@@ -1,0 +1,6 @@
+[package]
+name = "rusty_chess"
+version = "0.1.0"
+authors = ["stephenf <stephenf@cs.washington.edu>"]
+
+[dependencies]
