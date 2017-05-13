@@ -1,26 +1,9 @@
 
 use templates::Piece as Piece;
 use templates::Player as Player;
+use bit_twiddles::pop_count;
+use piece_move::BitMove;
 
-
-static popcnt8: &'static[u8] = &[
-0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
-];
 
 pub const BLACK_SIDE: u64 = 0b1111111111111111111111111111111100000000000000000000000000000000;
 pub const WHITE_SIDE: u64 = 0b0000000000000000000000000000000011111111111111111111111111111111;
@@ -42,7 +25,6 @@ pub const RANK_5 : u64 = 0x000000FF00000000;
 pub const RANK_6 : u64 = 0x0000FF0000000000;
 pub const RANK_7 : u64 = 0x00FF000000000000;
 pub const RANK_8 : u64 = 0xFF00000000000000;
-
 
 
 pub const NORTH: i8 = 8;
@@ -83,9 +65,11 @@ pub struct AllBitBoards {
 pub struct Board {
     pub bit_boards: AllBitBoards,
     pub turn: Player,
-    pub depth: u16,
-    pub castling: u8,
-    pub en_passant: u8,
+    pub depth: u16, // Tracks how many moves has been played so far
+    pub castling: u8, // 0000WWBB, left = 1 -> king side castle available, right = 1 -> queen side castle available
+    pub en_passant: u8, // is the square of the enpassant unless equal to 2^64
+    pub undo_moves: Vec<BitMove>,
+    pub ply: u8,
 }
 
 pub struct BitBoardsIntoIterator {
@@ -113,6 +97,8 @@ impl Board {
             depth: 0,
             castling: 0,
             en_passant: 0,
+            undo_moves: Vec::new(),
+            ply: 0
         };
         board
     }
@@ -122,7 +108,7 @@ impl Board {
             Some(x) => x,
             None    => 0,
         };
-        count_bits(x)
+        pop_count(x)
     }
 
     // Returns Bitboard for one Piece and One Player
@@ -181,6 +167,161 @@ impl Board {
     pub fn get_occupied(&self) -> u64 {
         self.bit_boards.into_iter().fold(0, |sum, x| sum ^ x)
     }
+
+    pub fn deep_clone(&self) -> Board {
+        Board {
+            bit_boards: AllBitBoards::new(),
+            turn: &self.turn,
+            depth: &self.turn,
+            castling: &self.castling,
+            en_passant: &self.en_passant,
+            undo_moves: &self.undo_moves.clone(),
+            ply: &self.ply
+        }
+    }
+
+    pub fn shallow_clone(&self) -> Board {
+        Board {
+            bit_boards: AllBitBoards::new(),
+            turn: &self.turn,
+            depth: &self.turn,
+            castling: &self.castling,
+            en_passant: &self.en_passant,
+            undo_moves: Vec::new(),
+            ply: &self.ply
+        }
+    }
+
+    pub fn apply_move(&mut self, bit_move: BitMove) {
+        let them = match self.turn {Player::White => Player::Black, Player::Black => Player::White};
+        let src = bit_move.get_src();
+        let dst = bit_move.get_dest();
+        let src_bit = 1 << src;
+        let dst_bit = 1 << dst;
+        if bit_move.is_castle() {
+            // White: King at index: 4
+            // Black: King at index: 60
+            if bit_move.is_king_castle() {
+                // White: Rook at index: 7
+                // Black: Rook at index: 63
+                match self.turn {
+                    Player::White => {
+                        let rook_pos: u64 = (1<<7 | 1<<5);
+                        let king_pos: u64 = (1<<4 | 1<<6);
+                        self.bit_boards.white_rook = self.bit_boards.white_rook ^ rook_pos;
+                        self.bit_boards.white_king = self.bit_boards.white_king ^ king_pos
+
+                    },
+                    Player::Black => {
+                        let rook_pos: u64 = (1<<63 | 1<<61);
+                        let king_pos: u64 = (1<<60 | 1<<62);
+                        self.bit_boards.black_rook = self.bit_boards.black_rook ^ rook_pos;
+                        self.bit_boards.black_king = self.bit_boards.black_king ^ king_pos;
+                    }
+                }
+            } else {
+                // White: Rook at index: 0
+                // Black: Rook at index: 56
+                match self.turn {
+                    Player::White => {
+                        let rook_pos: u64 = (1<<0 | 1<<3);
+                        let king_pos: u64 = (1<<4 | 1<<2);
+                        self.bit_boards.white_rook = self.bit_boards.white_rook ^ rook_pos;
+                        self.bit_boards.white_king = self.bit_boards.white_king ^ king_pos
+                    },
+                    Player::Black => {
+                        let rook_pos: u64 = (1<<56 | 1<<59);
+                        let king_pos: u64 = (1<<60 | 1<<58);
+                        self.bit_boards.black_rook = self.bit_boards.black_rook ^ rook_pos;
+                        self.bit_boards.black_king = self.bit_boards.black_king ^ king_pos;
+                    }
+                }
+            }
+            match self.turn {
+                Player::White => {
+                    self.castling &= 0b11110011;
+                }
+                Player::Black => {
+                    self.castling &= 0b11111100;
+                }
+            }
+        } else if bit_move.is_double_push() {
+            match self.turn {
+                Player::White => { self.bit_boards.white_pawn ^= (src_bit | dst_bit); },
+                Player::Black => { self.bit_boards.black_pawn ^= (src_bit | dst_bit); }
+            }
+            self.en_passant = dst;
+        } else if bit_move.is_promo() {
+            if bit_move.is_capture() {
+                captured_piece = get_piece_from_src(dst_bit,them);
+                captured_piece_board = get_bitboard(them,captured_piece);
+                modifiy_bitboard(dst_bit ^ captured_piece_board, them, captured_piece);
+            }
+            modifiy_bitboard(get_bitboard(self.turn,Piece::P) ^ src_bit, self.turn, Piece::P);
+            promoted_piece = bit_move.promo_piece();
+            modifiy_bitboard(get_bitboard(self.turn,promoted_piece) ^ dst_bit, self.turn, promoted_piece);
+
+        } else if bit_move.is_en_passant() {
+            match self.turn {
+                Player::White => {
+                    self.bit_boards.white_pawn ^= (src_bit | dst_bit);
+                    self.bit_boards.black_pawn ^= dst_bit >> 8;
+                },
+                Player::Black => {
+                    self.bit_boards.black_pawn ^= (src_bit | dst_bit);
+                    self.bit_boards.white_pawn ^= dst_bit << 8;
+                }
+            }
+        } else {
+            let piece = get_piece_from_src(src_bit, &self.turn);
+            if bit_move.is_capture() {
+                captured_piece = get_piece_from_src(dst_bit,them);
+                captured_piece_board = get_bitboard(them,captured_piece);
+                modifiy_bitboard(dst_bit ^ captured_piece_board, them, captured_piece);
+            }
+            modifiy_bitboard(get_bitboard(self.turn,piece) ^ (src_bit | dst_bit), self.turn, piece);
+        }
+        if !bit_move.is_double_push() { self.en_passant = 64; }
+        self.ply += 1;
+        self.turn += 1;
+        self.turn = them;
+    }
+
+    fn get_piece_from_src(&self, src_bit: u64, player: Player) -> Piece {
+        if self.get_bitboard(player, Piece::P) & src_bit != 0 { return Piece::P};
+        if self.get_bitboard(player, Piece::R) & src_bit != 0 { return Piece::R};
+        if self.get_bitboard(player, Piece::N) & src_bit != 0 { return Piece::N};
+        if self.get_bitboard(player, Piece::Q) & src_bit != 0 { return Piece::Q};
+        if self.get_bitboard(player, Piece::B) & src_bit != 0 { return Piece::B};
+        Piece::K
+    }
+
+    fn modifiy_bitboard(&mut self, bit_board: u64, player: Player, piece: Piece) {
+        match player {
+            Player::White  => {
+                match piece {
+                    Piece::B => self.bit_boards.white_bishop.bits = bit_board,
+                    Piece::P => self.bit_boards.white_pawn.bits = bit_board,
+                    Piece::R => self.bit_boards.white_rook.bits = bit_board,
+                    Piece::N => self.bit_boards.white_knight.bits = bit_board,
+                    Piece::K => self.bit_boards.white_king.bits = bit_board,
+                    Piece::Q => self.bit_boards.white_queen.bits = bit_board,
+                };
+            },
+            Player::Black => {
+                match piece {
+                    Piece::B => self.bit_boards.black_bishop.bits = bit_board,
+                    Piece::P => self.bit_boards.black_pawn.bits = bit_board,
+                    Piece::R => self.bit_boards.black_rook.bits = bit_board,
+                    Piece::N => self.bit_boards.black_knight.bits = bit_board,
+                    Piece::K => self.bit_boards.black_king.bits = bit_board,
+                    Piece::Q => self.bit_boards.black_queen.bits = bit_board,
+                };
+            }
+        };
+    }
+
+
 }
 
 impl AllBitBoards {
@@ -274,20 +415,6 @@ fn format_u64(input: u64) -> String {
     s
 }
 
-
-pub fn count_bits(x: u64) -> u8 {
-    let x = x as usize;
-    if x == 0 { return 0 }
-    if x & (x-1) == 0 { return 1}
-    popcnt8[  x >> 56         ] +
-        popcnt8[ (x >> 48) & 0xFF ] +
-        popcnt8[ (x >> 40) & 0xFF ] +
-        popcnt8[ (x >> 32) & 0xFF ] +
-        popcnt8[ (x >> 24) & 0xFF ] +
-        popcnt8[ (x >> 16) & 0xFF ] +
-        popcnt8[ (x >>  8) & 0xFF ] +
-        popcnt8[  x        & 0xFF ]
-}
 
 
 
