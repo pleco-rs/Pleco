@@ -45,6 +45,13 @@ pub struct BitBoard {
     piece: Piece
 }
 
+// Used for determining checks
+pub struct LastMoveData {
+    pub piece_moved: Piece,
+    pub src: u8,
+    pub dst: u8,
+}
+
 #[derive(Copy, Clone)]
 pub struct AllBitBoards {
     white_pawn: BitBoard,
@@ -70,6 +77,7 @@ pub struct Board {
     pub en_passant: u8, // is the square of the enpassant unless equal to 2^64
     pub undo_moves: Vec<BitMove>,
     pub ply: u8,
+    pub last_move: Option<LastMoveData>
 }
 
 pub struct BitBoardsIntoIterator {
@@ -88,7 +96,7 @@ pub struct BitBoardsIntoIterator {
 //    -------------------------
 //      a  b  c  d  e  f  g  h
 
-
+// FEN
 impl Board {
     pub fn new() -> Board {
         let mut board = Board {
@@ -98,9 +106,173 @@ impl Board {
             castling: 0,
             en_passant: 0,
             undo_moves: Vec::new(),
-            ply: 0
+            ply: 0,
+            last_move: None
         };
         board
+    }
+
+    // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
+    // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
+    pub fn new_from_fen(fen: String) -> Option<Board> {
+        let mut chars = fen.chars();
+        let mut all_bit_boards = AllBitBoards {
+            white_pawn: BitBoard    {bits: 0, side: Player::White, piece: Piece::P},
+            white_knight: BitBoard  {bits: 0, side: Player::White, piece: Piece::N},
+            white_bishop: BitBoard  {bits: 0, side: Player::White, piece: Piece::B},
+            white_rook: BitBoard    {bits: 0, side: Player::White, piece: Piece::R},
+            white_queen: BitBoard   {bits: 0, side: Player::White, piece: Piece::Q},
+            white_king: BitBoard    {bits: 0, side: Player::White, piece: Piece::K},
+            black_pawn: BitBoard    {bits: 0, side: Player::Black, piece: Piece::P},
+            black_knight: BitBoard  {bits: 0, side: Player::Black, piece: Piece::N},
+            black_bishop: BitBoard  {bits: 0, side: Player::Black, piece: Piece::B},
+            black_rook: BitBoard    {bits: 0, side: Player::Black, piece: Piece::R},
+            black_queen: BitBoard   {bits: 0, side: Player::Black, piece: Piece::Q},
+            black_king: BitBoard    {bits: 0, side: Player::Black, piece: Piece::K},
+        };
+        let mut file: i32 = 8;
+        let mut castle_bits: u8 = 0;
+        let mut en_passant: u8 = 0;
+        let mut ply: u8 = 0;
+        let mut halfmove = 0;
+        let mut turn: Player = Player::White;
+        // [7 - 0] -> Files
+        // -1      -> Side to Move
+        // -2      -> Castling Ability
+        // -3      -> En Passant target Square
+        // -4      -> Halfmove clock
+        // -5      -> FullMove clock
+        while file > -6 {
+            let mut pos = 0; // Start at A
+            let char = match chars.next {
+                Some(x) => x,
+                None => return None,
+            };
+            match file {
+
+                0 ... 7 => {
+                    match char {
+                        "/" | " " => {file += -1; pos = 0},
+                        x @ 1 ... 8 => {pos += x},
+                        "p" => { all_bit_boards.black_pawn |= (1<<(8 * file) + pos); pos += 1; },
+                        "b" => { all_bit_boards.black_bishop |= (1<<(8 * file) + pos); pos += 1; },
+                        "n" => { all_bit_boards.black_knight |= (1<<(8 * file) + pos); pos += 1; },
+                        "r" => { all_bit_boards.black_rook |= (1<<(8 * file) + pos); pos += 1; },
+                        "q" => { all_bit_boards.black_queen |= (1<<(8 * file) + pos); pos += 1; },
+                        "k" => { all_bit_boards.black_king |= (1<<(8 * file) + pos); pos += 1; },
+                        "P" => { all_bit_boards.white_pawn |= (1<<(8 * file) + pos); pos += 1; },
+                        "B" => { all_bit_boards.white_bishop |= (1<<(8 * file) + pos); pos += 1; },
+                        "N" => { all_bit_boards.white_knight |= (1<<(8 * file) + pos); pos += 1; },
+                        "R" => { all_bit_boards.white_rook |= (1<<(8 * file) + pos); pos += 1; },
+                        "Q" => { all_bit_boards.white_queen |= (1<<(8 * file) + pos); pos += 1; },
+                        "K" => { all_bit_boards.white_king |= (1<<(8 * file) + pos); pos += 1; },
+                        _ => {return None;}
+                    };
+                },
+                -1 => {
+                    match char {
+                        "w" => {},
+                        "b" => {turn = Player::Black;},
+                        " " => {file += -1; pos = 0;},
+                        _ => {return None;}
+                    };
+                },
+                -2 => {
+                    match char {
+                        "K" => {castle_bits |= 0b1000;},
+                        "Q" => {castle_bits |= 0b0100;},
+                        "k" => {castle_bits |= 0b0010;},
+                        "q" => {castle_bits |= 0b0001;},
+                        "-" => {},
+                        " " => {file += -1; pos = 0;},
+                        _ => {return None;}
+                    };
+                },
+                -3 => {
+                    let mut ep_position = -1;
+                    match pos {
+                        0 => {
+                            match char {
+                                "-" => {}
+                                "a" => {ep_position = 0;}
+                                "b" => {ep_position = 1;}
+                                "c" => {ep_position = 2;}
+                                "d" => {ep_position = 3;}
+                                "e" => {ep_position = 4;}
+                                "f" => {ep_position = 5;}
+                                "g" => {ep_position = 6;}
+                                "h" => {ep_position = 7;}
+                            };
+                            pos +=1;
+                        },
+                        1 => {
+                            match char {
+                                "-" => {},
+                                " " => {file += -1; pos = 0},
+                                3 => {ep_position += 16;},
+                                6 => {ep_position += 30;},
+                                _ => {return None;}
+                            };
+                            pos += 1;
+                        }
+                        "-" => {},
+                        " " => {file += -1; pos = 0},
+                        _ => {return None;}
+
+                    };
+                    let en_passant = match ep_position {
+                        -1 => 64,
+                        e @ _ => e,
+                    };
+                },
+                -4 => {
+                    match char {
+                        e @ 1 ... 9 => {
+                            if pos = 0 {
+                                halfmove = e;
+                            } else {
+                                halfmove = halfmove * 10;
+                                halfmove += e;
+                            }
+                        },
+                        " " => {file += -1; pos = 0},
+                        _ => {return None;}
+
+                    };
+                },
+                -5 => {
+                    match char {
+                        e @ 1 ... 9 => {
+                            if pos = 0 {
+                                ply = e;
+                            } else {
+                                ply = ply * 10;
+                                ply += e;
+                            }
+                        },
+                        " " => {file += -1; pos = 0},
+                        _ => {return None;}
+
+                    };
+                },
+                _ => { file = -6}
+            };
+
+            ply += -1;
+            ply *= 2;
+            if turn == Player::Black {ply+= 1};
+            Board {
+                bit_boards: all_bit_boards,
+                turn: turn,
+                depth: 0,
+                castling: castle_bits,
+                en_passant: en_passant,
+                undo_moves: Vec::new(),
+                ply: ply,
+                last_move: None
+            }
+        }
+
     }
 
     pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
@@ -176,7 +348,8 @@ impl Board {
             castling: &self.castling,
             en_passant: &self.en_passant,
             undo_moves: &self.undo_moves.clone(),
-            ply: &self.ply
+            ply: &self.ply,
+            last_move: &self.last_move
         }
     }
 
@@ -188,7 +361,8 @@ impl Board {
             castling: &self.castling,
             en_passant: &self.en_passant,
             undo_moves: Vec::new(),
-            ply: &self.ply
+            ply: &self.ply,
+            last_move: &self.last_move
         }
     }
 
@@ -209,7 +383,8 @@ impl Board {
                         let rook_pos: u64 = (1<<7 | 1<<5);
                         let king_pos: u64 = (1<<4 | 1<<6);
                         self.bit_boards.white_rook = self.bit_boards.white_rook ^ rook_pos;
-                        self.bit_boards.white_king = self.bit_boards.white_king ^ king_pos
+                        self.bit_boards.white_king = self.bit_boards.white_king ^ king_pos;
+                        self.last_move = LastMoveData {piece_moved: Piece::R, src: 7, dst: 5};
 
                     },
                     Player::Black => {
@@ -217,6 +392,7 @@ impl Board {
                         let king_pos: u64 = (1<<60 | 1<<62);
                         self.bit_boards.black_rook = self.bit_boards.black_rook ^ rook_pos;
                         self.bit_boards.black_king = self.bit_boards.black_king ^ king_pos;
+                        self.last_move = LastMoveData {piece_moved: Piece::R, src: 63, dst: 61};
                     }
                 }
             } else {
@@ -227,13 +403,15 @@ impl Board {
                         let rook_pos: u64 = (1<<0 | 1<<3);
                         let king_pos: u64 = (1<<4 | 1<<2);
                         self.bit_boards.white_rook = self.bit_boards.white_rook ^ rook_pos;
-                        self.bit_boards.white_king = self.bit_boards.white_king ^ king_pos
+                        self.bit_boards.white_king = self.bit_boards.white_king ^ king_pos;
+                        self.last_move = LastMoveData {piece_moved: Piece::R, src: 0, dst: 3};
                     },
                     Player::Black => {
                         let rook_pos: u64 = (1<<56 | 1<<59);
                         let king_pos: u64 = (1<<60 | 1<<58);
                         self.bit_boards.black_rook = self.bit_boards.black_rook ^ rook_pos;
                         self.bit_boards.black_king = self.bit_boards.black_king ^ king_pos;
+                        self.last_move = LastMoveData {piece_moved: Piece::R, src: 56, dst: 59};
                     }
                 }
             }
@@ -245,12 +423,14 @@ impl Board {
                     self.castling &= 0b11111100;
                 }
             }
+
         } else if bit_move.is_double_push() {
             match self.turn {
                 Player::White => { self.bit_boards.white_pawn ^= (src_bit | dst_bit); },
                 Player::Black => { self.bit_boards.black_pawn ^= (src_bit | dst_bit); }
             }
             self.en_passant = dst;
+            let last_move = LastMoveData {piece_moved: Piece::P, src: src, dst: dst};
         } else if bit_move.is_promo() {
             if bit_move.is_capture() {
                 captured_piece = get_piece_from_src(dst_bit,them);
@@ -260,7 +440,7 @@ impl Board {
             modifiy_bitboard(get_bitboard(self.turn,Piece::P) ^ src_bit, self.turn, Piece::P);
             promoted_piece = bit_move.promo_piece();
             modifiy_bitboard(get_bitboard(self.turn,promoted_piece) ^ dst_bit, self.turn, promoted_piece);
-
+            self.last_move = LastMoveData {piece_moved: promoted_piece, src: src, dst: dst};
         } else if bit_move.is_en_passant() {
             match self.turn {
                 Player::White => {
@@ -272,6 +452,8 @@ impl Board {
                     self.bit_boards.white_pawn ^= dst_bit << 8;
                 }
             }
+            self.last_move = LastMoveData {piece_moved: Piece::P, src: src, dst: dst};
+
         } else {
             let piece = get_piece_from_src(src_bit, &self.turn);
             if bit_move.is_capture() {
@@ -280,8 +462,11 @@ impl Board {
                 modifiy_bitboard(dst_bit ^ captured_piece_board, them, captured_piece);
             }
             modifiy_bitboard(get_bitboard(self.turn,piece) ^ (src_bit | dst_bit), self.turn, piece);
+
+            self.last_move = LastMoveData {piece_moved: piece, src: src, dst: dst};
         }
         if !bit_move.is_double_push() { self.en_passant = 64; }
+
         self.ply += 1;
         self.turn += 1;
         self.turn = them;
@@ -375,6 +560,18 @@ impl Iterator for BitBoardsIntoIterator {
         result
     }
 }
+
+// TODO: Refactor Apply_move
+// TODO: Implement fen String
+//    TODO: Implement Fen String Constructor
+// TODO:
+// TODO: Implement new BitBoard Exports ***returns bitboards on criteria***
+//      TODO: Diagonal Pieces           (Piece)
+//      TODO: Sliding Pieces            (Piece)
+//      TODO: All_Occupied_Player       (Player)  **all squares occupied by player**
+//      TODO: Attacked_By               (Player)  **all squares attacked by player**
+//      TODO: All_Moves_Of_Piece        (Piece, Player) **All Possible Moves given Piece, Player**
+
 
 
 pub fn main() {
