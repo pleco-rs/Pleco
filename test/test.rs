@@ -76,12 +76,21 @@ mod test {
         assert_eq!(bit_twiddles::bit_scan_forward(32),5);
         assert_eq!(bit_twiddles::bit_scan_forward(31),0);
     }
-
     #[test]
     fn test_pawn_gen() {
         let board = Board::new();
         let vector = movegen::get_pseudo_moves(&board, Player::White);
         assert_eq!(vector.len(),16);
+    }
+
+    #[test]
+    fn fen_builder() {
+        let board = Board::new_from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        let t: bool = match board {
+            None => {false},
+            _ => {true}
+        };
+        assert!(t);
     }
 
 }
