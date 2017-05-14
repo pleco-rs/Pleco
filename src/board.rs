@@ -131,7 +131,7 @@ impl Board {
             black_queen: BitBoard   {bits: 0, side: Player::Black, piece: Piece::Q},
             black_king: BitBoard    {bits: 0, side: Player::Black, piece: Piece::K},
         };
-        let mut file: i32 = 8;
+        let mut file: u8 = 8;
         let mut castle_bits: u8 = 0;
         let mut en_passant: u8 = 0;
         let mut ply: u8 = 0;
@@ -143,8 +143,8 @@ impl Board {
         // -3      -> En Passant target Square
         // -4      -> Halfmove clock
         // -5      -> FullMove clock
-        while file > -6 {
-            let mut pos = 0; // Start at A
+        while file < 12 {
+            let mut pos: u8 = 0; // Start at A
             let char = match chars.next() {
                 Some(x) => x,
                 None => return None,
@@ -153,7 +153,7 @@ impl Board {
 
                 0 ... 7 => {
                     match char {
-                        '/' | ' ' => {file += -1; pos = 0},
+                        '/' | ' ' => {file += 1; pos = 0},
                         '1' => {pos += 1},
                         '2' => {pos += 2},
                         '3' => {pos += 3},
@@ -162,47 +162,47 @@ impl Board {
                         '6' => {pos += 6},
                         '7' => {pos += 7},
                         '8' => {pos += 8},
-                        'p' => { all_bit_boards.black_pawn.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'b' => { all_bit_boards.black_bishop.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'n' => { all_bit_boards.black_knight.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'r' => { all_bit_boards.black_rook.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'q' => { all_bit_boards.black_queen.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'k' => { all_bit_boards.black_king.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'P' => { all_bit_boards.white_pawn.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'B' => { all_bit_boards.white_bishop.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'N' => { all_bit_boards.white_knight.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'R' => { all_bit_boards.white_rook.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'Q' => { all_bit_boards.white_queen.bits |= 1<<(8 * file) + pos; pos += 1; },
-                        'K' => { all_bit_boards.white_king.bits |= 1<<(8 * file) + pos; pos += 1; },
+                        'p' => { all_bit_boards.black_pawn.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'b' => { all_bit_boards.black_bishop.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'n' => { all_bit_boards.black_knight.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'r' => { all_bit_boards.black_rook.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'q' => { all_bit_boards.black_queen.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'k' => { all_bit_boards.black_king.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'P' => { all_bit_boards.white_pawn.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'B' => { all_bit_boards.white_bishop.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'N' => { all_bit_boards.white_knight.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'R' => { all_bit_boards.white_rook.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'Q' => { all_bit_boards.white_queen.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
+                        'K' => { all_bit_boards.white_king.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
                         _ => {return None;}
                     };
                 },
-                -1 => {
+                7 => {
                     match char {
                         'w' => {},
                         'b' => {turn = Player::Black;},
-                        ' ' => {file += -1; pos = 0;},
+                        ' ' => {file += 1; pos = 0;},
                         _ => {return None;}
                     };
                 },
-                -2 => {
+                8 => {
                     match char {
                         'K' => {castle_bits |= 0b1000;},
                         'Q' => {castle_bits |= 0b0100;},
                         'k' => {castle_bits |= 0b0010;},
                         'q' => {castle_bits |= 0b0001;},
                         '-' => {},
-                        ' ' => {file += -1; pos = 0;},
+                        ' ' => {file += 1; pos = 0;},
                         _ => {return None;}
                     };
                 },
-                -3 => {
+                9 => {
                     let mut ep_position = -1;
                     match pos {
                         0 => {
                             match char {
                                 '-' => {},
-                                ' ' => {file += -1; pos = 0},
+                                ' ' => {file += 1; pos = 0},
                                 'a' => {ep_position = 0;}
                                 'b' => {ep_position = 1;}
                                 'c' => {ep_position = 2;}
@@ -218,7 +218,7 @@ impl Board {
                         1 => {
                             match char {
                                 '-' => {},
-                                ' ' => {file += -1; pos = 0},
+                                ' ' => {file += 1; pos = 0},
                                 '3' => {ep_position += 16;},
                                 '6' => {ep_position += 30;},
                                 _ => {return None;}
@@ -233,37 +233,37 @@ impl Board {
                         e @ _ => e,
                     };
                 },
-                -4 => {
+                10 => {
                     match char {
                         e @ '1' | e @ '2' | e @ '3' | e @ '4' | e @ '5' | e @ '6' | e @ '7' | e @ '8' | e @ '9' | e @ '0' => {
                             if pos == 0 {
-                                e.to_string().parse::<u8>().unwrap();
+                                pos = e.to_string().parse::<u8>().unwrap() as u8;
                             } else {
                                 halfmove = halfmove * 10;
-                                halfmove += e.to_string().parse::<u8>().unwrap();;
+                                halfmove += e.to_string().parse::<u8>().unwrap() as u8;
                             }
                         },
-                        ' ' => {file += -1; pos = 0},
+                        ' ' => {file += 1; pos = 0},
                         _ => {return None;}
 
                     };
                 },
-                -5 => {
+                11 => {
                     match char {
                         e @ '1' | e @ '2' | e @ '3' | e @ '4' | e @ '5' | e @ '6' | e @ '7' | e @ '8' | e @ '9' | e @ '0' => {
                             if pos == 0 {
-                                ply = e.to_string().parse::<u8>().unwrap();
+                                ply = e.to_string().parse::<u8>().unwrap() as u8;
                             } else {
                                 ply = ply * 10;
-                                ply += e.to_string().parse::<u8>().unwrap();
+                                ply += e.to_string().parse::<u8>().unwrap() as u8;
                             }
                         },
-                        ' ' => {file += -1; pos = 0},
+                        ' ' => {file += 1; pos = 0},
                         _ => {return None;}
 
                     };
                 },
-                _ => { file = -6}
+                _ => { file = 12}
             };
 
         };
