@@ -22,6 +22,24 @@ pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
     vec
 }
 
+//pub fn in_check(board: &Board) -> bool {
+//    let turn = board.turn;
+//
+//    let option = board.last_move;
+//    if option == None { return false; }
+//    assert!(option != None);
+//
+//    let last_move_info: LastMoveData = option.unwrap();
+//    let piece_moved = last_move_info.piece_moved;
+//    let src = last_move_info.src;
+//    let dst = last_move_info.dst;
+//    let king_pos = board.get_bitboard(turn, Piece::K);
+//
+//
+//
+//    true
+//}
+
 pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {
     let THEM: Player = match player {Player::White => Player::Black, Player::Black => Player::White};
     let TRANK8BB: u64 = match player {Player::White => RANK_8, Player::Black => RANK_1};
@@ -63,25 +81,34 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
             Player::White => dest - 8,
             Player::Black => dest + 8,
         };
-        list.push(PreMoveInfo {src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::QuietMove });
+        list.push(PreMoveInfo {src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::DoublePawnPush });
     }
+
+    // TODO: Implement Captures
+
+    // TODO: Implement
 
 
 }
 
 
 pub fn bit_scan_forward_list(input_bits: u64, list: &mut Vec<u8>) {
-//    println!("{:b}", bits);
     let mut bits = input_bits;
     let mut i = 0;
     while bits != 0 {
         let pos = bit_scan_forward(bits);
         list.push(pos);
-        let pos = ((1u64).checked_shl(pos as u32).unwrap());
+        let pos = (1u64).checked_shl(pos as u32).unwrap();
         bits = bits & (!(pos) as u64);
     }
 }
 
+// TODO: Implement Knight Attacks
+// TODO: Implement King Attacks
+// TODO: Implement Diagonal Attacks
+// TODO: Implement Sliding Attacks
+// TODO: Implement Knight Attacks
 
+// TODO: Implement Move Checker Attacks
 
 
