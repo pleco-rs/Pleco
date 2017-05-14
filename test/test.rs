@@ -87,8 +87,8 @@ mod test {
     fn fen_builder() {
         let board = Board::new_from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
         let t: bool = match board {
-            None => {false},
-            _ => {true}
+            Ok(x) => {false},
+            Err(e) => {println!("{:?}",e);true}
         };
         assert!(t);
     }

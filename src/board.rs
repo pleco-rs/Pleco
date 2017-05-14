@@ -115,7 +115,7 @@ impl Board {
 
     // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
     // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
-    pub fn new_from_fen(fen: String) -> Option<Board> {
+    pub fn new_from_fen(fen: String) -> Result<Board, &'static str> {
         let mut chars = fen.chars();
         let mut all_bit_boards = AllBitBoards {
             white_pawn: BitBoard    {bits: 0, side: Player::White, piece: Piece::P},
@@ -147,7 +147,7 @@ impl Board {
             let mut pos: u8 = 0; // Start at A
             let char = match chars.next() {
                 Some(x) => x,
-                None => return None,
+                None => return Err("Ran out of Chars: Line 150"),
             };
             match file {
 
@@ -174,7 +174,7 @@ impl Board {
                         'R' => { all_bit_boards.white_rook.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
                         'Q' => { all_bit_boards.white_queen.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
                         'K' => { all_bit_boards.white_king.bits |= 1<<(8 * (7 -file)) + pos; pos += 1; },
-                        _ => {return None;}
+                        _ => {return Err("Failed Matching Chars");}
                     };
                 },
                 7 => {
@@ -182,7 +182,7 @@ impl Board {
                         'w' => {},
                         'b' => {turn = Player::Black;},
                         ' ' => {file += 1; pos = 0;},
-                        _ => {return None;}
+                        _ => {return Err("Failed Matching turn");}
                     };
                 },
                 8 => {
@@ -193,7 +193,7 @@ impl Board {
                         'q' => {castle_bits |= 0b0001;},
                         '-' => {},
                         ' ' => {file += 1; pos = 0;},
-                        _ => {return None;}
+                        _ => {return Err("Failed Matching Castling Bits");}
                     };
                 },
                 9 => {
@@ -211,7 +211,7 @@ impl Board {
                                 'f' => {ep_position = 5;}
                                 'g' => {ep_position = 6;}
                                 'h' => {ep_position = 7;}
-                                 _ => {return None;}
+                                 _ => {return Err("Failed Matching EP position");}
                             };
                             pos +=1;
                         },
@@ -221,11 +221,11 @@ impl Board {
                                 ' ' => {file += 1; pos = 0},
                                 '3' => {ep_position += 16;},
                                 '6' => {ep_position += 30;},
-                                _ => {return None;}
+                                _ => {return Err("Failed Matching EP File");}
                             };
                             pos += 1;
                         }
-                        _ => {return None;}
+                        _ => {return Err("Failed Matching OverallEP Count");}
 
                     };
                     let en_passant = match ep_position {
@@ -244,7 +244,7 @@ impl Board {
                             }
                         },
                         ' ' => {file += 1; pos = 0},
-                        _ => {return None;}
+                        _ => {return Err("Failed Matching Halfmove Count");}
 
                     };
                 },
@@ -259,7 +259,7 @@ impl Board {
                             }
                         },
                         ' ' => {file += 1; pos = 0},
-                        _ => {return None;}
+                        _ => {return Err("Failed Matching Ply count");}
 
                     };
                 },
@@ -273,7 +273,7 @@ impl Board {
             Player::Black => {ply+= 1},
             _ => {}
         };
-        Some(Board {
+        Ok(Board {
             bit_boards: all_bit_boards,
             turn: turn,
             depth: 0,
