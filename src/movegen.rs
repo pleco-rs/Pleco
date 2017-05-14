@@ -98,7 +98,7 @@ pub fn bit_scan_forward_list(input_bits: u64, list: &mut Vec<u8>) {
     while bits != 0 {
         let pos = bit_scan_forward(bits);
         list.push(pos);
-        let pos = ((1u64).checked_shl(pos as u32).unwrap());
+        let pos = (1u64).checked_shl(pos as u32).unwrap();
         bits = bits & (!(pos) as u64);
     }
 }
