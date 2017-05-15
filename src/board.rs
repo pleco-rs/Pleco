@@ -146,8 +146,8 @@ impl Board {
         // -4      -> Halfmove clock
         // -5      -> FullMove clock
         let mut end_of_line: bool = false;
+        let mut pos: u64 = 0; // Start at A
         while file < 13 {
-            let mut pos: u64 = 0; // Start at A
             let char = match chars.next() {
                 Some(x) => x,
                 None => { if end_of_line { file = 13; '&'} else {
@@ -161,16 +161,16 @@ impl Board {
                             file += 1;
                             pos = 0;
                         },
-                        '1' => { pos += 1 },
-                        '2' => { pos += 2 },
-                        '3' => { pos += 3 },
-                        '4' => { pos += 4 },
-                        '5' => { pos += 5 },
-                        '6' => { pos += 6 },
-                        '7' => { pos += 7 },
-                        '8' => { pos += 8 },
+                        '1' => { pos += 1; },
+                        '2' => { pos += 2; },
+                        '3' => { pos += 3; },
+                        '4' => { pos += 4; },
+                        '5' => { pos += 5; },
+                        '6' => { pos += 6; },
+                        '7' => { pos += 7; },
+                        '8' => { pos += 8; },
                         'p' => {
-                            all_bit_boards.black_pawn.bits |= (1 << ((8 * (7 - file)) + pos));
+                            all_bit_boards.black_pawn.bits |= ((1 as u64) << ((8 * (7 - file)) + pos));
                             pos += 1;
                         },
                         'b' => {
