@@ -117,7 +117,7 @@ impl Board {
 
     // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
     // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
-    pub fn new_from_fen(fen: String) -> Result<Board, &'static str> {
+    pub fn new_from_fen(fen: String) -> Result<Board, String> {
         let mut chars = fen.chars();
         let mut all_bit_boards = AllBitBoards {
             white_pawn: BitBoard { bits: 0, side: Player::White, piece: Piece::P },
@@ -133,7 +133,7 @@ impl Board {
             black_queen: BitBoard { bits: 0, side: Player::Black, piece: Piece::Q },
             black_king: BitBoard { bits: 0, side: Player::Black, piece: Piece::K },
         };
-        let mut file: u8 = 8;
+        let mut file: u64 = 0;
         let mut castle_bits: u8 = 0;
         let mut en_passant: u8 = 0;
         let mut ply: u8 = 0;
@@ -145,90 +145,95 @@ impl Board {
         // -3      -> En Passant target Square
         // -4      -> Halfmove clock
         // -5      -> FullMove clock
-        while file < 12 {
-            let mut pos: u8 = 0; // Start at A
+        let mut end_of_line: bool = false;
+        while file < 13 {
+            let mut pos: u64 = 0; // Start at A
             let char = match chars.next() {
                 Some(x) => x,
-                None => return Err("Ran out of Chars: Line 150"),
+                None => { if end_of_line { file = 13; '&'} else {
+                    return Err(format!("Ran out of Chars: Line 150 {}", file).to_owned()) }
+                },
             };
             match file {
                 0 ... 7 => {
                     match char {
                         '/' | ' ' => {
                             file += 1;
-                            pos = 0
-                        }
-                        '1' => { pos += 1 }
-                        '2' => { pos += 2 }
-                        '3' => { pos += 3 }
-                        '4' => { pos += 4 }
-                        '5' => { pos += 5 }
-                        '6' => { pos += 6 }
-                        '7' => { pos += 7 }
-                        '8' => { pos += 8 }
-                        'p' => {
-                            all_bit_boards.black_pawn.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'b' => {
-                            all_bit_boards.black_bishop.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'n' => {
-                            all_bit_boards.black_knight.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'r' => {
-                            all_bit_boards.black_rook.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'q' => {
-                            all_bit_boards.black_queen.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'k' => {
-                            all_bit_boards.black_king.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'P' => {
-                            all_bit_boards.white_pawn.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'B' => {
-                            all_bit_boards.white_bishop.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'N' => {
-                            all_bit_boards.white_knight.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'R' => {
-                            all_bit_boards.white_rook.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'Q' => {
-                            all_bit_boards.white_queen.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        'K' => {
-                            all_bit_boards.white_king.bits |= 1 << (8 * (7 - file)) + pos;
-                            pos += 1;
-                        }
-                        _ => { return Err("Failed Matching Chars"); }
-                    };
-                }
-                7 => {
-                    match char {
-                        'w' => {}
-                        'b' => { turn = Player::Black; }
-                        ' ' => {
-                            file += 1;
                             pos = 0;
-                        }
-                        _ => { return Err("Failed Matching turn"); }
+                        },
+                        '1' => { pos += 1 },
+                        '2' => { pos += 2 },
+                        '3' => { pos += 3 },
+                        '4' => { pos += 4 },
+                        '5' => { pos += 5 },
+                        '6' => { pos += 6 },
+                        '7' => { pos += 7 },
+                        '8' => { pos += 8 },
+                        'p' => {
+                            all_bit_boards.black_pawn.bits |= (1 << ((8 * (7 - file)) + pos));
+                            pos += 1;
+                        },
+                        'b' => {
+                            all_bit_boards.black_bishop.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'n' => {
+                            all_bit_boards.black_knight.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'r' => {
+                            all_bit_boards.black_rook.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'q' => {
+                            all_bit_boards.black_queen.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'k' => {
+                            all_bit_boards.black_king.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'P' => {
+                            all_bit_boards.white_pawn.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'B' => {
+                            all_bit_boards.white_bishop.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'N' => {
+                            all_bit_boards.white_knight.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'R' => {
+                            all_bit_boards.white_rook.bits |= 1 << (8 * (7 - file) + pos);;
+                            pos += 1;
+                        },
+                        'Q' => {
+                            all_bit_boards.white_queen.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        'K' => {
+                            all_bit_boards.white_king.bits |= 1 << (8 * (7 - file) + pos);
+                            pos += 1;
+                        },
+                        _ => { let e = format!("FAILED CHAR AT {}", char.to_string());
+                            return Err(e.to_owned()); }
                     };
                 }
                 8 => {
+                    match char {
+                        'w' => {},
+                        'b' => { turn = Player::Black; },
+                        ' ' => {
+                            file += 1;
+                            pos = 0;
+                        },
+                        _ => { let e = format!("Failed Matching turn: char {}", char).to_string();
+                            return Err(e.to_owned()); }
+                    };
+                }
+                9 => {
                     match char {
                         'K' => { castle_bits |= 0b1000; }
                         'Q' => { castle_bits |= 0b0100; }
@@ -239,10 +244,11 @@ impl Board {
                             file += 1;
                             pos = 0;
                         }
-                        _ => { return Err("Failed Matching Castling Bits"); }
+                        _ => {  let e = format!("Failed Matching Castling: char: {}", char).to_string();
+                                return Err(e.to_owned()); }
                     };
                 }
-                9 => {
+                10 => {
                     let mut ep_position = -1;
                     match pos {
                         0 => {
@@ -260,7 +266,8 @@ impl Board {
                                 'f' => { ep_position = 5; }
                                 'g' => { ep_position = 6; }
                                 'h' => { ep_position = 7; }
-                                _ => { return Err("Failed Matching EP position"); }
+                                _ => { let e = format!("Failed Matching EP position: char {}", char).to_string();
+                                    return Err(e.to_owned()); }
                             };
                             pos += 1;
                         }
@@ -273,35 +280,39 @@ impl Board {
                                 }
                                 '3' => { ep_position += 16; }
                                 '6' => { ep_position += 30; }
-                                _ => { return Err("Failed Matching EP File"); }
+                                _ => { let e = format!("Failed Matching EP File: char {}", char).to_string();
+                                    return Err(e.to_owned()); }
                             };
                             pos += 1;
                         }
-                        _ => { return Err("Failed Matching OverallEP Count"); }
+                        _ => { let e = format!("Failed Matching OverallEP Count: char {}", char).to_string();
+                                 return Err(e.to_owned()); }
                     };
                     let en_passant = match ep_position {
                         -1 => 64,
                         e @ _ => e,
                     };
                 }
-                10 => {
+                11 => {
                     match char {
                         e @ '1' | e @ '2' | e @ '3' | e @ '4' | e @ '5' | e @ '6' | e @ '7' | e @ '8' | e @ '9' | e @ '0' => {
                             if pos == 0 {
-                                pos = e.to_string().parse::<u8>().unwrap() as u8;
+                                pos = e.to_string().parse::<u64>().unwrap() as u64;
                             } else {
                                 halfmove = halfmove * 10;
-                                halfmove += e.to_string().parse::<u8>().unwrap() as u8;
+                                halfmove += e.to_string().parse::<u64>().unwrap() as u64;
                             }
                         }
                         ' ' => {
                             file += 1;
                             pos = 0
                         }
-                        _ => { return Err("Failed Matching Halfmove Count"); }
+                        _ => { let e = format!("Failed Matching Halfmove Counter: char {}", char).to_string();
+                            return Err(e.to_owned()); }
                     };
                 }
-                11 => {
+                12 => {
+                    end_of_line = true;
                     match char {
                         e @ '1' | e @ '2' | e @ '3' | e @ '4' | e @ '5' | e @ '6' | e @ '7' | e @ '8' | e @ '9' | e @ '0' => {
                             if pos == 0 {
@@ -315,10 +326,11 @@ impl Board {
                             file += 1;
                             pos = 0
                         }
-                        _ => { return Err("Failed Matching Ply count"); }
+                        _ => { let e = format!("Failed Matching Ply count: char {}", char).to_string();
+                            return Err(e.to_owned()); }
                     };
                 }
-                _ => { file = 12 }
+                _ => { file = 13 }
             };
         };
         ply -= 1;
@@ -582,7 +594,7 @@ impl AllBitBoards {
         let mut bit_boards = AllBitBoards {
             white_pawn: BitBoard { bits: 0b0000000000000000000000000000000000000000000000001111111100000000, side: Player::White, piece: Piece::P },
             white_knight: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000001000010, side: Player::White, piece: Piece::N },
-            white_bishop: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000100100, side: Player::White, piece: Piece::N },
+            white_bishop: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000100100, side: Player::White, piece: Piece::B },
             white_rook: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000010000001, side: Player::White, piece: Piece::R },
             white_queen: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000001000, side: Player::White, piece: Piece::Q },
             white_king: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000010000, side: Player::White, piece: Piece::K },

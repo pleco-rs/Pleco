@@ -11,15 +11,29 @@ use rusty_chess::bit_twiddles::*;
 
 #[test]
 fn fen_builder() {
-    let board = Board::new_from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
-    let t: bool = match board {
-        Ok(x) => { false }
+    // test if Works in the first place
+    let i_board = Board::new_from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+    match i_board {
+        Ok(x) => {}
         Err(e) => {
-            println!("{:?}", e);
-            true
+            panic!(e);
         }
     };
-    assert!(t);
+    let board = Board::new_from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")).unwrap();
+    assert_eq!(board.get_occupied(), 0b1111111111111111000000000000000000000000000000001111111111111111);
+//    assert_eq!(board.get_bitboard(Player::White, Piece::P).unwrap(),  0b0000000000000000000000000000000000000000000000001111111100000000);
+//    assert_eq!(board.get_bitboard(Player::White, Piece::N).unwrap(),  0b0000000000000000000000000000000000000000000000000000000001000010);
+//    assert_eq!(board.get_bitboard(Player::White, Piece::B).unwrap(),  0b0000000000000000000000000000000000000000000000000000000000100100);
+//    assert_eq!(board.get_bitboard(Player::White, Piece::R).unwrap(),  0b0000000000000000000000000000000000000000000000000000000010000001);
+//    assert_eq!(board.get_bitboard(Player::White, Piece::Q).unwrap(),  0b0000000000000000000000000000000000000000000000000000000000001000);
+//    assert_eq!(board.get_bitboard(Player::White, Piece::K).unwrap(),  0b0000000000000000000000000000000000000000000000000000000000010000);
+//    assert_eq!(board.get_bitboard(Player::Black, Piece::P).unwrap(),  0b0000000011111111000000000000000000000000000000000000000000000000);
+//    assert_eq!(board.get_bitboard(Player::Black, Piece::N).unwrap(),  0b0100001000000000000000000000000000000000000000000000000000000000);
+//    assert_eq!(board.get_bitboard(Player::Black, Piece::B).unwrap(),  0b0010010000000000000000000000000000000000000000000000000000000000);
+//    assert_eq!(board.get_bitboard(Player::Black, Piece::R).unwrap(),  0b1000000100000000000000000000000000000000000000000000000000000000);
+//    assert_eq!(board.get_bitboard(Player::Black, Piece::Q).unwrap(),  0b0000100000000000000000000000000000000000000000000000000000000000);
+//    assert_eq!(board.get_bitboard(Player::Black, Piece::K).unwrap(),  0b0001000000000000000000000000000000000000000000000000000000000000);
+
 }
 
 #[test]
