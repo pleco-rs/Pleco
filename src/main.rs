@@ -1,15 +1,5 @@
-mod board;
-mod lib;
-mod piece_move;
-mod movegen;
-mod templates;
-mod bit_twiddles;
-
-include!("../test/test.rs");
-
-
-
+extern crate rusty_chess;
 
 fn main() {
-    board::main();
+    println!("Hello!");
 }

@@ -1,24 +1,24 @@
-use templates::{SQ,Piece,Player,to_SQ};
+use templates::{SQ, Piece, Player, to_SQ};
 use board::*;
-use piece_move::{MoveFlag,BitMove,PreMoveInfo};
+use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use std;
 use std::num::Wrapping;
-use bit_twiddles::{pop_count,bit_scan_forward};
+use bit_twiddles::{pop_count, bit_scan_forward};
 
-static index64: &'static[u8] = &[
-    0,  1, 48,  2, 57, 49, 28,  3,
-    61, 58, 50, 42, 38, 29, 17,  4,
+static index64: &'static [u8] = &[
+    0, 1, 48, 2, 57, 49, 28, 3,
+    61, 58, 50, 42, 38, 29, 17, 4,
     62, 55, 59, 36, 53, 51, 43, 22,
-    45, 39, 33, 30, 24, 18, 12,  5,
+    45, 39, 33, 30, 24, 18, 12, 5,
     63, 47, 56, 27, 60, 41, 37, 16,
     54, 35, 52, 21, 44, 32, 23, 11,
     46, 26, 40, 15, 34, 20, 31, 10,
-    25, 14, 19,  9, 13,  8,  7,  6
+    25, 14, 19, 9, 13, 8, 7, 6
 ];
 
 pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
     let mut vec = Vec::with_capacity(40);
-    get_pawn_moves(&board, player, & mut vec);
+    get_pawn_moves(&board, player, &mut vec);
     vec
 }
 
@@ -41,16 +41,34 @@ pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
 //}
 
 pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {
-    let THEM: Player = match player {Player::White => Player::Black, Player::Black => Player::White};
-    let TRANK8BB: u64 = match player {Player::White => RANK_8, Player::Black => RANK_1};
-    let TRANK7BB: u64 = match player {Player::White => RANK_7, Player::Black => RANK_2};
-    let TRANK3BB: u64 = match player {Player::White => RANK_3, Player::Black => RANK_6};
+    let THEM: Player = match player {
+        Player::White => Player::Black,
+        Player::Black => Player::White
+    };
+    let TRANK8BB: u64 = match player {
+        Player::White => RANK_8,
+        Player::Black => RANK_1
+    };
+    let TRANK7BB: u64 = match player {
+        Player::White => RANK_7,
+        Player::Black => RANK_2
+    };
+    let TRANK3BB: u64 = match player {
+        Player::White => RANK_3,
+        Player::Black => RANK_6
+    };
     let UP: i8 = match player {
         Player::White => NORTH,
         Player::Black => SOUTH
-        };
-    let RIGHT: i8 = match player {Player::White => NORTH_EAST, Player::Black => SOUTH_WEST};
-    let LEFT: i8 = match player {Player::White => NORTH_WEST, Player::Black => SOUTH_EAST};
+    };
+    let RIGHT: i8 = match player {
+        Player::White => NORTH_EAST,
+        Player::Black => SOUTH_WEST
+    };
+    let LEFT: i8 = match player {
+        Player::White => NORTH_WEST,
+        Player::Black => SOUTH_EAST
+    };
 
     let pawn_bits = board.get_bitboard(player, Piece::P).unwrap();
     let occupied = board.get_occupied();
@@ -68,7 +86,7 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
             Player::White => dest - 8,
             Player::Black => dest + 8,
         };
-        list.push(PreMoveInfo {src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::QuietMove  });
+        list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::QuietMove });
     }
 
     let mut double_push_list = Vec::new();
@@ -81,14 +99,12 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
             Player::White => dest - 8,
             Player::Black => dest + 8,
         };
-        list.push(PreMoveInfo {src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::DoublePawnPush });
+        list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::DoublePawnPush });
     }
 
     // TODO: Implement Captures
 
     // TODO: Implement
-
-
 }
 
 

@@ -3,4 +3,20 @@ name = "rusty_chess"
 version = "0.1.0"
 authors = ["stephenf <stephenf@cs.washington.edu>"]
 
+include = [
+    "src/*.rs",
+    "tests/*.rs",
+    "Cargo.toml",
+    ".gitignore"
+]
+
+[lib]
+name = "rusty_chess"
+
 [dependencies]
+
+
+
+[[test]]
+path = "tests/test.rs"
+name = "default"
