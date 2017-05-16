@@ -4,7 +4,7 @@ use rusty_chess::board::{Board, AllBitBoards};
 use rusty_chess::templates::{Piece, Player};
 use rusty_chess::movegen as movegen;
 use rusty_chess::piece_move::*;
-use rusty_chess::bit_twiddles::*;
+
 
 
 #[test]

@@ -33,7 +33,6 @@
 
 use templates::SQ;
 use templates::Piece;
-use std::mem;
 
 static SRC_MASK: u16 = 0b0000000000111111;
 static DST_MASK: u16 = 0b0000111111000000;
@@ -66,10 +65,9 @@ pub struct PreMoveInfo {
 // https://chessprogramming.wikispaces.com/Encoding+Moves
 impl BitMove {
     pub fn new(input: u16) -> BitMove {
-        let mut bit_move = BitMove { data: input };
+        let bit_move = BitMove { data: input };
         bit_move
     }
-
     pub fn init(info: PreMoveInfo) -> BitMove {
         let src = info.src as u16;
         let dst = (info.dst as u16) << 6;
@@ -103,9 +101,8 @@ impl BitMove {
             }
             MoveFlag::DoublePawnPush => { 1 }
             MoveFlag::QuietMove => { 0 }
-            _ => { 0 }
         };
-        let mut bit_move = BitMove { data: (flag_bits << 12) | src | dst };
+        let bit_move = BitMove { data: (flag_bits << 12) | src | dst };
         bit_move
     }
 
@@ -138,6 +135,8 @@ impl BitMove {
     pub fn src_col(&self) -> u8 {
         (self.data & SRC_MASK) as u8 % 8
     }
+
+    // Assume Piece is promoted
     pub fn promo_piece(&self) -> Piece {
         match (self.data >> 12) & 0b0011 {
             0 => Piece::N,

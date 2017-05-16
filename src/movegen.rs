@@ -16,29 +16,30 @@ static index64: &'static [u8] = &[
     25, 14, 19, 9, 13, 8, 7, 6
 ];
 
+
 pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
     let mut vec = Vec::with_capacity(40);
     get_pawn_moves(&board, player, &mut vec);
     vec
 }
 
-//pub fn in_check(board: &Board) -> bool {
-//    let turn = board.turn;
-//
-//    let option = board.last_move;
-//    if option == None { return false; }
-//    assert!(option != None);
-//
-//    let last_move_info: LastMoveData = option.unwrap();
-//    let piece_moved = last_move_info.piece_moved;
-//    let src = last_move_info.src;
-//    let dst = last_move_info.dst;
-//    let king_pos = board.get_bitboard(turn, Piece::K);
-//
-//
-//
-//    true
-//}
+pub fn in_check(board: &Board) -> bool {
+    let turn = board.turn;
+
+    option = board.last_move;
+    if option.unwrap() == None { return false; }
+
+
+    let last_move_info: LastMoveData = option.unwrap();
+    let piece_moved = last_move_info.piece_moved;
+    let src = last_move_info.src;
+    let dst = last_move_info.dst;
+    let king_pos = board.get_bitboard(turn, Piece::K);
+
+
+
+    true
+}
 
 pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {
     let THEM: Player = match player {
@@ -108,9 +109,35 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
 }
 
 
+fn get_rank_mask(bit: u64) -> u64  {
+    match bit_scan_forward(bit) / 8 {
+        0 => board::RANK_1,
+        1 => board::RANK_2,
+        2 => board::RANK_3,
+        3 => board::RANK_4,
+        4 => board::RANK_5,
+        5 => board::RANK_6,
+        6 => board::RANK_7,
+        7 => board::RANK_8,
+    }
+}
+
+fn get_file_mask(bit: u64) -> u64  {
+    match bit_scan_forward(bit) / 8 {
+        0 => board::FILE_A,
+        1 => board::FILE_B,
+        2 => board::FILE_C,
+        3 => board::FILE_D,
+        4 => board::FILE_E,
+        5 => board::FILE_F,
+        6 => board::FILE_G,
+        7 => board::FILE_H,
+    }
+}
+
+
 pub fn bit_scan_forward_list(input_bits: u64, list: &mut Vec<u8>) {
     let mut bits = input_bits;
-    let mut i = 0;
     while bits != 0 {
         let pos = bit_scan_forward(bits);
         list.push(pos);
