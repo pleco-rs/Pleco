@@ -14,8 +14,10 @@ include = [
 name = "rusty_chess"
 
 [dependencies]
+clippy = {version = "*", optional = true}
 
-
+[features]
+default = []
 
 [[test]]
 path = "tests/test.rs"

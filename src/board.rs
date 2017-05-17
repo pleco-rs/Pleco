@@ -40,8 +40,6 @@ pub const SOUTH_WEST: i8 = -9;
 #[derive(Copy, Clone)]
 pub struct BitBoard {
     bits: u64,
-    side: Player,
-    piece: Piece
 }
 
 // Used for determining checks
@@ -54,18 +52,18 @@ pub struct LastMoveData {
 
 #[derive(Copy, Clone)]
 pub struct AllBitBoards {
-    white_pawn: BitBoard,
-    white_knight: BitBoard,
-    white_bishop: BitBoard,
-    white_rook: BitBoard,
-    white_queen: BitBoard,
-    white_king: BitBoard,
-    black_pawn: BitBoard,
-    black_knight: BitBoard,
-    black_bishop: BitBoard,
-    black_rook: BitBoard,
-    black_queen: BitBoard,
-    black_king: BitBoard,
+    w_pawn: BitBoard,
+    w_knight: BitBoard,
+    w_bishop: BitBoard,
+    w_rook: BitBoard,
+    w_queen: BitBoard,
+    w_king: BitBoard,
+    b_pawn: BitBoard,
+    b_knight: BitBoard,
+    b_bishop: BitBoard,
+    b_rook: BitBoard,
+    b_queen: BitBoard,
+    b_king: BitBoard,
 }
 
 #[derive(Clone)]
@@ -105,7 +103,7 @@ pub struct BitBoardsIntoIterator {
 // FEN
 impl Board {
     pub fn new() -> Board {
-        let mut board = Board {
+        Board {
             bit_boards: AllBitBoards::new(),
             turn: Player::White,
             depth: 0,
@@ -114,28 +112,14 @@ impl Board {
             undo_moves: Vec::new(),
             ply: 0,
             last_move: None
-        };
-        board
+        }
     }
 
     // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
     // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
     pub fn new_from_fen(fen: String) -> Result<Board, String> {
         let mut chars = fen.chars();
-        let mut all_bit_boards = AllBitBoards {
-            white_pawn: BitBoard { bits: 0, side: Player::White, piece: Piece::P },
-            white_knight: BitBoard { bits: 0, side: Player::White, piece: Piece::N },
-            white_bishop: BitBoard { bits: 0, side: Player::White, piece: Piece::B },
-            white_rook: BitBoard { bits: 0, side: Player::White, piece: Piece::R },
-            white_queen: BitBoard { bits: 0, side: Player::White, piece: Piece::Q },
-            white_king: BitBoard { bits: 0, side: Player::White, piece: Piece::K },
-            black_pawn: BitBoard { bits: 0, side: Player::Black, piece: Piece::P },
-            black_knight: BitBoard { bits: 0, side: Player::Black, piece: Piece::N },
-            black_bishop: BitBoard { bits: 0, side: Player::Black, piece: Piece::B },
-            black_rook: BitBoard { bits: 0, side: Player::Black, piece: Piece::R },
-            black_queen: BitBoard { bits: 0, side: Player::Black, piece: Piece::Q },
-            black_king: BitBoard { bits: 0, side: Player::Black, piece: Piece::K },
-        };
+        let mut all_bit_boards = AllBitBoards::default();
         let mut file: u64 = 0;
         let mut castle_bits: u8 = 0;
         let mut en_passant: u8 = 0;
@@ -173,51 +157,51 @@ impl Board {
                         '7' => { pos += 7; },
                         '8' => { pos += 8; },
                         'p' => {
-                            all_bit_boards.black_pawn.bits |= (1 as u64) << ((8 * (7 - file)) + pos);
+                            all_bit_boards.b_pawn.bits |= (1 as u64) << ((8 * (7 - file)) + pos);
                             pos += 1;
                         },
                         'b' => {
-                            all_bit_boards.black_bishop.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.b_bishop.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'n' => {
-                            all_bit_boards.black_knight.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.b_knight.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'r' => {
-                            all_bit_boards.black_rook.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.b_rook.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'q' => {
-                            all_bit_boards.black_queen.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.b_queen.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'k' => {
-                            all_bit_boards.black_king.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.b_king.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'P' => {
-                            all_bit_boards.white_pawn.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.w_pawn.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'B' => {
-                            all_bit_boards.white_bishop.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.w_bishop.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'N' => {
-                            all_bit_boards.white_knight.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.w_knight.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'R' => {
-                            all_bit_boards.white_rook.bits |= 1 << (8 * (7 - file) + pos);;
+                            all_bit_boards.w_rook.bits |= 1 << (8 * (7 - file) + pos);;
                             pos += 1;
                         },
                         'Q' => {
-                            all_bit_boards.white_queen.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.w_queen.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         'K' => {
-                            all_bit_boards.white_king.bits |= 1 << (8 * (7 - file) + pos);
+                            all_bit_boards.w_king.bits |= 1 << (8 * (7 - file) + pos);
                             pos += 1;
                         },
                         _ => { let e = format!("FAILED CHAR AT {}", char.to_string());
@@ -252,7 +236,7 @@ impl Board {
                     };
                 }
                 10 => {
-                    let mut ep_position = -1;
+                    let mut ep_position = 64;
                     match pos {
                         0 => {
                             match char {
@@ -299,10 +283,7 @@ impl Board {
                             };
                         }
                     };
-                    let en_passant = match ep_position {
-                        -1 => 64,
-                        e @ _ => e,
-                    };
+                    en_passant = if ep_position < 64 && ep_position >= 0 {ep_position} else {64};
                 }
                 11 => {
                     match char {
@@ -311,7 +292,7 @@ impl Board {
                                 halfmove = e.to_string().parse::<u64>().unwrap() as u64;
                                 pos += 1;
                             } else {
-                                halfmove = halfmove * 10;
+                                halfmove *= 10;
                                 halfmove += e.to_string().parse::<u64>().unwrap() as u64;
                                 pos += 1;
                             }
@@ -332,7 +313,7 @@ impl Board {
                                 ply = e.to_string().parse::<u8>().unwrap() as u8;
                                 pos += 1;
                             } else {
-                                ply = ply * 10;
+                                ply *= 10;
                                 ply += e.to_string().parse::<u8>().unwrap() as u8;
                                 pos += 1;
                             }
@@ -350,11 +331,8 @@ impl Board {
         };
 
         ply *= 2;
-        ply =  ply - 2;
-        match turn {
-            Player::Black => { ply += 1 }
-            _ => {}
-        };
+        ply -= 2;
+        if let Player::Black = turn { ply += 1 };
         Ok(Board {
             bit_boards: all_bit_boards,
             turn: turn,
@@ -368,10 +346,7 @@ impl Board {
     }
 
     pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
-        let x = match self.get_bitboard(player, piece) {
-            Some(x) => x,
-            None => 0,
-        };
+        let x = self.get_bitboard(player, piece);
         pop_count(x)
     }
 
@@ -380,29 +355,28 @@ impl Board {
     }
 
     // Returns Bitboard for one Piece and One Player
-    pub fn get_bitboard(&self, player: Player, piece: Piece) -> Option<u64> {
+    pub fn get_bitboard(&self, player: Player, piece: Piece) -> u64 {
         match player {
             Player::White => {
                 match piece {
-                    Piece::K => Some(self.bit_boards.white_king.bits),
-                    Piece::Q => Some(self.bit_boards.white_queen.bits),
-                    Piece::R => Some(self.bit_boards.white_rook.bits),
-                    Piece::B => Some(self.bit_boards.white_bishop.bits),
-                    Piece::N => Some(self.bit_boards.white_knight.bits),
-                    Piece::P => Some(self.bit_boards.white_pawn.bits),
+                    Piece::K => (self.bit_boards.w_king.bits),
+                    Piece::Q => (self.bit_boards.w_queen.bits),
+                    Piece::R => (self.bit_boards.w_rook.bits),
+                    Piece::B => (self.bit_boards.w_bishop.bits),
+                    Piece::N => (self.bit_boards.w_knight.bits),
+                    Piece::P => (self.bit_boards.w_pawn.bits),
                 }
             }
             Player::Black => {
                 match piece {
-                    Piece::K => Some(self.bit_boards.black_king.bits),
-                    Piece::Q => Some(self.bit_boards.black_queen.bits),
-                    Piece::R => Some(self.bit_boards.black_rook.bits),
-                    Piece::B => Some(self.bit_boards.black_bishop.bits),
-                    Piece::N => Some(self.bit_boards.black_knight.bits),
-                    Piece::P => Some(self.bit_boards.black_pawn.bits),
+                    Piece::K => (self.bit_boards.b_king.bits),
+                    Piece::Q => (self.bit_boards.b_queen.bits),
+                    Piece::R => (self.bit_boards.b_rook.bits),
+                    Piece::B => (self.bit_boards.b_bishop.bits),
+                    Piece::N => (self.bit_boards.b_knight.bits),
+                    Piece::P => (self.bit_boards.b_pawn.bits),
                 }
             }
-            _ => None
         }
     }
 
@@ -411,22 +385,21 @@ impl Board {
         let mut vector = Vec::with_capacity(6);
         match player {
             Player::White => {
-                vector.push(self.bit_boards.white_king);
-                vector.push(self.bit_boards.white_queen);
-                vector.push(self.bit_boards.white_rook);
-                vector.push(self.bit_boards.white_bishop);
-                vector.push(self.bit_boards.white_knight);
-                vector.push(self.bit_boards.white_pawn);
+                vector.push(self.bit_boards.w_king);
+                vector.push(self.bit_boards.w_queen);
+                vector.push(self.bit_boards.w_rook);
+                vector.push(self.bit_boards.w_bishop);
+                vector.push(self.bit_boards.w_knight);
+                vector.push(self.bit_boards.w_pawn);
             }
             Player::Black => {
-                vector.push(self.bit_boards.black_king);
-                vector.push(self.bit_boards.black_queen);
-                vector.push(self.bit_boards.black_rook);
-                vector.push(self.bit_boards.black_bishop);
-                vector.push(self.bit_boards.black_knight);
-                vector.push(self.bit_boards.black_pawn);
+                vector.push(self.bit_boards.b_king);
+                vector.push(self.bit_boards.b_queen);
+                vector.push(self.bit_boards.b_rook);
+                vector.push(self.bit_boards.b_bishop);
+                vector.push(self.bit_boards.b_knight);
+                vector.push(self.bit_boards.b_pawn);
             }
-            _ => {}
         };
         vector
     }
@@ -434,20 +407,6 @@ impl Board {
     // Gets all occupied Squares
     pub fn get_occupied(&self) -> u64 {
         self.bit_boards.into_iter().fold(0, |sum, x| sum ^ x)
-    }
-
-    // Returns Deep clone of current board with Past Move List
-    pub fn deep_clone(&self) -> Board {
-        Board {
-            bit_boards: AllBitBoards::new(),
-            turn: self.turn,
-            depth: self.depth,
-            castling: self.castling,
-            en_passant: self.en_passant,
-            undo_moves: self.undo_moves.clone(),
-            ply: self.ply,
-            last_move: self.last_move
-        }
     }
 
     // Returns Shallow clone of current board with no Past Move List
@@ -491,15 +450,15 @@ impl Board {
                     Player::White => {
                         let rook_pos: u64 = 1 << 7 | 1 << 5;
                         let king_pos: u64 = 1 << 4 | 1 << 6;
-                        self.bit_boards.white_rook.bits ^= rook_pos;
-                        self.bit_boards.white_king.bits ^= king_pos;
+                        self.bit_boards.w_rook.bits ^= rook_pos;
+                        self.bit_boards.w_king.bits ^= king_pos;
                         self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 7, dst: 5 });
                     }
                     Player::Black => {
                         let rook_pos: u64 = 1 << 63 | 1 << 61;
                         let king_pos: u64 = 1 << 60 | 1 << 62;
-                        self.bit_boards.black_rook.bits ^= rook_pos;
-                        self.bit_boards.black_king.bits ^= king_pos;
+                        self.bit_boards.b_rook.bits ^= rook_pos;
+                        self.bit_boards.b_king.bits ^= king_pos;
                         self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 63, dst: 61 });
                     }
                 }
@@ -510,8 +469,8 @@ impl Board {
                     Player::White => {
                         let rook_pos: u64 = 1 << 0 | 1 << 3;
                         let king_pos: u64 = 1 << 4 | 1 << 2;
-                        self.bit_boards.white_rook.bits ^= rook_pos;
-                        self.bit_boards.white_king.bits ^= king_pos;
+                        self.bit_boards.w_rook.bits ^= rook_pos;
+                        self.bit_boards.w_king.bits ^= king_pos;
                         self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 0, dst: 3 });
                     }
                     Player::Black => {
@@ -530,8 +489,8 @@ impl Board {
         } else if bit_move.is_double_push().0 {
             // DOUBLE PAWN MOVE
             match us {
-                Player::White => { self.bit_boards.white_pawn.bits ^= src_bit | dst_bit; }
-                Player::Black => { self.bit_boards.black_pawn.bits ^= src_bit | dst_bit; }
+                Player::White => { self.bit_boards.w_pawn.bits ^= src_bit | dst_bit; }
+                Player::Black => { self.bit_boards.b_pawn.bits ^= src_bit | dst_bit; }
             }
             self.en_passant = dst;
             self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
@@ -546,12 +505,12 @@ impl Board {
             // PAWN ENPASSENT;
             match us {
                 Player::White => {
-                    self.bit_boards.white_pawn.bits ^= src_bit | dst_bit;
-                    self.bit_boards.black_pawn.bits ^= dst_bit >> 8;
+                    self.bit_boards.w_pawn.bits ^= src_bit | dst_bit;
+                    self.bit_boards.b_pawn.bits ^= dst_bit >> 8;
                 }
                 Player::Black => {
-                    self.bit_boards.black_pawn.bits ^= src_bit | dst_bit;
-                    self.bit_boards.white_pawn.bits ^= dst_bit << 8;
+                    self.bit_boards.b_pawn.bits ^= src_bit | dst_bit;
+                    self.bit_boards.w_pawn.bits ^= dst_bit << 8;
                 }
             }
             self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
@@ -574,18 +533,18 @@ impl Board {
 
     // Returns the piece at the given place
     fn get_piece_from_src(&self, src_bit: u64, player: Player) -> Option<Piece> {
-        if self.get_bitboard(player, Piece::P).unwrap() & src_bit != 0 { return Some(Piece::P) };
-        if self.get_bitboard(player, Piece::R).unwrap() & src_bit != 0 { return Some(Piece::R) };
-        if self.get_bitboard(player, Piece::N).unwrap() & src_bit != 0 { return Some(Piece::N) };
-        if self.get_bitboard(player, Piece::Q).unwrap() & src_bit != 0 { return Some(Piece::Q) };
-        if self.get_bitboard(player, Piece::B).unwrap() & src_bit != 0 { return Some(Piece::B) };
-        if self.get_bitboard(player, Piece::K).unwrap() & src_bit != 0 { return Some(Piece::K) };
+        if self.get_bitboard(player, Piece::P) & src_bit != 0 { return Some(Piece::P) };
+        if self.get_bitboard(player, Piece::R) & src_bit != 0 { return Some(Piece::R) };
+        if self.get_bitboard(player, Piece::N) & src_bit != 0 { return Some(Piece::N) };
+        if self.get_bitboard(player, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
+        if self.get_bitboard(player, Piece::B) & src_bit != 0 { return Some(Piece::B) };
+        if self.get_bitboard(player, Piece::K) & src_bit != 0 { return Some(Piece::K) };
         None
     }
 
     // XORs the Bitboard of (player,piece) by the input bit_board, figures out the piece & player itself
     fn xor_bitboard_sq(&mut self, square_bit: u64) {
-        let player = match self.get_bitboards_player(Player::White).iter().fold(0, |sum, x| sum ^ x.bits) & square_bit {
+        let player = match self.get_occupied() & square_bit {
             0 => Player::Black,
             _ => Player::White
         };
@@ -603,22 +562,22 @@ impl Board {
         match player {
             Player::White => {
                 match piece {
-                    Piece::B => self.bit_boards.white_bishop.bits ^= square_bit,
-                    Piece::P => self.bit_boards.white_pawn.bits ^= square_bit,
-                    Piece::R => self.bit_boards.white_rook.bits ^= square_bit,
-                    Piece::N => self.bit_boards.white_knight.bits ^= square_bit,
-                    Piece::K => self.bit_boards.white_king.bits ^= square_bit,
-                    Piece::Q => self.bit_boards.white_queen.bits ^= square_bit,
+                    Piece::B => self.bit_boards.w_bishop.bits ^= square_bit,
+                    Piece::P => self.bit_boards.w_pawn.bits ^= square_bit,
+                    Piece::R => self.bit_boards.w_rook.bits ^= square_bit,
+                    Piece::N => self.bit_boards.w_knight.bits ^= square_bit,
+                    Piece::K => self.bit_boards.w_king.bits ^= square_bit,
+                    Piece::Q => self.bit_boards.w_queen.bits ^= square_bit,
                 };
             }
             Player::Black => {
                 match piece {
-                    Piece::B => self.bit_boards.black_bishop.bits ^= square_bit,
-                    Piece::P => self.bit_boards.black_pawn.bits ^= square_bit,
-                    Piece::R => self.bit_boards.black_rook.bits ^= square_bit,
-                    Piece::N => self.bit_boards.black_knight.bits ^= square_bit,
-                    Piece::K => self.bit_boards.black_king.bits ^= square_bit,
-                    Piece::Q => self.bit_boards.black_queen.bits ^= square_bit,
+                    Piece::B => self.bit_boards.b_bishop.bits ^= square_bit,
+                    Piece::P => self.bit_boards.b_pawn.bits ^= square_bit,
+                    Piece::R => self.bit_boards.b_rook.bits ^= square_bit,
+                    Piece::N => self.bit_boards.b_knight.bits ^= square_bit,
+                    Piece::K => self.bit_boards.b_king.bits ^= square_bit,
+                    Piece::Q => self.bit_boards.b_queen.bits ^= square_bit,
                 };
             }
         };
@@ -629,22 +588,22 @@ impl Board {
         match player {
             Player::White => {
                 match piece {
-                    Piece::B => self.bit_boards.white_bishop.bits = bit_board,
-                    Piece::P => self.bit_boards.white_pawn.bits = bit_board,
-                    Piece::R => self.bit_boards.white_rook.bits = bit_board,
-                    Piece::N => self.bit_boards.white_knight.bits = bit_board,
-                    Piece::K => self.bit_boards.white_king.bits = bit_board,
-                    Piece::Q => self.bit_boards.white_queen.bits = bit_board,
+                    Piece::B => self.bit_boards.w_bishop.bits = bit_board,
+                    Piece::P => self.bit_boards.w_pawn.bits = bit_board,
+                    Piece::R => self.bit_boards.w_rook.bits = bit_board,
+                    Piece::N => self.bit_boards.w_knight.bits = bit_board,
+                    Piece::K => self.bit_boards.w_king.bits = bit_board,
+                    Piece::Q => self.bit_boards.w_queen.bits = bit_board,
                 };
             }
             Player::Black => {
                 match piece {
-                    Piece::B => self.bit_boards.black_bishop.bits = bit_board,
-                    Piece::P => self.bit_boards.black_pawn.bits = bit_board,
-                    Piece::R => self.bit_boards.black_rook.bits = bit_board,
-                    Piece::N => self.bit_boards.black_knight.bits = bit_board,
-                    Piece::K => self.bit_boards.black_king.bits = bit_board,
-                    Piece::Q => self.bit_boards.black_queen.bits = bit_board,
+                    Piece::B => self.bit_boards.b_bishop.bits = bit_board,
+                    Piece::P => self.bit_boards.b_pawn.bits = bit_board,
+                    Piece::R => self.bit_boards.b_rook.bits = bit_board,
+                    Piece::N => self.bit_boards.b_knight.bits = bit_board,
+                    Piece::K => self.bit_boards.b_king.bits = bit_board,
+                    Piece::Q => self.bit_boards.b_queen.bits = bit_board,
                 };
             }
         };
@@ -653,23 +612,41 @@ impl Board {
     // Horizontally moving and Vertically moving pieves
     pub fn sliding_piece_bits(&self, player: Player) -> u64 {
         match player {
-            Player::White => self.bit_boards.white_queen.bits ^ self.bit_boards.white_rook.bits,
-            Player::Black => self.bit_boards.black_queen.bits ^ self.bit_boards.black_rook.bits,
+            Player::White => self.bit_boards.w_queen.bits ^ self.bit_boards.w_rook.bits,
+            Player::Black => self.bit_boards.b_queen.bits ^ self.bit_boards.b_rook.bits,
         }
     }
     // Diagonal moving pieces
     pub fn diagonal_piece_bits(&self, player: Player) -> u64 {
         match player {
-            Player::White => self.bit_boards.white_queen.bits ^ self.bit_boards.white_bishop.bits,
-            Player::Black => self.bit_boards.black_queen.bits ^ self.bit_boards.black_bishop.bits,
+            Player::White => self.bit_boards.w_queen.bits ^ self.bit_boards.w_bishop.bits,
+            Player::Black => self.bit_boards.b_queen.bits ^ self.bit_boards.b_bishop.bits,
         }
     }
 
     pub fn get_occupied_player(&self, player: Player) -> u64 {
         match player {
-            Player::White => self.get_bitboards_player(Player::White).iter().fold(0, |sum, x| sum ^ x.bits),
-            Player::Black => self.get_bitboards_player(Player::Black).iter().fold(0, |sum, x| sum ^ x.bits),
+            Player::White => self.occupied_white(),
+            Player::Black => self.occupied_black(),
         }
+    }
+
+    fn occupied_white(&self) -> u64 {
+        self.bit_boards.w_bishop
+            | self.bit_boards.w_pawn
+            | self.bit_boards.w_knight
+            | self.bit_boards.w_rook
+            | self.bit_boards.w_king
+            | self.bit_boards.w_queen
+    }
+
+    fn occupied_black(&self) -> u64 {
+        self.bit_boards.b_bishop
+            | self.bit_boards.b_pawn
+            | self.bit_boards.b_knight
+            | self.bit_boards.b_rook
+            | self.bit_boards.b_king
+            | self.bit_boards.b_queen
     }
 
 
@@ -677,22 +654,41 @@ impl Board {
 }
 
 impl AllBitBoards {
-    pub fn new() -> AllBitBoards {
-        let mut bit_boards = AllBitBoards {
-            white_pawn: BitBoard { bits: 0b0000000000000000000000000000000000000000000000001111111100000000, side: Player::White, piece: Piece::P },
-            white_knight: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000001000010, side: Player::White, piece: Piece::N },
-            white_bishop: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000100100, side: Player::White, piece: Piece::B },
-            white_rook: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000010000001, side: Player::White, piece: Piece::R },
-            white_queen: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000001000, side: Player::White, piece: Piece::Q },
-            white_king: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000010000, side: Player::White, piece: Piece::K },
-            black_pawn: BitBoard { bits: 0b0000000011111111000000000000000000000000000000000000000000000000, side: Player::Black, piece: Piece::P },
-            black_knight: BitBoard { bits: 0b0100001000000000000000000000000000000000000000000000000000000000, side: Player::Black, piece: Piece::N },
-            black_bishop: BitBoard { bits: 0b0010010000000000000000000000000000000000000000000000000000000000, side: Player::Black, piece: Piece::B },
-            black_rook: BitBoard { bits: 0b1000000100000000000000000000000000000000000000000000000000000000, side: Player::Black, piece: Piece::R },
-            black_queen: BitBoard { bits: 0b0000100000000000000000000000000000000000000000000000000000000000, side: Player::Black, piece: Piece::Q },
-            black_king: BitBoard { bits: 0b0001000000000000000000000000000000000000000000000000000000000000, side: Player::Black, piece: Piece::K },
-        };
-        bit_boards
+    fn new() -> AllBitBoards {
+        AllBitBoards {
+            w_pawn: BitBoard { bits: 0b0000000000000000000000000000000000000000000000001111111100000000},
+            w_knight: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000001000010},
+            w_bishop: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000100100},
+            w_rook: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000010000001},
+            w_queen: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000001000},
+            w_king: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000010000},
+            b_pawn: BitBoard { bits: 0b0000000011111111000000000000000000000000000000000000000000000000},
+            b_knight: BitBoard { bits: 0b0100001000000000000000000000000000000000000000000000000000000000},
+            b_bishop: BitBoard { bits: 0b0010010000000000000000000000000000000000000000000000000000000000},
+            b_rook: BitBoard { bits: 0b1000000100000000000000000000000000000000000000000000000000000000},
+            b_queen: BitBoard { bits: 0b0000100000000000000000000000000000000000000000000000000000000000},
+            b_king: BitBoard { bits: 0b0001000000000000000000000000000000000000000000000000000000000000},
+        }
+    }
+}
+
+// Returns blank bitboards
+impl Default for AllBitBoards {
+    fn default() -> AllBitBoards {
+        AllBitBoards {
+            w_pawn: BitBoard { bits: 0 },
+            w_knight: BitBoard { bits: 0 },
+            w_bishop: BitBoard { bits: 0 },
+            w_rook: BitBoard { bits: 0 },
+            w_queen: BitBoard { bits: 0 },
+            w_king: BitBoard { bits: 0 },
+            b_pawn: BitBoard { bits: 0 },
+            b_knight: BitBoard { bits: 0 },
+            b_bishop: BitBoard { bits: 0 },
+            b_rook: BitBoard { bits: 0 },
+            b_queen: BitBoard { bits: 0 },
+            b_king: BitBoard { bits: 0 }
+        }
     }
 }
 
@@ -700,9 +696,7 @@ impl IntoIterator for AllBitBoards {
     type Item = u64;
     type IntoIter = BitBoardsIntoIterator;
 
-    fn into_iter(self) -> Self::IntoIter {
-        BitBoardsIntoIterator { bit_boards: self, index: 0 }
-    }
+    fn into_iter(self) -> Self::IntoIter { BitBoardsIntoIterator { bit_boards: self, index: 0 } }
 }
 
 impl Iterator for BitBoardsIntoIterator {
@@ -737,44 +731,6 @@ impl Iterator for BitBoardsIntoIterator {
 //      TODO: Sliding Pieces            (Piece)
 //      TODO: Attacked_By               (Player)  **all squares attacked by player**
 //      TODO: All_Moves_Of_Piece        (Piece, Player) **All Possible Moves given Piece, Player**
-
-
-pub fn main() {
-    let board = Board::new();
-    //    print(board);
-    //    print!("{}", check_board(&board));
-    print!("{}", board.count_piece(Player::White, Piece::P));
-}
-
-pub fn print(board: Board) {
-    let bit_board = board.bit_boards;
-    for i in bit_board.into_iter() {
-        print_bitboard(i);
-    }
-    //    let xor = bit_board.into_iter().fold(0, |sum, x| sum ^ x);
-    //    println!("{}",format_u64(xor));
-}
-
-pub fn print_bitboard(input: u64) {
-    let s = format_u64(input);
-    for x in 0..8 {
-        let slice = &s[x * 8..(x * 8) + 8];
-        print!("{}\n", slice);
-    }
-    println!();
-}
-
-fn format_u64(input: u64) -> String {
-    let mut s = String::with_capacity(64);
-    let strin = format!("{:b}", input);
-    let mut i = strin.len();
-    while i < 64 {
-        s.push_str("0");
-        i += 1;
-    }
-    s.push_str(&strin);
-    s
-}
 
 
 
