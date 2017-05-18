@@ -84,11 +84,6 @@ pub struct Board {
     // Tracks last moved played for evaluation purposes
 }
 
-pub struct BitBoardsIntoIterator {
-    bit_boards: AllBitBoards,
-    index: usize,
-}
-
 //  8 | 56 57 58 59 60 61 62 63
 //  7 | 48 49 50 51 52 53 54 55
 //  6 | 40 41 42 43 44 45 46 47
@@ -406,7 +401,7 @@ impl Board {
 
     // Gets all occupied Squares
     pub fn get_occupied(&self) -> u64 {
-        self.bit_boards.into_iter().fold(0, |sum, x| sum ^ x)
+        self.occupied_black() | self.occupied_white()
     }
 
     // Returns Shallow clone of current board with no Past Move List
@@ -476,8 +471,8 @@ impl Board {
                     Player::Black => {
                         let rook_pos: u64 = 1 << 56 | 1 << 59;
                         let king_pos: u64 = 1 << 60 | 1 << 58;
-                        self.bit_boards.black_rook.bits ^= rook_pos;
-                        self.bit_boards.black_king.bits ^= king_pos;
+                        self.bit_boards.b_rook.bits ^= rook_pos;
+                        self.bit_boards.b_king.bits ^= king_pos;
                         self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 56, dst: 59 });
                     }
                 }
@@ -632,21 +627,21 @@ impl Board {
     }
 
     fn occupied_white(&self) -> u64 {
-        self.bit_boards.w_bishop
-            | self.bit_boards.w_pawn
-            | self.bit_boards.w_knight
-            | self.bit_boards.w_rook
-            | self.bit_boards.w_king
-            | self.bit_boards.w_queen
+        self.bit_boards.w_bishop.bits
+            | self.bit_boards.w_pawn.bits
+            | self.bit_boards.w_knight.bits
+            | self.bit_boards.w_rook.bits
+            | self.bit_boards.w_king.bits
+            | self.bit_boards.w_queen.bits
     }
 
     fn occupied_black(&self) -> u64 {
-        self.bit_boards.b_bishop
-            | self.bit_boards.b_pawn
-            | self.bit_boards.b_knight
-            | self.bit_boards.b_rook
-            | self.bit_boards.b_king
-            | self.bit_boards.b_queen
+        self.bit_boards.b_bishop.bits
+            | self.bit_boards.b_pawn.bits
+            | self.bit_boards.b_knight.bits
+            | self.bit_boards.b_rook.bits
+            | self.bit_boards.b_king.bits
+            | self.bit_boards.b_queen.bits
     }
 
 
@@ -692,35 +687,6 @@ impl Default for AllBitBoards {
     }
 }
 
-impl IntoIterator for AllBitBoards {
-    type Item = u64;
-    type IntoIter = BitBoardsIntoIterator;
-
-    fn into_iter(self) -> Self::IntoIter { BitBoardsIntoIterator { bit_boards: self, index: 0 } }
-}
-
-impl Iterator for BitBoardsIntoIterator {
-    type Item = u64;
-    fn next(&mut self) -> Option<u64> {
-        let result = match self.index {
-            0 => Some(self.bit_boards.white_pawn.bits),
-            1 => Some(self.bit_boards.white_knight.bits),
-            2 => Some(self.bit_boards.white_bishop.bits),
-            3 => Some(self.bit_boards.white_rook.bits),
-            4 => Some(self.bit_boards.white_queen.bits),
-            5 => Some(self.bit_boards.white_king.bits),
-            6 => Some(self.bit_boards.black_pawn.bits),
-            7 => Some(self.bit_boards.black_knight.bits),
-            8 => Some(self.bit_boards.black_bishop.bits),
-            9 => Some(self.bit_boards.black_rook.bits),
-            10 => Some(self.bit_boards.black_queen.bits),
-            11 => Some(self.bit_boards.black_king.bits),
-            _ => return None,
-        };
-        self.index += 1;
-        result
-    }
-}
 
 // TODO: Refactor Apply_move
 // TODO: Implement fen String
@@ -731,6 +697,191 @@ impl Iterator for BitBoardsIntoIterator {
 //      TODO: Sliding Pieces            (Piece)
 //      TODO: Attacked_By               (Player)  **all squares attacked by player**
 //      TODO: All_Moves_Of_Piece        (Piece, Player) **All Possible Moves given Piece, Player**
+
+
+
+
+pub fn left_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits >> 1},
+        Player::Black => {bits << 1},
+    }
+}
+
+pub fn right_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits << 1},
+        Player::Black => {bits >> 1},
+    }
+}
+
+pub fn up_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits << 8},
+        Player::Black => {bits >> 8},
+    }
+}
+
+pub fn down_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits >> 8},
+        Player::Black => {bits << 8},
+    }
+}
+
+pub fn safe_l_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn safe_r_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn safe_u_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn safe_d_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn left_move(bits: u8, player:Player) -> u8 {
+    match player {
+        Player::White => {bits - 1},
+        Player::Black => {bits + 1},
+    }
+}
+
+pub fn right_move(bits: u8, player:Player) -> u8 {
+    match player {
+        Player::White => {bits + 1},
+        Player::Black => {bits - 1},
+    }
+}
+
+pub fn up_move(bits: u8, player:Player) -> u8 {
+    match player {
+        Player::White => {bits + 8},
+        Player::Black => {bits - 8},
+    }
+}
+
+pub fn down_move(bits: u8, player:Player) -> u8 {
+    match player {
+        Player::White => {bits - 8},
+        Player::Black => {bits + 8},
+    }
+}
+
+pub fn REL_RANK8(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {RANK_8},
+        Player::Black => {RANK_1},
+    }
+}
+
+pub fn REL_RANK7(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {RANK_7},
+        Player::Black => {RANK_2},
+    }
+}
+
+pub fn REL_RANK5(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {RANK_5},
+        Player::Black => {RANK_4},
+    }
+}
+
+pub fn REL_RANK3(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {RANK_3},
+        Player::Black => {RANK_6},
+    }
+}
+
+pub fn left_file(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {FILE_A},
+        Player::Black => {FILE_H},
+    }
+}
+
+pub fn right_file(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {FILE_H},
+        Player::Black => {FILE_A},
+    }
+}
+
+pub fn up_left_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits << 7},
+        Player::Black => {bits >> 7},
+    }
+}
+
+pub fn up_right_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits << 9},
+        Player::Black => {bits >> 9},
+    }
+}
+
+pub fn down_left_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits >> 9},
+        Player::Black => {bits << 9},
+    }
+}
+
+pub fn down_right_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {bits >> 7},
+        Player::Black => {bits << 7},
+    }
+}
+
+pub fn safe_u_l_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn safe_u_r_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn safe_d_l_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
+
+pub fn safe_d_r_shift(bits: u64, player:Player) -> u64 {
+    match player {
+        Player::White => {},
+        Player::Black => {},
+    }
+}
 
 
 

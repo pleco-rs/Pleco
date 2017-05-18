@@ -17,16 +17,6 @@ static index64: &'static [u8] = &[
     25, 14, 19, 9, 13, 8, 7, 6
 ];
 
-struct BH {
-    player: Player,
-
-}
-
-impl BH {
-    pub fn white() -> BH { BH {player: Player::White} }
-    pub fn black() -> BH { BH {player: Player::Black} }
-
-}
 
 
 pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
@@ -94,7 +84,7 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
         Player::Black => SOUTH_EAST
     };
 
-    let pawn_bits = board.get_bitboard(player, Piece::P).unwrap();
+    let pawn_bits = board.get_bitboard(player, Piece::P);
     let occupied = board.get_occupied();
 
     // get single and double pushes
@@ -111,10 +101,10 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
             Player::Black => dest + 8,
         };
         if 1<< dest & TRANK8BB != 0 {
-            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:B} });
-            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:R} });
-            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:N} });
-            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:Q} });
+            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:Piece::B} });
+            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:Piece::R} });
+            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:Piece::N} });
+            list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: false, prom:Piece::Q} });
         } else {
             list.push(PreMoveInfo { src: to_SQ(sorc), dst: to_SQ(dest), flags: MoveFlag::QuietMove });
         }
@@ -141,11 +131,11 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
         if pawns_possible_to_ep != 0 {
             let dest = bit_scan_forward(ep_bit << UP);
             if (ep_bit << LEFT) & pawns_possible_to_ep != 0 {
-                if src & TRANK7BB != 0 {
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:B} });
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:R} });
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:N} });
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Q} });
+                if (ep_bit << LEFT) & TRANK7BB != 0 {
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::B} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::R} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::N} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::Q} });
                 }
                 list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Capture{ep_capture: true} });
             }
@@ -155,33 +145,33 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
         };
     }
 
-    let left_file: u64 = match player {
-        Player::White => FILE_A,
-        Player::White => FILE_H,
-    };
-
-    let right_file: u64 = match player {
-        Player::White => FILE_H,
-        Player::White => FILE_A,
-    };
-
-    let opp_pieces: u64 = board.get_occupied_player(them);
-    let mut left_attacks: u64 = ((pawn_bits & !left_file) << (LEFT + UP)) & opp_pieces;
-    let mut right_attacks: u64 = ((pawn_bits & !right_file) << (RIGHT + UP)) & opp_pieces;
-    while left_attacks != 0 {
-        let attacked_sq = bit_scan_forward(bits);
-        let dst_bits: u64 = (1u64).checked_shl(attacked_sq as u32).unwrap();
-        let srq_sq = bit_scan_forward(dst_bits + RIGHT + DOWN);
-        left_attacks &= !(dst) as u64;
-        list.push(PreMoveInfo { src: to_SQ(srq_sq), dst: to_SQ(attacked_sq), flags: MoveFlag::Capture{ep_capture: true} });
-    }
-    while right_attacks != 0 {
-        let attacked_sq = bit_scan_forward(bits);
-        let dst_bits: u64 = (1u64).checked_shl(attacked_sq as u32).unwrap();
-        let srq_sq = bit_scan_forward(dst_bits + LEFT + DOWN);
-        left_attacks &= !(dst) as u64;
-        list.push(PreMoveInfo { src: to_SQ(srq_sq), dst: to_SQ(attacked_sq), flags: MoveFlag::Capture{ep_capture: true} });
-    }
+//    let left_file: u64 = match player {
+//        Player::White => FILE_A,
+//        Player::White => FILE_H,
+//    };
+//
+//    let right_file: u64 = match player {
+//        Player::White => FILE_H,
+//        Player::White => FILE_A,
+//    };
+//
+//    let opp_pieces: u64 = board.get_occupied_player(them);
+//    let mut left_attacks: u64 = ((pawn_bits & !left_file) << (LEFT + UP)) & opp_pieces;
+//    let mut right_attacks: u64 = ((pawn_bits & !right_file) << (RIGHT + UP)) & opp_pieces;
+//    while left_attacks != 0 {
+//        let attacked_sq = bit_scan_forward(bits);
+//        let dst_bits: u64 = (1u64).checked_shl(attacked_sq as u32).unwrap();
+//        let srq_sq = bit_scan_forward(dst_bits + RIGHT + DOWN);
+//        left_attacks &= !(dst) as u64;
+//        list.push(PreMoveInfo { src: to_SQ(srq_sq), dst: to_SQ(attacked_sq), flags: MoveFlag::Capture{ep_capture: true} });
+//    }
+//    while right_attacks != 0 {
+//        let attacked_sq = bit_scan_forward(bits);
+//        let dst_bits: u64 = (1u64).checked_shl(attacked_sq as u32).unwrap();
+//        let srq_sq = bit_scan_forward(dst_bits + LEFT + DOWN);
+//        left_attacks &= !(dst) as u64;
+//        list.push(PreMoveInfo { src: to_SQ(srq_sq), dst: to_SQ(attacked_sq), flags: MoveFlag::Capture{ep_capture: true} });
+//    }
 }
 
 #[allow(unused)]
