@@ -731,29 +731,29 @@ pub fn down_shift(bits: u64, player:Player) -> u64 {
 
 pub fn safe_l_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits >> 1)  & !FILE_H},
+        Player::Black => {(bits << 1)  & !FILE_A},
     }
 }
 
 pub fn safe_r_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits << 1) & ! FILE_A},
+        Player::Black => {(bits >> 1) & ! FILE_H},
     }
 }
 
 pub fn safe_u_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits << 8) & !RANK_1},
+        Player::Black => {(bits >> 8) & !RANK_8},
     }
 }
 
 pub fn safe_d_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits >> 8) & !RANK_8},
+        Player::Black => {(bits << 8) & !RANK_1},
     }
 }
 
@@ -857,29 +857,29 @@ pub fn down_right_shift(bits: u64, player:Player) -> u64 {
 
 pub fn safe_u_l_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits << 7) & !FILE_H & !RANK_1},
+        Player::Black => {(bits >> 7) & !FILE_A & !RANK_8},
     }
 }
 
 pub fn safe_u_r_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits << 9) & !FILE_A & !RANK_1},
+        Player::Black => {(bits >> 9) & !FILE_A & !RANK_1},
     }
 }
 
 pub fn safe_d_l_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits >> 9) & !FILE_H & !RANK_8},
+        Player::Black => {(bits << 9) & !FILE_A & !RANK_1},
     }
 }
 
 pub fn safe_d_r_shift(bits: u64, player:Player) -> u64 {
     match player {
-        Player::White => {},
-        Player::Black => {},
+        Player::White => {(bits >> 7) & !FILE_A & !RANK_8},
+        Player::Black => {(bits << 7) & !FILE_H & !RANK_1},
     }
 }
 
