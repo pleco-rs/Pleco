@@ -25,24 +25,27 @@ pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
     vec
 }
 
-//pub fn in_check(board: &Board) -> bool {
-//    let turn = board.turn;
-//
-//    option = board.last_move;
-//    if option.unwrap() == None { return false; }
-//
-//
-//    let last_move_info: LastMoveData = option.unwrap();
-//    let piece_moved = last_move_info.piece_moved;
-//    let src = last_move_info.src;
-//    let dst = last_move_info.dst;
-//    let king_pos = board.get_bitboard(turn, Piece::K);
-//
-//    true
-//}
+pub fn in_check(board: &Board) -> bool {
+    let turn = board.turn;
 
-// TODO: Test the Moving Function Extensively
-// TODO: Test the Capturing Function Extensively
+    option = board.last_move.unwrap();
+    if option == None { return false; }
+
+
+    let last_move_info: LastMoveData = option;
+    let piece_moved = last_move_info.piece_moved;
+    let src = last_move_info.src;
+    let dst = last_move_info.dst;
+    let king_pos = board.get_bitboard(turn, Piece::K);
+
+    // Check the Piece that moved, get its attacking squares,
+    // Check Files/Ranks/Diagonals for Attacks
+    // Check for EP
+
+    true
+}
+
+
 pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {
     #[allow(unused)]
     let THEM: Player = match player {
@@ -67,21 +70,6 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
     let TRANK3BB: u64 = match player {
         Player::White => RANK_3,
         Player::Black => RANK_6
-    };
-    #[allow(unused)]
-    let UP: i8 = match player {
-        Player::White => NORTH,
-        Player::Black => SOUTH
-    };
-    #[allow(unused)]
-    let RIGHT: i8 = match player {
-        Player::White => NORTH_EAST,
-        Player::Black => SOUTH_WEST
-    };
-    #[allow(unused)]
-    let LEFT: i8 = match player {
-        Player::White => NORTH_WEST,
-        Player::Black => SOUTH_EAST
     };
 
     let pawn_bits = board.get_bitboard(player, Piece::P);
@@ -132,15 +120,15 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
             let dest = bit_scan_forward(ep_bit << UP);
             if (ep_bit << LEFT) & pawns_possible_to_ep != 0 {
                 if (ep_bit << LEFT) & TRANK7BB != 0 {
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::B} });
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::R} });
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::N} });
-                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::Q} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::B} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::R} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::N} });
+                    list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::Q} });
                 }
-                list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << LEFT)), dst: to_SQ(dest), flags: MoveFlag::Capture{ep_capture: true} });
+                list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Capture{ep_capture: true} });
             }
-            if (ep_bit << RIGHT) & pawns_possible_to_ep != 0 {
-                list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(ep_bit << RIGHT)), dst: to_SQ(dest), flags: MoveFlag::Capture{ep_capture: true} });
+            if (safe_r_shift(ep_bit, player)) & pawns_possible_to_ep != 0 {
+                list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_r_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Capture{ep_capture: true} });
             }
         };
     }

@@ -39,6 +39,6 @@ pub fn bit_scan_forward(bits: u64) -> u8 {
 
 // Returns the LSB
 pub fn lsb(bits: u64) -> u64 {
-    1 << (pop_count((bits & (!bits + 1)) - 1)as u64)
+    1 << (pop_count((bits & (!bits + 1)) - 1) as u64)
 }
 
