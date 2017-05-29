@@ -8,15 +8,6 @@ use std::*;
 
 
 #[test]
-fn check_two_piece_one_square() {
-    let board = Board::new();
-    let xor = board.bit_boards.into_iter().fold(0, |sum, x| sum ^ x);
-    let or = board.bit_boards.into_iter().fold(0, |sum, x| sum | x);
-    assert_eq!(or, xor);
-}
-
-
-#[test]
 fn test_counts() {
     let board = Board::new();
 

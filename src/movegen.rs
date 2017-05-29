@@ -28,8 +28,8 @@ pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
 pub fn in_check(board: &Board) -> bool {
     let turn = board.turn;
 
-    option = board.last_move.unwrap();
-    if option == None { return false; }
+    let option = board.last_move.unwrap();
+//    if option == None { return false; }
 
 
     let last_move_info: LastMoveData = option;
@@ -76,8 +76,8 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
     let occupied = board.get_occupied();
 
     // get single and double pushes
-    let single_push: u64 = (pawn_bits << UP) & !occupied;
-    let double_push: u64 = ((single_push & TRANK3BB) << UP) & !occupied;
+    let single_push: u64 = safe_u_shift(pawn_bits, player) & !occupied;
+    let double_push: u64 = safe_u_shift(single_push & TRANK3BB, player) & !occupied;
 
     // Single Moves
     let mut single_push_list = Vec::new();
@@ -117,9 +117,9 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
         let ep_mask: u64 = ep_bit >> 1 | ep_bit << 1;
         let pawns_possible_to_ep = ep_mask & pawn_bits & TRANK5BB;
         if pawns_possible_to_ep != 0 {
-            let dest = bit_scan_forward(ep_bit << UP);
-            if (ep_bit << LEFT) & pawns_possible_to_ep != 0 {
-                if (ep_bit << LEFT) & TRANK7BB != 0 {
+            let dest = bit_scan_forward(safe_u_shift(ep_bit, player));
+            if safe_l_shift(ep_bit, player) & pawns_possible_to_ep != 0 {
+                if safe_l_shift(ep_bit, player) & TRANK7BB != 0 {
                     list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::B} });
                     list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::R} });
                     list.push(PreMoveInfo { src: to_SQ(bit_scan_forward(safe_l_shift(ep_bit, player))), dst: to_SQ(dest), flags: MoveFlag::Promotion {capture: true, prom:Piece::N} });

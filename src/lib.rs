@@ -7,7 +7,7 @@ pub mod bit_twiddles;
 pub mod movegen;
 pub mod piece_move;
 pub mod templates;
-
+pub mod fen;
 
 
 //include!("tests/test.rs");
