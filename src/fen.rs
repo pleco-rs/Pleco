@@ -5,6 +5,9 @@ use bit_twiddles::pop_count;
 use piece_move::BitMove;
 
 
+// TODO: Change so structs of bitboard dont have to be public
+// Meaning that it stores local copies of the stuff
+
 pub fn generate_board(fen: String) -> Result<Board, String> {
     let mut chars = fen.chars();
     let mut all_bit_boards = AllBitBoards::default();
