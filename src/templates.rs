@@ -1,8 +1,14 @@
 #[derive(Copy, Clone)]
 pub enum Player {
-    White = 0,
-    Black = 1,
+    White,
+    Black,
 }
+
+#[derive(Copy, Clone)]
+pub struct WhitePlayer;
+
+#[derive(Copy, Clone)]
+pub struct BlackPlayer;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
