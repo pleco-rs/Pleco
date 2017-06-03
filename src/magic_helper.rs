@@ -609,14 +609,14 @@ pub fn format_bits(bits: String) {
 
 
 #[test]
-fn test_kings() {
+fn test_king_mask_gen() {
     let arr = gen_king_moves().to_vec();
     let sum = arr.iter().fold(0 as  u64,|a, &b| a + (bit_twiddles::pop_count(b) as u64));
     assert_eq!(sum, (3*4) + (5 * 6 * 4) + (8 * 6 * 6));
 }
 
 #[test]
-fn test_knights() {
+fn test_knight_mask_gen() {
     let arr = gen_knight_moves().to_vec();
     let sum = arr.iter().fold(0 as  u64,|a, &b| a + (bit_twiddles::pop_count(b) as u64));
     assert_eq!(sum, (2 * 4) + (4 * 4) + (3 * 2 * 4) + (4 * 4 * 4) + (6 * 4 * 4) + (8 * 4 * 4));

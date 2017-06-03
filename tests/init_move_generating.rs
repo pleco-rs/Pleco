@@ -1,7 +1,7 @@
 extern crate rusty_chess;
 
 use rusty_chess::board::{Board, AllBitBoards};
-use rusty_chess::templates::{Piece, Player};
+use rusty_chess::templates::{Piece, Player, SQ};
 use rusty_chess::movegen as movegen;
 use rusty_chess::piece_move::*;
 
@@ -14,3 +14,147 @@ fn test_pawn_gen() {
     assert_eq!(vector.len(), 16);
 }
 
+// ****** Test Move representation *******
+
+// Testing with no flags and bit input
+#[test]
+fn bit_move_position() {
+    let bits: u16 = 0b0000111011010000;
+    let bit_move = BitMove::new(bits);
+    assert_eq!(bit_move.get_src(),0b010000);
+    assert_eq!(bit_move.get_dest(),0b111011);
+    assert!(bit_move.is_quiet_move());
+    assert!(!bit_move.is_promo());
+    assert!(!bit_move.is_capture());
+    assert!(!bit_move.is_castle());
+    assert!(!bit_move.is_king_castle());
+    assert!(!bit_move.is_queen_castle());
+    assert!(!bit_move.is_double_push().0);
+    assert!(!bit_move.is_en_passant());
+}
+
+#[test]
+fn test_move_permutations() {
+    let moves = all_move_flags();
+    for move_flag in moves {
+        let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+        let move_info = BitMove::init(pre_move_info);
+        assert_eq!(move_flag == MoveFlag::QuietMove, move_info.is_quiet_move());
+        assert_eq!(move_flag == MoveFlag::Castle{king_side: true } ||move_flag == MoveFlag::Castle{king_side: false} , move_info.is_castle());
+        assert_eq!(move_flag == MoveFlag::Castle{king_side: true}, move_info.is_king_castle());
+        assert_eq!(move_flag == MoveFlag::Castle{king_side: false}, move_info.is_queen_castle());
+        assert_eq!(move_flag == MoveFlag::DoublePawnPush, move_info.is_double_push().0);
+        assert_eq!(move_flag == MoveFlag::Capture {ep_capture: true}, move_info.is_en_passant());
+    }
+}
+
+// Test all Promotion Moves for correct Piece Placement
+#[test]
+fn bit_move_promoions() {
+    let move_flag = ( MoveFlag::Promotion{capture: true, prom: Piece::P});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::Q);
+
+    let move_flag = ( MoveFlag::Promotion{capture: true, prom: Piece::N});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::N);
+
+    let move_flag = ( MoveFlag::Promotion{capture: true, prom: Piece::B});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::B);
+
+    let move_flag = ( MoveFlag::Promotion{capture: true, prom: Piece::R});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::R);
+
+    let move_flag = ( MoveFlag::Promotion{capture: true, prom: Piece::K});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::Q);
+
+    let move_flag = ( MoveFlag::Promotion{capture: true, prom: Piece::Q});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::Q);
+
+    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::P});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(!move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::Q);
+
+    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::N});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(!move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::N);
+
+    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::B});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(!move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::B);
+
+    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::R});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(!move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::R);
+
+    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::K});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(!move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::Q);
+
+    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::Q});
+    let pre_move_info = PreMoveInfo{src: SQ::B2, dst: SQ::F3, flags: move_flag};
+    let move_info = BitMove::init(pre_move_info);
+    assert!(!move_info.is_capture());
+    assert!(move_info.is_promo());
+    assert_eq!(move_info.promo_piece(), Piece::Q);
+}
+
+fn all_move_flags() -> Vec<MoveFlag>{
+    let mut move_flags = Vec::new();
+    move_flags.push( MoveFlag::Promotion{capture: true, prom: Piece::P});
+    move_flags.push( MoveFlag::Promotion{capture: true, prom: Piece::N});
+    move_flags.push( MoveFlag::Promotion{capture: true, prom: Piece::B});
+    move_flags.push( MoveFlag::Promotion{capture: true, prom: Piece::R});
+    move_flags.push( MoveFlag::Promotion{capture: true, prom: Piece::K});
+    move_flags.push( MoveFlag::Promotion{capture: true, prom: Piece::Q});
+    move_flags.push( MoveFlag::Promotion{capture: false, prom: Piece::P});
+    move_flags.push( MoveFlag::Promotion{capture: false, prom: Piece::N});
+    move_flags.push( MoveFlag::Promotion{capture: false, prom: Piece::B});
+    move_flags.push( MoveFlag::Promotion{capture: false, prom: Piece::R});
+    move_flags.push( MoveFlag::Promotion{capture: false, prom: Piece::K});
+    move_flags.push( MoveFlag::Promotion{capture: false, prom: Piece::Q});
+    move_flags.push( MoveFlag::Castle{king_side: true});
+    move_flags.push( MoveFlag::Castle{king_side: false});
+    move_flags.push( MoveFlag::Capture{ep_capture: true});
+    move_flags.push( MoveFlag::Capture{ep_capture: false});
+    move_flags.push( MoveFlag::DoublePawnPush);
+    move_flags.push( MoveFlag::QuietMove);
+    move_flags
+}

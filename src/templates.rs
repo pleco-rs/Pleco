@@ -151,7 +151,7 @@ pub fn to_SQ(num: u8) -> SQ {
 }
 
 #[repr(u8)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {
     K = 6,
     Q = 5,

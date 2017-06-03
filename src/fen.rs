@@ -8,6 +8,8 @@ use piece_move::BitMove;
 // TODO: Change so structs of bitboard dont have to be public
 // Meaning that it stores local copies of the stuff
 
+// Generates a given BitBoard from the fen String
+// Returns an Error String if it cnanot parse the fen
 pub fn generate_board(fen: String) -> Result<Board, String> {
     let mut chars = fen.chars();
     let mut all_bit_boards = AllBitBoards::default();
@@ -234,4 +236,11 @@ pub fn generate_board(fen: String) -> Result<Board, String> {
         ply: ply,
         last_move: None
     })
+}
+
+// Generates a fen String from a Bitboard
+// If cannot be generated, passes through an error message
+pub fn generate_fen(board: &Board) -> Result<String, String> {
+
+    return Err(format!("Not yet Implemented").to_owned());
 }
