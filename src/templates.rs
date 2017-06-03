@@ -1,3 +1,6 @@
+use bit_twiddles;
+use std::num;
+
 #[derive(Copy, Clone)]
 pub enum Player {
     White,
@@ -80,6 +83,8 @@ pub enum SQ {
     H8 = 63,
 }
 
+
+
 pub fn to_SQ(num: u8) -> SQ {
     match num {
         0 => SQ::A1,
@@ -159,4 +164,68 @@ pub enum Piece {
     B = 3,
     N = 2,
     P = 1,
+}
+
+pub const BLACK_SIDE: u64 = 0b1111111111111111111111111111111100000000000000000000000000000000;
+pub const WHITE_SIDE: u64 = 0b0000000000000000000000000000000011111111111111111111111111111111;
+
+pub const FILE_A: u64 = 0b0000000100000001000000010000000100000001000000010000000100000001;
+pub const FILE_B: u64 = 0b0000001000000010000000100000001000000010000000100000001000000010;
+pub const FILE_C: u64 = 0b0000010000000100000001000000010000000100000001000000010000000100;
+pub const FILE_D: u64 = 0b0000100000001000000010000000100000001000000010000000100000001000;
+pub const FILE_E: u64 = 0b0001000000010000000100000001000000010000000100000001000000010000;
+pub const FILE_F: u64 = 0b0010000000100000001000000010000000100000001000000010000000100000;
+pub const FILE_G: u64 = 0b0100000001000000010000000100000001000000010000000100000001000000;
+pub const FILE_H: u64 = 0b1000000010000000100000001000000010000000100000001000000010000000;
+
+pub const RANK_1: u64 = 0x00000000000000FF;
+pub const RANK_2: u64 = 0x000000000000FF00;
+pub const RANK_3: u64 = 0x0000000000FF0000;
+pub const RANK_4: u64 = 0x00000000FF000000;
+pub const RANK_5: u64 = 0x000000FF00000000;
+pub const RANK_6: u64 = 0x0000FF0000000000;
+pub const RANK_7: u64 = 0x00FF000000000000;
+pub const RANK_8: u64 = 0xFF00000000000000;
+
+
+pub const FILE_BB: [u64; 8] = [FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H];
+pub const RANK_BB: [u64; 8] = [RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8];
+
+
+
+pub const NORTH: i8 = 8;
+pub const SOUTH: i8 = -8;
+pub const WEST: i8 = -1;
+pub const EAST: i8 = 1;
+
+pub const NORTH_EAST: i8 = 9;
+pub const NORTH_WEST: i8 = 7;
+pub const SOUTH_EAST: i8 = -7;
+pub const SOUTH_WEST: i8 = -9;
+
+// For whatever rank the bit is in, gets the whole bitboard
+pub fn rank_bb(s: u64) -> u64 {
+    RANK_BB[s]
+}
+
+pub fn rank_of(s: u64) -> u8 {
+    (s >> 3) % 8
+}
+
+pub fn file_bb(s: u64) -> u64 {
+    FILE_BB[s]
+}
+
+pub fn file_of(s: u64) -> u8 {
+    (s >> 3) % 8
+}
+
+pub fn is_ok(s: u64) -> bool {
+    s >= 0 && s < 64
+}
+
+
+
+pub fn distance(s: u64, x: u64) -> u64 {
+    (rank_of(s) - rank_of(x)).abs() + (file_of(s) - file_of(x)).abs()
 }

@@ -1,7 +1,7 @@
 use board::*;
 use templates::Piece as Piece;
 use templates::Player as Player;
-use bit_twiddles::pop_count;
+use bit_twiddles::popcount64;
 use piece_move::BitMove;
 
 
@@ -242,5 +242,5 @@ pub fn generate_board(fen: String) -> Result<Board, String> {
 // If cannot be generated, passes through an error message
 pub fn generate_fen(board: &Board) -> Result<String, String> {
 
-    return Err(format!("Not yet Implemented").to_owned());
+    unimplemented!();
 }

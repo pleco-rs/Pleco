@@ -18,7 +18,7 @@ static popcnt8: &'static [u8] = &[
 ];
 
 // Returns count of bits
-pub fn pop_count(x: u64) -> u8 {
+pub fn popcount64(x: u64) -> u8 {
     let x = x as usize;
     if x == 0 { return 0 }
     if x & (x - 1) == 0 { return 1 }
@@ -32,13 +32,25 @@ pub fn pop_count(x: u64) -> u8 {
         popcnt8[x & 0xFF]
 }
 
+// Returns count of bits
+// popcount for 16 bits
+pub fn popcount16(mut u: u16) -> u8 {
+    u -= (u >> 1) & 0x5555;
+    u = ((u >> 2) & 0x3333) + (u & 0x3333);
+    u = ((u >> 4) + u) & 0x0F0F;
+    return (u * 0x0101) >> 8;
+}
+
 // Returns index of the LSB
 pub fn bit_scan_forward(bits: u64) -> u8 {
-    pop_count((bits & (!bits + 1)) - 1)
+    popcount64((bits & (!bits + 1)) - 1)
 }
 
 // Returns the LSB
 pub fn lsb(bits: u64) -> u64 {
-    1 << (pop_count((bits & (!bits + 1)) - 1) as u64)
+    1 << (popcount64((bits & (!bits + 1)) - 1) as u64)
 }
 
+pub fn msb(bits: u64) -> u64 {
+    unimplemented!();
+}

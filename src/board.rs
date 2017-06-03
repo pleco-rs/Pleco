@@ -1,45 +1,15 @@
 use templates::Piece as Piece;
 use templates::Player as Player;
-use bit_twiddles::pop_count;
+use templates::*;
+use bit_twiddles::popcount64;
 use piece_move::BitMove;
 use fen;
 
 
-pub const BLACK_SIDE: u64 = 0b1111111111111111111111111111111100000000000000000000000000000000;
-pub const WHITE_SIDE: u64 = 0b0000000000000000000000000000000011111111111111111111111111111111;
-
-pub const FILE_A: u64 = 0b0000000100000001000000010000000100000001000000010000000100000001;
-pub const FILE_B: u64 = 0b0000001000000010000000100000001000000010000000100000001000000010;
-pub const FILE_C: u64 = 0b0000010000000100000001000000010000000100000001000000010000000100;
-pub const FILE_D: u64 = 0b0000100000001000000010000000100000001000000010000000100000001000;
-pub const FILE_E: u64 = 0b0001000000010000000100000001000000010000000100000001000000010000;
-pub const FILE_F: u64 = 0b0010000000100000001000000010000000100000001000000010000000100000;
-pub const FILE_G: u64 = 0b0100000001000000010000000100000001000000010000000100000001000000;
-pub const FILE_H: u64 = 0b1000000010000000100000001000000010000000100000001000000010000000;
-
-pub const RANK_1: u64 = 0x00000000000000FF;
-pub const RANK_2: u64 = 0x000000000000FF00;
-pub const RANK_3: u64 = 0x0000000000FF0000;
-pub const RANK_4: u64 = 0x00000000FF000000;
-pub const RANK_5: u64 = 0x000000FF00000000;
-pub const RANK_6: u64 = 0x0000FF0000000000;
-pub const RANK_7: u64 = 0x00FF000000000000;
-pub const RANK_8: u64 = 0xFF00000000000000;
-
-
-pub const NORTH: i8 = 8;
-pub const SOUTH: i8 = -8;
-pub const WEST: i8 = -1;
-pub const EAST: i8 = 1;
-
-pub const NORTH_EAST: i8 = 9;
-pub const NORTH_WEST: i8 = 7;
-pub const SOUTH_EAST: i8 = -7;
-pub const SOUTH_WEST: i8 = -9;
 
 
 #[derive(Copy, Clone)]
-pub struct BitBoard {
+pub struct Bitboard {
     pub bits: u64,
 }
 
@@ -53,18 +23,18 @@ pub struct LastMoveData {
 
 #[derive(Copy, Clone)]
 pub struct AllBitBoards {
-    pub w_pawn: BitBoard,
-    pub w_knight: BitBoard,
-    pub w_bishop: BitBoard,
-    pub w_rook: BitBoard,
-    pub w_queen: BitBoard,
-    pub w_king: BitBoard,
-    pub b_pawn: BitBoard,
-    pub b_knight: BitBoard,
-    pub b_bishop: BitBoard,
-    pub b_rook: BitBoard,
-    pub b_queen: BitBoard,
-    pub b_king: BitBoard,
+    pub w_pawn: Bitboard,
+    pub w_knight: Bitboard,
+    pub w_bishop: Bitboard,
+    pub w_rook: Bitboard,
+    pub w_queen: Bitboard,
+    pub w_king: Bitboard,
+    pub b_pawn: Bitboard,
+    pub b_knight: Bitboard,
+    pub b_bishop: Bitboard,
+    pub b_rook: Bitboard,
+    pub b_queen: Bitboard,
+    pub b_king: Bitboard,
 }
 
 #[derive(Clone)]
@@ -119,11 +89,11 @@ impl Board {
 
     pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
         let x = self.get_bitboard(player, piece);
-        pop_count(x)
+        popcount64(x)
     }
 
     pub fn count_pieces_player(&self, player: Player) -> u8 {
-        pop_count(self.get_occupied_player(player))
+        popcount64(self.get_occupied_player(player))
     }
 
     // Returns Bitboard for one Piece and One Player
@@ -153,7 +123,7 @@ impl Board {
     }
 
     // Returns set of all bit boards for that specific player
-    pub fn get_bitboards_player(&self, player: Player) -> Vec<BitBoard> {
+    pub fn get_bitboards_player(&self, player: Player) -> Vec<Bitboard> {
         let mut vector = Vec::with_capacity(6);
         match player {
             Player::White => {
@@ -403,6 +373,15 @@ impl Board {
         }
     }
 
+    pub fn pretty_string(&self) -> String {
+        unimplemented!();
+    }
+
+    pub fn pretty_print(&self) {
+        unimplemented!();
+    }
+
+
     fn occupied_white(&self) -> u64 {
         self.bit_boards.w_bishop.bits
             | self.bit_boards.w_pawn.bits
@@ -428,18 +407,18 @@ impl Board {
 impl AllBitBoards {
     fn new() -> AllBitBoards {
         AllBitBoards {
-            w_pawn: BitBoard { bits: 0b0000000000000000000000000000000000000000000000001111111100000000},
-            w_knight: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000001000010},
-            w_bishop: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000100100},
-            w_rook: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000010000001},
-            w_queen: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000001000},
-            w_king: BitBoard { bits: 0b0000000000000000000000000000000000000000000000000000000000010000},
-            b_pawn: BitBoard { bits: 0b0000000011111111000000000000000000000000000000000000000000000000},
-            b_knight: BitBoard { bits: 0b0100001000000000000000000000000000000000000000000000000000000000},
-            b_bishop: BitBoard { bits: 0b0010010000000000000000000000000000000000000000000000000000000000},
-            b_rook: BitBoard { bits: 0b1000000100000000000000000000000000000000000000000000000000000000},
-            b_queen: BitBoard { bits: 0b0000100000000000000000000000000000000000000000000000000000000000},
-            b_king: BitBoard { bits: 0b0001000000000000000000000000000000000000000000000000000000000000},
+            w_pawn: Bitboard { bits: 0b0000000000000000000000000000000000000000000000001111111100000000},
+            w_knight: Bitboard { bits: 0b0000000000000000000000000000000000000000000000000000000001000010},
+            w_bishop: Bitboard { bits: 0b0000000000000000000000000000000000000000000000000000000000100100},
+            w_rook: Bitboard { bits: 0b0000000000000000000000000000000000000000000000000000000010000001},
+            w_queen: Bitboard { bits: 0b0000000000000000000000000000000000000000000000000000000000001000},
+            w_king: Bitboard { bits: 0b0000000000000000000000000000000000000000000000000000000000010000},
+            b_pawn: Bitboard { bits: 0b0000000011111111000000000000000000000000000000000000000000000000},
+            b_knight: Bitboard { bits: 0b0100001000000000000000000000000000000000000000000000000000000000},
+            b_bishop: Bitboard { bits: 0b0010010000000000000000000000000000000000000000000000000000000000},
+            b_rook: Bitboard { bits: 0b1000000100000000000000000000000000000000000000000000000000000000},
+            b_queen: Bitboard { bits: 0b0000100000000000000000000000000000000000000000000000000000000000},
+            b_king: Bitboard { bits: 0b0001000000000000000000000000000000000000000000000000000000000000},
         }
     }
 }
@@ -448,18 +427,18 @@ impl AllBitBoards {
 impl Default for AllBitBoards {
     fn default() -> AllBitBoards {
         AllBitBoards {
-            w_pawn: BitBoard { bits: 0 },
-            w_knight: BitBoard { bits: 0 },
-            w_bishop: BitBoard { bits: 0 },
-            w_rook: BitBoard { bits: 0 },
-            w_queen: BitBoard { bits: 0 },
-            w_king: BitBoard { bits: 0 },
-            b_pawn: BitBoard { bits: 0 },
-            b_knight: BitBoard { bits: 0 },
-            b_bishop: BitBoard { bits: 0 },
-            b_rook: BitBoard { bits: 0 },
-            b_queen: BitBoard { bits: 0 },
-            b_king: BitBoard { bits: 0 }
+            w_pawn: Bitboard { bits: 0 },
+            w_knight: Bitboard { bits: 0 },
+            w_bishop: Bitboard { bits: 0 },
+            w_rook: Bitboard { bits: 0 },
+            w_queen: Bitboard { bits: 0 },
+            w_king: Bitboard { bits: 0 },
+            b_pawn: Bitboard { bits: 0 },
+            b_knight: Bitboard { bits: 0 },
+            b_bishop: Bitboard { bits: 0 },
+            b_rook: Bitboard { bits: 0 },
+            b_queen: Bitboard { bits: 0 },
+            b_king: Bitboard { bits: 0 }
         }
     }
 }

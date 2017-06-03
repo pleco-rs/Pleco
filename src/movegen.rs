@@ -2,7 +2,7 @@ use templates::{SQ, Piece, Player, to_SQ};
 use board::*;
 use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use std;
-use bit_twiddles::{pop_count, bit_scan_forward};
+use bit_twiddles::{popcount64, bit_scan_forward};
 
 #[allow(unused)]
 
@@ -162,35 +162,35 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
 //    }
 }
 
-#[allow(unused)]
-fn get_rank_mask(bit: u64) -> u64  {
-    match bit_scan_forward(bit) / 8 {
-        0 => RANK_1,
-        1 => RANK_2,
-        2 => RANK_3,
-        3 => RANK_4,
-        4 => RANK_5,
-        5 => RANK_6,
-        6 => RANK_7,
-        7 => RANK_8,
-        _ => 0,
-    }
-}
-
-#[allow(unused)]
-fn get_file_mask(bit: u64) -> u64  {
-    match bit_scan_forward(bit) / 8 {
-        0 => FILE_A,
-        1 => FILE_B,
-        2 => FILE_C,
-        3 => FILE_D,
-        4 => FILE_E,
-        5 => FILE_F,
-        6 => FILE_G,
-        7 => FILE_H,
-        _ => 0,
-    }
-}
+//#[allow(unused)]
+//fn get_rank_mask(bit: u64) -> u64  {
+//    match bit_scan_forward(bit) / 8 {
+//        0 => RANK_1,
+//        1 => RANK_2,
+//        2 => RANK_3,
+//        3 => RANK_4,
+//        4 => RANK_5,
+//        5 => RANK_6,
+//        6 => RANK_7,
+//        7 => RANK_8,
+//        _ => 0,
+//    }
+//}
+//
+//#[allow(unused)]
+//fn get_file_mask(bit: u64) -> u64  {
+//    match bit_scan_forward(bit) / 8 {
+//        0 => FILE_A,
+//        1 => FILE_B,
+//        2 => FILE_C,
+//        3 => FILE_D,
+//        4 => FILE_E,
+//        5 => FILE_F,
+//        6 => FILE_G,
+//        7 => FILE_H,
+//        _ => 0,
+//    }
+//}
 
 
 pub fn bit_scan_forward_list(input_bits: u64, list: &mut Vec<u8>) {

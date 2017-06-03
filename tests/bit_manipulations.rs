@@ -19,11 +19,11 @@ fn test_bit_scan() {
 
 #[test]
 fn popcount() {
-    assert_eq!(bit_twiddles::pop_count(0b000000000000000), 0);
-    assert_eq!(bit_twiddles::pop_count(0b11111100000001), 7);
-    assert_eq!(bit_twiddles::pop_count(0b1000010000), 2);
-    assert_eq!(bit_twiddles::pop_count(0xFFFFFFFF), 32);
-    assert_eq!(bit_twiddles::pop_count(0x55555555), 16);
+    assert_eq!(bit_twiddles::popcount64(0b000000000000000), 0);
+    assert_eq!(bit_twiddles::popcount64(0b11111100000001), 7);
+    assert_eq!(bit_twiddles::popcount64(0b1000010000), 2);
+    assert_eq!(bit_twiddles::popcount64(0xFFFFFFFF), 32);
+    assert_eq!(bit_twiddles::popcount64(0x55555555), 16);
 }
 
 fn lsb() {
