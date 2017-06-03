@@ -1,4 +1,4 @@
-
+use bit_twiddles;
 
 pub static ROOK_MASK: &'static [u64] = &[
     0x7e01010101010100, // a1
@@ -408,6 +408,8 @@ pub static MAGIC_BISHOP_SHIFTS: &'static [u64] = &[
 struct MagicHelper {
     magic_bishop_moves: [[u64; 4096]; 64],
     magic_rook_moves: [[u64; 1024]; 64],
+    knight_moves: [u64; 64],
+    king_moves: [u64; 64]
 }
 
 //impl MagicHelper {
@@ -435,6 +437,92 @@ struct MagicHelper {
 //
 //    }
 //}
+
+fn gen_king_moves() -> [u64; 64] {
+    let mut moves: [u64;64] = [0; 64];
+
+    for index in 0..64 {
+        let mut mask: u64 = 0;
+        let file = index % 8;
+        // LEFT
+        if file != 0 {
+            mask |= 1 << (index - 1);
+        }
+        // RIGHT
+        if file != 7 {
+            mask |= 1 << (index + 1);
+        }
+        // UP
+        if index < 56  {
+            mask |= 1 << (index + 8);
+        }
+        // DOWN
+        if index > 7  {
+            mask |= 1 << (index - 8);
+        }
+        // LEFT UP
+        if file != 0 && index < 56 {
+            mask |= 1 << (index + 7);
+        }
+        // LEFT DOWN
+        if file != 0 && index > 7 {
+            mask |= 1 << (index - 9);
+        }
+        // RIGHT DOWN
+        if file!= 7 && index > 7 {
+            mask |= 1 << (index - 7);
+        }
+        // RIGHT UP
+        if file != 7 && index < 56 {
+            mask |= 1 << (index + 0);
+        }
+        moves[index] = mask;
+    }
+    moves
+}
+
+fn gen_knight_moves() -> [u64; 64] {
+    let mut moves: [u64;64] = [0; 64];
+    for index in 0..64 {
+        let mut mask: u64 = 0;
+        let file = index % 8;
+
+        // 1 UP   + 2 LEFT
+        if file > 1 && index < 56 {
+            mask |= 1 << (index + 6);
+        }
+        // 2 UP   + 1 LEFT
+        if file != 0 && index < 48 {
+            mask |= 1 << (index + 15);
+        }
+        // 2 UP   + 1 RIGHT
+        if file != 7 && index < 48 {
+            mask |= 1 << (index + 17);
+        }
+        // 1 UP   + 2 RIGHT
+        if file < 6 && index < 56 {
+            mask |= 1 << (index + 10);
+        }
+        // 1 DOWN   + 2 RIGHT
+        if file < 6 && index > 7 {
+            mask |= 1 << (index - 6);
+        }
+        // 2 DOWN   + 1 RIGHT
+        if file != 7 && index > 15 {
+            mask |= 1 << (index - 15 );
+        }
+        // 2 DOWN   + 1 LEFT
+        if file != 0 && index > 15 {
+            mask |= 1 << (index - 17 );
+        }
+        // 1 DOWN   + 2 LEFT
+        if file > 1 && index > 7 {
+            mask |= 1 << (index - 10 );
+        }
+        moves[index] = mask;
+    }
+    moves
+}
 
 pub fn gen_rook_masks() {
     let mut arr_masks: [u64; 64] = [0; 64];
@@ -469,7 +557,7 @@ pub fn gen_rook_masks() {
         }
         arr_masks[bit_ref] = mask;
         format_bits(format!("{:b}",mask));
-        bitRef += 1;
+        bit_ref += 1;
     }
 }
 
@@ -516,4 +604,20 @@ pub fn format_bits(bits: String) {
         i += 1;
     }
     println!("{}",bits);
+}
+
+
+
+#[test]
+fn test_kings() {
+    let arr = gen_king_moves().to_vec();
+    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (bit_twiddles::pop_count(b) as u64));
+    assert_eq!(sum, (3*4) + (5 * 6 * 4) + (8 * 6 * 6));
+}
+
+#[test]
+fn test_knights() {
+    let arr = gen_knight_moves().to_vec();
+    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (bit_twiddles::pop_count(b) as u64));
+    assert_eq!(sum, (2 * 4) + (4 * 4) + (3 * 2 * 4) + (4 * 4 * 4) + (6 * 4 * 4) + (8 * 4 * 4));
 }
