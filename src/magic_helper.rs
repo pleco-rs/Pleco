@@ -2,7 +2,9 @@ use bit_twiddles::*;
 use board::*;
 use templates::*;
 use std::ptr;
-
+use std::mem;
+use std::slice;
+use std;
 
 struct MagicHelper {
     square_BB: [u64; 64], // Maps index to square
@@ -155,8 +157,8 @@ fn get_magics() {
 }
 
 // std::mem::transmute::<f32, u32>(1.0)
-fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [*mut u64; 64], magics: [u64; 64],
-                    mut masks: [u64; 64], shifts: [u64; 64], deltas: [u64; 4], index: [u64; 64]) {
+fn init_rook_magics<T>(mut table: Vec<u64>, mut attacks: [&mut [u64]; 64], mut magics: [u64; 64],
+                    mut masks: [u64; 64], mut shifts: [u64; 64], deltas: [u64; 4], mut index: [u64; 64]) {
 
     let seeds: [[u64;8]; 2] = [ [ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
                                 [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ] ];
@@ -168,15 +170,21 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [*mut u64; 64], magi
     let mut reference: [u64; 4096] = [0; 4096];
     let mut edges: u64 = 0;
     let mut age: [i32; 4096] =  [0; 4096];
+
     let mut current: i32 = 0;
     let mut size: usize = 0;
 
+    attacks[0] = unsafe{std::slice::from_raw_parts_mut(table.as_mut_ptr(),8000)};
+
+
+    // s = index for the square
     for s in 0..64 {
         // ((Rank1BB | Rank8BB) & ~rank_bb(s)) | ((FileABB | FileHBB) & ~file_bb(s));
         edges = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_B) & !file_bb(s));
 
         masks[s as usize] = sliding_attack(deltas, s, 0) & !edges;
         shifts[s as usize] = (64 - popcount64(masks[s as usize])) as u64;
+
         let mut b = 0;
         size = 0;
 
@@ -192,12 +200,13 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [*mut u64; 64], magi
 
         if s < 63 {
             unsafe {
-                attacks[s as usize + 1] = std::mem::transmute::<*u64, u64>(1.0);
-                    attacks[s as usize] + size as u64;
-
+                attacks[s as usize + 1] = std::slice::from_raw_parts_mut(
+                    attacks[s as usize].as_mut_ptr().offset(size as isize),4000);
+//                attacks[s as usize] = slice::from_raw_parts(attacks[s as usize], size);
             }
-//            attacks[s as usize + 1] = attacks[s as usize] + size as u64;
 
+//            attacks[s as usize + 1] = attacks[s as usize] + size as u64;
+//            https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html
         }
 
         let mut rng = PRNG::init(seeds[1][rank_of(s) as usize]);
@@ -227,9 +236,12 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [*mut u64; 64], magi
         }
     }
 }
-
 // https://bluss.github.io/rust-ndarray/master/ndarray/struct.ArrayBase.html
 
+//struct TableAttacks {
+//    table: [u64],
+//    attacks:
+//}
 
 struct PRNG {
     seed: u64
@@ -363,13 +375,13 @@ pub fn format_bits(bits: String) {
 #[test]
 fn test_king_mask_gen() {
     let arr = gen_king_moves().to_vec();
-    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (bit_twiddles::popcount64(b) as u64));
+    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (popcount64(b) as u64));
     assert_eq!(sum, (3*4) + (5 * 6 * 4) + (8 * 6 * 6));
 }
 
 #[test]
 fn test_knight_mask_gen() {
     let arr = gen_knight_moves().to_vec();
-    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (bit_twiddles::popcount64(b) as u64));
+    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (popcount64(b) as u64));
     assert_eq!(sum, (2 * 4) + (4 * 4) + (3 * 2 * 4) + (4 * 4 * 4) + (6 * 4 * 4) + (8 * 4 * 4));
 }
