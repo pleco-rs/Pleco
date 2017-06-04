@@ -1,6 +1,7 @@
-use bit_twiddles;
+use bit_twiddles::*;
 use board::*;
 use templates::*;
+use std::ptr;
 
 
 struct MagicHelper {
@@ -153,11 +154,11 @@ fn get_magics() {
 
 }
 
+// std::mem::transmute::<f32, u32>(1.0)
+fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [*mut u64; 64], magics: [u64; 64],
+                    mut masks: [u64; 64], shifts: [u64; 64], deltas: [u64; 4], index: [u64; 64]) {
 
-fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [u64; 64], magics: [u64; 64],
-                    mut masks: [u64; 64], shifts: [u64; 64], deltas: [u64; 64], index: [u64; 64]) {
-
-    let seeds: [[i32;8]; 2] = [ [ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
+    let seeds: [[u64;8]; 2] = [ [ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
                                 [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ] ];
 
     let bishop_deltas: [i8; 4] = [7,9,9,7];
@@ -174,9 +175,10 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [u64; 64], magics: [
         // ((Rank1BB | Rank8BB) & ~rank_bb(s)) | ((FileABB | FileHBB) & ~file_bb(s));
         edges = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_B) & !file_bb(s));
 
-        masks[s] = sliding_attack(deltas, s, 0) & !edges;
-        shifts[s] = 64 - popcount(masks[s as usize]);
-        d = size = 0;
+        masks[s as usize] = sliding_attack(deltas, s, 0) & !edges;
+        shifts[s as usize] = (64 - popcount64(masks[s as usize])) as u64;
+        let mut b = 0;
+        size = 0;
 
         loop {
             occupancy[size] = b;
@@ -189,15 +191,21 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [u64; 64], magics: [
         }
 
         if s < 63 {
-            attacks[s + 1] = attacks[s as usize] + size;
+            unsafe {
+                attacks[s as usize + 1] = std::mem::transmute::<*u64, u64>(1.0);
+                    attacks[s as usize] + size as u64;
+
+            }
+//            attacks[s as usize + 1] = attacks[s as usize] + size as u64;
+
         }
 
-        let mut rng = PRNG::init(seeds[1][rank_of(s)]);
+        let mut rng = PRNG::init(seeds[1][rank_of(s) as usize]);
 
         'outer: loop {
             'first_in: loop {
-                magics[s] = rng.sparse_rand();
-                if popcount((magics[s as usize] * masks[s as usize]) >> 56) < 6 {
+                magics[s as usize] = rng.sparse_rand();
+                if popcount64((magics[s as usize] * masks[s as usize]) >> 56) < 6 {
                     break 'first_in;
                 }
             }
@@ -205,7 +213,7 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [u64; 64], magics: [
             current += 1;
             let mut i: usize = 0;
             'secon_in: while i < size {
-                let index: usize = (((occupied[i as usize] & masks[s as usize]) * magics[s as usize]) >> Shifts[s as usize]) as usize;
+                let index: usize = (((occupancy[i as usize] & masks[s as usize]) * magics[s as usize]) >> shifts[s as usize]) as usize;
                 if age[index] < current {
                     age[index] = current;
                     attacks[s as usize][index] = reference[i];
@@ -218,16 +226,18 @@ fn init_rook_magics(mut table: [u64; 0x19000], mut attacks: [u64; 64], magics: [
             }
         }
     }
-
 }
+
+// https://bluss.github.io/rust-ndarray/master/ndarray/struct.ArrayBase.html
+
 
 struct PRNG {
     seed: u64
 }
 
 impl PRNG {
-    pub fn init(s: seed) -> PRNG {
-        assert!(s);
+    pub fn init(s: u64) -> PRNG {
+        assert_ne!(s,0);
         PRNG {seed: s}
     }
 
@@ -251,19 +261,21 @@ impl PRNG {
     }
 }
 
-fn sliding_attack(deltas: [u64; 4], square: u64, u64: occupied) -> u64 {
+fn sliding_attack(deltas: [u64; 4], square: u64, occupied: u64) -> u64 {
     let mut attack: u64 = 0;
 
     for i in 0..4 {
         let mut s: u64 = square + deltas[i];
         while is_ok(s) &&  distance(s, s - deltas[i]) == 1 {
 
-            if occupied & s { break;}
+            if occupied & s == 0 { break;}
             s += deltas[i];
         }
     }
     attack
 }
+
+
 
 
 pub fn gen_rook_masks() {
