@@ -1,4 +1,4 @@
-use templates::{SQ, Piece, Player, to_SQ};
+use templates::*;
 use board::*;
 use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use std;

@@ -32,15 +32,6 @@ pub fn popcount64(x: u64) -> u8 {
         popcnt8[x & 0xFF]
 }
 
-// Returns count of bits
-// popcount for 16 bits
-pub fn popcount16(mut u: u16) -> u8 {
-    u -= (u >> 1) & 0x5555;
-    u = ((u >> 2) & 0x3333) + (u & 0x3333);
-    u = ((u >> 4) + u) & 0x0F0F;
-    return (u * 0x0101) >> 8;
-}
-
 // Returns index of the LSB
 pub fn bit_scan_forward(bits: u64) -> u8 {
     popcount64((bits & (!bits + 1)) - 1)
