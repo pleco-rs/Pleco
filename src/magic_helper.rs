@@ -257,7 +257,7 @@ const seeds: [[u64;8]; 2] = [ [ 8977, 44560, 54343, 38998,  5731, 95205, 104912,
 [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ] ];
 
 
-// TODO: LORD HELP ME, TURN THIS INTO A FUCKING VECTOR
+// TODO:
 impl MRookTable {
     pub fn init() -> MRookTable {
         let mut sq_table = SMagic::init_arr();
@@ -272,9 +272,9 @@ impl MRookTable {
         let mut b: u64 = 0;
         let mut current: i32 = 0;
 
-        let table: *mut [u64;0x19000] =  unsafe {mem::transmute(Box::into_raw(attacks))};
+        let table: *mut [u64;0x19000] = Box::into_raw(attacks);
 //        sq_table[0].ptr = unsafe {ptr::copy(table)}
-        unsafe {ptr::write(sq_table[0].ptr,mem::transmute::<*mut [u64;0x19000], u64>(table));}
+        sq_table[0].ptr = *unsafe{mem::transmute::<*mut [u64;0x19000], *mut u64>(table)};
         for s in 0..64 {
             let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_B) & !file_bb(s));
             let mask: u64 = sliding_attack(rook_deltas, s as i64, 0) & !edges;
@@ -307,16 +307,17 @@ impl MRookTable {
                     let index: usize = (((occupancy[i as usize] & mask) * sq_table[s as usize].magic) >> shift) as usize;
 
                     let tmp_val: u64 =  unsafe {
-                        ptr::read(sq_table[s as usize].ptr.offset(index as isize))
+                        *(sq_table[s as usize].ptr.offset(index as isize))
                     };
                     if age[index] < current {
                         age[index] = current;
                         unsafe {
-                            ptr::write(sq_table[s as usize].ptr.offset(index as isize),reference[i]);
+                            *(sq_table[s as usize].ptr.offset(index as isize)) = reference[i];
                         }
                     } else if tmp_val != reference[i] {
                         break 'secon_in;
                     }
+                    i += 1;
                 }
                 if i < size {
                     break 'outer;
@@ -326,7 +327,7 @@ impl MRookTable {
             sq_table[s as usize].mask = mask;
         }
         MRookTable{sq_magics: sq_table, attacks: unsafe {
-            Box::from_raw(table )
+            Box::from_raw(table)
             }
         }
     }
@@ -431,6 +432,13 @@ fn test_knight_mask_gen() {
 
 #[test]
 fn rmagic() {
-    let mstruct = MRookTable::init();
-
+    let mstruct = SMagic::init_arr();
+    assert_eq!(mem::size_of_val(&mstruct), 2048);
 }
+
+#[test]
+fn rmagics() {
+    let mstruct = MRookTable::init();
+    assert_eq!(mem::size_of_val(&mstruct), 2048);
+}
+
