@@ -256,6 +256,8 @@ struct MBishopTable {
 const seeds: [[u64;8]; 2] = [ [ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
 [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ] ];
 
+
+// TODO: LORD HELP ME, TURN THIS INTO A FUCKING VECTOR
 impl MRookTable {
     pub fn init() -> MRookTable {
         let mut sq_table = SMagic::init_arr();
@@ -270,8 +272,9 @@ impl MRookTable {
         let mut b: u64 = 0;
         let mut current: i32 = 0;
 
-        sq_table[0].ptr = attacks.as_mut_ptr();
-
+        let table: *mut [u64;0x19000] =  unsafe {mem::transmute(Box::into_raw(attacks))};
+//        sq_table[0].ptr = unsafe {ptr::copy(table)}
+        unsafe {ptr::write(sq_table[0].ptr,mem::transmute::<*mut [u64;0x19000], u64>(table));}
         for s in 0..64 {
             let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_B) & !file_bb(s));
             let mask: u64 = sliding_attack(rook_deltas, s as i64, 0) & !edges;
@@ -322,12 +325,17 @@ impl MRookTable {
             sq_table[s as usize].shift = shift;
             sq_table[s as usize].mask = mask;
         }
-        MRookTable{sq_magics: sq_table, attacks: attacks}
+        MRookTable{sq_magics: sq_table, attacks: unsafe {
+            Box::from_raw(table )
+            }
+        }
     }
 }
 // https://doc.rust-lang.org/1.9.0/std/primitive.pointer.html
 //  https://doc.rust-lang.org/std/ptr/
 // https://doc.rust-lang.org/nomicon/vec-final.html
+// https://aminb.gitbooks.io/rust-for-c/content/destructuring_2/index.html
+// https://doc.rust-lang.org/std/mem/fn.transmute.html
 
 impl SMagic {
     pub unsafe fn new() -> SMagic {
@@ -382,17 +390,17 @@ impl PRNG {
 fn sliding_attack(deltas: [i8; 4], square: i64, occupied: u64) -> u64 {
     let mut attack: u64 = 0;
 
-//    for i in 0..4 {
-//        let mut s: i64 = unsafe {
+    for i in 0..4 {
+        let mut s: i64 = unsafe {
 //            std::mem::transmute::<i64, u64>(square) + deltas[i]
-//        };
-//        while is_ok(s) &&  distance(s, s - deltas[i]) == 1 {
-//            attack |= 1 << s;
-//            if occupied & s == 0 { break;}
-//            s += deltas[i];
-//        }
-//
-//    }
+            square + (deltas[i] as i64)
+        };
+        while is_ok_signed(s) &&  distance((1 << s) as u64 , (1 << (s - (deltas[i] as i64))) as u64) == 1 {
+            attack |= (1 << s) as u64;
+            if occupied & (1 << s) == 0 { break;}
+            s = s + (deltas[i] as i64);
+        }
+    }
     attack
 }
 
@@ -424,4 +432,5 @@ fn test_knight_mask_gen() {
 #[test]
 fn rmagic() {
     let mstruct = MRookTable::init();
+
 }
