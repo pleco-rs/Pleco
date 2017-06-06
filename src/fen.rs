@@ -50,51 +50,51 @@ pub fn generate_board(fen: String) -> Result<Board, String> {
                     '7' => { pos += 7; },
                     '8' => { pos += 8; },
                     'p' => {
-                        all_bit_boards.b_pawn.bits |= (1 as u64) << ((8 * (7 - file)) + pos);
+                        all_bit_boards.b_pawn |= (1 as u64) << ((8 * (7 - file)) + pos);
                         pos += 1;
                     },
                     'b' => {
-                        all_bit_boards.b_bishop.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.b_bishop |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'n' => {
-                        all_bit_boards.b_knight.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.b_knight |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'r' => {
-                        all_bit_boards.b_rook.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.b_rook |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'q' => {
-                        all_bit_boards.b_queen.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.b_queen |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'k' => {
-                        all_bit_boards.b_king.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.b_king |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'P' => {
-                        all_bit_boards.w_pawn.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.w_pawn |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'B' => {
-                        all_bit_boards.w_bishop.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.w_bishop |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'N' => {
-                        all_bit_boards.w_knight.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.w_knight |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'R' => {
-                        all_bit_boards.w_rook.bits |= 1 << (8 * (7 - file) + pos);;
+                        all_bit_boards.w_rook |= 1 << (8 * (7 - file) + pos);;
                         pos += 1;
                     },
                     'Q' => {
-                        all_bit_boards.w_queen.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.w_queen |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     'K' => {
-                        all_bit_boards.w_king.bits |= 1 << (8 * (7 - file) + pos);
+                        all_bit_boards.w_king |= 1 << (8 * (7 - file) + pos);
                         pos += 1;
                     },
                     _ => { let e = format!("FAILED CHAR AT {}", char.to_string());
