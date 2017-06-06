@@ -6,6 +6,11 @@ use std::mem;
 use std::slice;
 use std;
 use std::ops::IndexMut;
+use std::ops::Range;
+use std::ops::Index;
+use std::borrow::Borrow;
+use std::num::Wrapping;
+use std::num;
 
 const NIL:u64 = 1;
 
@@ -236,20 +241,44 @@ fn gen_knight_moves() -> [u64; 64] {
 //}
 //// https://bluss.github.io/rust-ndarray/master/ndarray/struct.ArrayBase.html
 
-struct SMagic {
-    ptr: *mut u64,
+struct SMagic<'a> {
+    ptr: &'a [u64],
     mask: u64,
     magic: u64,
     shift: u64
 }
 
-struct MRookTable {
-    sq_magics: [SMagic; 64],
-    attacks: Box<[u64; 0x19000]>
+struct PreSMagic {
+    start: usize,
+    len: usize,
+    mask: u64,
+    magic: u64,
+    shift: u64
 }
 
-struct MBishopTable {
-    sq_magics: [SMagic; 64],
+impl PreSMagic {
+    pub fn init() -> PreSMagic {
+        PreSMagic {start: 0, len: 0, mask: 0, magic: 0, shift: 0}
+    }
+
+    pub unsafe fn init64() -> [PreSMagic; 64] {
+        let arr: [PreSMagic; 64] = mem::uninitialized();
+        arr
+    }
+
+    pub fn next_idx(&self) -> usize {
+        self.start + self.len
+    }
+}
+
+struct MRookTable<'a> {
+    sq_magics: [SMagic<'a>; 64],
+    // attacks: Vec<u64; 0x19000]>
+    attacks: Vec<u64>
+}
+
+struct MBishopTable<'a> {
+    sq_magics: [SMagic<'a>; 64],
     attacks: Box<[u64; 0x1480]>
 }
 
@@ -258,26 +287,33 @@ const seeds: [[u64;8]; 2] = [ [ 8977, 44560, 54343, 38998,  5731, 95205, 104912,
 
 
 // TODO:
-impl MRookTable {
-    pub fn init() -> MRookTable {
-        let mut sq_table = SMagic::init_arr();
-        let mut attacks: Box<[u64; 0x19000]> = Box::new([0; 0x19000]);
+impl <'a> MRookTable<'a>  {
+    pub fn init() -> MRookTable<'a> {
+        let mut pre_sq_table: [PreSMagic; 64] = unsafe {PreSMagic::init64() };
+        for i in 0..64 {
+            pre_sq_table[i] = PreSMagic::init();
+        }
+        let mut attacks: Vec<u64> = Vec::with_capacity(102400);
+
+        for i in 0..102400 {
+            attacks.push(0);
+        }
+
         let rook_deltas: [i8; 4] = [8,1,-8,1];
         let mut occupancy: [u64; 4096] = [0; 4096];
         let mut reference: [u64; 4096] = [0; 4096];
         let mut age: [i32; 4096] =  [0; 4096];
 
         let mut size: usize = 0;
-        let mut tot_place: usize = 0;
         let mut b: u64 = 0;
         let mut current: i32 = 0;
+        let mut i: usize = 0;
 
-        let table: *mut [u64;0x19000] = Box::into_raw(attacks);
-//        sq_table[0].ptr = unsafe {ptr::copy(table)}
-        sq_table[0].ptr = *unsafe{mem::transmute::<*mut [u64;0x19000], *mut u64>(table)};
         for s in 0..64 {
+            println!("{:?}",s);
+            let mut magic = 0;
             let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_B) & !file_bb(s));
-            let mask: u64 = sliding_attack(rook_deltas, s as i64, 0) & !edges;
+            let mask: u64 = rook_sliding_attack(s)& !edges;
             let shift: u64 = (64 - popcount64(mask)) as u64;
             b = 0;
             size = 0;
@@ -286,50 +322,72 @@ impl MRookTable {
                 occupancy[size] = b;
                 reference[size] = sliding_attack(rook_deltas, s as i64, b);
                 size += 1;
-                b = (b - mask) * mask;
+                b = b.wrapping_sub(mask) & mask;
                 if b == 0 { break 'bit; }
             }
-            if s < 63 { unsafe {   //            https://doc.rust-lang.org/std/slice/fn.from_raw_parts.html
-                    sq_table[s as usize + 1].ptr = sq_table[s as usize].ptr.offset(size as isize);
-            }}
+
+            pre_sq_table[s as usize].len = size;
+            if s < 63 {
+                pre_sq_table[s as usize + 1].start = pre_sq_table[s as usize].next_idx();
+            }
             let mut rng = PRNG::init(seeds[1][rank_of(s) as usize]);
+
+            println!("size: {:?}",size);
+            println!("shift {:?}",shift);
             'outer: loop {
                 'first_in: loop {
-                    sq_table[s as usize].magic = rng.sparse_rand();
-                    if popcount64((sq_table[s as usize].magic * mask) >> 56) < 6 {
-                        break 'first_in;
-                    }
+                    magic = rng.sparse_rand();
+                    if popcount64(magic.wrapping_mul(mask) >> 56) >= 6 { break 'first_in; }
                 }
                 // magic_index return unsigned(((occupied & Masks[s]) * Magics[s]) >> Shifts[s]);
-                current += 1;
-                let mut i: usize = 0;
+                current = current + 1;
+                i = 0;
                 'secon_in: while i < size {
-                    let index: usize = (((occupancy[i as usize] & mask) * sq_table[s as usize].magic) >> shift) as usize;
 
-                    let tmp_val: u64 =  unsafe {
-                        *(sq_table[s as usize].ptr.offset(index as isize))
-                    };
+                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic)).wrapping_shr(shift as u32) as usize;
+
                     if age[index] < current {
                         age[index] = current;
-                        unsafe {
-                            *(sq_table[s as usize].ptr.offset(index as isize)) = reference[i];
-                        }
-                    } else if tmp_val != reference[i] {
+                        attacks[pre_sq_table[s as usize].start + index] = reference[i];
+
+                    } else if attacks[pre_sq_table[s as usize].start + index] != reference[i] {
                         break 'secon_in;
                     }
                     i += 1;
                 }
-                if i < size {
+
+                if i >= size {
+                    println!("magic for: {:?}", magic);
                     break 'outer;
                 }
             }
-            sq_table[s as usize].shift = shift;
-            sq_table[s as usize].mask = mask;
+            pre_sq_table[s as usize].magic = magic;
+            pre_sq_table[s as usize].mask = mask;
+            pre_sq_table[s as usize].shift = shift;
         }
-        MRookTable{sq_magics: sq_table, attacks: unsafe {
-            Box::from_raw(table)
+        unsafe {
+            let mut sq_table: [SMagic<'a>; 64] = std::mem::uninitialized();
+            let mut size = 0;
+            for i in 0.. 64 {
+                let beginptr = attacks.as_ptr().offset(size as isize);
+                let mut table_i: SMagic = SMagic {
+                    ptr: mem::uninitialized(),
+                    mask: pre_sq_table[i].mask,
+                    magic: pre_sq_table[i].magic,
+                    shift: pre_sq_table[i].shift,
+                };
+                table_i.ptr = unsafe {
+                    slice::from_raw_parts(beginptr,pre_sq_table[i].len)
+//                    attacks.index(Range{ start: pre_sq_table[i].start, end: pre_sq_table[i].next_idx()});
+                };
+                size += pre_sq_table[i].len;
+                sq_table[i] = table_i;
+
             }
+            println!("{:?}",size);
+            MRookTable{sq_magics: sq_table, attacks: attacks}
         }
+
     }
 }
 // https://doc.rust-lang.org/1.9.0/std/primitive.pointer.html
@@ -338,24 +396,24 @@ impl MRookTable {
 // https://aminb.gitbooks.io/rust-for-c/content/destructuring_2/index.html
 // https://doc.rust-lang.org/std/mem/fn.transmute.html
 
-impl SMagic {
-    pub unsafe fn new() -> SMagic {
-        SMagic{ptr: ptr::null_mut(), mask: 0, magic: 0, shift: 0}
-    }
-
-    pub fn init_arr() -> [SMagic; 64] {
-        let array = unsafe {
-            let mut array: [SMagic; 64] = mem::uninitialized();
-            for (i, element) in array.iter_mut().enumerate() {
-                let smagic = SMagic::new();
-                ptr::write(element, smagic)
-            }
-            array
-        };
-        array
-    }
-
-}
+//impl SMagic {
+//    pub unsafe fn new() -> SMagic {
+//        SMagic{ptr: ptr::null_mut(), mask: 0, magic: 0, shift: 0}
+//    }
+//
+//    pub unsafe fn init_arr() -> [SMagic; 64] {
+//        let array = unsafe {
+//            let mut array: [SMagic; 64] = mem::uninitialized();
+//            for (i, element) in array.iter_mut().enumerate() {
+//                let smagic = SMagic::new();
+//                ptr::write(element, smagic)
+//            }
+//            array
+//        };
+//        array
+//    }
+//
+//}
 
 
 struct PRNG {
@@ -384,8 +442,14 @@ impl PRNG {
         self.seed ^= self.seed << 25;
         self.seed ^= self.seed >> 27;
 
-        self.seed * 2685821657736338717
+        self.seed.wrapping_mul(2685821657736338717)
     }
+}
+
+fn rook_sliding_attack(square: u64) -> u64 {
+    let file: u64 = file_bb(square);
+    let rank: u64 = rank_bb(square);
+    !(1<<square) & (file | rank)
 }
 
 fn sliding_attack(deltas: [i8; 4], square: i64, occupied: u64) -> u64 {
@@ -396,7 +460,7 @@ fn sliding_attack(deltas: [i8; 4], square: i64, occupied: u64) -> u64 {
 //            std::mem::transmute::<i64, u64>(square) + deltas[i]
             square + (deltas[i] as i64)
         };
-        while is_ok_signed(s) &&  distance((1 << s) as u64 , (1 << (s - (deltas[i] as i64))) as u64) == 1 {
+        while is_ok_signed(s) &&  distance(((1 as u64).wrapping_shl(s as u32)) as u64 , ((1 as u64).wrapping_shl((s - (deltas[i] as i64)) as u32)) as u64) == 1 {
             attack |= (1 << s) as u64;
             if occupied & (1 << s) == 0 { break;}
             s = s + (deltas[i] as i64);
@@ -428,12 +492,6 @@ fn test_knight_mask_gen() {
     let arr = gen_knight_moves().to_vec();
     let sum = arr.iter().fold(0 as  u64,|a, &b| a + (popcount64(b) as u64));
     assert_eq!(sum, (2 * 4) + (4 * 4) + (3 * 2 * 4) + (4 * 4 * 4) + (6 * 4 * 4) + (8 * 4 * 4));
-}
-
-#[test]
-fn rmagic() {
-    let mstruct = SMagic::init_arr();
-    assert_eq!(mem::size_of_val(&mstruct), 2048);
 }
 
 #[test]

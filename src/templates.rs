@@ -205,7 +205,7 @@ pub const SOUTH_WEST: i8 = -9;
 
 // For whatever rank the bit is in, gets the whole bitboard
 pub fn rank_bb(s: u64) -> u64 {
-    RANK_BB[s as usize]
+    RANK_BB[rank_of(s) as usize]
 }
 
 pub fn rank_of(s: u64) -> u8 {
@@ -213,17 +213,20 @@ pub fn rank_of(s: u64) -> u8 {
 }
 
 pub fn file_bb(s: u64) -> u64 {
-    FILE_BB[s as usize]
+    FILE_BB[file_of(s) as usize]
 }
 
 pub fn file_of(s: u64) -> u8 {
-    ((s >> 3) % 8) as u8
+    (s & 0b111) as u8
 }
 
 pub fn is_ok(s: u64) -> bool {
     s >= 0 && s < 64
 }
 
+pub fn is_ok_signed(s: i64) -> bool {
+    s >= 0 && s < 64
+}
 
 
 pub fn distance(s: u64, x: u64) -> u64 {
