@@ -1,7 +1,6 @@
 use templates::*;
 use board::*;
 use piece_move::{MoveFlag, BitMove, PreMoveInfo};
-use std;
 use bit_twiddles::{popcount64, bit_scan_forward};
 
 #[allow(unused)]

@@ -1,5 +1,4 @@
 use bit_twiddles;
-use std::num;
 
 #[derive(Copy, Clone)]
 pub enum Player {
