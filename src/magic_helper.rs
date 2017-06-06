@@ -11,11 +11,11 @@ use std::ops::Index;
 use std::borrow::Borrow;
 use std::num::Wrapping;
 use std::num;
+use std::cmp;
 
 const NIL:u64 = 1;
 
 struct MagicHelper {
-    square_BB: [u64; 64], // Maps index to square
     knight_table: [u64; 64],
     king_table: [u64; 64]
 }
@@ -245,7 +245,7 @@ struct SMagic<'a> {
     ptr: &'a [u64],
     mask: u64,
     magic: u64,
-    shift: u64
+    shift: u32
 }
 
 struct PreSMagic {
@@ -253,7 +253,7 @@ struct PreSMagic {
     len: usize,
     mask: u64,
     magic: u64,
-    shift: u64
+    shift: u32
 }
 
 impl PreSMagic {
@@ -274,7 +274,7 @@ impl PreSMagic {
 struct MRookTable<'a> {
     sq_magics: [SMagic<'a>; 64],
     // attacks: Vec<u64; 0x19000]>
-    attacks: Vec<u64>
+    attacks: Vec<BitBoard>
 }
 
 struct MBishopTable<'a> {
@@ -293,7 +293,7 @@ impl <'a> MRookTable<'a>  {
         for i in 0..64 {
             pre_sq_table[i] = PreSMagic::init();
         }
-        let mut attacks: Vec<u64> = Vec::with_capacity(102400);
+        let mut attacks: Vec<BitBoard> = Vec::with_capacity(102400);
 
         for i in 0..102400 {
             attacks.push(0);
@@ -309,53 +309,59 @@ impl <'a> MRookTable<'a>  {
         let mut current: i32 = 0;
         let mut i: usize = 0;
 
-        for s in 0..64 {
+        pre_sq_table[0].start = 0;
+
+        for s in 0..64 as SQ {
             println!("{:?}",s);
             let mut magic = 0;
-            let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_B) & !file_bb(s));
-            let mask: u64 = rook_sliding_attack(s)& !edges;
-            let shift: u64 = (64 - popcount64(mask)) as u64;
+            let edges: BitBoard = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_H) & !file_bb(s));
+            let mask: BitBoard = sliding_attack(rook_deltas, s, 0) & !edges;
+            let shift: u32 = (64 - popcount64(mask)) as u32;
             b = 0;
             size = 0;
 
             'bit: loop {
                 occupancy[size] = b;
-                reference[size] = sliding_attack(rook_deltas, s as i64, b);
+                reference[size] = sliding_attack(rook_deltas, s, b);
                 size += 1;
-                b = b.wrapping_sub(mask) & mask;
+                b = ((b).wrapping_sub(mask)) as u64 & mask;
                 if b == 0 { break 'bit; }
             }
-
             pre_sq_table[s as usize].len = size;
             if s < 63 {
                 pre_sq_table[s as usize + 1].start = pre_sq_table[s as usize].next_idx();
+
             }
-            let mut rng = PRNG::init(seeds[1][rank_of(s) as usize]);
+            let mut rng = PRNG::init(seeds[1][rank_of_sq(s) as usize]);
 
             println!("size: {:?}",size);
             println!("shift {:?}",shift);
+            println!("mask {:b}",mask);
             'outer: loop {
                 'first_in: loop {
                     magic = rng.sparse_rand();
-                    if popcount64(magic.wrapping_mul(mask) >> 56) >= 6 { break 'first_in; }
+                    if popcount64((magic.wrapping_mul(mask)).wrapping_shr(56)) >= 6 {
+                        break 'first_in;
+                    }
                 }
+//                println!("wemade it {:?}",magic);
                 // magic_index return unsigned(((occupied & Masks[s]) * Magics[s]) >> Shifts[s]);
-                current = current + 1;
+                current += 1;
+//                println!("curr {:?}",current);
                 i = 0;
                 'secon_in: while i < size {
-
-                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic)).wrapping_shr(shift as u32) as usize;
-
+//                    println!("i {:?}",i);
+                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic) as u64).wrapping_shr(shift) as usize;
+//                    println!("idx {:?}",index);
                     if age[index] < current {
                         age[index] = current;
                         attacks[pre_sq_table[s as usize].start + index] = reference[i];
-
                     } else if attacks[pre_sq_table[s as usize].start + index] != reference[i] {
                         break 'secon_in;
                     }
                     i += 1;
                 }
-
+//                println!("i {:?} size: {:?}",i,size);
                 if i >= size {
                     println!("magic for: {:?}", magic);
                     break 'outer;
@@ -385,36 +391,12 @@ impl <'a> MRookTable<'a>  {
 
             }
             println!("{:?}",size);
+            assert_eq!(size, 102400);
             MRookTable{sq_magics: sq_table, attacks: attacks}
         }
 
     }
 }
-// https://doc.rust-lang.org/1.9.0/std/primitive.pointer.html
-//  https://doc.rust-lang.org/std/ptr/
-// https://doc.rust-lang.org/nomicon/vec-final.html
-// https://aminb.gitbooks.io/rust-for-c/content/destructuring_2/index.html
-// https://doc.rust-lang.org/std/mem/fn.transmute.html
-
-//impl SMagic {
-//    pub unsafe fn new() -> SMagic {
-//        SMagic{ptr: ptr::null_mut(), mask: 0, magic: 0, shift: 0}
-//    }
-//
-//    pub unsafe fn init_arr() -> [SMagic; 64] {
-//        let array = unsafe {
-//            let mut array: [SMagic; 64] = mem::uninitialized();
-//            for (i, element) in array.iter_mut().enumerate() {
-//                let smagic = SMagic::new();
-//                ptr::write(element, smagic)
-//            }
-//            array
-//        };
-//        array
-//    }
-//
-//}
-
 
 struct PRNG {
     seed: u64
@@ -441,32 +423,39 @@ impl PRNG {
         self.seed ^= self.seed >> 12;
         self.seed ^= self.seed << 25;
         self.seed ^= self.seed >> 27;
-
         self.seed.wrapping_mul(2685821657736338717)
     }
 }
 
-fn rook_sliding_attack(square: u64) -> u64 {
-    let file: u64 = file_bb(square);
-    let rank: u64 = rank_bb(square);
-    !(1<<square) & (file | rank)
-}
 
-fn sliding_attack(deltas: [i8; 4], square: i64, occupied: u64) -> u64 {
-    let mut attack: u64 = 0;
-
-    for i in 0..4 {
-        let mut s: i64 = unsafe {
-//            std::mem::transmute::<i64, u64>(square) + deltas[i]
-            square + (deltas[i] as i64)
-        };
-        while is_ok_signed(s) &&  distance(((1 as u64).wrapping_shl(s as u32)) as u64 , ((1 as u64).wrapping_shl((s - (deltas[i] as i64)) as u32)) as u64) == 1 {
-            attack |= (1 << s) as u64;
-            if occupied & (1 << s) == 0 { break;}
-            s = s + (deltas[i] as i64);
+//
+fn sliding_attack(deltas: [i8; 4], square: SQ, occupied: BitBoard) -> BitBoard {
+    assert!(square < 64);
+    assert!(square >= 0);
+    let sq: i8 = square as i8;
+    let mut attack: BitBoard = 0;
+    for i in 0..4 as usize {
+        let mut s: SQ = ((sq).wrapping_add(deltas[i])) as u8;
+        'inner: while sq_is_okay(s) && sq_distance(s, ((s as i8).wrapping_sub(deltas[i])) as u8) == 1 {
+            attack = attack | (1 as u64).wrapping_shl(s as u32);
+            if occupied & (1 << s) != 0 {break 'inner;}
+            s = (s as i8).wrapping_add(deltas[i]) as u8;
         }
     }
     attack
+}
+
+pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
+    let x = distance(file_of_sq(sq1),file_of_sq(sq2));
+    let y = distance(rank_of_sq(sq1),rank_of_sq(sq2));
+    cmp::max(x,y)
+}
+
+pub fn distance(x: u8, y: u8) -> u8 {
+    match x < y {
+        true =>  return y - x,
+        false => return x - y,
+    }
 }
 
 
@@ -495,8 +484,21 @@ fn test_knight_mask_gen() {
 }
 
 #[test]
+fn occupancy_and_sliding() {
+    let rook_deltas: [i8; 4] = [8,1,-8,1];
+    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0)),14);
+    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0xFF00)),8);
+}
+
+fn edges() {
+    let rook_deltas: [i8; 4] = [8,1,-8,1];
+    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0)),14);
+    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0xFF00)),8);
+}
+
+#[test]
 fn rmagics() {
     let mstruct = MRookTable::init();
-    assert_eq!(mem::size_of_val(&mstruct), 2048);
+    assert_eq!(mem::size_of_val(&mstruct), 2584);
 }
 
