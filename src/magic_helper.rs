@@ -13,7 +13,9 @@ use std::num::Wrapping;
 use std::num;
 use std::cmp;
 
-const NIL:u64 = 1;
+const NIL: u64 = 1;
+
+
 
 struct MagicHelper {
     knight_table: [u64; 64],
@@ -312,6 +314,7 @@ impl <'a> MRookTable<'a>  {
         pre_sq_table[0].start = 0;
 
         for s in 0..64 as SQ {
+            let mut max = 0;
             println!("{:?}",s);
             let mut magic = 0;
             let edges: BitBoard = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_H) & !file_bb(s));
@@ -349,7 +352,7 @@ impl <'a> MRookTable<'a>  {
                 current += 1;
 //                println!("curr {:?}",current);
                 i = 0;
-                'secon_in: while i < size {
+                while i < size {
 //                    println!("i {:?}",i);
                     let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic) as u64).wrapping_shr(shift) as usize;
 //                    println!("idx {:?}",index);
@@ -357,14 +360,20 @@ impl <'a> MRookTable<'a>  {
                         age[index] = current;
                         attacks[pre_sq_table[s as usize].start + index] = reference[i];
                     } else if attacks[pre_sq_table[s as usize].start + index] != reference[i] {
-                        break 'secon_in;
+                        break;
                     }
                     i += 1;
                 }
 //                println!("i {:?} size: {:?}",i,size);
                 if i >= size {
-                    println!("magic for: {:?}", magic);
+                    println!("we got one {:?}", 0);
+                    println!("index: {:?}", s);
+                    println!("magic: {:?}", magic);
                     break 'outer;
+                }
+                if i > max {
+                    max = i;
+                    println!("i {:?} size: {:?}",i,size);
                 }
             }
             pre_sq_table[s as usize].magic = magic;
@@ -414,8 +423,8 @@ impl PRNG {
 
     pub fn sparse_rand(&mut self) -> u64 {
         let mut s = self.rand_change();
-        s ^= self.rand_change();
-        s ^= self.rand_change();
+        s &= self.rand_change();
+        s &= self.rand_change();
         s
     }
 
