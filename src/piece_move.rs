@@ -46,7 +46,7 @@ pub struct BitMove {
     data: u16,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum MoveFlag {
     Promotion { capture: bool, prom: Piece },
     Castle { king_side: bool },
@@ -61,6 +61,7 @@ pub struct PreMoveInfo {
     pub dst: SQ,
     pub flags: MoveFlag,
 }
+
 
 // https://chessprogramming.wikispaces.com/Encoding+Moves
 impl BitMove {
@@ -96,7 +97,7 @@ impl BitMove {
 
     // Note: Encompasses two missing Spots
     pub fn is_capture(&self) -> bool { ((self.data & CP_MASK) >> 14) == 1 }
-
+    pub fn is_quiet_move(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 0 }
     pub fn is_promo(&self) -> bool { ((self.data & PR_MASK) >> 15) == 1 }
     pub fn get_dest(&self) -> u8 { ((self.data & DST_MASK) >> 6) as u8 }
     pub fn get_src(&self) -> u8 { (self.data & SRC_MASK) as u8 }
@@ -105,7 +106,7 @@ impl BitMove {
     pub fn is_queen_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 3 }
     pub fn is_en_passant(&self) -> bool { (self.data & FLAG_MASK) >> 12 == 5 }
     pub fn is_double_push(&self) -> (bool, u8) {
-        let is_double_push: u8 = (self.data & FLAG_MASK) as u8;
+        let is_double_push: u8 = ((self.data & FLAG_MASK) >> 12) as u8;
         match is_double_push {
             1 => (true, self.get_dest() as u8),
             _ => (false, 64)

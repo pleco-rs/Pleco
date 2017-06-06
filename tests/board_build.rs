@@ -8,43 +8,23 @@ use std::*;
 
 
 #[test]
-fn test_counts() {
+fn test__init_counts() {
     let board = Board::new();
-
-    let count_w_p = board.count_piece(Player::White, Piece::P);
-    assert_eq!(count_w_p, 8);
-
-    let count_w_n = board.count_piece(Player::White, Piece::N);
-    assert_eq!(count_w_n, 2);
-
-    let count_w_b = board.count_piece(Player::White, Piece::B);
-    assert_eq!(count_w_b, 2);
-
-    let count_w_r = board.count_piece(Player::White, Piece::R);
-    assert_eq!(count_w_r, 2);
-
-    let count_w_k = board.count_piece(Player::White, Piece::K);
-    assert_eq!(count_w_k, 1);
-
-    let count_w_q = board.count_piece(Player::White, Piece::Q);
-    assert_eq!(count_w_q, 1);
-
-    let count_b_p = board.count_piece(Player::Black, Piece::P);
-    assert_eq!(count_b_p, 8);
-
-    let count_b_n = board.count_piece(Player::Black, Piece::N);
-    assert_eq!(count_b_n, 2);
-
-    let count_b_b = board.count_piece(Player::Black, Piece::B);
-    assert_eq!(count_b_b, 2);
-
-    let count_b_r = board.count_piece(Player::Black, Piece::R);
-    assert_eq!(count_b_r, 2);
-
-    let count_b_k = board.count_piece(Player::Black, Piece::K);
-    assert_eq!(count_b_k, 1);
-
-    let count_b_q = board.count_piece(Player::Black, Piece::Q);
-    assert_eq!(count_b_q, 1);
+    assert_eq!(board.count_piece(Player::White, Piece::P), 8);
+    assert_eq!(board.count_piece(Player::White, Piece::N), 2);
+    assert_eq!(board.count_piece(Player::White, Piece::B), 2);
+    assert_eq!(board.count_piece(Player::White, Piece::R), 2);
+    assert_eq!(board.count_piece(Player::White, Piece::K), 1);
+    assert_eq!(board.count_piece(Player::White, Piece::Q), 1);
+    assert_eq!(board.count_piece(Player::Black, Piece::P), 8);
+    assert_eq!(board.count_piece(Player::Black, Piece::N), 2);
+    assert_eq!(board.count_piece(Player::Black, Piece::B), 2);
+    assert_eq!(board.count_piece(Player::Black, Piece::R), 2);
+    assert_eq!(board.count_piece(Player::Black, Piece::K), 1);
+    assert_eq!(board.count_piece(Player::Black, Piece::Q), 1);
+    assert_eq!(board.diagonal_piece_bits(Player::White),0b101100);
+    assert_eq!(board.sliding_piece_bits(Player::White),0b10001001);
+    assert_eq!(board.count_pieces_player(Player::White),board.count_pieces_player(Player::Black));
+    assert_eq!(board.get_occupied(),0xFFFF00000000FFFF);
 }
 
