@@ -1,9 +1,12 @@
 use templates::Piece as Piece;
 use templates::Player as Player;
 use templates::*;
+use magic_helper::MagicHelper;
 use bit_twiddles::popcount64;
 use piece_move::BitMove;
 use fen;
+use movegen;
+use std::sync::Arc;
 
 
 
@@ -34,7 +37,7 @@ pub struct AllBitBoards {
 }
 
 #[derive(Clone)]
-pub struct Board {
+pub struct Board<'a,'b>  {
     pub bit_boards: AllBitBoards,
     pub turn: Player,
     pub depth: u16,
@@ -47,8 +50,7 @@ pub struct Board {
     // Full list of undo-able moves
     pub ply: u8,
     // Tracks how many half-moves has been played so far
-    pub last_move: Option<LastMoveData>
-    // Tracks last moved played for evaluation purposes
+    pub magic_helper: Arc<MagicHelper <'a,'b>>,
 }
 
 //  8 | 56 57 58 59 60 61 62 63
@@ -63,8 +65,9 @@ pub struct Board {
 //      a  b  c  d  e  f  g  h
 
 // FEN
-impl Board {
-    pub fn new() -> Board {
+impl <'a, 'b> Board <'a, 'b> {
+
+    pub fn default() -> Board <'a, 'b> {
         Board {
             bit_boards: AllBitBoards::new(),
             turn: Player::White,
@@ -73,13 +76,30 @@ impl Board {
             en_passant: 0,
             undo_moves: Vec::new(),
             ply: 0,
-            last_move: None
+            magic_helper: Arc::new(MagicHelper::new())
         }
     }
 
+    pub fn new(m_help: &Arc<MagicHelper<'a, 'b>>) -> Board <'a, 'b> {
+        Board  {
+            bit_boards: AllBitBoards::new(),
+            turn: Player::White,
+            depth: 0,
+            castling: 0,
+            en_passant: 0,
+            undo_moves: Vec::new(),
+            ply: 0,
+            magic_helper: m_help.clone()
+        }
+    }
+
+    pub fn generate_moves(&self) -> Vec<BitMove> { movegen::get_moves(&self) }
+
+
+
     // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
     // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
-    pub fn new_from_fen(fen: String) -> Result<Board, String> {
+    pub fn new_from_fen(fen: String) -> Result<Board<'a, 'b>, String> {
         fen::generate_board(fen)
     }
 
@@ -157,10 +177,8 @@ impl Board {
             en_passant: self.en_passant,
             undo_moves: Vec::new(),
             ply: self.ply,
-            last_move: match self.last_move {
-                Some(x) => Some(x),
-                None => None
-            }
+            magic_helper: self.magic_helper.clone()
+
         }
     }
 
@@ -190,14 +208,14 @@ impl Board {
                         let king_pos: BitBoard = 1 << 4 | 1 << 6;
                         self.bit_boards.w_rook ^= rook_pos;
                         self.bit_boards.w_king ^= king_pos;
-                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 7, dst: 5 });
+//                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 7, dst: 5 });
                     }
                     Player::Black => {
                         let rook_pos: BitBoard = 1 << 63 | 1 << 61;
                         let king_pos: BitBoard = 1 << 60 | 1 << 62;
                         self.bit_boards.b_rook ^= rook_pos;
                         self.bit_boards.b_king ^= king_pos;
-                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 63, dst: 61 });
+//                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 63, dst: 61 });
                     }
                 }
             } else {
@@ -205,18 +223,18 @@ impl Board {
                 // Black: Rook at index: 56
                 match us {
                     Player::White => {
-                        let rook_pos: BitBoard = 1 << 0 | 1 << 3;
+                        let rook_pos: BitBoard = 1      | 1 << 3;
                         let king_pos: BitBoard = 1 << 4 | 1 << 2;
                         self.bit_boards.w_rook ^= rook_pos;
                         self.bit_boards.w_king ^= king_pos;
-                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 0, dst: 3 });
+//                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 0, dst: 3 });
                     }
                     Player::Black => {
                         let rook_pos: BitBoard = 1 << 56 | 1 << 59;
                         let king_pos: BitBoard = 1 << 60 | 1 << 58;
                         self.bit_boards.b_rook ^= rook_pos;
                         self.bit_boards.b_king ^= king_pos;
-                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 56, dst: 59 });
+//                        self.last_move = Some(LastMoveData { piece_moved: Piece::R, src: 56, dst: 59 });
                     }
                 }
             }
@@ -231,14 +249,14 @@ impl Board {
                 Player::Black => { self.bit_boards.b_pawn ^= src_bit | dst_bit; }
             }
             self.en_passant = dst;
-            self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
+//            self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
         } else if bit_move.is_promo() {
             if bit_move.is_capture() {
                 self.xor_bitboard_player_sq(them, dst_bit);
             }
             self.xor_bitboard_player_piece_sq(us, Piece::P, src_bit);
             self.xor_bitboard_player_piece_sq(us, bit_move.promo_piece(), dst_bit);
-            self.last_move = None;
+//            self.last_move = None;
         } else if bit_move.is_en_passant() {
             // PAWN ENPASSENT;
             match us {
@@ -251,7 +269,7 @@ impl Board {
                     self.bit_boards.w_pawn ^= dst_bit << 8;
                 }
             }
-            self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
+//            self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
         } else {
             // QUIET MOVE
 
@@ -261,7 +279,7 @@ impl Board {
             // Modify own board
             let piece = self.get_piece_from_src(src_bit, us).unwrap();
             self.xor_bitboard_player_piece_sq(us, piece, src_bit | dst_bit);
-            self.last_move = Some( LastMoveData { piece_moved: piece, src: src, dst: dst } );
+//            self.last_move = Some( LastMoveData { piece_moved: piece, src: src, dst: dst } );
         }
         if !bit_move.is_double_push().0 { self.en_passant = 64; }
 
@@ -377,8 +395,7 @@ impl Board {
         unimplemented!();
     }
 
-
-    fn occupied_white(&self) -> BitBoard {
+    pub fn occupied_white(&self) -> BitBoard {
         self.bit_boards.w_bishop
             | self.bit_boards.w_pawn
             | self.bit_boards.w_knight
@@ -387,7 +404,7 @@ impl Board {
             | self.bit_boards.w_queen
     }
 
-    fn occupied_black(&self) -> BitBoard {
+    pub fn occupied_black(&self) -> BitBoard {
         self.bit_boards.b_bishop
             | self.bit_boards.b_pawn
             | self.bit_boards.b_knight
@@ -395,9 +412,6 @@ impl Board {
             | self.bit_boards.b_king
             | self.bit_boards.b_queen
     }
-
-
-
 }
 
 impl AllBitBoards {

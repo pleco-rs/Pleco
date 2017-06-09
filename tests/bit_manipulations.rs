@@ -33,3 +33,4 @@ fn lsb() {
     assert_eq!(bit_twiddles::lsb(0b100001000000), 0b1000000);
     assert_eq!(bit_twiddles::lsb(0b1), 0b1);
 }
+

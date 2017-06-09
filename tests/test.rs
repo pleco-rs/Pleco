@@ -1,4 +1,7 @@
+#![feature(test)]
+
 extern crate rusty_chess;
+extern crate test;
 
 mod bit_manipulations;
 mod board_build;
@@ -10,4 +13,5 @@ mod magic;
 #[cfg(test)]
 mod test {
     use super::*;
+    use test::Bencher;
 }

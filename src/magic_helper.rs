@@ -7,8 +7,8 @@ use std::{mem,slice,cmp};
 const B_DELTAS: [i8; 4] = [7,9,-9,-7];
 const R_DELTAS: [i8; 4] = [8,1,-8,-1];
 const DELTAS: [[i8; 4]; 2] = [B_DELTAS, R_DELTAS];
-const SEEDS: [[u64;8]; 2] = [   [ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
-                                [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ] ];
+const SEEDS: [[u64;8]; 2] = [[ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
+                             [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ]];
 
 
 
@@ -37,8 +37,15 @@ pub struct MagicHelper<'a, 'b> {
     knight_table: [u64; 64],
     king_table: [u64; 64],
     dist_table: [[SQ; 64]; 64],
-    line_bitboard:[[u64; 64]; 64]
+    line_bitboard:[[u64; 64]; 64],
+    between_sqs_bb: [[u64; 64]; 64],
+    adjacent_files_bb: [u64;8]
+
 }
+
+// TO IMPLEMENT:
+//      Adjacent Files BitBoard
+//      Between Squares BitBoard
 
 impl <'a,'b>MagicHelper<'a,'b> {
 
@@ -51,56 +58,99 @@ impl <'a,'b>MagicHelper<'a,'b> {
             king_table: gen_king_moves(),
             dist_table: init_distance_table(),
             line_bitboard: [[0; 64]; 64],
+            between_sqs_bb: [[0; 64]; 64],
+            adjacent_files_bb: [0;8],
         };
         mhelper.gen_line_bbs();
+        mhelper.gen_between_bbs();
+        mhelper.gen_adjacent_file_bbs();
         mhelper
     }
 
     // Generate Knight Moves bitboard from a source square
     pub fn knight_moves(&self, square: SQ) -> BitBoard {
+        assert!(sq_is_okay(square));
         self.knight_table[square as usize]
     }
 
     // Generate King moves bitboard from a source  square
     pub fn king_moves(&self, square: SQ) -> BitBoard {
+        assert!(sq_is_okay(square));
         self.king_table[square as usize]
     }
 
     // Generate Bishop Moves from a bishop square and all occupied squares on the board
     pub fn bishop_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
-        self.bishop_moves(occupied, square)
+        assert!(sq_is_okay(square));
+        self.magic_bishop.bishop_attacks(occupied, square)
     }
 
     // Generate Rook Moves from a bishop square and all occupied squares on the board
     pub fn rook_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
-        self.rook_moves(occupied, square)
+        assert!(sq_is_okay(square));
+        self.magic_rook.rook_attacks(occupied, square)
     }
 
     // Generate Queen Moves from a bishop square and all occupied squares on the board
     pub fn queen_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
-        self.rook_moves(occupied, square) | self.bishop_moves(occupied, square)
+        assert!(sq_is_okay(square));
+        self.magic_rook.rook_attacks(occupied, square) | self.magic_bishop.bishop_attacks(occupied, square)
     }
 
     // get the distance of two squares
     pub fn distance_of_sqs(&self, square_one: SQ, square_two: SQ) -> u8 {
+        assert!(sq_is_okay(square_one));
+        assert!(sq_is_okay(square_two));
         self.dist_table[square_one as usize][square_two as usize]
     }
 
-    // Get the line between two squares, if it exists
+    // Get the line (diagonal / file / rank) two squares, if it exists
     pub fn line_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
+        assert!(sq_is_okay(square_one));
+        assert!(sq_is_okay(square_two));
         self.line_bitboard[square_one as usize][square_two as usize]
     }
 
+    // Get the line between two squares, not including the squares, if it exists
+    pub fn between_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
+        assert!(sq_is_okay(square_one));
+        assert!(sq_is_okay(square_two));
+        self.between_sqs_bb[square_one as usize][square_two as usize]
+    }
+
+    // Gets the adjacent files of the square
+    pub fn adjacent_file(&self, square: SQ,) -> BitBoard {
+        assert!(sq_is_okay(square));
+        self.adjacent_files_bb[square as usize]
+    }
+
     fn gen_line_bbs(&mut self) {
-        DELTAS.iter().map(|d|
+        for d in 0..DELTAS.len() {
             for i in 0..64 as SQ {
                 for j in 0..64 as SQ {
-                    let mut line_board: BitBoard = (sliding_attack(d, i, 0) & sliding_attack(d, j, 0));
+                    let mut line_board: BitBoard = sliding_attack(&DELTAS[d], i, 0) & sliding_attack(&DELTAS[d], j, 0);
                     line_board |= ((1 as u64) << i) | ((1 as u64) << j);
                     self.line_bitboard[i as usize][i as usize] |= line_board;
                 }
-            });
+            }
+        }
+    }
+    fn gen_between_bbs(&mut self) {
+        for d in 0..DELTAS.len() {
+            for i in 0..64 as SQ {
+                for j in 0..64 as SQ {
+                    self.between_sqs_bb[i as usize][i as usize] |= sliding_attack(&DELTAS[d], j, ((1 as u64) << i))
+                        & sliding_attack(&DELTAS[d], i, ((1 as u64) << j));
+                }
+            }
+        }
+    }
 
+    fn gen_adjacent_file_bbs(&mut self) {
+        for file in 0..8 as SQ {
+            if file != 0 { self.adjacent_files_bb[file as usize] |= file_bb(file - 1)}
+            if file != 7 { self.adjacent_files_bb[file as usize] |= file_bb(file + 1)}
+        }
     }
 }
 
@@ -303,7 +353,6 @@ impl <'a> MRookTable<'a>  {
         magic_entry.ptr[occupied as usize]
     }
 }
-
 
 impl <'a> MBishopTable<'a> {
 
@@ -529,7 +578,7 @@ fn gen_king_moves() -> [u64; 64] {
         }
         // RIGHT UP
         if file != 7 && index < 56 {
-            mask |= 1 << (index + 0);
+            mask |= 1 << index + 9;
         }
         moves[index] = mask;
     }
@@ -588,12 +637,12 @@ fn sliding_attack(deltas: &[i8; 4], sq: SQ, occupied: BitBoard) -> BitBoard {
     assert!(sq < 64);
     let mut attack: BitBoard = 0;
     let square: i16 = sq as i16;
-    for i in 0..4 as usize {
-        let mut s: SQ = ((square as i16) + (deltas[i] as i16)) as u8;
-        'inner: while sq_is_okay(s as u8) && sq_distance(s as u8, ((s as i16) - (deltas[i] as i16)) as u8) == 1 {
+    for delta in deltas.iter().take(4 as usize) {
+        let mut s: SQ = ((square as i16) + (*delta as i16)) as u8;
+        'inner: while sq_is_okay(s as u8) && sq_distance(s as u8, ((s as i16) - (*delta as i16)) as u8) == 1 {
             attack |= (1 as u64).wrapping_shl(s as u32);
             if occupied & (1 as u64).wrapping_shl(s as u32) != 0 {break 'inner;}
-            s = ((s as i16) + (deltas[i] as i16)) as u8;
+            s = ((s as i16) + (*delta as i16)) as u8;
         }
     }
     attack
@@ -623,8 +672,8 @@ pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
 // returns the difference between two unsigned u8s
 pub fn diff(x: u8, y: u8) -> u8 {
     match x < y {
-        true =>  return y - x,
-        false => return x - y,
+        true  =>  y - x,
+        false =>  x - y,
     }
 }
 
@@ -650,9 +699,9 @@ fn test_knight_mask_gen() {
 #[test]
 fn occupancy_and_sliding() {
     let rook_deltas: [i8; 4] = [8,1,-8,-1];
-    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0)),14);
-    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0xFF00)),8);
-    assert_eq!(popcount64(sliding_attack(rook_deltas, 19, 0)),14);
+    assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0)),14);
+    assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0xFF00)),8);
+    assert_eq!(popcount64(sliding_attack(&rook_deltas, 19, 0)),14);
 }
 
 #[test]

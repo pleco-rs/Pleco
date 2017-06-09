@@ -1,51 +1,64 @@
 use templates::*;
 use board::*;
 use piece_move::{MoveFlag, BitMove, PreMoveInfo};
-use bit_twiddles::{popcount64, bit_scan_forward};
-
-#[allow(unused)]
-
-static index64: &'static [u8] = &[
-    0, 1, 48, 2, 57, 49, 28, 3,
-    61, 58, 50, 42, 38, 29, 17, 4,
-    62, 55, 59, 36, 53, 51, 43, 22,
-    45, 39, 33, 30, 24, 18, 12, 5,
-    63, 47, 56, 27, 60, 41, 37, 16,
-    54, 35, 52, 21, 44, 32, 23, 11,
-    46, 26, 40, 15, 34, 20, 31, 10,
-    25, 14, 19, 9, 13, 8, 7, 6
-];
+use bit_twiddles::{bit_scan_forward};
 
 
+// Struct to store repeatedly used information
+pub struct MoveInfos {
+    board: &Board,
+    occupied: BitBoard,
+    us_occupied: BitBoard,
+    them_occupied: BitBoard,
+    us: Player,
+    them: Player,
+}
 
-pub fn get_pseudo_moves(board: &Board, player: Player) -> Vec<PreMoveInfo> {
+impl MoveInfos {
+    pub fn new(board: &Board) -> MoveInfos {
+        let us_p: Player = board.turn;
+        let them_p: other_player(us_p);
+        let us_occ = board.get_occupied_player(us_p);
+        let them_occ = board.get_occupied_player(them_p);
+        MoveInfos {
+            board: board,
+            occupied: us_occ | them_occ,
+            us_occupied: us_occ,
+            them_occupied: them_occ,
+            us: us_p,
+            them: them_p
+        }
+    }
+
+    pub fn gen_moves(&self) -> Vec<BitMove> {
+
+    }
+
+    fn pseudo_moves(&self) -> Vec<PreMoveInfo> {
+
+    }
+
+
+
+}
+
+pub fn get_moves(board: &Board) -> Vec<BitMove> {
+    MoveInfos::new(board).gen_moves()
+}
+
+fn get_pseudo_moves(move_info: &MoveInfos, board: &Board, player: Player) -> Vec<PreMoveInfo> {
     let mut vec = Vec::with_capacity(40);
     get_pawn_moves(&board, player, &mut vec);
     vec
 }
 
-pub fn in_check(board: &Board) -> bool {
-    let turn = board.turn;
-
-    let option = board.last_move.unwrap();
-//    if option == None { return false; }
-
-
-    let last_move_info: LastMoveData = option;
-    let piece_moved = last_move_info.piece_moved;
-    let src = last_move_info.src;
-    let dst = last_move_info.dst;
-    let king_pos = board.get_bitboard(turn, Piece::K);
-
-    // Check the Piece that moved, get its attacking squares,
-    // Check Files/Ranks/Diagonals for Attacks
-    // Check for EP
-
-    true
+fn in_check(board: &Board, bit_move: BitMove) -> bool {
+    unimplemented!();
 }
 
 
-pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {
+
+fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {
     #[allow(unused)]
     let THEM: Player = match player {
         Player::White => Player::Black,
@@ -160,36 +173,6 @@ pub fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>
 //        list.push(PreMoveInfo { src: srq_sq), dst: attacked_sq), flags: MoveFlag::Capture{ep_capture: true} });
 //    }
 }
-
-//#[allow(unused)]
-//fn get_rank_mask(bit: u64) -> u64  {
-//    match bit_scan_forward(bit) / 8 {
-//        0 => RANK_1,
-//        1 => RANK_2,
-//        2 => RANK_3,
-//        3 => RANK_4,
-//        4 => RANK_5,
-//        5 => RANK_6,
-//        6 => RANK_7,
-//        7 => RANK_8,
-//        _ => 0,
-//    }
-//}
-//
-//#[allow(unused)]
-//fn get_file_mask(bit: u64) -> u64  {
-//    match bit_scan_forward(bit) / 8 {
-//        0 => FILE_A,
-//        1 => FILE_B,
-//        2 => FILE_C,
-//        3 => FILE_D,
-//        4 => FILE_E,
-//        5 => FILE_F,
-//        6 => FILE_G,
-//        7 => FILE_H,
-//        _ => 0,
-//    }
-//}
 
 
 pub fn bit_scan_forward_list(input_bits: u64, list: &mut Vec<u8>) {

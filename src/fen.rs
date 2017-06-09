@@ -3,6 +3,8 @@ use templates::Piece as Piece;
 use templates::Player as Player;
 use bit_twiddles::popcount64;
 use piece_move::BitMove;
+use magic_helper::MagicHelper;
+use std::sync::Arc;
 
 
 // TODO: Change so structs of bitboard dont have to be public
@@ -10,7 +12,7 @@ use piece_move::BitMove;
 
 // Generates a given BitBoard from the fen String
 // Returns an Error String if it cnanot parse the fen
-pub fn generate_board(fen: String) -> Result<Board, String> {
+pub fn generate_board<'a, 'b> (fen: String) -> Result<Board<'a, 'b>, String> {
     let mut chars = fen.chars();
     let mut all_bit_boards = AllBitBoards::default();
     let mut file: u64 = 0;
@@ -176,7 +178,7 @@ pub fn generate_board(fen: String) -> Result<Board, String> {
                     };
                     }
                 };
-                en_passant = if ep_position < 64 && ep_position >= 0 {ep_position} else {64};
+                en_passant = if ep_position < 64  {ep_position} else {64};
             }
             11 => {
                 match char {
@@ -234,7 +236,7 @@ pub fn generate_board(fen: String) -> Result<Board, String> {
         en_passant: en_passant,
         undo_moves: Vec::new(),
         ply: ply,
-        last_move: None
+        magic_helper: Arc::new(MagicHelper::new())
     })
 }
 

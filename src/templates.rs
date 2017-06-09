@@ -63,27 +63,49 @@ pub const NORTH_WEST: i8 = 7;
 pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
 
+#[inline]
+pub fn other_player(p: Player) -> Player {
+    match p {
+        Player::White => Player::Black,
+        Player::Black => Player::White,
+    }
+}
+
 // For whatever rank the bit is in, gets the whole bitboard
+#[inline]
 pub fn rank_bb(s: SQ) -> BitBoard {
     RANK_BB[rank_of_sq(s) as usize]
 }
 
+#[inline]
 pub fn rank_of_sq(s: SQ) -> u8 {
     (s >> 3) as u8
 }
 
+#[inline]
 pub fn file_bb(s: SQ) -> u64 {
     FILE_BB[file_of_sq(s) as usize]
 }
 
+#[inline]
 pub fn file_of_sq(s: SQ) -> u8 {
     s & 0b00000111
 }
 
-//pub fn is_ok(s: u64) -> bool {
-//    s >= 0 && s < 64
-//}
+// Assumes only one bit!
+#[inline]
+pub fn bb_to_sq(b: BitBoard) -> SQ {
+    debug_assert!(bit_twiddles::popcount64(b) == 1);
+    bit_twiddles::bit_scan_forward(b)
+}
 
+#[inline]
+pub fn sq_to_to(s: SQ) -> BitBoard {
+    assert!(s < 64);
+    (1 as u64) << s
+}
+
+#[inline]
 pub fn sq_is_okay(s: SQ) -> bool {
-    s >= 0 && s < 64
+    s < 64
 }
