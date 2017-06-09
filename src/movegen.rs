@@ -35,8 +35,8 @@ impl MoveInfos {
 // MoveGen Classifications:
 // Evasions, Captures, Quiets, Quiet_checks, Evasions, Non Evasions, Legal
 //
-// Heirarchy:
-// Legal -> {
+// Evasions: Board is currently in check; Generate moves that block the check or move away
+//
 
 
 pub fn get_moves(board: &Board) -> Vec<BitMove> {

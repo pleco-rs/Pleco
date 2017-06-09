@@ -106,7 +106,7 @@ fn popcount_old(x: u64) -> u8 {
 
 
 
-pub const TRAILS: u64 = 1700000;
+pub const TRAILS: u64 = 17000;
 
 
 #[bench]

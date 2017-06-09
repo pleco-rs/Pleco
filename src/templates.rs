@@ -109,3 +109,53 @@ pub fn sq_to_to(s: SQ) -> BitBoard {
 pub fn sq_is_okay(s: SQ) -> bool {
     s < 64
 }
+
+
+
+
+
+pub fn reverse_bytes(b: BitBoard) -> u64 {
+    let mut m: u64 = 0;
+    m |= (reverse_byte(((b >> 56) & 0xFF) as u8) as u64) << 56 ;
+    m |= (reverse_byte(((b >> 48) & 0xFF) as u8) as u64) << 48 ;
+    m |= (reverse_byte(((b >> 40) & 0xFF) as u8) as u64) << 40 ;
+    m |= (reverse_byte(((b >> 32) & 0xFF) as u8) as u64) << 32 ;
+    m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24 ;
+    m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16 ;
+    m |= (reverse_byte(((b >> 8 ) & 0xFF) as u8) as u64) << 8  ;
+    m |= (reverse_byte((b         & 0xFF) as u8) as u64);
+    m
+}
+
+pub fn reverse_byte(b: u8) -> u8 {
+    let m: u8 = ((0b00000001 & b) << 7) | ((0b00000010 & b) << 5) | ((0b00000100 & b) << 3)
+              | ((0b00001000 & b) << 1) | ((0b00010000 & b) >> 1) | ((0b00100000 & b) >> 3)
+              | ((0b01000000 & b) >> 5) | ((0b10000000 & b) >> 7);
+    m
+}
+
+pub fn print_bitboard(input: BitBoard) {
+   print_u64(reverse_bytes(input))   ;
+}
+
+pub fn print_u64(input: u64) {
+    let s = format_u64(input);
+    for x in 0..8 {
+        let slice = &s[x * 8..(x * 8) + 8];
+        println!("{}", slice);
+    }
+    println!();
+}
+
+fn format_u64(input: u64) -> String {
+    let mut s = String::with_capacity(64);
+    let strin = format!("{:b}", input);
+    let mut i = strin.len();
+    while i < 64 {
+        s.push_str("0");
+        i += 1;
+    }
+    s.push_str(&strin);
+    s
+}
+
