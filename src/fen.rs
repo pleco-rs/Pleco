@@ -1,8 +1,6 @@
 use board::*;
 use templates::Piece as Piece;
 use templates::Player as Player;
-use bit_twiddles::popcount64;
-use piece_move::BitMove;
 use magic_helper::MagicHelper;
 use std::sync::Arc;
 

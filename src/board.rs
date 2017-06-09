@@ -80,6 +80,19 @@ impl <'a, 'b> Board <'a, 'b> {
         }
     }
 
+    pub fn simple() -> Board <'a, 'b> {
+        Board {
+            bit_boards: AllBitBoards::new(),
+            turn: Player::White,
+            depth: 0,
+            castling: 0,
+            en_passant: 0,
+            undo_moves: Vec::new(),
+            ply: 0,
+            magic_helper: Arc::new(MagicHelper::simple())
+        }
+    }
+
     pub fn new(m_help: &Arc<MagicHelper<'a, 'b>>) -> Board <'a, 'b> {
         Board  {
             bit_boards: AllBitBoards::new(),

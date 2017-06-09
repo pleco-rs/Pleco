@@ -67,6 +67,20 @@ impl <'a,'b>MagicHelper<'a,'b> {
         mhelper
     }
 
+    // Dummy copy for testing purposes
+    pub fn simple() -> MagicHelper<'a,'b> {
+        let mut mhelper = MagicHelper {
+            magic_rook: MRookTable::simple(),
+            magic_bishop: MBishopTable::simple(),
+            knight_table: [0; 64],
+            king_table: [0; 64],
+            dist_table: [[0; 64]; 64],
+            line_bitboard: [[0; 64]; 64],
+            between_sqs_bb: [[0; 64]; 64],
+            adjacent_files_bb: [0; 8], };
+        mhelper
+    }
+
     // Generate Knight Moves bitboard from a source square
     pub fn knight_moves(&self, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
@@ -205,6 +219,12 @@ struct MBishopTable<'a> {
 }
 
 impl <'a> MRookTable<'a>  {
+
+    pub fn simple() -> MRookTable<'a> {
+        let sq_table: [SMagic<'a>; 64] =  unsafe{mem::uninitialized()};
+        MRookTable{sq_magics: sq_table, attacks: Vec::new()}
+    }
+
     // Creates the Magic Rook Table Struct
     pub fn init() -> MRookTable<'a> {
         // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
@@ -355,6 +375,11 @@ impl <'a> MRookTable<'a>  {
 }
 
 impl <'a> MBishopTable<'a> {
+    pub fn simple() -> MBishopTable<'a> {
+        let sq_table: [SMagic<'a>; 64] =  unsafe{mem::uninitialized()};
+        MBishopTable{sq_magics: sq_table, attacks: Vec::new()}
+    }
+
 
     // Create MagicBishopBitBoards
     pub fn init() -> MBishopTable<'a> {
@@ -671,10 +696,7 @@ pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
 
 // returns the difference between two unsigned u8s
 pub fn diff(x: u8, y: u8) -> u8 {
-    match x < y {
-        true  =>  y - x,
-        false =>  x - y,
-    }
+    if x < y { y - x } else { x - y }
 }
 
 

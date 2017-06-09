@@ -10,8 +10,3 @@ mod fen_building;
 mod board_move_apply;
 mod magic;
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use test::Bencher;
-}

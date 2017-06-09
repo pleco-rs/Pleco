@@ -95,7 +95,7 @@ pub fn file_of_sq(s: SQ) -> u8 {
 // Assumes only one bit!
 #[inline]
 pub fn bb_to_sq(b: BitBoard) -> SQ {
-    debug_assert!(bit_twiddles::popcount64(b) == 1);
+    debug_assert_eq!(bit_twiddles::popcount64(b),1);
     bit_twiddles::bit_scan_forward(b)
 }
 

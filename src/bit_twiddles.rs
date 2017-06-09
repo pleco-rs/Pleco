@@ -114,7 +114,7 @@ fn EVS_bench_bitscan_djuie(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
-            let mut x: u64 = (very_sparse_random(c.wrapping_mul(909090909090909091)));
+            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
             if x == 0 { x = 1;} else { x = bit_scan_forward(x) as u64;}
             a ^ (x) }
         )
@@ -128,7 +128,7 @@ fn EVS_bench_popcount_rust(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
-            let mut x: u64 = (very_sparse_random(c.wrapping_mul(909090909090909091)));
+            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
             if x == 0 { x = 1;} else { x = popcount64(x) as u64;}
             a ^ (x) }
         )
@@ -140,7 +140,7 @@ fn EVS_bench_popcount_old(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
-            let mut x: u64 = (very_sparse_random(c.wrapping_mul(909090909090909091)));
+            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
             if x == 0 { x = 1;} else { x = popcount_old(x) as u64;}
             a ^ (x) }
         )
@@ -153,7 +153,7 @@ fn EVS_bench_lsb_pop_rust(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
-            let mut x: u64 = (very_sparse_random(c.wrapping_mul(909090909090909091)));
+            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
             if x == 0 { x = 1;} else { x = lsb(x) as u64;}
             a ^ (x)
         })
@@ -161,14 +161,12 @@ fn EVS_bench_lsb_pop_rust(b: &mut Bencher) {
 }
 
 
-
-
 #[bench]
 fn EVS_bench_randomize_super_sparse(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
-            let mut x: u64 = (very_sparse_random(c.wrapping_mul(909090909090909091)));
+            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
             if x == 0 { x = 1;}
             a ^ (x) }
         )
