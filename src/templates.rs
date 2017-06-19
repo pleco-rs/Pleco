@@ -7,6 +7,16 @@ pub enum Player {
 }
 
 #[derive(Copy, Clone)]
+pub enum GenTypes {
+    Legal,
+    Captures,
+    Quiets,
+    Evasions,
+    NonEvasions,
+    QuietChecks
+}
+
+#[derive(Copy, Clone)]
 pub struct WhitePlayer;
 
 #[derive(Copy, Clone)]
@@ -100,7 +110,7 @@ pub fn bb_to_sq(b: BitBoard) -> SQ {
 }
 
 #[inline]
-pub fn sq_to_to(s: SQ) -> BitBoard {
+pub fn sq_to_bb(s: SQ) -> BitBoard {
     assert!(s < 64);
     (1 as u64) << s
 }

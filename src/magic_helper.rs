@@ -45,6 +45,10 @@ pub struct MagicHelper<'a, 'b> {
 
 }
 
+unsafe impl Send for MagicHelper {}
+
+unsafe impl Sync for MagicHelper {}
+
 // TO IMPLEMENT:
 //      Adjacent Files BitBoard
 //      Between Squares BitBoard

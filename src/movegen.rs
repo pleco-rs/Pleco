@@ -36,7 +36,7 @@ impl MoveInfos {
 // Evasions, Captures, Quiets, Quiet_checks, Evasions, Non Evasions, Legal
 //
 // Evasions: Board is currently in check; Generate moves that block the check or move away
-//
+// Captures:
 
 
 pub fn get_moves(board: &Board) -> Vec<BitMove> {
@@ -131,6 +131,38 @@ fn in_check(board: &Board, bit_move: BitMove) -> bool {
     unimplemented!()
 }
 
+
+// Gets pawn attacks from a square
+pub fn pawn_attacks_from(sq: SQ, player: Player) -> BitBoard {
+    match player {
+        Player::White => {
+            let mut board: u64 = 0;
+            if sq < 56 {
+                let file = file_of_sq(sq);
+                if file != 0 {
+                    board |= (1 as u64).wrapping_shl(sq + 7);
+                }
+                if file != 7 {
+                    board |= (1 as u64).wrapping_shl(sq + 9);
+                }
+            }
+            board
+        },
+        Player::Black => {
+            let mut board: u64 = 0;
+            if sq > 7 {
+                let file = file_of_sq(sq);
+                if file != 0 {
+                    board |= (1 as u64).wrapping_shl(sq - 9);
+                }
+                if file != 7 {
+                    board |= (1 as u64).wrapping_shl(sq - 7);
+                }
+            }
+            board
+        }
+    }
+}
 
 
 fn get_pawn_moves(board: &Board, player: Player, list: &mut Vec<PreMoveInfo>) {

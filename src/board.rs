@@ -107,6 +107,15 @@ impl <'a, 'b> Board <'a, 'b> {
     }
 
     pub fn generate_moves(&self) -> Vec<BitMove> { movegen::get_moves(&self) }
+//
+//    fn update_check(&self, piece_moved: Piece, src: BitBoard) {
+//        let occupied: BitBoard = self.get_occupied();
+//        let turn: Player = self.turn;
+//        let king_bb: BitBoard = self.get_bitboard(turn, Piece::K);
+//        let attacks
+//    }
+
+
 
 
 
@@ -205,10 +214,16 @@ impl <'a, 'b> Board <'a, 'b> {
         let src: SQ = bit_move.get_src();
         let dst: SQ = bit_move.get_dest();
 
-        let src_bit: BitBoard = 1 << src;
-        let dst_bit: BitBoard = 1 << dst;
+        let src_bit: BitBoard = sq_to_bb(src);
+        let dst_bit: BitBoard = sq_to_bb(dst);
+
+        let opp_king_bb: BitBoard = self.get_bitboard(them, Piece::K);
+        let mut piece_moved: Piece = Piece::P;
+        let mut them_in_check: bool = false;
 
         if bit_move.is_castle() {
+            piece_moved = Piece::R;
+
             // IF CASTLE MOVE
             // White: King at index: 4
             // Black: King at index: 60
@@ -255,13 +270,19 @@ impl <'a, 'b> Board <'a, 'b> {
                 Player::White => { self.castling &= 0b11110011; }
                 Player::Black => { self.castling &= 0b11111100; }
             }
+
+            if self.magic_helper.rook_moves(self.get_occupied(),dst) & opp_king_bb != 0 { them_in_check = true; }
+
         } else if bit_move.is_double_push().0 {
             // DOUBLE PAWN MOVE
             match us {
                 Player::White => { self.bit_boards.w_pawn ^= src_bit | dst_bit; }
                 Player::Black => { self.bit_boards.b_pawn ^= src_bit | dst_bit; }
             }
-            self.en_passant = dst;
+            if movegen::pawn_attacks_from(dst, us) & opp_king_bb != 0 {
+                them_in_check = true;}
+
+
 //            self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
         } else if bit_move.is_promo() {
             if bit_move.is_capture() {
@@ -282,23 +303,28 @@ impl <'a, 'b> Board <'a, 'b> {
                     self.bit_boards.w_pawn ^= dst_bit << 8;
                 }
             }
+            self.en_passant = dst;
 //            self.last_move = Some(LastMoveData { piece_moved: Piece::P, src: src, dst: dst });
         } else {
             // QUIET MOVE
 
-            if bit_move.is_capture() { self.xor_bitboard_player_sq(them, dst_bit); }
             // check if capture, if so opponent board needs to be modified;
+            if bit_move.is_capture() {
+                self.xor_bitboard_player_sq(them, dst_bit);
+            }
 
             // Modify own board
             let piece = self.get_piece_from_src(src_bit, us).unwrap();
             self.xor_bitboard_player_piece_sq(us, piece, src_bit | dst_bit);
 //            self.last_move = Some( LastMoveData { piece_moved: piece, src: src, dst: dst } );
+            if self.magic_helper.rook_moves(self.get_occupied(),dst) & opp_king_bb != 0 { them_in_check = true; }
         }
         if !bit_move.is_double_push().0 { self.en_passant = 64; }
 
         self.ply += 1;
         self.turn = them;
     }
+    
 
     // Returns the piece at the given place. Num bits src_bit == 1
     fn get_piece_from_src(&self, src_bit: BitBoard, player: Player) -> Option<Piece> {

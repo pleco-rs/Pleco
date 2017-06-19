@@ -31,6 +31,9 @@
 // 1110  ===> Rook   Capture  Promo
 // 1111  ===> Queen  Capture  Promo
 
+
+// Castles have the src and dst bit moved for the ROOK
+
 use templates::SQ;
 use templates::Piece;
 
