@@ -2,9 +2,17 @@ use bit_twiddles;
 
 #[derive(Copy, Clone)]
 pub enum Player {
-    White,
-    Black,
+    White = 0,
+    Black = 1,
 }
+
+pub const PLAYER_CNT: usize = 2;
+pub const PIECE_CNT: usize = 8;
+pub const SQ_CNT: usize = 64;
+pub const FILE_CNT: usize = 8;
+pub const RANK_CNT: usize = 8;
+pub const CASTLING_CNT: usize = 4;
+
 
 #[derive(Copy, Clone)]
 pub enum GenTypes {
@@ -32,6 +40,8 @@ pub enum Piece {
     N = 2,
     P = 1,
 }
+
+
 
 pub type BitBoard = u64;
 pub type SQ = u8;
@@ -62,7 +72,6 @@ pub const FILE_BB: [u64; 8] = [FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, F
 pub const RANK_BB: [u64; 8] = [RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8];
 
 
-
 pub const NORTH: i8 = 8;
 pub const SOUTH: i8 = -8;
 pub const WEST: i8 = -1;
@@ -73,6 +82,7 @@ pub const NORTH_WEST: i8 = 7;
 pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
 
+
 #[inline]
 pub fn other_player(p: Player) -> Player {
     match p {
@@ -80,6 +90,7 @@ pub fn other_player(p: Player) -> Player {
         Player::Black => Player::White,
     }
 }
+
 
 // For whatever rank the bit is in, gets the whole bitboard
 #[inline]
@@ -119,9 +130,6 @@ pub fn sq_to_bb(s: SQ) -> BitBoard {
 pub fn sq_is_okay(s: SQ) -> bool {
     s < 64
 }
-
-
-
 
 
 pub fn reverse_bytes(b: BitBoard) -> u64 {

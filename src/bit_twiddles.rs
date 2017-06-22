@@ -51,6 +51,15 @@ pub fn popcount64(x: u64) -> u8 {
      x.count_ones() as u8
 }
 
+
+// Pops and Returns the lsb
+#[inline]
+pub fn pop_lsb(&mut x: u64) -> u64 {
+    let lsb: Bitboard = lsb(x);
+    x &= !lsb;
+    lsb
+}
+
 // Returns index of the LSB
 #[inline]
 pub fn bit_scan_forward(bits: u64) -> u8 {

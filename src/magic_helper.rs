@@ -41,13 +41,49 @@ pub struct MagicHelper<'a, 'b> {
     dist_table: [[SQ; 64]; 64],
     line_bitboard:[[u64; 64]; 64],
     between_sqs_bb: [[u64; 64]; 64],
-    adjacent_files_bb: [u64;8]
-
+    adjacent_files_bb: [u64;8],
+    zobrist: Zobrist,
 }
 
-unsafe impl Send for MagicHelper {}
+pub struct Zobrist {
+    sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
+    en_p: [u64; FILE_CNT],
+    castle: [u64; CASTLING_CNT],
+    side: u64,
+}
 
-unsafe impl Sync for MagicHelper {}
+impl Zobrist {
+    fn default() -> Zobrist {
+        let mut zob = Zobrist {
+            sq_piece: [[0; PIECE_CNT]; SQ_CNT],
+            en_p: [0; FILE_CNT],
+            castle: [0; CASTLING_CNT],
+            side: 0,
+        };
+        let mut rng = PRNG::init(23081);
+
+        for i in 0..SQ_CNT {
+            for j in 0..FILE_CNT {
+                zob.sq_piece[i][j] = rng.rand_change();
+            }
+        }
+
+        for i in 0..FILE_CNT {
+            zob.en_p[i] = rng.rand_change()
+        }
+
+        for i in 0..CASTLING_CNT {
+            zob.castle[i] = rng.rand_change()
+        }
+
+        zob.side = rng.rand_change();
+        zob
+    }
+}
+
+unsafe impl<'a,'b> Send for MagicHelper<'a,'b> {}
+
+unsafe impl<'a,'b> Sync for MagicHelper<'a,'b> {}
 
 // TO IMPLEMENT:
 //      Adjacent Files BitBoard
@@ -66,6 +102,7 @@ impl <'a,'b>MagicHelper<'a,'b> {
             line_bitboard: [[0; 64]; 64],
             between_sqs_bb: [[0; 64]; 64],
             adjacent_files_bb: [0;8],
+            zobrist: Zobrist::default(),
         };
         mhelper.gen_line_bbs();
         mhelper.gen_between_bbs();
@@ -83,7 +120,8 @@ impl <'a,'b>MagicHelper<'a,'b> {
             dist_table: [[0; 64]; 64],
             line_bitboard: [[0; 64]; 64],
             between_sqs_bb: [[0; 64]; 64],
-            adjacent_files_bb: [0; 8], };
+            adjacent_files_bb: [0; 8],
+            zobrist: Zobrist::default(),};
         mhelper
     }
 

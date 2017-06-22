@@ -1,6 +1,6 @@
 extern crate rusty_chess;
 
-use rusty_chess::board::{Board, AllBitBoards};
+use rusty_chess::board::{Board, BitBoardStates};
 use rusty_chess::templates::{Piece, Player, SQ};
 use rusty_chess::movegen as movegen;
 use rusty_chess::piece_move::*;

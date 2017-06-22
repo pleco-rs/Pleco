@@ -140,10 +140,10 @@ pub fn pawn_attacks_from(sq: SQ, player: Player) -> BitBoard {
             if sq < 56 {
                 let file = file_of_sq(sq);
                 if file != 0 {
-                    board |= (1 as u64).wrapping_shl(sq + 7);
+                    board |= (1 as u64).wrapping_shl((sq + 7) as u32);
                 }
                 if file != 7 {
-                    board |= (1 as u64).wrapping_shl(sq + 9);
+                    board |= (1 as u64).wrapping_shl((sq + 9) as u32);
                 }
             }
             board
@@ -153,10 +153,10 @@ pub fn pawn_attacks_from(sq: SQ, player: Player) -> BitBoard {
             if sq > 7 {
                 let file = file_of_sq(sq);
                 if file != 0 {
-                    board |= (1 as u64).wrapping_shl(sq - 9);
+                    board |= (1 as u64).wrapping_shl((sq - 9) as u32);
                 }
                 if file != 7 {
-                    board |= (1 as u64).wrapping_shl(sq - 7);
+                    board |= (1 as u64).wrapping_shl((sq - 7) as u32);
                 }
             }
             board
