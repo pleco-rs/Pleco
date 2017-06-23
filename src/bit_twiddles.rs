@@ -52,13 +52,13 @@ pub fn popcount64(x: u64) -> u8 {
 }
 
 
-// Pops and Returns the lsb
-#[inline]
-pub fn pop_lsb(&mut x: u64) -> u64 {
-    let lsb: Bitboard = lsb(x);
-    x &= !lsb;
-    lsb
-}
+//// Pops and Returns the lsb
+//#[inline]
+//pub fn pop_lsb(x: &mut u64) -> u64 {
+//    let lsb: Bitboard = lsb(*x);
+//    x &= !lsb;
+//    lsb
+//}
 
 // Returns index of the LSB
 #[inline]
@@ -84,9 +84,12 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 32;
     DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
 }
+#[inline]
+pub fn more_than_one(x: u64) -> bool {
+    (x & (x.wrapping_sub(1))) != 0
+}
 
 // Returns the LSB
-
 #[inline]
 pub fn lsb(bits: u64) -> u64 {
     1 << bits.trailing_zeros()

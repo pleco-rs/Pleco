@@ -58,6 +58,13 @@ pub enum MoveFlag {
     QuietMove,
 }
 
+pub enum MoveType {
+    Promotion,
+    Castle,
+    EnPassant,
+    Normal
+}
+
 #[derive(Copy, Clone)]
 pub struct PreMoveInfo {
     pub src: SQ,
@@ -162,6 +169,14 @@ impl BitMove {
             2 => Piece::R,
             3 | _ => Piece::Q,
         }
+    }
+
+    #[inline]
+    pub fn move_type(&self) -> MoveType {
+        if self.is_castle() {return MoveType::Castle}
+        if self.is_promo() {return MoveType::Promotion}
+        if self.is_en_passant() { return MoveType::EnPassant}
+        MoveType::Normal
     }
 }
 

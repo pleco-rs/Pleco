@@ -30,6 +30,59 @@ pub struct BitBoardStates {
 }
 
 
+impl BitBoardStates {
+    fn blank() -> BitBoardStates {
+        BitBoardStates {
+            w_pawn: 0,
+            w_knight: 0,
+            w_bishop: 0,
+            w_rook: 0,
+            w_queen: 0,
+            w_king: 0,
+            w_occ: 0,
+            b_pawn: 0,
+            b_knight: 0,
+            b_bishop: 0,
+            b_rook: 0,
+            b_queen: 0,
+            b_king: 0,
+            b_occ: 0
+        }
+    }
+
+    // Creates occupancy bb from other bb;
+    pub fn init_occ_bb(&mut self) {
+        let b__occ: BitBoard = self.b_pawn | self.b_knight | self.b_bishop | self.b_rook | self.b_queen | self.b_king;
+        let w__occ: BitBoard = self.w_pawn | self.w_knight | self.w_bishop | self.w_rook | self.w_queen | self.w_king;
+        self.b_occ = b__occ;
+        self.w_occ = w__occ;
+    }
+}
+
+// Returns blank bitboards
+impl Default for BitBoardStates {
+    fn default() -> BitBoardStates {
+        BitBoardStates {
+            w_pawn: 0b0000000000000000000000000000000000000000000000001111111100000000,
+            w_knight: 0b0000000000000000000000000000000000000000000000000000000001000010,
+            w_bishop: 0b0000000000000000000000000000000000000000000000000000000000100100,
+            w_rook: 0b0000000000000000000000000000000000000000000000000000000010000001,
+            w_queen: 0b0000000000000000000000000000000000000000000000000000000000001000,
+            w_king: 0b0000000000000000000000000000000000000000000000000000000000010000,
+            w_occ: 0b0000000000000000000000000000000000000000000000001111111111111111,
+            b_pawn: 0b0000000011111111000000000000000000000000000000000000000000000000,
+            b_knight: 0b0100001000000000000000000000000000000000000000000000000000000000,
+            b_bishop: 0b0010010000000000000000000000000000000000000000000000000000000000,
+            b_rook: 0b1000000100000000000000000000000000000000000000000000000000000000,
+            b_queen: 0b0000100000000000000000000000000000000000000000000000000000000000,
+            b_king: 0b0001000000000000000000000000000000000000000000000000000000000000,
+            b_occ: 0b1111111111111111000000000000000000000000000000000000000000000000,
+        }
+    }
+}
+
+
+
 // State of the Board
 #[derive(Clone)]
 pub struct BoardState {
@@ -54,10 +107,29 @@ pub struct BoardState {
     //  zobrast       -> zobrast key
     //  capture_piece -> If a piece was recently captured
     //  checkers_bb   -> Bitboard of all pieces where the king is in check
-    //  blockers_king -> per each player, bitboard of pieces blocking an attack on a king
+    //  blockers_king -> per each player, bitboard of pieces blocking an attack on a king. Of BOTH Sides
     //  pinners_king  -> Per each player, bitboard of pieces currently pinning the opponent's king
     //  check_sqs     -> Array of pieces where check is there
 }
+
+impl BoardState {
+    // Beginning Moves only
+    pub fn default() -> BoardState {
+        BoardState {
+            castling: 0,
+            rule_50: 0,
+            ply: 0,
+            ep_square: 0,
+            zobrast: 0,
+            captured_piece: None,
+            checkers_bb: 0,
+            blockers_king: [0; PLAYER_CNT],
+            pinners_king: [0; PLAYER_CNT],
+            check_sqs: [0; PIECE_CNT],
+        }
+    }
+}
+
 
 #[derive(Clone)]
 pub struct Board<'a,'b>  {
@@ -90,24 +162,6 @@ pub struct Board<'a,'b>  {
 //      a  b  c  d  e  f  g  h
 
 
-impl BoardState {
-    // Beginning Moves only
-    pub fn default() -> BoardState {
-        BoardState {
-            castling: 0,
-            rule_50: 0,
-            ply: 0,
-            ep_square: 0,
-            zobrast: 0,
-            captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
-        }
-    }
-}
-
 
 // Initializers!
 impl <'a, 'b> Board <'a, 'b> {
@@ -116,7 +170,7 @@ impl <'a, 'b> Board <'a, 'b> {
     pub fn default() -> Board<'a, 'b> {
         let mut b = Board {
             turn: Player::White,
-            bit_boards: BitBoardStates::new(),
+            bit_boards: BitBoardStates::default(),
             half_moves: 0,
             depth: 0,
             state: BoardState::default(),
@@ -132,7 +186,7 @@ impl <'a, 'b> Board <'a, 'b> {
     pub fn simple() -> Board<'a, 'b> {
         Board {
             turn: Player::White,
-            bit_boards: BitBoardStates::new(),
+            bit_boards: BitBoardStates::default(),
             half_moves: 0,
             depth: 0,
             state: BoardState::default(),
@@ -146,7 +200,7 @@ impl <'a, 'b> Board <'a, 'b> {
     pub fn new(m_help: &Arc<MagicHelper<'a, 'b>>) -> Board<'a, 'b> {
         let mut b = Board {
             turn: Player::White,
-            bit_boards: BitBoardStates::new(),
+            bit_boards: BitBoardStates::default(),
             half_moves: 0,
             depth: 0,
             state: BoardState::default(),
@@ -181,7 +235,6 @@ impl <'a, 'b> Board <'a, 'b> {
     }
 }
 
-
 // Public Move Gen & Mutation Functions
 impl <'a, 'b> Board <'a, 'b> {
 
@@ -190,6 +243,9 @@ impl <'a, 'b> Board <'a, 'b> {
         unimplemented!();
     }
 
+    pub fn undo_move(&mut self) {
+        unimplemented!();
+    }
 
     pub fn generate_moves(&self) -> Vec<BitMove> {
         unimplemented!();
@@ -199,48 +255,91 @@ impl <'a, 'b> Board <'a, 'b> {
 
 // Private Mutating Functions
 impl <'a, 'b> Board <'a, 'b> {
-    // Sets the Bitboard of piece, player to parameter bit_board
-    fn modifiy_bitboard(&mut self, bit_board: BitBoard, player: Player, piece: Piece) {
-        match player {
-            Player::White => {
-                match piece {
-                    Piece::B => self.bit_boards.w_bishop = bit_board,
-                    Piece::P => self.bit_boards.w_pawn = bit_board,
-                    Piece::R => self.bit_boards.w_rook = bit_board,
-                    Piece::N => self.bit_boards.w_knight = bit_board,
-                    Piece::K => self.bit_boards.w_king = bit_board,
-                    Piece::Q => self.bit_boards.w_queen = bit_board,
-                };
-            }
-            Player::Black => {
-                match piece {
-                    Piece::B => self.bit_boards.b_bishop = bit_board,
-                    Piece::P => self.bit_boards.b_pawn = bit_board,
-                    Piece::R => self.bit_boards.b_rook = bit_board,
-                    Piece::N => self.bit_boards.b_knight = bit_board,
-                    Piece::K => self.bit_boards.b_king = bit_board,
-                    Piece::Q => self.bit_boards.b_queen = bit_board,
-                };
-            }
-        };
+    fn put_piece(&mut self) {
+        unimplemented!();
     }
 
-//    pub struct Zobrist {
-//sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
-//en_p: [u64; FILE_CNT],
-//castle: [u64; CASTLING_CNT],
-//side: u64,
-//}
+    fn remove_piece(&mut self) {
+        unimplemented!();
+    }
+
+    fn move_piece(&mut self) {
+        unimplemented!();
+    }
+
+    fn set_check_info(&mut self) {
+        let mut white_pinners = 0;
+        self.state.blockers_king[Player::White as usize]  = {
+            self.slider_blockers(self.occupied_black(), self.king_sq(Player::White), &mut white_pinners) };
+        self.state.pinners_king[Player::White as usize] = white_pinners;
+
+        let mut black_pinners = 0;
+        self.state.blockers_king[Player::Black as usize]  = {
+            self.slider_blockers(self.occupied_white(), self.king_sq(Player::Black), &mut black_pinners) };
+        self.state.pinners_king[Player::Black as usize] = black_pinners;
+
+        let ksq: SQ = self.king_sq(other_player(self.turn));
+        let occupied = self.get_occupied();
+
+        self.state.check_sqs[Piece::P  as usize] = self.magic_helper.pawn_attacks_from(ksq,other_player(self.turn));
+        self.state.check_sqs[Piece::N  as usize] = self.magic_helper.knight_moves(ksq);
+        self.state.check_sqs[Piece::B  as usize] = self.magic_helper.bishop_moves(occupied, ksq);
+        self.state.check_sqs[Piece::R  as usize] = self.magic_helper.rook_moves(occupied, ksq);
+        self.state.check_sqs[Piece::Q  as usize] = self.state.check_sqs[Piece::B  as usize]
+                                                 | self.state.check_sqs[Piece::R  as usize];
+        self.state.check_sqs[Piece::K  as usize] = 0;
+    }
+
+    fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
+        let mut result: BitBoard = 0;
+        *pinners = 0;
+        let occupied: BitBoard = self.get_occupied();
+
+        let mut snipers: BitBoard = sliders & (
+            (self.magic_helper.rook_moves(0, s) & (self.piece_two_bb_both_players(Piece::B, Piece::Q)))
+                | (self.magic_helper.bishop_moves(0, s) & (self.piece_two_bb_both_players(Piece::B, Piece::Q))));
+
+        while snipers != 0 {
+            let lsb: BitBoard = lsb(snipers);
+            snipers &= !lsb;
+            let sniper_sq: SQ = bb_to_sq(lsb);
+            let b: BitBoard = self.magic_helper.between_bb(s,sniper_sq) & occupied;
+            if !more_than_one(b) {
+                result |= b;
+
+                if b & self.get_occupied_player(self.player_at_sq(s).unwrap()) != 0 {
+                    *pinners |= sq_to_bb(sniper_sq);
+                }
+            }
+        }
+
+        result
+    }
+}
+
+
+
+
+// Zobrist
+impl <'a, 'b> Board <'a, 'b> {
+
+    //    pub struct Zobrist {
+    //      sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
+    //      en_p: [u64; FILE_CNT],
+    //      castle: [u64; CASTLING_CNT],
+    //      side: u64,
+    //    }
+
     // Used to create a hash of self when initialized
     fn set_zob_hash(&mut self) {
         let mut zob: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
         while b != 0 {
-            let sq: BitBoard = bit_scan_forward(b);
+            let sq: SQ = bit_scan_forward(b);
             let lsb: BitBoard = lsb(b);
             b &= !lsb;
             let piece = self.piece_at_bb_all(lsb);
-            zob ^= self.magic_helper.zobrist.sq_piece[piece as usize][sq as usize];
+            zob ^= self.magic_helper.zobrist.sq_piece[piece.unwrap() as usize][sq as usize];
         }
         let ep = self.state.ep_square;
         if ep != 0 && ep < 64 {
@@ -248,74 +347,41 @@ impl <'a, 'b> Board <'a, 'b> {
             zob ^= self.magic_helper.zobrist.en_p[file as usize];
         }
 
-        if self.turn == Player::Black {
-            zob ^= self.magic_helper.zobrist.side;
+        match self.turn {
+            Player::Black =>  zob ^= self.magic_helper.zobrist.side,
+            Player::White => {}
         }
 
         let c = self.state.castling;
-        assert!(c < CASTLING_CNT);
+        assert!((c as usize) < CASTLING_CNT);
         zob ^= self.magic_helper.zobrist.castle[c as usize];
         self.state.zobrast = zob;
     }
-
-
-    // XORs the Bitboard of (player,piece) by the input bit_board, figures out the piece & player itself
-    fn xor_bitboard_sq(&mut self, square_bit: BitBoard) {
-        let player = match self.get_occupied() & square_bit {
-            0 => Player::Black,
-            _ => Player::White
-        };
-        self.xor_bitboard_player_sq(player, square_bit);
-    }
-
-    // XORs the Bitboard of (player,piece) by the input bit_board, figures out the piece itself
-    fn xor_bitboard_player_sq(&mut self, player: Player, square_bit: BitBoard) {
-        let piece = self.piece_at_bb(square_bit, player).unwrap();
-        self.xor_bitboard_player_piece_sq(player, piece, square_bit);
-    }
-
-    // XORs the Bitboard of (piece, player) by the input bit_board
-    fn xor_bitboard_player_piece_sq(&mut self, player: Player, piece: Piece, square_bit: BitBoard) {
-        match player {
-            Player::White => {
-                match piece {
-                    Piece::B => self.bit_boards.w_bishop ^= square_bit,
-                    Piece::P => self.bit_boards.w_pawn ^= square_bit,
-                    Piece::R => self.bit_boards.w_rook ^= square_bit,
-                    Piece::N => self.bit_boards.w_knight ^= square_bit,
-                    Piece::K => self.bit_boards.w_king ^= square_bit,
-                    Piece::Q => self.bit_boards.w_queen ^= square_bit,
-                };
-            }
-            Player::Black => {
-                match piece {
-                    Piece::B => self.bit_boards.b_bishop ^= square_bit,
-                    Piece::P => self.bit_boards.b_pawn ^= square_bit,
-                    Piece::R => self.bit_boards.b_rook ^= square_bit,
-                    Piece::N => self.bit_boards.b_knight ^= square_bit,
-                    Piece::K => self.bit_boards.b_king ^= square_bit,
-                    Piece::Q => self.bit_boards.b_queen ^= square_bit,
-                };
-            }
-        };
-    }
 }
 
-
-// State Information Methods
-// Returns information concering the state of the Bitboard
+// Position Representation
 impl <'a, 'b> Board <'a, 'b> {
-    pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
-        let x = self.get_bitboard(player, piece);
-        popcount64(x)
+    // Gets all occupied Squares
+    pub fn get_occupied(&self) -> BitBoard {
+        self.bit_boards.w_occ | self.bit_boards.b_occ
     }
 
-    pub fn count_pieces_player(&self, player: Player) -> u8 {
-        popcount64(self.get_occupied_player(player))
+    // Get the BitBoard of the squares occupied by player
+    pub fn get_occupied_player(&self, player: Player) -> BitBoard {
+        match player {
+            Player::White => self.occupied_white(),
+            Player::Black => self.occupied_black(),
+        }
     }
+
+    // Returns a Bitboard consisting of only the squares occupied by the White Player
+    pub fn occupied_white(&self) -> BitBoard { self.bit_boards.w_occ }
+
+    // Returns a BitBoard consisting of only the squares occupied by the Black Player
+    pub fn occupied_black(&self) -> BitBoard { self.bit_boards.b_occ }
 
     // Returns Bitboard for one Piece and One Player
-    pub fn get_bitboard(&self, player: Player, piece: Piece) -> BitBoard {
+    pub fn piece_bb(&self, player: Player, piece: Piece) -> BitBoard {
         match player {
             Player::White => {
                 match piece {
@@ -340,11 +406,6 @@ impl <'a, 'b> Board <'a, 'b> {
         }
     }
 
-    // Gets all occupied Squares
-    pub fn get_occupied(&self) -> BitBoard {
-        self.bit_boards.w_occ | self.bit_boards.b_occ
-    }
-
     // Horizontally moving and Vertically moving pieces of player (Queens and Rooks)
     pub fn sliding_piece_bb(&self, player: Player) -> BitBoard {
         match player {
@@ -360,54 +421,167 @@ impl <'a, 'b> Board <'a, 'b> {
         }
     }
 
+    // Bitboard of the pieces of both sides
+    pub fn piece_bb_both_players(&self, piece: Piece) -> BitBoard {
+        match piece {
+            Piece::P => self.bit_boards.b_pawn | self.bit_boards.w_pawn,
+            Piece::N => self.bit_boards.b_knight | self.bit_boards.w_knight,
+            Piece::B => self.bit_boards.b_bishop | self.bit_boards.w_bishop,
+            Piece::R => self.bit_boards.b_rook | self.bit_boards.w_rook,
+            Piece::Q => self.bit_boards.b_queen | self.bit_boards.w_queen,
+            Piece::K => self.bit_boards.b_king | self.bit_boards.w_king,
+        }
+    }
+
+    pub fn piece_two_bb_both_players(&self, piece: Piece, piece2: Piece) -> BitBoard {
+        self.piece_bb_both_players(piece) | self.piece_bb_both_players(piece2)
+    }
+
+    // Total number of pieces of type Piece and of player P
+    pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
+        let x = self.piece_bb(player, piece);
+        popcount64(x)
+    }
+
+    // Total number of pieces of Player
+    pub fn count_pieces_player(&self, player: Player) -> u8 {
+        popcount64(self.get_occupied_player(player))
+    }
+
     // Returns the piece at the given place. Number of bits must be equal to 1, or else won't work
     pub fn piece_at_bb(&self, src_bit: BitBoard, player: Player) -> Option<Piece> {
-        if self.get_bitboard(player, Piece::P) & src_bit != 0 { return Some(Piece::P) };
-        if self.get_bitboard(player, Piece::R) & src_bit != 0 { return Some(Piece::R) };
-        if self.get_bitboard(player, Piece::N) & src_bit != 0 { return Some(Piece::N) };
-        if self.get_bitboard(player, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
-        if self.get_bitboard(player, Piece::B) & src_bit != 0 { return Some(Piece::B) };
-        if self.get_bitboard(player, Piece::K) & src_bit != 0 { return Some(Piece::K) };
+        if self.piece_bb(player, Piece::P) & src_bit != 0 { return Some(Piece::P) };
+        if self.piece_bb(player, Piece::R) & src_bit != 0 { return Some(Piece::R) };
+        if self.piece_bb(player, Piece::N) & src_bit != 0 { return Some(Piece::N) };
+        if self.piece_bb(player, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
+        if self.piece_bb(player, Piece::B) & src_bit != 0 { return Some(Piece::B) };
+        if self.piece_bb(player, Piece::K) & src_bit != 0 { return Some(Piece::K) };
         None
     }
 
     // Returns the piece at the given place. Number of bits must be equal to 1, or else won't work
     pub fn piece_at_bb_all(&self, src_bit: BitBoard)-> Option<Piece> {
-        if self.get_bitboard(Player::White, Piece::P) & src_bit != 0 { return Some(Piece::P) };
-        if self.get_bitboard(Player::White, Piece::R) & src_bit != 0 { return Some(Piece::R) };
-        if self.get_bitboard(Player::White, Piece::N) & src_bit != 0 { return Some(Piece::N) };
-        if self.get_bitboard(Player::White, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
-        if self.get_bitboard(Player::White, Piece::B) & src_bit != 0 { return Some(Piece::B) };
-        if self.get_bitboard(Player::White, Piece::K) & src_bit != 0 { return Some(Piece::K) };
-        if self.get_bitboard(Player::Black, Piece::P) & src_bit != 0 { return Some(Piece::P) };
-        if self.get_bitboard(Player::White, Piece::R) & src_bit != 0 { return Some(Piece::R) };
-        if self.get_bitboard(Player::Black, Piece::N) & src_bit != 0 { return Some(Piece::N) };
-        if self.get_bitboard(Player::Black, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
-        if self.get_bitboard(Player::Black, Piece::B) & src_bit != 0 { return Some(Piece::B) };
-        if self.get_bitboard(Player::Black, Piece::K) & src_bit != 0 { return Some(Piece::K) };
+        if self.piece_bb(Player::White, Piece::P) & src_bit != 0 { return Some(Piece::P) };
+        if self.piece_bb(Player::White, Piece::R) & src_bit != 0 { return Some(Piece::R) };
+        if self.piece_bb(Player::White, Piece::N) & src_bit != 0 { return Some(Piece::N) };
+        if self.piece_bb(Player::White, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
+        if self.piece_bb(Player::White, Piece::B) & src_bit != 0 { return Some(Piece::B) };
+        if self.piece_bb(Player::White, Piece::K) & src_bit != 0 { return Some(Piece::K) };
+        if self.piece_bb(Player::Black, Piece::P) & src_bit != 0 { return Some(Piece::P) };
+        if self.piece_bb(Player::White, Piece::R) & src_bit != 0 { return Some(Piece::R) };
+        if self.piece_bb(Player::Black, Piece::N) & src_bit != 0 { return Some(Piece::N) };
+        if self.piece_bb(Player::Black, Piece::Q) & src_bit != 0 { return Some(Piece::Q) };
+        if self.piece_bb(Player::Black, Piece::B) & src_bit != 0 { return Some(Piece::B) };
+        if self.piece_bb(Player::Black, Piece::K) & src_bit != 0 { return Some(Piece::K) };
         None
     }
 
-    // Get the BitBoard of the squares occupied by player
-    pub fn get_occupied_player(&self, player: Player) -> BitBoard {
+    // Returns the Piece, if any, at the square
+    pub fn piece_at_sq(&self, sq: SQ)-> Option<Piece> {
+        assert!(sq < 64);
+        self.piece_at_bb_all(sq_to_bb(sq))
+    }
+
+    // Returns the Player, if any, occupying the square
+    pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
+        assert!(sq < 64);
+        let bb: BitBoard = sq_to_bb(sq);
+        if bb & self.occupied_black() != 0 { return Some(Player::Black)}
+        if bb & self.occupied_white() != 0 { return Some(Player::White)}
+        None
+    }
+
+    // Returns the player, if any, at the square
+    pub fn player_at_sq(&self, s: SQ) -> Option<Player> {
+        let bb = sq_to_bb(s);
+        if self.occupied_white() & bb != 0 {
+            return Some(Player::White);
+        } else if self.occupied_black() & bb != 0{
+            return Some(Player::Black);
+        }
+        None
+    }
+
+    // Returns the square of the King for a given player
+    pub fn king_sq(&self, player: Player) -> SQ {
         match player {
-            Player::White => self.occupied_white(),
-            Player::Black => self.occupied_black(),
+            Player::White => bb_to_sq(self.bit_boards.w_king),
+            Player::Black => bb_to_sq(self.bit_boards.b_king),
         }
     }
+}
 
-    // Returns a Bitboard consisting of only the squares occupied by the White Player
-    pub fn occupied_white(&self) -> BitBoard {
-        self.bit_boards.w_occ
+// Castling
+impl <'a, 'b> Board <'a, 'b> {
+    pub fn can_castle(&self, player: Player) -> bool {
+        unimplemented!();
+    }
+}
+
+// Checking
+impl <'a, 'b> Board <'a, 'b> {
+
+    // If current side to move is in check
+    pub fn in_check(&self) -> bool {
+        self.state.checkers_bb != 0
     }
 
-    // Returns a BitBoard consisting of only the squares occupied by the Black Player
-    pub fn occupied_black(&self) -> BitBoard {
-        self.bit_boards.b_occ
+    // Checks on the current player's king
+    pub fn checkers(&self) -> BitBoard {
+        self.state.checkers_bb
+    }
+
+    // Pieces the current side can move to discover check
+    pub fn discovered_check_candidates(&self) -> BitBoard {
+        self.state.blockers_king[other_player(self.turn) as usize] & self.get_occupied_player(self.turn)
+    }
+
+    // Gets the Pinned pieces for the given player
+    pub fn pieces_pinned(&self, player: Player) -> BitBoard {
+        self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
 }
 
 
+impl <'a, 'b> Board <'a, 'b> {
+    // Attacks to / From a given square
+    pub fn attackers_to(&self, sq: SQ) -> BitBoard {
+        let occupied: BitBoard = self.get_occupied();
+        unimplemented!();
+    }
+
+}
+
+// Move Testing
+impl <'a, 'b> Board <'a, 'b> {
+    pub fn legal_move(&self, m: BitMove) -> bool {
+        unimplemented!();
+    }
+    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
+        unimplemented!();
+    }
+
+    // Checks if a move will give check to the opposing player's King
+    pub fn gives_check(&self, m: BitMove) -> bool {
+        let src: SQ = m.get_src();
+        let dst: SQ = m.get_dest();
+        assert_ne!(src, dst);
+        assert_eq!(self.color_of_sq(src),self.turn);
+
+
+
+
+    }
+
+    pub fn moved_piece(&self, m: BitMove) -> Piece {
+        let src = m.get_src();
+    }
+
+    pub fn captured_piece(&self, m: BitMove) -> Piece {
+        unimplemented!();
+    }
+
+}
 
 // Printing and Debugging Functions
 impl <'a, 'b> Board <'a, 'b> {
@@ -424,58 +598,8 @@ impl <'a, 'b> Board <'a, 'b> {
 
     // Checks the current state of the Board
     pub fn is_okay(&self) -> bool {
+        unimplemented!();
         true
-    }
-}
-
-impl BitBoardStates {
-    fn blank() -> BitBoardStates {
-        BitBoardStates {
-            w_pawn: 0,
-            w_knight: 0,
-            w_bishop: 0,
-            w_rook: 0,
-            w_queen: 0,
-            w_king: 0,
-            w_occ: 0,
-            b_pawn: 0,
-            b_knight: 0,
-            b_bishop: 0,
-            b_rook: 0,
-            b_queen: 0,
-            b_king: 0,
-            b_occ: 0
-        }
-    }
-
-    // Creates occupancy bb from other bb;
-    pub fn init_occ_bb(&mut self) {
-        let b__occ: BitBoard = (b_pawn | b_knight | b_bishop | b_rook | b_queen | b_king);
-        let w__occ: BitBoard = (w_pawn | w_knight | w_bishop | w_rook | w_queen | w_king);
-        self.b_occ = b__occ;
-    }
-}
-
-// Returns blank bitboards
-impl Default for BitBoardStates {
-
-    fn default() -> BitBoardStates {
-        BitBoardStates {
-            w_pawn: 0b0000000000000000000000000000000000000000000000001111111100000000,
-            w_knight: 0b0000000000000000000000000000000000000000000000000000000001000010,
-            w_bishop: 0b0000000000000000000000000000000000000000000000000000000000100100,
-            w_rook: 0b0000000000000000000000000000000000000000000000000000000010000001,
-            w_queen: 0b0000000000000000000000000000000000000000000000000000000000001000,
-            w_king: 0b0000000000000000000000000000000000000000000000000000000000010000,
-            w_occ: 0b0000000000000000000000000000000000000000000000001111111111111111,
-            b_pawn: 0b0000000011111111000000000000000000000000000000000000000000000000,
-            b_knight: 0b0100001000000000000000000000000000000000000000000000000000000000,
-            b_bishop: 0b0010010000000000000000000000000000000000000000000000000000000000,
-            b_rook: 0b1000000100000000000000000000000000000000000000000000000000000000,
-            b_queen: 0b0000100000000000000000000000000000000000000000000000000000000000,
-            b_king: 0b0001000000000000000000000000000000000000000000000000000000000000,
-            b_occ: 0b1111111111111111000000000000000000000000000000000000000000000000,
-        }
     }
 }
 

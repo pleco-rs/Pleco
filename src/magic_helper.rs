@@ -42,14 +42,15 @@ pub struct MagicHelper<'a, 'b> {
     line_bitboard:[[u64; 64]; 64],
     between_sqs_bb: [[u64; 64]; 64],
     adjacent_files_bb: [u64;8],
-    zobrist: Zobrist,
+    pawn_attacks_from: [[u64;64]; 2],
+    pub zobrist: Zobrist,
 }
 
 pub struct Zobrist {
-    sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
-    en_p: [u64; FILE_CNT],
-    castle: [u64; CASTLING_CNT],
-    side: u64,
+    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
+    pub en_p: [u64; FILE_CNT],
+    pub castle: [u64; CASTLING_CNT],
+    pub side: u64,
 }
 
 impl Zobrist {
@@ -101,12 +102,14 @@ impl <'a,'b>MagicHelper<'a,'b> {
             dist_table: init_distance_table(),
             line_bitboard: [[0; 64]; 64],
             between_sqs_bb: [[0; 64]; 64],
-            adjacent_files_bb: [0;8],
+            adjacent_files_bb: [0; 8],
+            pawn_attacks_from: [[0; 64]; 2],
             zobrist: Zobrist::default(),
         };
         mhelper.gen_line_bbs();
         mhelper.gen_between_bbs();
         mhelper.gen_adjacent_file_bbs();
+        mhelper.gen_pawn_attacks();
         mhelper
     }
 
@@ -121,6 +124,7 @@ impl <'a,'b>MagicHelper<'a,'b> {
             line_bitboard: [[0; 64]; 64],
             between_sqs_bb: [[0; 64]; 64],
             adjacent_files_bb: [0; 8],
+            pawn_attacks_from: [[0; 64]; 2],
             zobrist: Zobrist::default(),};
         mhelper
     }
@@ -182,6 +186,14 @@ impl <'a,'b>MagicHelper<'a,'b> {
         self.adjacent_files_bb[file_of_sq(square) as usize]
     }
 
+    pub fn pawn_attacks_from(&self, square: SQ, player: Player) -> BitBoard {
+        assert!(square < 64);
+        match player {
+            Player::White => self.pawn_attacks_from[0][square],
+            Player::Black => self.pawn_attacks_from[1][square],
+        }
+    }
+
     fn gen_line_bbs(&mut self) {
         for d in 0..DELTAS.len() {
             for i in 0..64 as SQ {
@@ -210,6 +222,33 @@ impl <'a,'b>MagicHelper<'a,'b> {
             if file != 7 { self.adjacent_files_bb[file as usize] |= file_bb(file + 1)}
         }
     }
+
+    fn gen_pawn_attacks(&mut self) {
+        // gen white pawn attacks
+        for i in 0..56 as u8 {
+            let mut bb: u64 = 0;
+            if file_of_sq(i) != 0 {
+                bb |= sq_to_bb(i + 7)
+            }
+            if file_of_sq(i) != 7 {
+                bb |= sq_to_bb(i + 9)
+            }
+            self.pawn_attacks_from[0][i as usize] = bb;
+        }
+
+        for i in 8..64 as u8 {
+            let mut bb: u64 = 0;
+            if file_of_sq(i) != 0 {
+                bb |= sq_to_bb(i - 9)
+            }
+            if file_of_sq(i) != 7 {
+                bb |= sq_to_bb(i - 7)
+            }
+            self.pawn_attacks_from[1][i as usize] = bb;
+        }
+    }
+
+
 }
 
 
