@@ -1,9 +1,7 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![feature(type_ascription)]
 #![cfg_attr(feature="clippy", plugin(clippy))]
-#![feature(test)]
 
-extern crate test;
 pub mod board;
 pub mod bit_twiddles;
 pub mod movegen;
@@ -15,4 +13,3 @@ pub mod magic_helper;
 
 
 //include!("tests/test.rs");
-

@@ -1,27 +1,9 @@
 use bit_twiddles;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Player {
-    White = 0,
-    Black = 1,
-}
-
-pub const PLAYER_CNT: usize = 2;
-pub const PIECE_CNT: usize = 8;
-pub const SQ_CNT: usize = 64;
-pub const FILE_CNT: usize = 8;
-pub const RANK_CNT: usize = 8;
-pub const CASTLING_CNT: usize = 4;
-
-
 #[derive(Copy, Clone)]
-pub enum GenTypes {
-    Legal,
-    Captures,
-    Quiets,
-    Evasions,
-    NonEvasions,
-    QuietChecks
+pub enum Player {
+    White,
+    Black,
 }
 
 #[derive(Copy, Clone)]
@@ -40,12 +22,6 @@ pub enum Piece {
     N = 2,
     P = 1,
 }
-
-pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B,
-                                     Piece::R, Piece::Q, Piece::K];
-
-
-
 
 pub type BitBoard = u64;
 pub type SQ = u8;
@@ -76,6 +52,7 @@ pub const FILE_BB: [u64; 8] = [FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, F
 pub const RANK_BB: [u64; 8] = [RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8];
 
 
+
 pub const NORTH: i8 = 8;
 pub const SOUTH: i8 = -8;
 pub const WEST: i8 = -1;
@@ -86,128 +63,27 @@ pub const NORTH_WEST: i8 = 7;
 pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
 
-
-#[inline]
-pub fn other_player(p: Player) -> Player {
-    match p {
-        Player::White => Player::Black,
-        Player::Black => Player::White,
-    }
-}
-
-#[inline]
-pub fn relative_square(p: Player, sq: SQ) -> SQ {
-    assert!(sq_is_okay(sq));
-    sq ^ (p as u8 * 56)
-}
-
-#[inline]
-pub fn relative_rank_of_sq(p: Player, sq: SQ) -> u8 {
-    relative_rank(p, rank_of_sq(sq))
-}
-
-#[inline]
-pub fn relative_rank(p: Player, rank: u8) -> u8 {
-    rank ^ (p as u8 * 7)
-}
-
-
-#[inline]
-pub fn make_sq(file: u8, rank: u8) -> SQ {
-    (rank.wrapping_shl(3) + file) as u8
-}
-
-#[inline]
-pub fn pawn_push(player: Player) -> i8 {
-    match player {
-        Player::White => NORTH,
-        Player::Black => SOUTH,
-    }
-}
-
-
 // For whatever rank the bit is in, gets the whole bitboard
-#[inline]
 pub fn rank_bb(s: SQ) -> BitBoard {
     RANK_BB[rank_of_sq(s) as usize]
 }
 
-#[inline]
 pub fn rank_of_sq(s: SQ) -> u8 {
     (s >> 3) as u8
 }
 
-#[inline]
 pub fn file_bb(s: SQ) -> u64 {
     FILE_BB[file_of_sq(s) as usize]
 }
 
-#[inline]
 pub fn file_of_sq(s: SQ) -> u8 {
     s & 0b00000111
 }
 
-// Assumes only one bit!
-#[inline]
-pub fn bb_to_sq(b: BitBoard) -> SQ {
-    debug_assert_eq!(bit_twiddles::popcount64(b),1);
-    bit_twiddles::bit_scan_forward(b)
-}
+//pub fn is_ok(s: u64) -> bool {
+//    s >= 0 && s < 64
+//}
 
-#[inline]
-pub fn sq_to_bb(s: SQ) -> BitBoard {
-    assert!(s < 64);
-    (1 as u64) << s
-}
-
-#[inline]
 pub fn sq_is_okay(s: SQ) -> bool {
-    s < 64
+    s >= 0 && s < 64
 }
-
-
-pub fn reverse_bytes(b: BitBoard) -> u64 {
-    let mut m: u64 = 0;
-    m |= (reverse_byte(((b >> 56) & 0xFF) as u8) as u64) << 56 ;
-    m |= (reverse_byte(((b >> 48) & 0xFF) as u8) as u64) << 48 ;
-    m |= (reverse_byte(((b >> 40) & 0xFF) as u8) as u64) << 40 ;
-    m |= (reverse_byte(((b >> 32) & 0xFF) as u8) as u64) << 32 ;
-    m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24 ;
-    m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16 ;
-    m |= (reverse_byte(((b >> 8 ) & 0xFF) as u8) as u64) << 8  ;
-    m |= (reverse_byte((b         & 0xFF) as u8) as u64);
-    m
-}
-
-pub fn reverse_byte(b: u8) -> u8 {
-    let m: u8 = ((0b00000001 & b) << 7) | ((0b00000010 & b) << 5) | ((0b00000100 & b) << 3)
-              | ((0b00001000 & b) << 1) | ((0b00010000 & b) >> 1) | ((0b00100000 & b) >> 3)
-              | ((0b01000000 & b) >> 5) | ((0b10000000 & b) >> 7);
-    m
-}
-
-pub fn print_bitboard(input: BitBoard) {
-   print_u64(reverse_bytes(input))   ;
-}
-
-pub fn print_u64(input: u64) {
-    let s = format_u64(input);
-    for x in 0..8 {
-        let slice = &s[x * 8..(x * 8) + 8];
-        println!("{}", slice);
-    }
-    println!();
-}
-
-fn format_u64(input: u64) -> String {
-    let mut s = String::with_capacity(64);
-    let strin = format!("{:b}", input);
-    let mut i = strin.len();
-    while i < 64 {
-        s.push_str("0");
-        i += 1;
-    }
-    s.push_str(&strin);
-    s
-}
-
