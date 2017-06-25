@@ -3,7 +3,7 @@ use templates::Player as Player;
 use templates::*;
 use magic_helper::MagicHelper;
 use bit_twiddles::*;
-use piece_move::BitMove;
+use piece_move::{BitMove,MoveType};
 use fen;
 use movegen;
 use std::sync::Arc;
@@ -128,6 +128,21 @@ impl BoardState {
             check_sqs: [0; PIECE_CNT],
         }
     }
+
+    pub fn partial_clone(&self) -> BoardState {
+        BoardState {
+            castling: self.castling ,
+            rule_50: self.rule_50,
+            ply: self.ply,
+            ep_square: self.ep_square,
+            zobrast: self.zobrast,
+            captured_piece: None,
+            checkers_bb: 0,
+            blockers_king: [0; PLAYER_CNT],
+            pinners_king: [0; PLAYER_CNT],
+            check_sqs: [0; PIECE_CNT],
+        }
+    }
 }
 
 
@@ -240,6 +255,17 @@ impl <'a, 'b> Board <'a, 'b> {
 
     // Applies the bitmove to the board
     pub fn apply_move(&mut self, bit_move: BitMove) {
+        assert_ne!(bit_move.get_src(),bit_move.get_dest());
+
+        let mut new_state: BoardState = self.state.partial_clone();
+
+
+
+
+
+
+
+
         unimplemented!();
     }
 
@@ -509,6 +535,10 @@ impl <'a, 'b> Board <'a, 'b> {
             Player::Black => bb_to_sq(self.bit_boards.b_king),
         }
     }
+
+    pub fn pinned_pieces(&self, player: Player) -> BitBoard {
+        self.state.blockers_king[player as usize] & self.get_occupied_player(player)
+    }
 }
 
 // Castling
@@ -545,40 +575,127 @@ impl <'a, 'b> Board <'a, 'b> {
 
 impl <'a, 'b> Board <'a, 'b> {
     // Attacks to / From a given square
-    pub fn attackers_to(&self, sq: SQ) -> BitBoard {
-        let occupied: BitBoard = self.get_occupied();
-        unimplemented!();
+    pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
+              (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
+            | (self.magic_helper.pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, Piece::P))
+            | (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(Piece::N))
+            | (self.magic_helper.rook_moves(occupied,sq) & (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black)))
+            | (self.magic_helper.bishop_moves(occupied,sq) & (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black)))
+            | (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(Piece::K))
     }
-
 }
 
 // Move Testing
 impl <'a, 'b> Board <'a, 'b> {
+
+    // Tests if a given move is legal
     pub fn legal_move(&self, m: BitMove) -> bool {
-        unimplemented!();
+
+        let them: Player = other_player(self.turn);
+        let src: SQ = m.get_src();
+        let src_bb: BitBoard = sq_to_bb(src);
+        let dst: SQ = m.get_dest();
+
+        // Special en_passant case
+        if m.move_type() == MoveType::EnPassant {
+            let k_sq: SQ = self.king_sq(self.turn);
+            let dst_bb: BitBoard = sq_to_bb(dst);
+            let captured_sq: SQ = (dst as i8).wrapping_sub(pawn_push(self.turn)) as u8;
+            let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ sq_to_bb(captured_sq)) | dst_bb;
+
+            return (self.magic_helper.rook_moves(occupied,k_sq) & self.sliding_piece_bb(them) == 0)
+            && (self.magic_helper.queen_moves(occupied,k_sq) & self.diagonal_piece_bb(them) == 0)
+        }
+
+        // If Moving the king, check if the square moved to is not being attacked
+        // Castles are checking during move gen for check, so we goo dthere
+        if self.piece_at_sq(src).unwrap() == Piece::K {
+            return m.move_type() == MoveType::Castle || (self.attackers_to(dst,self.get_occupied()) & self.get_occupied_player(them)) == 0
+        }
+
+        // Making sure not moving a pinned piece
+        (self.pinned_pieces(self.turn) & src_bb == 0) || self.magic_helper.aligned(src,dst, self.king_sq(self.turn))
     }
+
+    // Used to check for Hashing errors from TT Tables
     pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
         unimplemented!();
     }
 
     // Checks if a move will give check to the opposing player's King
+    // I am too drunk to be making this right now
     pub fn gives_check(&self, m: BitMove) -> bool {
         let src: SQ = m.get_src();
         let dst: SQ = m.get_dest();
+        let src_bb: BitBoard = sq_to_bb(src);
+        let dst_bb: BitBoard = sq_to_bb(dst);
+        let opp_king_sq: SQ = self.king_sq(other_player(self.turn));
+
         assert_ne!(src, dst);
-        assert_eq!(self.color_of_sq(src),self.turn);
+        assert_eq!(self.color_of_sq(src).unwrap(),self.turn);
 
+        // Direct check mother fuckas
+        if self.state.check_sqs[self.piece_at_sq(src).unwrap() as usize] & dst_bb != 0 {
+            return true;
+        }
 
+        // Discovered check mother fuckas
+        if (self.discovered_check_candidates() & src_bb != 0)
+            && !self.magic_helper.aligned(src, dst, opp_king_sq) {
+            return true;
+        }
 
+        match m.move_type() {
+            MoveType::Normal => return false,
+            MoveType::Promotion => {
+                let attacks_bb = match m.promo_piece() {
+                    Piece::N => self.magic_helper.knight_moves(dst),
+                    Piece::B => self.magic_helper.bishop_moves(self.get_occupied() ^ src_bb, dst),
+                    Piece::R => self.magic_helper.rook_moves(self.get_occupied() ^ src_bb, dst),
+                    Piece::Q => self.magic_helper.queen_moves(self.get_occupied() ^ src_bb, dst),
+                    _ => panic!()
+                };
+                return attacks_bb & sq_to_bb(opp_king_sq) != 0
+            },
+            MoveType::EnPassant => {
+                let captured_sq: SQ = make_sq(file_of_sq(dst), rank_of_sq(src));
+                let b: BitBoard = (self.get_occupied() ^ src_bb ^ sq_to_bb(captured_sq)) | dst_bb;
 
+                let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
+                let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
+
+                return (self.magic_helper.rook_moves(b, opp_king_sq) | turn_sliding_p)
+                    & (self.magic_helper.bishop_moves(b, opp_king_sq) | turn_diag_p) != 0;
+            },
+            MoveType::Castle => {
+                let k_from: SQ = src;
+                let r_from: SQ = dst;
+
+                let k_to: SQ = relative_square(self.turn, {
+                    if r_from > k_from { 6 } else { 2 }
+                });
+                let r_to: SQ = relative_square(self.turn, {
+                    if r_from > k_from { 5 } else { 3 }
+                });
+
+                return (self.magic_helper.rook_moves(0, r_to) & sq_to_bb(opp_king_sq) != 0)
+                    && (self.magic_helper.rook_moves(self.get_occupied() ^ sq_to_bb(k_from) ^ sq_to_bb(r_from), opp_king_sq)) != 0;
+            },
+            MoveType::Normal => { return false; }
+        }
+        unreachable!();
     }
 
+    // Returns the piece that was moved
     pub fn moved_piece(&self, m: BitMove) -> Piece {
         let src = m.get_src();
+        self.piece_at_sq(src).unwrap()
     }
 
+    // Returns the piece that was captured, if any
     pub fn captured_piece(&self, m: BitMove) -> Piece {
-        unimplemented!();
+        let dst = m.get_dest();
+        self.piece_at_bb(sq_to_bb(dst),other_player(self.turn)).unwrap()
     }
 
 }
@@ -598,10 +715,62 @@ impl <'a, 'b> Board <'a, 'b> {
 
     // Checks the current state of the Board
     pub fn is_okay(&self) -> bool {
-        unimplemented!();
+        const QUICK_CHECK: bool = false;
+
+        if QUICK_CHECK {
+            return self.check_basic()
+        }
+        self.check_basic()
+            && self.check_bitboards()
+            && self.check_king()
+            && self.check_state_info()
+            && self.check_lists()
+            && self.check_castling()
+    }
+}
+
+// Debugging helper Functions
+// Returns false if the board is not good
+impl <'a, 'b> Board <'a, 'b> {
+    fn check_basic(&self) -> bool {
+        self.piece_at_sq(self.king_sq(Player::White)).unwrap() == Piece::K
+        && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == Piece::K
+        && (self.state.ep_square == 0 || self.state.ep_square == 64
+            || relative_rank(self.turn,self.state.ep_square) != 5)
+    }
+
+    fn check_king(&self) -> bool {
+        // TODO: Implement attacks to opposing king must be zero
+        self.count_piece(Player::White, Piece::K,) == 1
+        &&  self.count_piece(Player::Black, Piece::K) == 1
+
+    }
+
+    fn check_bitboards(&self) -> bool {
+        if self.occupied_white() & self.occupied_black() != 0
+        || (self.occupied_white() | self.occupied_white()) != self.get_occupied() {
+            return false;
+        }
+        // TODO: Loop through all pieces and make sure no two pieces are on the same square
+
+        true
+    }
+
+    fn check_state_info(&self) -> bool {
+        true
+    }
+
+    fn check_lists(&self) -> bool {
+        true
+    }
+
+    fn check_castling(&self) -> bool {
         true
     }
 }
+
+
+
 
 
 

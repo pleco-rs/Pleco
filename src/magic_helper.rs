@@ -187,11 +187,15 @@ impl <'a,'b>MagicHelper<'a,'b> {
     }
 
     pub fn pawn_attacks_from(&self, square: SQ, player: Player) -> BitBoard {
-        assert!(square < 64);
+        assert!(sq_is_okay(square));
         match player {
-            Player::White => self.pawn_attacks_from[0][square],
-            Player::Black => self.pawn_attacks_from[1][square],
+            Player::White => self.pawn_attacks_from[0][square as usize],
+            Player::Black => self.pawn_attacks_from[1][square as usize],
         }
+    }
+
+    pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
+        self.line_bb(s1, s2) & sq_to_bb(s3) != 0
     }
 
     fn gen_line_bbs(&mut self) {

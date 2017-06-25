@@ -1,6 +1,6 @@
 use bit_twiddles;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
     White = 0,
     Black = 1,
@@ -40,6 +40,10 @@ pub enum Piece {
     N = 2,
     P = 1,
 }
+
+pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B,
+                                     Piece::R, Piece::Q, Piece::K];
+
 
 
 
@@ -88,6 +92,36 @@ pub fn other_player(p: Player) -> Player {
     match p {
         Player::White => Player::Black,
         Player::Black => Player::White,
+    }
+}
+
+#[inline]
+pub fn relative_square(p: Player, sq: SQ) -> SQ {
+    assert!(sq_is_okay(sq));
+    sq ^ (p as u8 * 56)
+}
+
+#[inline]
+pub fn relative_rank_of_sq(p: Player, sq: SQ) -> u8 {
+    relative_rank(p, rank_of_sq(sq))
+}
+
+#[inline]
+pub fn relative_rank(p: Player, rank: u8) -> u8 {
+    rank ^ (p as u8 * 7)
+}
+
+
+#[inline]
+pub fn make_sq(file: u8, rank: u8) -> SQ {
+    (rank.wrapping_shl(3) + file) as u8
+}
+
+#[inline]
+pub fn pawn_push(player: Player) -> i8 {
+    match player {
+        Player::White => NORTH,
+        Player::Black => SOUTH,
     }
 }
 

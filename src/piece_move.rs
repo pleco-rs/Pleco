@@ -32,10 +32,11 @@
 // 1111  ===> Queen  Capture  Promo
 
 
-// Castles have the src and dst bit moved for the ROOK
+// Castles have the src as the king bit and the dst as the rook
 
 use templates::SQ;
 use templates::Piece;
+
 
 static SRC_MASK: u16 = 0b0000000000111111;
 static DST_MASK: u16 = 0b0000111111000000;
@@ -58,6 +59,7 @@ pub enum MoveFlag {
     QuietMove,
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum MoveType {
     Promotion,
     Castle,
