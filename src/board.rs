@@ -714,6 +714,7 @@ impl <'a, 'b> Board <'a, 'b> {
     }
 
     // Checks the current state of the Board
+    // yup
     pub fn is_okay(&self) -> bool {
         const QUICK_CHECK: bool = false;
 
