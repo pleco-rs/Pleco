@@ -1,4 +1,7 @@
+#![feature(test)]
+
 extern crate rusty_chess;
+extern crate test;
 
 mod bit_manipulations;
 mod board_build;
@@ -7,7 +10,3 @@ mod fen_building;
 mod board_move_apply;
 mod magic;
 
-#[cfg(test)]
-mod test {
-    use super::*;
-}
