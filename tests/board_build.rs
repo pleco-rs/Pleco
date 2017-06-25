@@ -9,7 +9,7 @@ use std::*;
 
 #[test]
 fn test__init_counts() {
-    let board = Board::new();
+    let board = Board::simple();
     assert_eq!(board.count_piece(Player::White, Piece::P), 8);
     assert_eq!(board.count_piece(Player::White, Piece::N), 2);
     assert_eq!(board.count_piece(Player::White, Piece::B), 2);
