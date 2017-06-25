@@ -1,19 +1,21 @@
 use bit_twiddles::*;
 use templates::*;
 use std::{mem,slice,cmp};
+use test::Bencher;
+use test;
 
 
 
 const B_DELTAS: [i8; 4] = [7,9,-9,-7];
 const R_DELTAS: [i8; 4] = [8,1,-8,-1];
 const DELTAS: [[i8; 4]; 2] = [B_DELTAS, R_DELTAS];
-const SEEDS: [[u64;8]; 2] = [   [ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
-                                [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ] ];
+const SEEDS: [[u64;8]; 2] = [[ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
+                             [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ]];
 
 
 
 // Object for helping the Board with various functions. Pre-computes everything on initialization
-// Thread safe. Once initializes, IS NOT MUTABLE.
+// Thread safe. Once initializes, IT SHOULD NOT BE MODIFIED
 // Currently does the following:
 //      - Generates King and Rook Move Bitboards
 //      - Generates Rook, Bishop, Queen Magic Bitboards for Move generation
@@ -37,8 +39,56 @@ pub struct MagicHelper<'a, 'b> {
     knight_table: [u64; 64],
     king_table: [u64; 64],
     dist_table: [[SQ; 64]; 64],
-    line_bitboard:[[u64; 64]; 64]
+    line_bitboard:[[u64; 64]; 64],
+    between_sqs_bb: [[u64; 64]; 64],
+    adjacent_files_bb: [u64;8],
+    pawn_attacks_from: [[u64;64]; 2],
+    pub zobrist: Zobrist,
 }
+
+pub struct Zobrist {
+    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
+    pub en_p: [u64; FILE_CNT],
+    pub castle: [u64; CASTLING_CNT],
+    pub side: u64,
+}
+
+impl Zobrist {
+    fn default() -> Zobrist {
+        let mut zob = Zobrist {
+            sq_piece: [[0; PIECE_CNT]; SQ_CNT],
+            en_p: [0; FILE_CNT],
+            castle: [0; CASTLING_CNT],
+            side: 0,
+        };
+        let mut rng = PRNG::init(23081);
+
+        for i in 0..SQ_CNT {
+            for j in 0..FILE_CNT {
+                zob.sq_piece[i][j] = rng.rand_change();
+            }
+        }
+
+        for i in 0..FILE_CNT {
+            zob.en_p[i] = rng.rand_change()
+        }
+
+        for i in 0..CASTLING_CNT {
+            zob.castle[i] = rng.rand_change()
+        }
+
+        zob.side = rng.rand_change();
+        zob
+    }
+}
+
+unsafe impl<'a,'b> Send for MagicHelper<'a,'b> {}
+
+unsafe impl<'a,'b> Sync for MagicHelper<'a,'b> {}
+
+// TO IMPLEMENT:
+//      Adjacent Files BitBoard
+//      Between Squares BitBoard
 
 impl <'a,'b>MagicHelper<'a,'b> {
 
@@ -51,57 +101,158 @@ impl <'a,'b>MagicHelper<'a,'b> {
             king_table: gen_king_moves(),
             dist_table: init_distance_table(),
             line_bitboard: [[0; 64]; 64],
+            between_sqs_bb: [[0; 64]; 64],
+            adjacent_files_bb: [0; 8],
+            pawn_attacks_from: [[0; 64]; 2],
+            zobrist: Zobrist::default(),
         };
         mhelper.gen_line_bbs();
+        mhelper.gen_between_bbs();
+        mhelper.gen_adjacent_file_bbs();
+        mhelper.gen_pawn_attacks();
+        mhelper
+    }
+
+    // Dummy copy for testing purposes
+    pub fn simple() -> MagicHelper<'a,'b> {
+        let mut mhelper = MagicHelper {
+            magic_rook: MRookTable::simple(),
+            magic_bishop: MBishopTable::simple(),
+            knight_table: [0; 64],
+            king_table: [0; 64],
+            dist_table: [[0; 64]; 64],
+            line_bitboard: [[0; 64]; 64],
+            between_sqs_bb: [[0; 64]; 64],
+            adjacent_files_bb: [0; 8],
+            pawn_attacks_from: [[0; 64]; 2],
+            zobrist: Zobrist::default(),};
         mhelper
     }
 
     // Generate Knight Moves bitboard from a source square
     pub fn knight_moves(&self, square: SQ) -> BitBoard {
+        assert!(sq_is_okay(square));
         self.knight_table[square as usize]
     }
 
     // Generate King moves bitboard from a source  square
     pub fn king_moves(&self, square: SQ) -> BitBoard {
+        assert!(sq_is_okay(square));
         self.king_table[square as usize]
     }
 
     // Generate Bishop Moves from a bishop square and all occupied squares on the board
     pub fn bishop_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
-        self.bishop_moves(occupied, square)
+        assert!(sq_is_okay(square));
+        self.magic_bishop.bishop_attacks(occupied, square)
     }
 
     // Generate Rook Moves from a bishop square and all occupied squares on the board
     pub fn rook_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
-        self.rook_moves(occupied, square)
+        assert!(sq_is_okay(square));
+        self.magic_rook.rook_attacks(occupied, square)
     }
 
     // Generate Queen Moves from a bishop square and all occupied squares on the board
     pub fn queen_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
-        self.rook_moves(occupied, square) | self.bishop_moves(occupied, square)
+        assert!(sq_is_okay(square));
+        self.magic_rook.rook_attacks(occupied, square) | self.magic_bishop.bishop_attacks(occupied, square)
     }
 
     // get the distance of two squares
     pub fn distance_of_sqs(&self, square_one: SQ, square_two: SQ) -> u8 {
+        assert!(sq_is_okay(square_one));
+        assert!(sq_is_okay(square_two));
         self.dist_table[square_one as usize][square_two as usize]
     }
 
-    // Get the line between two squares, if it exists
+    // Get the line (diagonal / file / rank) two squares, if it exists
     pub fn line_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
+        assert!(sq_is_okay(square_one));
+        assert!(sq_is_okay(square_two));
         self.line_bitboard[square_one as usize][square_two as usize]
     }
 
+    // Get the line between two squares, not including the squares, if it exists
+    pub fn between_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
+        assert!(sq_is_okay(square_one));
+        assert!(sq_is_okay(square_two));
+        self.between_sqs_bb[square_one as usize][square_two as usize]
+    }
+
+    // Gets the adjacent files of the square
+    pub fn adjacent_file(&self, square: SQ,) -> BitBoard {
+        assert!(sq_is_okay(square));
+        self.adjacent_files_bb[file_of_sq(square) as usize]
+    }
+
+    pub fn pawn_attacks_from(&self, square: SQ, player: Player) -> BitBoard {
+        assert!(sq_is_okay(square));
+        match player {
+            Player::White => self.pawn_attacks_from[0][square as usize],
+            Player::Black => self.pawn_attacks_from[1][square as usize],
+        }
+    }
+
+    pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
+        self.line_bb(s1, s2) & sq_to_bb(s3) != 0
+    }
+
     fn gen_line_bbs(&mut self) {
-        DELTAS.iter().map(|d|
+        for d in 0..DELTAS.len() {
             for i in 0..64 as SQ {
                 for j in 0..64 as SQ {
-                    let mut line_board: BitBoard = (sliding_attack(d, i, 0) & sliding_attack(d, j, 0));
+                    let mut line_board: BitBoard = sliding_attack(&DELTAS[d], i, 0) & sliding_attack(&DELTAS[d], j, 0);
                     line_board |= ((1 as u64) << i) | ((1 as u64) << j);
                     self.line_bitboard[i as usize][i as usize] |= line_board;
                 }
-            });
-
+            }
+        }
     }
+    fn gen_between_bbs(&mut self) {
+        for d in 0..DELTAS.len() {
+            for i in 0..64 as SQ {
+                for j in 0..64 as SQ {
+                    self.between_sqs_bb[i as usize][i as usize] |= sliding_attack(&DELTAS[d], j, ((1 as u64) << i))
+                        & sliding_attack(&DELTAS[d], i, ((1 as u64) << j));
+                }
+            }
+        }
+    }
+
+    fn gen_adjacent_file_bbs(&mut self) {
+        for file in 0..8 as SQ {
+            if file != 0 { self.adjacent_files_bb[file as usize] |= file_bb(file - 1)}
+            if file != 7 { self.adjacent_files_bb[file as usize] |= file_bb(file + 1)}
+        }
+    }
+
+    fn gen_pawn_attacks(&mut self) {
+        // gen white pawn attacks
+        for i in 0..56 as u8 {
+            let mut bb: u64 = 0;
+            if file_of_sq(i) != 0 {
+                bb |= sq_to_bb(i + 7)
+            }
+            if file_of_sq(i) != 7 {
+                bb |= sq_to_bb(i + 9)
+            }
+            self.pawn_attacks_from[0][i as usize] = bb;
+        }
+
+        for i in 8..64 as u8 {
+            let mut bb: u64 = 0;
+            if file_of_sq(i) != 0 {
+                bb |= sq_to_bb(i - 9)
+            }
+            if file_of_sq(i) != 7 {
+                bb |= sq_to_bb(i - 7)
+            }
+            self.pawn_attacks_from[1][i as usize] = bb;
+        }
+    }
+
+
 }
 
 
@@ -130,11 +281,13 @@ impl PreSMagic {
         PreSMagic {start: 0, len: 0, mask: 0, magic: 0, shift: 0}
     }
 
+    // creates an array of PreSMagic
     pub unsafe fn init64() -> [PreSMagic; 64] {
         let arr: [PreSMagic; 64] = mem::uninitialized();
         arr
     }
 
+    // Helper method to compute the next index
     pub fn next_idx(&self) -> usize {
         self.start + self.len
     }
@@ -155,6 +308,14 @@ struct MBishopTable<'a> {
 }
 
 impl <'a> MRookTable<'a>  {
+
+    // simple version that creates the table with an empty array.
+    // used for testing purposes where MagicStruct is not needed
+    pub fn simple() -> MRookTable<'a> {
+        let sq_table: [SMagic<'a>; 64] =  unsafe{mem::uninitialized()};
+        MRookTable{sq_magics: sq_table, attacks: Vec::new()}
+    }
+
     // Creates the Magic Rook Table Struct
     pub fn init() -> MRookTable<'a> {
         // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
@@ -304,8 +465,14 @@ impl <'a> MRookTable<'a>  {
     }
 }
 
-
 impl <'a> MBishopTable<'a> {
+
+    // simple version that creates the table with an empty array.
+    // used for testing purposes where MagicStruct is not needed
+    pub fn simple() -> MBishopTable<'a> {
+        let sq_table: [SMagic<'a>; 64] =  unsafe{mem::uninitialized()};
+        MBishopTable{sq_magics: sq_table, attacks: Vec::new()}
+    }
 
     // Create MagicBishopBitBoards
     pub fn init() -> MBishopTable<'a> {
@@ -529,7 +696,7 @@ fn gen_king_moves() -> [u64; 64] {
         }
         // RIGHT UP
         if file != 7 && index < 56 {
-            mask |= 1 << (index + 0);
+            mask |= 1 << index + 9;
         }
         moves[index] = mask;
     }
@@ -588,12 +755,12 @@ fn sliding_attack(deltas: &[i8; 4], sq: SQ, occupied: BitBoard) -> BitBoard {
     assert!(sq < 64);
     let mut attack: BitBoard = 0;
     let square: i16 = sq as i16;
-    for i in 0..4 as usize {
-        let mut s: SQ = ((square as i16) + (deltas[i] as i16)) as u8;
-        'inner: while sq_is_okay(s as u8) && sq_distance(s as u8, ((s as i16) - (deltas[i] as i16)) as u8) == 1 {
+    for delta in deltas.iter().take(4 as usize) {
+        let mut s: SQ = ((square as i16) + (*delta as i16)) as u8;
+        'inner: while sq_is_okay(s as u8) && sq_distance(s as u8, ((s as i16) - (*delta as i16)) as u8) == 1 {
             attack |= (1 as u64).wrapping_shl(s as u32);
             if occupied & (1 as u64).wrapping_shl(s as u32) != 0 {break 'inner;}
-            s = ((s as i16) + (deltas[i] as i16)) as u8;
+            s = ((s as i16) + (*delta as i16)) as u8;
         }
     }
     attack
@@ -622,10 +789,7 @@ pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
 
 // returns the difference between two unsigned u8s
 pub fn diff(x: u8, y: u8) -> u8 {
-    match x < y {
-        true =>  return y - x,
-        false => return x - y,
-    }
+    if x < y { y - x } else { x - y }
 }
 
 
@@ -650,9 +814,9 @@ fn test_knight_mask_gen() {
 #[test]
 fn occupancy_and_sliding() {
     let rook_deltas: [i8; 4] = [8,1,-8,-1];
-    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0)),14);
-    assert_eq!(popcount64(sliding_attack(rook_deltas, 0, 0xFF00)),8);
-    assert_eq!(popcount64(sliding_attack(rook_deltas, 19, 0)),14);
+    assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0)),14);
+    assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0xFF00)),8);
+    assert_eq!(popcount64(sliding_attack(&rook_deltas, 19, 0)),14);
 }
 
 #[test]
@@ -663,3 +827,97 @@ fn rmagics() {
     assert_eq!(mem::size_of_val(&bstruct), 2584);
 }
 
+#[bench]
+fn bench_rook_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let x: u64 = m.rook_moves(a,c);
+            a ^ (x) }
+        )
+    })
+}
+
+#[bench]
+fn bench_bishop_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let x: u64 = m.bishop_moves(a,c);
+            a ^ (x) }
+        )
+    })
+}
+
+#[bench]
+fn bench_queen_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let x: u64 = m.queen_moves(a,c);
+            a ^ (x) }
+        )
+    })
+}
+
+#[bench]
+fn bench_king_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let x: u64 = m.king_moves(c);
+            a ^ (x) }
+        )
+    })
+}
+
+#[bench]
+fn bench_knight_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let x: u64 = m.knight_moves(c);
+            a ^ (x) }
+        )
+    })
+}
+
+// Benefits from locality
+#[bench]
+fn bench_sequential_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let mut x: u64 = m.knight_moves(c);
+            x ^= m.king_moves(c);
+            x ^= m.bishop_moves(x,c);
+            x ^= m.rook_moves(x,c);
+            x ^= m.queen_moves(x,c);
+            a ^ (x) }
+        )
+    })
+}
+
+
+// Stutters so Cache must be refreshed more often
+#[bench]
+fn bench_stutter_lookup(b: &mut Bencher) {
+    let m = MagicHelper::new();
+    b.iter(|| {
+        let n: u8 = test::black_box(64);
+        (0..n).fold(0, |a: u64, c| {
+            let mut x: u64 = m.queen_moves(a,c);
+            x ^= m.king_moves(c);
+            x ^= m.bishop_moves(x,c);
+            x ^= m.knight_moves(c);
+            x ^= m.rook_moves(x,c);
+            a ^ (x) }
+        )
+    })
+}

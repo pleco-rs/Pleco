@@ -26,6 +26,7 @@ fn popcount() {
     assert_eq!(bit_twiddles::popcount64(0x55555555), 16);
 }
 
+#[test]
 fn lsb() {
     assert_eq!(bit_twiddles::lsb(0b110011100000010), 0b10);
     assert_eq!(bit_twiddles::lsb(0b1010000000000000), 0b10000000000000);
@@ -33,3 +34,4 @@ fn lsb() {
     assert_eq!(bit_twiddles::lsb(0b100001000000), 0b1000000);
     assert_eq!(bit_twiddles::lsb(0b1), 0b1);
 }
+
