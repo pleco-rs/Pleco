@@ -105,13 +105,12 @@ impl PieceStates {
 }
 
 
-
 pub struct Board<'a,'b>  {
     // Basic information
     pub turn: Player,
-    pub bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT],
-    pub occ: [BitBoard; PLAYER_CNT],
-    pub occ_all: BitBoard,
+    pub bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
+    pub occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
+    pub occ_all: BitBoard, // Total Occupancy BB
     pub half_moves: u16, // Total moves
     pub depth: u8, // current depth from actual position
     pub piece_states: PieceStates, // Piece Counts and Piece Board
@@ -122,7 +121,6 @@ pub struct Board<'a,'b>  {
     // Not copied
     pub undo_moves: Vec<BitMove>,
     pub move_states: Vec<BoardState>,
-
 
     // Special Case
     pub magic_helper: Arc<MagicHelper <'a,'b>>,
@@ -305,19 +303,39 @@ impl <'a, 'b> Board <'a, 'b> {
 
     // put a piece, color is known
     fn put_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
-        unimplemented!();
+        let bb = sq_to_bb(square);
+        self.occ_all |= bb;
+        self.occ[player as usize] |= bb;
+        self.bit_boards[player as usize][piece as usize] |= bb;
+
+        self.piece_states.piece_squares[square as usize] = Some(piece);
+        self.piece_states.piece_counts[player as usize][piece as usize] += 1;
+        // Note: Should We set captured Piece?
     }
 
     // remove a piece, color is known
     fn remove_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
-        unimplemented!();
+        let bb = sq_to_bb(square);
+        self.occ_all ^= bb;
+        self.occ[player as usize] ^= bb;
+        self.bit_boards[player as usize][piece as usize] ^= bb;
+
+        self.piece_states.piece_squares[square as usize] = None;
+        self.piece_states.piece_counts[player as usize][piece as usize] -= 1;
     }
 
     // move a piece, color is known
     fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ, player: Player) {
-        unimplemented!();
-    }
+        assert_ne!(from, to);
+        let comb_bb = sq_to_bb(from) | sq_to_bb(to);
 
+        self.occ_all ^= comb_bb;
+        self.occ[player as usize] ^= comb_bb;
+        self.bit_boards[player as usize][piece as usize] ^= comb_bb;
+
+        self.piece_states.piece_squares[from as usize] = None;
+        self.piece_states.piece_squares[from as usize] = Some(piece);
+    }
 
     fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
         let mut result: BitBoard = 0;

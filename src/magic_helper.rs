@@ -115,7 +115,7 @@ impl <'a,'b>MagicHelper<'a,'b> {
 
     // Dummy copy for testing purposes
     pub fn simple() -> MagicHelper<'a,'b> {
-        let mut mhelper = MagicHelper {
+        let mhelper = MagicHelper {
             magic_rook: MRookTable::simple(),
             magic_bishop: MBishopTable::simple(),
             knight_table: [0; 64],
