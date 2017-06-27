@@ -1,4 +1,5 @@
 use bit_twiddles;
+use std::mem;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
@@ -6,8 +7,10 @@ pub enum Player {
     Black = 1,
 }
 
+pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
+
 pub const PLAYER_CNT: usize = 2;
-pub const PIECE_CNT: usize = 8;
+pub const PIECE_CNT: usize = 6;
 pub const SQ_CNT: usize = 64;
 pub const FILE_CNT: usize = 8;
 pub const RANK_CNT: usize = 8;
@@ -24,28 +27,18 @@ pub enum GenTypes {
     QuietChecks
 }
 
-#[derive(Copy, Clone)]
-pub struct WhitePlayer;
-
-#[derive(Copy, Clone)]
-pub struct BlackPlayer;
-
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {
-    K = 6,
-    Q = 5,
-    R = 4,
-    B = 3,
-    N = 2,
-    P = 1,
+    K = 5,
+    Q = 4,
+    R = 3,
+    B = 2,
+    N = 1,
+    P = 0,
 }
 
-pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B,
-                                     Piece::R, Piece::Q, Piece::K];
-
-
-
+pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 
 pub type BitBoard = u64;
 pub type SQ = u8;
@@ -85,6 +78,49 @@ pub const NORTH_EAST: i8 = 9;
 pub const NORTH_WEST: i8 = 7;
 pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
+
+pub const START_W_PAWN:   BitBoard =  0b0000000000000000000000000000000000000000000000001111111100000000;
+pub const START_W_KNIGHT: BitBoard =  0b0000000000000000000000000000000000000000000000000000000001000010;
+pub const START_W_BISHOP: BitBoard =  0b0000000000000000000000000000000000000000000000000000000000100100;
+pub const START_W_ROOK:   BitBoard =  0b0000000000000000000000000000000000000000000000000000000010000001;
+pub const START_W_QUEEN:  BitBoard =  0b0000000000000000000000000000000000000000000000000000000000001000;
+pub const START_W_KING:   BitBoard =  0b0000000000000000000000000000000000000000000000000000000000010000;
+
+pub const START_B_PAWN:   BitBoard =  0b0000000011111111000000000000000000000000000000000000000000000000;
+pub const START_B_KNIGHT: BitBoard =  0b0100001000000000000000000000000000000000000000000000000000000000;
+pub const START_B_BISHOP: BitBoard =  0b0010010000000000000000000000000000000000000000000000000000000000;
+pub const START_B_ROOK:   BitBoard =  0b1000000100000000000000000000000000000000000000000000000000000000;
+pub const START_B_QUEEN:  BitBoard =  0b0000100000000000000000000000000000000000000000000000000000000000;
+pub const START_B_KING:   BitBoard =  0b0001000000000000000000000000000000000000000000000000000000000000;
+
+pub const START_WHITE_OCC: BitBoard =  0b0000000000000000000000000000000000000000000000001111111111111111;
+pub const START_BLACK_OCC: BitBoard =  0b1111111111111111000000000000000000000000000000000000000000000000;
+pub const START_OCC_ALL: BitBoard = START_BLACK_OCC | START_WHITE_OCC;
+
+
+pub const START_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [
+    [START_W_PAWN , START_W_KNIGHT, START_W_BISHOP, START_W_ROOK , START_W_QUEEN, START_W_KING ],
+    [START_B_PAWN , START_B_KNIGHT, START_B_BISHOP, START_B_ROOK , START_B_QUEEN, START_B_KING ]];
+
+pub const BLANK_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
+
+pub const START_OCC_BOARDS: [BitBoard; PLAYER_CNT] = [START_WHITE_OCC, START_BLACK_OCC];
+
+
+
+
+#[inline]
+pub fn copy_piece_bbs(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT]) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+    let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(&bbs) };
+    new_bbs
+}
+
+#[inline]
+pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
+    let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(&bbs) };
+    new_bbs
+}
+
 
 
 #[inline]

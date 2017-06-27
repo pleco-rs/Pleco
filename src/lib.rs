@@ -2,6 +2,7 @@
 #![feature(type_ascription)]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![feature(test)]
+#![allow(dead_code)]
 
 extern crate test;
 pub mod board;
