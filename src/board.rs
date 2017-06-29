@@ -6,10 +6,24 @@ use bit_twiddles::*;
 use piece_move::{BitMove,MoveType};
 use fen;
 use movegen;
+use lazy_static;
 use std::sync::Arc;
 use std::option::*;
+use std::mem;
 
 
+
+
+// Initialize MAGIC_HELPER
+
+lazy_static! {
+    pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
+}
+
+// ***** CASTLING STRUCT ***** //
+
+
+// ***** BOARD STATE ***** //
 
 // State of the Board
 #[derive(Clone)]
@@ -28,7 +42,7 @@ pub struct BoardState {
     pub pinners_king: [BitBoard; PLAYER_CNT],
     pub check_sqs: [BitBoard; PIECE_CNT],
 
-    //  castling      ->  0000WWBB, left = 1 -> king side castle available, right = 1 -> queen side castle available
+    //  castling      ->  0000WWBB, left = 1 -> king side castle possible, right = 1 -> queen side castle possible
     //  rule50        -> 50 moves without capture, for draws
     //  ply           -> How many moves deep this current thread is
     //  ep_square     -> square of en_passant, if any
@@ -39,7 +53,6 @@ pub struct BoardState {
     //  pinners_king  -> Per each player, bitboard of pieces currently pinning the opponent's king
     //  check_sqs     -> Array of pieces where check is there
 }
-
 
 impl BoardState {
     // Beginning Moves only
@@ -74,6 +87,9 @@ impl BoardState {
     }
 }
 
+// ***** PIECE STATES ***** //
+
+
 // Keeps Tracks of piece counts and the location of pieces on the board
 pub struct PieceStates {
     pub piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
@@ -104,8 +120,9 @@ impl PieceStates {
     }
 }
 
+// ***** BOARD ***** //
 
-pub struct Board<'a,'b>  {
+pub struct Board {
     // Basic information
     pub turn: Player,
     pub bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
@@ -123,7 +140,7 @@ pub struct Board<'a,'b>  {
     pub move_states: Vec<BoardState>,
 
     // Special Case
-    pub magic_helper: Arc<MagicHelper <'a,'b>>,
+    pub magic_helper: &'static MAGIC_HELPER,
 }
 
 //  8 | 56 57 58 59 60 61 62 63
@@ -140,33 +157,13 @@ pub struct Board<'a,'b>  {
 
 
 // Initializers!
-impl <'a, 'b> Board <'a, 'b> {
+impl Board {
 
     // Default, starting board
-    pub fn default() -> Board<'a, 'b> {
+    pub fn default() -> Board {
         let mut b = Board {
             turn: Player::White,
-            bit_boards: copy_piece_bbs(&START_BIT_BOARDS),
-            occ: copy_occ_bbs(&START_OCC_BOARDS),
-            occ_all: START_OCC_ALL,
-            half_moves: 0,
-            depth: 0,
-            piece_states: PieceStates::default(),
-            state: BoardState::default(),
-            undo_moves: Vec::new(),
-            move_states: Vec::new(),
-            magic_helper: Arc::new(MagicHelper::new())
-        };
-        b.set_zob_hash();
-        b.set_piece_states();
-        b
-    }
-
-    // Simple Version for testing, Skips creation of MagicHelper
-    pub fn simple() -> Board<'a, 'b> {
-        Board {
-            turn: Player::White,
-            bit_boards: copy_piece_bbs(&START_BIT_BOARDS),
+            bit_boards: return_start_bb(),
             occ: [START_WHITE_OCC, START_BLACK_OCC],
             occ_all: START_OCC_ALL,
             half_moves: 0,
@@ -175,12 +172,15 @@ impl <'a, 'b> Board <'a, 'b> {
             state: BoardState::default(),
             undo_moves: Vec::new(),
             move_states: Vec::new(),
-            magic_helper: Arc::new(MagicHelper::simple())
-        }
+            magic_helper: &MAGIC_HELPER
+        };
+        b.set_zob_hash();
+        b.set_piece_states();
+        b
     }
 
-    // Creates a new board from an already created MagicHelper
-    pub fn new(m_help: &Arc<MagicHelper<'a, 'b>>) -> Board<'a, 'b> {
+    // Simple Version for testing, Skips creation of MagicHelper
+    pub fn simple() -> Board {
         let mut b = Board {
             turn: Player::White,
             bit_boards: copy_piece_bbs(&START_BIT_BOARDS),
@@ -192,9 +192,8 @@ impl <'a, 'b> Board <'a, 'b> {
             state: BoardState::default(),
             undo_moves: Vec::new(),
             move_states: Vec::new(),
-            magic_helper: m_help.clone()
+            magic_helper: &MAGIC_HELPER
         };
-        b.set_zob_hash();
         b.set_piece_states();
         b
     }
@@ -212,11 +211,11 @@ impl <'a, 'b> Board <'a, 'b> {
             state: self.state.clone(),
             undo_moves: Vec::new(),
             move_states: Vec::new(),
-            magic_helper: self.magic_helper.clone()
+            magic_helper: &MAGIC_HELPER,
         }
     }
 
-    // Sets the piece states
+    // Sets the piece states for non cloning initilization
     fn set_piece_states(&mut self) {
         for player in ALL_PLAYERS.iter() {
             for piece in ALL_PIECES.iter() {
@@ -230,26 +229,143 @@ impl <'a, 'b> Board <'a, 'b> {
 
     }
 
-    // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
-    // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
     // Creates a new Board from a fen string
-    pub fn new_from_fen(fen: String) -> Result<Board<'a, 'b>, String> {
+    pub fn new_from_fen(fen: String) -> Result<Board, String> {
         unimplemented!();
+        // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
+        // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
 //        fen::generate_board(fen)
     }
 }
 
 // Public Move Gen & Mutation Functions
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
 
     // Applies the bitmove to the board
     pub fn apply_move(&mut self, bit_move: BitMove) {
         assert_ne!(bit_move.get_src(),bit_move.get_dest());
 
+        let gives_check: bool = self.gives_check(bit_move);
+
+        let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
         let mut new_state: BoardState = self.state.partial_clone();
 
+        self.half_moves += 1;
+        self.depth += 1;
+        new_state.rule_50 += 1;
+        new_state.ply += 1;
 
-        unimplemented!();
+        let us = self.turn;
+        let them = other_player(self.turn);
+        let from: SQ = bit_move.get_src();
+        let to: SQ = bit_move.get_dest();
+        let piece: Piece = self.piece_at_sq(from).unwrap();
+        let captured: Option<Piece> = if bit_move.is_en_passant() {
+            Some(Piece::P)
+        } else {
+            self.piece_at_sq(from)
+        };
+
+        assert_eq!(self.color_of_sq(from).unwrap(), us);
+
+        if bit_move.is_castle() {
+            assert_eq!(captured.unwrap(),Piece::R);
+            assert_eq!(piece,Piece::K);
+
+            let mut k_to: SQ = 0;
+            let mut r_to: SQ = 0;
+            self.apply_castling(us, to, from, &mut k_to, &mut r_to);
+            zob ^= self.magic_helper.z_piece_at_sq(Piece::R,k_to) ^ self.magic_helper.z_piece_at_sq(Piece::R,r_to);
+            new_state.captured_piece = None;
+            new_state.castling &= !CASTLE_RIGHTS[us as usize];
+        }
+
+        // A piece has been captured
+        if captured.is_some() {
+            let mut cap_sq: SQ = to;
+            let cap_p: Piece = captured.unwrap();
+            if cap_p == Piece::P && bit_move.move_type() == MoveType::EnPassant {
+                match us {
+                    Player::White => cap_sq -= 8,
+                    Player::Black => cap_sq += 8,
+                };
+                assert_eq!(piece, Piece::P);
+                assert_eq!(cap_sq, self.state.ep_square);
+                assert_eq!(relative_rank(us,6), rank_of_sq(to));
+                assert!(self.piece_at_sq(to).is_none());
+                assert_eq!(self.piece_at_sq(cap_sq).unwrap(),Piece::P);
+                assert_eq!(self.player_at_sq(cap_sq).unwrap(),them);
+                self.remove_piece_c(Piece::P,cap_sq,them);
+            } else {
+                self.remove_piece_c(cap_p,cap_sq,them);
+            }
+            zob ^= self.magic_helper.z_piece_at_sq(cap_p,cap_sq);
+            new_state.rule_50 = 0;
+        }
+
+        zob ^= self.magic_helper.z_piece_at_sq(piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
+
+        if self.state.ep_square != NO_SQ {
+            zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
+            new_state.ep_square = NO_SQ;
+        }
+
+        if new_state.castling != 0 && !bit_move.is_castle() {
+            if piece == Piece::K {
+                new_state.castling &= !CASTLE_RIGHTS[us as usize];
+            } else if piece == Piece::R {
+                match us {
+                    Player::White => {
+                        if from == ROOK_WHITE_KSIDE_START {
+                            new_state.castling &= !CASTLE_RIGHTS_WHITE_K;
+                        } else if from == ROOK_WHITE_QSIDE_START {
+                            new_state.castling &= !CASTLE_RIGHTS_WHITE_Q;
+                        }
+                    },
+                    Player::Black => {
+                        if from == ROOK_BLACK_KSIDE_START {
+                            new_state.castling &= !CASTLE_RIGHTS_BLACK_K;
+                        } else if from == ROOK_BLACK_QSIDE_START {
+                            new_state.castling &= !CASTLE_RIGHTS_BLACK_Q;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !bit_move.is_castle() && !bit_move.is_promo() {
+            self.move_piece_c(piece, to, from, us);
+        }
+
+        if piece == Piece::P {
+            if self.magic_helper.distance_of_sqs(to,from) == 2 {
+                // Double Push
+                new_state.ep_square = (to + from) / 2;
+                zob ^= self.magic_helper.z_ep_file(new_state.ep_square);
+            } else if bit_move.is_promo() {
+                let promo_piece: Piece = bit_move.promo_piece();
+
+                self.remove_piece_c(Piece::P, from, us);
+                self.put_piece_c(promo_piece,to,us);
+                zob ^= self.magic_helper.z_piece_at_sq(promo_piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
+            }
+            new_state.rule_50 = 0;
+        }
+
+        new_state.captured_piece = captured;
+        new_state.zobrast = zob;
+
+        if self.gives_check(bit_move) {
+            new_state.checkers_bb = self.attackers_to(self.king_sq(them),self.get_occupied());
+        }
+
+        self.turn = them;
+        self.move_states.push(unsafe { mem::transmute_copy(&self.state) });
+        self.undo_moves.push(bit_move);
+        self.state = new_state;
+
+        self.set_check_info();
+        assert!(self.is_okay());
     }
 
     pub fn undo_move(&mut self) {
@@ -263,7 +379,7 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 // Private Mutating Functions
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
 
     // After a move is made, Information about the checking situation is created
     fn set_check_info(&mut self) {
@@ -315,6 +431,7 @@ impl <'a, 'b> Board <'a, 'b> {
 
     // remove a piece, color is known
     fn remove_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
+        assert_eq!(self.piece_at_sq(square).unwrap(),piece);
         let bb = sq_to_bb(square);
         self.occ_all ^= bb;
         self.occ[player as usize] ^= bb;
@@ -327,6 +444,7 @@ impl <'a, 'b> Board <'a, 'b> {
     // move a piece, color is known
     fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ, player: Player) {
         assert_ne!(from, to);
+        assert_eq!(self.piece_at_sq(from).unwrap(),piece);
         let comb_bb = sq_to_bb(from) | sq_to_bb(to);
 
         self.occ_all ^= comb_bb;
@@ -335,6 +453,34 @@ impl <'a, 'b> Board <'a, 'b> {
 
         self.piece_states.piece_squares[from as usize] = None;
         self.piece_states.piece_squares[from as usize] = Some(piece);
+    }
+
+    fn apply_castling(&mut self, player: Player, k_src: SQ, r_src: SQ, k_dst: &mut SQ, r_dst: &mut SQ) {
+        let king_side: bool = k_src < r_src;
+
+        if king_side {
+            *k_dst = relative_square(player,6);
+            *r_dst = relative_square(player,5);
+        } else {
+            *k_dst = relative_square(player,2);
+            *r_dst = relative_square(player,3);
+        }
+        self.move_piece_c(Piece::K,k_src,*k_dst,player);
+        self.move_piece_c(Piece::R,r_src,*r_dst,player);
+    }
+
+    fn remove_castling(&mut self, player: Player, k_src: SQ, r_src: SQ) {
+        let mut k_dst: SQ = self.king_sq(player);
+        let mut r_dst: SQ = 0;
+        let king_side: bool = k_src < r_src;
+
+        if king_side {
+            r_dst = relative_square(player,7);
+        } else {
+            r_dst = relative_square(player,0);
+        }
+        self.move_piece_c(Piece::K,k_dst,k_src,player);
+        self.move_piece_c(Piece::K,r_dst,r_src,player);
     }
 
     fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
@@ -365,10 +511,8 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 
-
-
 // Zobrist and move making for hashing
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
 
     //    pub struct Zobrist {
     //      sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
@@ -386,22 +530,21 @@ impl <'a, 'b> Board <'a, 'b> {
             let lsb: BitBoard = lsb(b);
             b &= !lsb;
             let piece = self.piece_at_bb_all(lsb);
-            zob ^= self.magic_helper.zobrist.sq_piece[piece.unwrap() as usize][sq as usize];
+            zob ^= self.magic_helper.z_piece_at_sq(piece.unwrap(),sq);
         }
         let ep = self.state.ep_square;
         if ep != 0 && ep < 64 {
-            let file: u8 = file_of_sq(ep);
-            zob ^= self.magic_helper.zobrist.en_p[file as usize];
+            zob ^= self.magic_helper.z_ep_file(ep);
         }
 
         match self.turn {
-            Player::Black =>  zob ^= self.magic_helper.zobrist.side,
+            Player::Black =>  zob ^= self.magic_helper.z_side(),
             Player::White => {}
         }
 
         let c = self.state.castling;
         assert!((c as usize) < CASTLING_CNT);
-        zob ^= self.magic_helper.zobrist.castle[c as usize];
+        zob ^= self.magic_helper.z_castle_rights(c);
         self.state.zobrast = zob;
     }
 
@@ -410,7 +553,7 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 // Position Representation
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
     // Gets all occupied Squares
     pub fn get_occupied(&self) -> BitBoard { self.occ_all }
 
@@ -514,14 +657,14 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 // Castling
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
     pub fn can_castle(&self, player: Player) -> bool {
         unimplemented!();
     }
 }
 
 // Checking
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
 
     // If current side to move is in check
     pub fn in_check(&self) -> bool {
@@ -545,7 +688,7 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
     // Attacks to / From a given square
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
               (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
@@ -558,7 +701,7 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 // Move Testing
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
 
     // Tests if a given move is legal
     pub fn legal_move(&self, m: BitMove) -> bool {
@@ -673,7 +816,7 @@ impl <'a, 'b> Board <'a, 'b> {
 }
 
 // Printing and Debugging Functions
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
 
     // Returns a prettified String of the current board
     pub fn pretty_string(&self) -> String {
@@ -704,7 +847,7 @@ impl <'a, 'b> Board <'a, 'b> {
 
 // Debugging helper Functions
 // Returns false if the board is not good
-impl <'a, 'b> Board <'a, 'b> {
+impl  Board  {
     fn check_basic(&self) -> bool {
         self.piece_at_sq(self.king_sq(Player::White)).unwrap() == Piece::K
         && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == Piece::K

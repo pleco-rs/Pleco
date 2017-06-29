@@ -1,3 +1,5 @@
+
+
 use bit_twiddles::*;
 use templates::*;
 use std::{mem,slice,cmp};
@@ -64,7 +66,7 @@ impl Zobrist {
         let mut rng = PRNG::init(23081);
 
         for i in 0..SQ_CNT {
-            for j in 0..FILE_CNT {
+            for j in 0..PIECE_CNT {
                 zob.sq_piece[i][j] = rng.rand_change();
             }
         }
@@ -113,20 +115,22 @@ impl <'a,'b>MagicHelper<'a,'b> {
         mhelper
     }
 
-    // Dummy copy for testing purposes
-    pub fn simple() -> MagicHelper<'a,'b> {
-        let mhelper = MagicHelper {
-            magic_rook: MRookTable::simple(),
-            magic_bishop: MBishopTable::simple(),
-            knight_table: [0; 64],
-            king_table: [0; 64],
-            dist_table: [[0; 64]; 64],
-            line_bitboard: [[0; 64]; 64],
-            between_sqs_bb: [[0; 64]; 64],
-            adjacent_files_bb: [0; 8],
-            pawn_attacks_from: [[0; 64]; 2],
-            zobrist: Zobrist::default(),};
-        mhelper
+    pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
+        assert!(sq_is_okay(square));
+        self.zobrist.sq_piece[square as usize][piece as usize]
+    }
+
+    pub fn z_ep_file(&self, square: SQ) -> u64 {
+        self.zobrist.en_p[file_of_sq(square) as usize]
+    }
+
+    pub fn z_castle_rights(&self, castle: u8) -> u64 {
+        assert!((castle as usize) < CASTLING_CNT);
+        self.zobrist.castle[castle as usize]
+    }
+
+    pub fn z_side(&self) -> u64 {
+        self.zobrist.side
     }
 
     // Generate Knight Moves bitboard from a source square
@@ -304,7 +308,7 @@ struct MRookTable<'a> {
 #[allow(dead_code)]
 struct MBishopTable<'a> {
     sq_magics: [SMagic<'a>; 64],
-    attacks: Vec<BitBoard>
+    attacks: Vec<BitBoard> // 5248 long
 }
 
 impl <'a> MRookTable<'a>  {

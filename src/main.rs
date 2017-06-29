@@ -1,13 +1,24 @@
 extern crate rusty_chess;
-use rusty_chess::magic_helper;
+#[macro_use]
+extern crate lazy_static;
+use rusty_chess::magic_helper::MagicHelper;
 use rusty_chess::templates;
 
 
 
+
+
 fn main() {
-    let m = magic_helper::MagicHelper::new();
-    templates::print_bitboard(m.rook_moves(0,0));
-    templates::print_bitboard(m.queen_moves(0x16060590A2281,63));
-    templates::print_bitboard(m.knight_moves(0));
-    templates::print_bitboard(m.king_moves(0))
+
+//    lazy_static! {
+//        static ref MAGIC : Arc<MagicHelper<'a,'b>> =
+//            Arc::new(MagicHelper::new());
+//    }
+
+
+
 }
+
+//pub fn global() -> &'static  Arc<MagicHelper<'a,'b>> {
+//
+//}

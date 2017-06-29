@@ -1,5 +1,6 @@
 use bit_twiddles;
 use std::mem;
+use std::ptr;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
@@ -42,6 +43,8 @@ pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B, Piece::R, Piec
 
 pub type BitBoard = u64;
 pub type SQ = u8;
+
+pub const NO_SQ: SQ = 64;
 
 pub const BLACK_SIDE: u64 = 0b1111111111111111111111111111111100000000000000000000000000000000;
 pub const WHITE_SIDE: u64 = 0b0000000000000000000000000000000011111111111111111111111111111111;
@@ -97,6 +100,29 @@ pub const START_WHITE_OCC: BitBoard =  0b000000000000000000000000000000000000000
 pub const START_BLACK_OCC: BitBoard =  0b1111111111111111000000000000000000000000000000000000000000000000;
 pub const START_OCC_ALL: BitBoard = START_BLACK_OCC | START_WHITE_OCC;
 
+pub const ROOK_BLACK_KSIDE_START: SQ =  63;
+pub const ROOK_BLACK_QSIDE_START: SQ =  56;
+pub const ROOK_WHITE_KSIDE_START: SQ =  7;
+pub const ROOK_WHITE_QSIDE_START: SQ =  0;
+
+
+pub const CASTLE_RIGHTS_WHITE: u8 = 0b00001100;
+pub const CASTLE_RIGHTS_BLACK: u8 = 0b00000011;
+
+pub const CASTLE_RIGHTS_WHITE_K: u8 = 0b00001000;
+pub const CASTLE_RIGHTS_BLACK_K: u8 = 0b00000010;
+
+pub const CASTLE_RIGHTS_WHITE_Q: u8 = 0b00000100;
+pub const CASTLE_RIGHTS_BLACK_Q: u8 = 0b00000001;
+
+pub const CASTLE_RIGHTS: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE, CASTLE_RIGHTS_BLACK];
+
+pub const CASTLE_RIGHTS_K: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE_K, CASTLE_RIGHTS_BLACK_K];
+pub const CASTLE_RIGHTS_Q: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE_Q, CASTLE_RIGHTS_BLACK_Q];
+
+
+
+
 
 pub const START_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [
     [START_W_PAWN , START_W_KNIGHT, START_W_BISHOP, START_W_ROOK , START_W_QUEEN, START_W_KING ],
@@ -109,15 +135,23 @@ pub const START_OCC_BOARDS: [BitBoard; PLAYER_CNT] = [START_WHITE_OCC, START_BLA
 
 
 
+
+
 #[inline]
 pub fn copy_piece_bbs(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT]) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
-    let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(&bbs) };
+    let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
     new_bbs
 }
 
 #[inline]
+pub fn return_start_bb() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+    [[START_W_PAWN , START_W_KNIGHT, START_W_BISHOP, START_W_ROOK , START_W_QUEEN, START_W_KING ],
+    [START_B_PAWN , START_B_KNIGHT, START_B_BISHOP, START_B_ROOK , START_B_QUEEN, START_B_KING ]]
+}
+
+#[inline]
 pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
-    let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(&bbs) };
+    let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
     new_bbs
 }
 
@@ -211,7 +245,7 @@ pub fn reverse_bytes(b: BitBoard) -> u64 {
     m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24 ;
     m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16 ;
     m |= (reverse_byte(((b >> 8 ) & 0xFF) as u8) as u64) << 8  ;
-    m |= (reverse_byte((b         & 0xFF) as u8) as u64);
+    m |=  reverse_byte((b         & 0xFF) as u8) as u64;
     m
 }
 
