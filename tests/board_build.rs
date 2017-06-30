@@ -22,8 +22,8 @@ fn test__init_counts() {
     assert_eq!(board.count_piece(Player::Black, Piece::R), 2);
     assert_eq!(board.count_piece(Player::Black, Piece::K), 1);
     assert_eq!(board.count_piece(Player::Black, Piece::Q), 1);
-    assert_eq!(board.diagonal_piece_bits(Player::White),0b101100);
-    assert_eq!(board.sliding_piece_bits(Player::White),0b10001001);
+    assert_eq!(board.diagonal_piece_bb(Player::White),0b101100);
+    assert_eq!(board.sliding_piece_bb(Player::White),0b10001001);
     assert_eq!(board.count_pieces_player(Player::White),board.count_pieces_player(Player::Black));
     assert_eq!(board.get_occupied(),0xFFFF00000000FFFF);
 }

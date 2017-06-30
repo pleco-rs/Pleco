@@ -136,7 +136,7 @@ pub const START_OCC_BOARDS: [BitBoard; PLAYER_CNT] = [START_WHITE_OCC, START_BLA
 
 
 
-
+// Yes
 #[inline]
 pub fn copy_piece_bbs(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT]) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
     let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };

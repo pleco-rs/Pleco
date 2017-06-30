@@ -3,6 +3,7 @@ name = "rusty_chess"
 version = "0.1.0"
 dependencies = [
  "clippy 0.0.138 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
