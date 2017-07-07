@@ -1,2 +1,3 @@
 # rusty-chess
-## A Chess Engine Implementation using Rust
+## A Chess Engine Implementated with Rust
+Inspired heavily by stockfish

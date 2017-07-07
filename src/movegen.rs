@@ -127,10 +127,6 @@ fn gen_king_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInf
 
 
 
-fn in_check(board: &Board, bit_move: BitMove) -> bool {
-    unimplemented!()
-}
-
 
 // Gets pawn attacks from a square
 pub fn pawn_attacks_from(sq: SQ, player: Player) -> BitBoard {

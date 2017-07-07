@@ -1,6 +1,6 @@
 use bit_twiddles;
 use std::mem;
-use std::ptr;
+//use std::ptr;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
@@ -39,7 +39,33 @@ pub enum Piece {
     P = 0,
 }
 
-pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
+#[repr(u8)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum File {
+    A = 0,
+    B = 1,
+    C = 2,
+    D = 3,
+    E = 4,
+    F = 5,
+    G = 6,
+    H = 7,
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Rank {
+    R1 = 0,
+    R2 = 1,
+    R3 = 2,
+    R4 = 3,
+    R5 = 4,
+    R6 = 5,
+    R7 = 6,
+    R8 = 7,
+}
+
+pub const ALL_PIECES: [Piece; PIECE_CNT] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 
 pub type BitBoard = u64;
 pub type SQ = u8;
@@ -132,7 +158,17 @@ pub const BLANK_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [[0, 0, 0, 0, 
 
 pub const START_OCC_BOARDS: [BitBoard; PLAYER_CNT] = [START_WHITE_OCC, START_BLACK_OCC];
 
+pub const SQ_DISPLAY_ORDER: [SQ; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
+                                            48, 49, 50, 51, 52, 53, 54, 55,
+                                            40, 41, 42, 43, 44, 45, 46, 47,
+                                            32, 33, 34, 35, 36, 37, 38, 39,
+                                            24, 25, 26, 27, 28, 29, 30, 31,
+                                            16, 17, 18, 19, 20, 21, 22, 23,
+                                            8,  9,  10, 11, 12, 13, 14, 15,
+                                            0,  1,   2,  3,  4,  5,  6,  7];
 
+pub const PIECE_DISPLAYS: [[char; PIECE_CNT]; PLAYER_CNT] = [['P', 'N', 'B', 'R', 'Q', 'K'],
+                                                             ['p', 'n', 'b', 'r', 'q', 'k']];
 
 
 
@@ -224,12 +260,14 @@ pub fn bb_to_sq(b: BitBoard) -> SQ {
     bit_twiddles::bit_scan_forward(b)
 }
 
+// Given a Square (u8) that is valid, returns the bitboard representaton
 #[inline]
 pub fn sq_to_bb(s: SQ) -> BitBoard {
-    assert!(s < 64);
-    (1 as u64) << s
+    assert!(sq_is_okay(s));
+    (1 as u64).wrapping_shl(s as u32)
 }
 
+// Function to make sure a Square is okay
 #[inline]
 pub fn sq_is_okay(s: SQ) -> bool {
     s < 64

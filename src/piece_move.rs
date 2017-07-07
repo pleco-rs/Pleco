@@ -108,34 +108,34 @@ impl BitMove {
     }
 
     // Note: Encompasses two missing Spots
-    #[inline]
+    #[inline(always)]
     pub fn is_capture(&self) -> bool { ((self.data & CP_MASK) >> 14) == 1 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_quiet_move(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 0 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_promo(&self) -> bool { ((self.data & PR_MASK) >> 15) == 1 }
 
-    #[inline]
+    #[inline(always)]
     pub fn get_dest(&self) -> SQ { ((self.data & DST_MASK) >> 6) as u8 }
 
-    #[inline]
+    #[inline(always)]
     pub fn get_src(&self) -> SQ { (self.data & SRC_MASK) as u8 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 13) == 1 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_king_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 2 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_queen_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 3 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_en_passant(&self) -> bool { (self.data & FLAG_MASK) >> 12 == 5 }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_double_push(&self) -> (bool, u8) {
         let is_double_push: u8 = ((self.data & FLAG_MASK) >> 12) as u8;
         match is_double_push {
@@ -144,26 +144,26 @@ impl BitMove {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn dest_row(&self) -> u8 {
         ((self.data & DST_MASK) >> 6) as u8 / 8
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn dest_col(&self) -> u8 {
         ((self.data & DST_MASK) >> 6) as u8 % 8
     }
-    #[inline]
+    #[inline(always)]
     pub fn src_row(&self) -> u8 {
         (self.data & SRC_MASK) as u8 / 8
     }
-    #[inline]
+    #[inline(always)]
     pub fn src_col(&self) -> u8 {
         (self.data & SRC_MASK) as u8 % 8
     }
 
     // Assume Piece is promoted
-    #[inline]
+    #[inline(always)]
     pub fn promo_piece(&self) -> Piece {
         match (self.data >> 12) & 0b0011 {
             0 => Piece::N,
@@ -173,7 +173,7 @@ impl BitMove {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn move_type(&self) -> MoveType {
         if self.is_castle() {return MoveType::Castle}
         if self.is_promo() {return MoveType::Promotion}
