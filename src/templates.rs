@@ -1,4 +1,6 @@
 use bit_twiddles;
+use std::mem;
+//use std::ptr;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
@@ -6,8 +8,10 @@ pub enum Player {
     Black = 1,
 }
 
+pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
+
 pub const PLAYER_CNT: usize = 2;
-pub const PIECE_CNT: usize = 8;
+pub const PIECE_CNT: usize = 6;
 pub const SQ_CNT: usize = 64;
 pub const FILE_CNT: usize = 8;
 pub const RANK_CNT: usize = 8;
@@ -24,31 +28,49 @@ pub enum GenTypes {
     QuietChecks
 }
 
-#[derive(Copy, Clone)]
-pub struct WhitePlayer;
-
-#[derive(Copy, Clone)]
-pub struct BlackPlayer;
-
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {
-    K = 6,
-    Q = 5,
-    R = 4,
-    B = 3,
-    N = 2,
-    P = 1,
+    K = 5,
+    Q = 4,
+    R = 3,
+    B = 2,
+    N = 1,
+    P = 0,
 }
 
-pub const ALL_PIECES: [Piece; 6] = [Piece::P, Piece::N, Piece::B,
-                                     Piece::R, Piece::Q, Piece::K];
+#[repr(u8)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum File {
+    A = 0,
+    B = 1,
+    C = 2,
+    D = 3,
+    E = 4,
+    F = 5,
+    G = 6,
+    H = 7,
+}
 
+#[repr(u8)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Rank {
+    R1 = 0,
+    R2 = 1,
+    R3 = 2,
+    R4 = 3,
+    R5 = 4,
+    R6 = 5,
+    R7 = 6,
+    R8 = 7,
+}
 
-
+pub const ALL_PIECES: [Piece; PIECE_CNT] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 
 pub type BitBoard = u64;
 pub type SQ = u8;
+
+pub const NO_SQ: SQ = 64;
 
 pub const BLACK_SIDE: u64 = 0b1111111111111111111111111111111100000000000000000000000000000000;
 pub const WHITE_SIDE: u64 = 0b0000000000000000000000000000000011111111111111111111111111111111;
@@ -85,6 +107,90 @@ pub const NORTH_EAST: i8 = 9;
 pub const NORTH_WEST: i8 = 7;
 pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
+
+pub const START_W_PAWN:   BitBoard =  0b0000000000000000000000000000000000000000000000001111111100000000;
+pub const START_W_KNIGHT: BitBoard =  0b0000000000000000000000000000000000000000000000000000000001000010;
+pub const START_W_BISHOP: BitBoard =  0b0000000000000000000000000000000000000000000000000000000000100100;
+pub const START_W_ROOK:   BitBoard =  0b0000000000000000000000000000000000000000000000000000000010000001;
+pub const START_W_QUEEN:  BitBoard =  0b0000000000000000000000000000000000000000000000000000000000001000;
+pub const START_W_KING:   BitBoard =  0b0000000000000000000000000000000000000000000000000000000000010000;
+
+pub const START_B_PAWN:   BitBoard =  0b0000000011111111000000000000000000000000000000000000000000000000;
+pub const START_B_KNIGHT: BitBoard =  0b0100001000000000000000000000000000000000000000000000000000000000;
+pub const START_B_BISHOP: BitBoard =  0b0010010000000000000000000000000000000000000000000000000000000000;
+pub const START_B_ROOK:   BitBoard =  0b1000000100000000000000000000000000000000000000000000000000000000;
+pub const START_B_QUEEN:  BitBoard =  0b0000100000000000000000000000000000000000000000000000000000000000;
+pub const START_B_KING:   BitBoard =  0b0001000000000000000000000000000000000000000000000000000000000000;
+
+pub const START_WHITE_OCC: BitBoard =  0b0000000000000000000000000000000000000000000000001111111111111111;
+pub const START_BLACK_OCC: BitBoard =  0b1111111111111111000000000000000000000000000000000000000000000000;
+pub const START_OCC_ALL: BitBoard = START_BLACK_OCC | START_WHITE_OCC;
+
+pub const ROOK_BLACK_KSIDE_START: SQ =  63;
+pub const ROOK_BLACK_QSIDE_START: SQ =  56;
+pub const ROOK_WHITE_KSIDE_START: SQ =  7;
+pub const ROOK_WHITE_QSIDE_START: SQ =  0;
+
+
+pub const CASTLE_RIGHTS_WHITE: u8 = 0b00001100;
+pub const CASTLE_RIGHTS_BLACK: u8 = 0b00000011;
+
+pub const CASTLE_RIGHTS_WHITE_K: u8 = 0b00001000;
+pub const CASTLE_RIGHTS_BLACK_K: u8 = 0b00000010;
+
+pub const CASTLE_RIGHTS_WHITE_Q: u8 = 0b00000100;
+pub const CASTLE_RIGHTS_BLACK_Q: u8 = 0b00000001;
+
+pub const CASTLE_RIGHTS: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE, CASTLE_RIGHTS_BLACK];
+
+pub const CASTLE_RIGHTS_K: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE_K, CASTLE_RIGHTS_BLACK_K];
+pub const CASTLE_RIGHTS_Q: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE_Q, CASTLE_RIGHTS_BLACK_Q];
+
+
+
+
+
+pub const START_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [
+    [START_W_PAWN , START_W_KNIGHT, START_W_BISHOP, START_W_ROOK , START_W_QUEEN, START_W_KING ],
+    [START_B_PAWN , START_B_KNIGHT, START_B_BISHOP, START_B_ROOK , START_B_QUEEN, START_B_KING ]];
+
+pub const BLANK_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
+
+pub const START_OCC_BOARDS: [BitBoard; PLAYER_CNT] = [START_WHITE_OCC, START_BLACK_OCC];
+
+pub const SQ_DISPLAY_ORDER: [SQ; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
+                                            48, 49, 50, 51, 52, 53, 54, 55,
+                                            40, 41, 42, 43, 44, 45, 46, 47,
+                                            32, 33, 34, 35, 36, 37, 38, 39,
+                                            24, 25, 26, 27, 28, 29, 30, 31,
+                                            16, 17, 18, 19, 20, 21, 22, 23,
+                                            8,  9,  10, 11, 12, 13, 14, 15,
+                                            0,  1,   2,  3,  4,  5,  6,  7];
+
+pub const PIECE_DISPLAYS: [[char; PIECE_CNT]; PLAYER_CNT] = [['P', 'N', 'B', 'R', 'Q', 'K'],
+                                                             ['p', 'n', 'b', 'r', 'q', 'k']];
+
+
+
+// Yes
+#[inline]
+pub fn copy_piece_bbs(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT]) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+    let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
+    new_bbs
+}
+
+#[inline]
+pub fn return_start_bb() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+    [[START_W_PAWN , START_W_KNIGHT, START_W_BISHOP, START_W_ROOK , START_W_QUEEN, START_W_KING ],
+    [START_B_PAWN , START_B_KNIGHT, START_B_BISHOP, START_B_ROOK , START_B_QUEEN, START_B_KING ]]
+}
+
+#[inline]
+pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
+    let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
+    new_bbs
+}
+
 
 
 #[inline]
@@ -154,12 +260,14 @@ pub fn bb_to_sq(b: BitBoard) -> SQ {
     bit_twiddles::bit_scan_forward(b)
 }
 
+// Given a Square (u8) that is valid, returns the bitboard representaton
 #[inline]
 pub fn sq_to_bb(s: SQ) -> BitBoard {
-    assert!(s < 64);
-    (1 as u64) << s
+    assert!(sq_is_okay(s));
+    (1 as u64).wrapping_shl(s as u32)
 }
 
+// Function to make sure a Square is okay
 #[inline]
 pub fn sq_is_okay(s: SQ) -> bool {
     s < 64
@@ -175,7 +283,7 @@ pub fn reverse_bytes(b: BitBoard) -> u64 {
     m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24 ;
     m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16 ;
     m |= (reverse_byte(((b >> 8 ) & 0xFF) as u8) as u64) << 8  ;
-    m |= (reverse_byte((b         & 0xFF) as u8) as u64);
+    m |=  reverse_byte((b         & 0xFF) as u8) as u64;
     m
 }
 

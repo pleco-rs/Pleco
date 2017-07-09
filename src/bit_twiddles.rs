@@ -1,6 +1,6 @@
 
 use test::Bencher;
-use std::mem;
+//use std::mem;
 use test;
 
 static POPCNT8: &'static [u8] = &[
@@ -46,7 +46,7 @@ const DEBRUIJ_M: u64 = 0x03f79d71b4cb0a89;
 
 
 // Returns count of bits
-#[inline]
+#[inline(always)]
 pub fn popcount64(x: u64) -> u8 {
      x.count_ones() as u8
 }
@@ -61,19 +61,19 @@ pub fn popcount64(x: u64) -> u8 {
 //}
 
 // Returns index of the LSB
-#[inline]
+#[inline(always)]
 pub fn bit_scan_forward(bits: u64) -> u8 {
     assert_ne!(bits, 0);
     DEBRUIJ_T[(((bits ^ bits.wrapping_sub(1)).wrapping_mul(DEBRUIJ_M)).wrapping_shr(58)) as usize]
 }
 
-#[inline]
+#[inline(always)]
 pub fn bit_scan_forward_rust_trailing(bits: u64) -> u8 {
     assert_ne!(bits, 0);
     bits.trailing_zeros() as u8
 }
 
-#[inline]
+#[inline(always)]
 pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     assert_ne!(bb, 0);
     bb |= bb >> 1;
@@ -84,23 +84,23 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 32;
     DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
 }
-#[inline]
+#[inline(always)]
 pub fn more_than_one(x: u64) -> bool {
     (x & (x.wrapping_sub(1))) != 0
 }
 
 // Returns the LSB
-#[inline]
+#[inline(always)]
 pub fn lsb(bits: u64) -> u64 {
-    1 << bits.trailing_zeros()
+    (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
 
-#[inline]
+#[inline(always)]
 pub fn msb(bits: u64) -> u64 {
-    unimplemented!();
+    (1 as u64).wrapping_shl(bits.leading_zeros())
 }
 
-#[inline]
+#[inline(always)]
 fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
     if x == 0 { return 0 }
@@ -122,7 +122,7 @@ pub const TRAILS: u64 = 17000;
 
 
 #[bench]
-fn EVS_bench_bitscan_djuie(b: &mut Bencher) {
+fn evs_bench_bitscan_djuie(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
@@ -136,7 +136,7 @@ fn EVS_bench_bitscan_djuie(b: &mut Bencher) {
 
 
 #[bench]
-fn EVS_bench_popcount_rust(b: &mut Bencher) {
+fn evs_bench_popcount_rust(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
@@ -148,7 +148,7 @@ fn EVS_bench_popcount_rust(b: &mut Bencher) {
 }
 
 #[bench]
-fn EVS_bench_popcount_old(b: &mut Bencher) {
+fn evs_bench_popcount_old(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {
@@ -161,7 +161,7 @@ fn EVS_bench_popcount_old(b: &mut Bencher) {
 
 
 #[bench]
-fn EVS_bench_lsb_pop_rust(b: &mut Bencher) {
+fn evs_bench_lsb_pop_rust(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {

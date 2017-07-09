@@ -2,7 +2,11 @@
 #![feature(type_ascription)]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![feature(test)]
+#![allow(dead_code)]
+#![feature(box_syntax)]
 
+#[macro_use]
+extern crate lazy_static;
 extern crate test;
 pub mod board;
 pub mod bit_twiddles;
