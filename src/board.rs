@@ -9,6 +9,7 @@ use fen;
 use lazy_static;
 use std::option::*;
 use std::mem;
+use std::sync::Arc;
 
 
 
@@ -38,6 +39,8 @@ pub struct BoardState {
     pub pinners_king: [BitBoard; PLAYER_CNT],
     pub check_sqs: [BitBoard; PIECE_CNT],
 
+    // previous one
+    pub prev: Option<Arc<BoardState>>,
     //  castling      ->  0000WWBB, left = 1 -> king side castle possible, right = 1 -> queen side castle possible
     //  rule50        -> 50 moves without capture, for draws
     //  ply           -> How many moves deep this current thread is
@@ -64,6 +67,7 @@ impl BoardState {
             blockers_king: [0; PLAYER_CNT],
             pinners_king: [0; PLAYER_CNT],
             check_sqs: [0; PIECE_CNT],
+            prev: None,
         }
     }
 
@@ -79,9 +83,14 @@ impl BoardState {
             blockers_king: [0; PLAYER_CNT],
             pinners_king: [0; PLAYER_CNT],
             check_sqs: [0; PIECE_CNT],
+            prev: None, // NOTE, WHEN CLONING THE SUPER METHOD HAS TO MANUALLY CHANGE THIS
         }
     }
 }
+
+
+
+
 
 // ***** BOARD ***** //
 
@@ -97,11 +106,10 @@ pub struct Board {
     pub piece_locations: PieceLocations,
     
     // State of the Board
-    pub state: BoardState,
+    pub state: Arc<BoardState>,
 
     // Not copied
     pub undo_moves: Vec<BitMove>,
-    pub move_states: Vec<BoardState>,
 
     // Special Case
     pub magic_helper: &'static MAGIC_HELPER,
@@ -134,9 +142,8 @@ impl Board {
             depth: 0,
             piece_counts: [[0; PIECE_CNT]; PLAYER_CNT],
             piece_locations: PieceLocations::default(),
-            state: BoardState::default(),
+            state: Arc::new(BoardState::default()),
             undo_moves: Vec::new(),
-            move_states: Vec::new(),
             magic_helper: &MAGIC_HELPER
         };
         b.set_zob_hash();
@@ -155,9 +162,8 @@ impl Board {
             depth: 0,
             piece_counts: [[0; PIECE_CNT]; PLAYER_CNT],
             piece_locations: PieceLocations::default(),
-            state: BoardState::default(),
+            state: Arc::new(BoardState::default()),
             undo_moves: Vec::new(),
-            move_states: Vec::new(),
             magic_helper: &MAGIC_HELPER
         };
         b.set_piece_states();
@@ -177,7 +183,6 @@ impl Board {
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
             undo_moves: Vec::new(),
-            move_states: Vec::new(),
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -201,6 +206,8 @@ impl Board {
                                 else if self.piece_bb(player, Piece::Q) & bb != 0 { Piece::Q }
                                     else if self.piece_bb(player, Piece::K) & bb != 0 { Piece::K } else { panic!() };
             self.piece_locations.place(square,player,piece);
+            } else {
+                self.piece_locations.remove(square);
             }
         }
 
@@ -225,138 +232,137 @@ impl  Board  {
         let gives_check: bool = self.gives_check(bit_move);
 
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
-        let mut new_state: BoardState = self.state.partial_clone();
 
-        self.half_moves += 1;
-        self.depth += 1;
-        new_state.rule_50 += 1;
-        new_state.ply += 1;
+        let mut next_arc_state = Arc::new(self.state.partial_clone());
 
-        let us = self.turn;
-        let them = other_player(self.turn);
-        let from: SQ = bit_move.get_src();
-        let to: SQ = bit_move.get_dest();
-        let piece: Piece = self.piece_at_sq(from).unwrap();
-        let captured: Option<Piece> = if bit_move.is_en_passant() {
-            Some(Piece::P)
-        } else {
-            self.piece_at_sq(from)
-        };
+        {
+            let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+            new_state.prev = Some(self.state.clone());
 
-        assert_eq!(self.color_of_sq(from).unwrap(), us);
+            self.half_moves += 1;
+            self.depth += 1;
+            new_state.rule_50 += 1;
+            new_state.ply += 1;
 
-        if bit_move.is_castle() {
-            assert_eq!(captured.unwrap(),Piece::R);
-            assert_eq!(piece,Piece::K);
-
-            let mut k_to: SQ = 0;
-            let mut r_to: SQ = 0;
-            self.apply_castling(us, to, from, &mut k_to, &mut r_to);
-            zob ^= self.magic_helper.z_piece_at_sq(Piece::R,k_to) ^ self.magic_helper.z_piece_at_sq(Piece::R,r_to);
-            new_state.captured_piece = None;
-            new_state.castling &= !CASTLE_RIGHTS[us as usize];
-        }
-
-        // A piece has been captured
-        if captured.is_some() {
-            let mut cap_sq: SQ = to;
-            let cap_p: Piece = captured.unwrap();
-            if cap_p == Piece::P && bit_move.move_type() == MoveType::EnPassant {
-                match us {
-                    Player::White => cap_sq -= 8,
-                    Player::Black => cap_sq += 8,
-                };
-                assert_eq!(piece, Piece::P);
-                assert_eq!(cap_sq, self.state.ep_square);
-                assert_eq!(relative_rank(us,6), rank_of_sq(to));
-                assert!(self.piece_at_sq(to).is_none());
-                assert_eq!(self.piece_at_sq(cap_sq).unwrap(),Piece::P);
-                assert_eq!(self.player_at_sq(cap_sq).unwrap(),them);
-                self.remove_piece_c(Piece::P,cap_sq,them);
+            let us = self.turn;
+            let them = other_player(self.turn);
+            let from: SQ = bit_move.get_src();
+            let to: SQ = bit_move.get_dest();
+            let piece: Piece = self.piece_at_sq(from).unwrap();
+            let captured: Option<Piece> = if bit_move.is_en_passant() {
+                Some(Piece::P)
             } else {
-                self.remove_piece_c(cap_p,cap_sq,them);
-            }
-            zob ^= self.magic_helper.z_piece_at_sq(cap_p,cap_sq);
-            new_state.rule_50 = 0;
-        }
+                self.piece_at_sq(from)
+            };
 
-        zob ^= self.magic_helper.z_piece_at_sq(piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
+            assert_eq!(self.color_of_sq(from).unwrap(), us);
 
-        if self.state.ep_square != NO_SQ {
-            zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
-            new_state.ep_square = NO_SQ;
-        }
+            if bit_move.is_castle() {
+                assert_eq!(captured.unwrap(),Piece::R);
+                assert_eq!(piece,Piece::K);
 
-        if new_state.castling != 0 && !bit_move.is_castle() {
-            if piece == Piece::K {
+                let mut k_to: SQ = 0;
+                let mut r_to: SQ = 0;
+                self.apply_castling(us, to, from, &mut k_to, &mut r_to);
+                zob ^= self.magic_helper.z_piece_at_sq(Piece::R,k_to) ^ self.magic_helper.z_piece_at_sq(Piece::R,r_to);
+                new_state.captured_piece = None;
                 new_state.castling &= !CASTLE_RIGHTS[us as usize];
-            } else if piece == Piece::R {
-                match us {
-                    Player::White => {
-                        if from == ROOK_WHITE_KSIDE_START {
-                            new_state.castling &= !CASTLE_RIGHTS_WHITE_K;
-                        } else if from == ROOK_WHITE_QSIDE_START {
-                            new_state.castling &= !CASTLE_RIGHTS_WHITE_Q;
-                        }
-                    },
-                    Player::Black => {
-                        if from == ROOK_BLACK_KSIDE_START {
-                            new_state.castling &= !CASTLE_RIGHTS_BLACK_K;
-                        } else if from == ROOK_BLACK_QSIDE_START {
-                            new_state.castling &= !CASTLE_RIGHTS_BLACK_Q;
+            }
+
+            // A piece has been captured
+            if captured.is_some() {
+                let mut cap_sq: SQ = to;
+                let cap_p: Piece = captured.unwrap();
+                if cap_p == Piece::P && bit_move.move_type() == MoveType::EnPassant {
+                    match us {
+                        Player::White => cap_sq -= 8,
+                        Player::Black => cap_sq += 8,
+                    };
+                    assert_eq!(piece, Piece::P);
+                    assert_eq!(cap_sq, self.state.ep_square);
+                    assert_eq!(relative_rank(us,6), rank_of_sq(to));
+                    assert!(self.piece_at_sq(to).is_none());
+                    assert_eq!(self.piece_at_sq(cap_sq).unwrap(),Piece::P);
+                    assert_eq!(self.player_at_sq(cap_sq).unwrap(),them);
+                    self.remove_piece_c(Piece::P,cap_sq,them);
+                } else {
+                    self.remove_piece_c(cap_p,cap_sq,them);
+                }
+                zob ^= self.magic_helper.z_piece_at_sq(cap_p,cap_sq);
+                new_state.rule_50 = 0;
+            }
+
+            zob ^= self.magic_helper.z_piece_at_sq(piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
+
+            if self.state.ep_square != NO_SQ {
+                zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
+                new_state.ep_square = NO_SQ;
+            }
+
+            if new_state.castling != 0 && !bit_move.is_castle() {
+                if piece == Piece::K {
+                    new_state.castling &= !CASTLE_RIGHTS[us as usize];
+                } else if piece == Piece::R {
+                    match us {
+                        Player::White => {
+                            if from == ROOK_WHITE_KSIDE_START {
+                                new_state.castling &= !CASTLE_RIGHTS_WHITE_K;
+                            } else if from == ROOK_WHITE_QSIDE_START {
+                                new_state.castling &= !CASTLE_RIGHTS_WHITE_Q;
+                            }
+                        },
+                        Player::Black => {
+                            if from == ROOK_BLACK_KSIDE_START {
+                                new_state.castling &= !CASTLE_RIGHTS_BLACK_K;
+                            } else if from == ROOK_BLACK_QSIDE_START {
+                                new_state.castling &= !CASTLE_RIGHTS_BLACK_Q;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if !bit_move.is_castle() && !bit_move.is_promo() {
-            self.move_piece_c(piece, to, from, us);
-        }
-
-        if piece == Piece::P {
-            if self.magic_helper.distance_of_sqs(to,from) == 2 {
-                // Double Push
-                new_state.ep_square = (to + from) / 2;
-                zob ^= self.magic_helper.z_ep_file(new_state.ep_square);
-            } else if bit_move.is_promo() {
-                let promo_piece: Piece = bit_move.promo_piece();
-
-                self.remove_piece_c(Piece::P, from, us);
-                self.put_piece_c(promo_piece,to,us);
-                zob ^= self.magic_helper.z_piece_at_sq(promo_piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
+            if !bit_move.is_castle() && !bit_move.is_promo() {
+                self.move_piece_c(piece, to, from, us);
             }
-            new_state.rule_50 = 0;
+
+            if piece == Piece::P {
+                if self.magic_helper.distance_of_sqs(to,from) == 2 {
+                    // Double Push
+                    new_state.ep_square = (to + from) / 2;
+                    zob ^= self.magic_helper.z_ep_file(new_state.ep_square);
+                } else if bit_move.is_promo() {
+                    let promo_piece: Piece = bit_move.promo_piece();
+
+                    self.remove_piece_c(Piece::P, from, us);
+                    self.put_piece_c(promo_piece,to,us);
+                    zob ^= self.magic_helper.z_piece_at_sq(promo_piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
+                }
+                new_state.rule_50 = 0;
+            }
+
+            new_state.captured_piece = captured;
+            new_state.zobrast = zob;
+
+            if self.gives_check(bit_move) {
+                new_state.checkers_bb = self.attackers_to(self.king_sq(them),self.get_occupied());
+            }
+
+            self.turn = them;
+            self.undo_moves.push(bit_move);
+            self.set_check_info(new_state);
         }
-
-        new_state.captured_piece = captured;
-        new_state.zobrast = zob;
-
-        if self.gives_check(bit_move) {
-            new_state.checkers_bb = self.attackers_to(self.king_sq(them),self.get_occupied());
-        }
-
-        self.turn = them;
-        self.move_states.push(unsafe { mem::transmute_copy(&self.state) });
-        self.undo_moves.push(bit_move);
-        self.state = new_state;
-
-        self.set_check_info();
+        self.state = next_arc_state;
         assert!(self.is_okay());
     }
 
     pub fn undo_move(&mut self) {
         assert!(self.undo_moves.len() > 0);
-        assert!(self.move_states.len() > 0);
+        assert!(self.state.prev.is_some());
 
         self.turn = other_player(self.turn);
 
-        {
-            let re_state = &self.move_states;
-        }
-
         let us: Player = self.turn;
-
 
         unimplemented!();
     }
@@ -374,28 +380,30 @@ impl  Board  {
 impl  Board  {
 
     // After a move is made, Information about the checking situation is created
-    fn set_check_info(&mut self) {
+    fn set_check_info(&self, board_state: &mut BoardState) {
         let mut white_pinners = 0;
-        self.state.blockers_king[Player::White as usize]  = {
+        board_state.blockers_king[Player::White as usize]  = {
             self.slider_blockers(self.occupied_black(), self.king_sq(Player::White), &mut white_pinners) };
-        self.state.pinners_king[Player::White as usize] = white_pinners;
+        board_state.pinners_king[Player::White as usize] = white_pinners;
 
         let mut black_pinners = 0;
-        self.state.blockers_king[Player::Black as usize]  = {
+        board_state.blockers_king[Player::Black as usize]  = {
             self.slider_blockers(self.occupied_white(), self.king_sq(Player::Black), &mut black_pinners) };
-        self.state.pinners_king[Player::Black as usize] = black_pinners;
+        board_state.pinners_king[Player::Black as usize] = black_pinners;
 
         let ksq: SQ = self.king_sq(other_player(self.turn));
         let occupied = self.get_occupied();
 
-        self.state.check_sqs[Piece::P as usize] = self.magic_helper.pawn_attacks_from(ksq,other_player(self.turn));
-        self.state.check_sqs[Piece::N as usize] = self.magic_helper.knight_moves(ksq);
-        self.state.check_sqs[Piece::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
-        self.state.check_sqs[Piece::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
-        self.state.check_sqs[Piece::Q as usize] = self.state.check_sqs[Piece::B as usize]
+        board_state.check_sqs[Piece::P as usize] = self.magic_helper.pawn_attacks_from(ksq,other_player(self.turn));
+        board_state.check_sqs[Piece::N as usize] = self.magic_helper.knight_moves(ksq);
+        board_state.check_sqs[Piece::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
+        board_state.check_sqs[Piece::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
+        board_state.check_sqs[Piece::Q as usize] = self.state.check_sqs[Piece::B as usize]
                                                  | self.state.check_sqs[Piece::R as usize];
-        self.state.check_sqs[Piece::K  as usize] = 0;
+        board_state.check_sqs[Piece::K  as usize] = 0;
     }
+
+
 
     // Remove a piece, color is unknown
     fn remove_piece(&mut self, piece: Piece, square: SQ) {
@@ -531,12 +539,9 @@ impl  Board  {
         match self.turn {
             Player::Black =>  zob ^= self.magic_helper.z_side(),
             Player::White => {}
-        }
+        };
 
-        let c = self.state.castling;
-        assert!((c as usize) < CASTLING_CNT);
-        zob ^= self.magic_helper.z_castle_rights(c);
-        self.state.zobrast = zob;
+        Arc::get_mut(&mut self.state).unwrap().zobrast = zob;
     }
 
 
@@ -757,7 +762,7 @@ impl  Board  {
                     Piece::B => self.magic_helper.bishop_moves(self.get_occupied() ^ src_bb, dst),
                     Piece::R => self.magic_helper.rook_moves(self.get_occupied() ^ src_bb, dst),
                     Piece::Q => self.magic_helper.queen_moves(self.get_occupied() ^ src_bb, dst),
-                    _ => panic!()
+                    _ => unreachable!()
                 };
                 return attacks_bb & sq_to_bb(opp_king_sq) != 0
             },
@@ -810,7 +815,7 @@ impl  Board  {
     // Returns a prettified String of the current board
     // Capital Letters are WHITE, lowe case are BLACK
     pub fn pretty_string(&self) -> String {
-        let s = String::with_capacity(SQ_CNT);
+        let mut s = String::with_capacity(SQ_CNT * 2 + 8);
         for sq in SQ_DISPLAY_ORDER.iter() {
             let op = self.piece_locations.player_piece_at(sq.clone());
             let char = if op.is_some() {
@@ -820,18 +825,18 @@ impl  Board  {
             } else {
                 '-'
             };
-
-
+            s.push(char);
+            s.push(' ');
             if sq % 8 == 7 {
-                // append newline
+                s.push('\n');
             }
         }
-        unimplemented!();
+        s
     }
 
     // prints a prettified representation of the board
     pub fn pretty_print(&self) {
-        unimplemented!();
+        println!("{}",self.pretty_string());
     }
 
     // Checks the current state of the Board
@@ -945,7 +950,12 @@ impl PieceLocations {
         let mask: u8 = {
             if rem == 0 {0x0F} else {0xF0}
         };
+        let blank: u8 = {
+            if rem == 0 {0b0111} else {0b0111 << 4}
+        };
         self.data[idx] &= !mask;
+        self.data[idx] |= blank;
+
 
     }
 
@@ -1050,7 +1060,6 @@ impl PieceLocations {
         loc
     }
 }
-
 
 
 
