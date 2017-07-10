@@ -1,12 +1,8 @@
-use templates::Piece as Piece;
-use templates::Player as Player;
 use templates::*;
 use magic_helper::MagicHelper;
 use bit_twiddles::*;
 use piece_move::{BitMove,MoveType};
 use fen;
-//use movegen;
-use lazy_static;
 use std::option::*;
 use std::mem;
 use std::sync::Arc;
@@ -14,7 +10,7 @@ use std::sync::Arc;
 
 
 
-// Initialize MAGIC_HELPER
+// Initialize MAGIC_HELPER as a static structure
 
 lazy_static! {
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
@@ -22,11 +18,21 @@ lazy_static! {
 
 // ***** BOARD STATE ***** //
 
-// State of the Board
+// TODO: change casting bits to a type
+
+// 'BoardState' is a structure to hold useful information concerning the current state of the board
+// This is information that is computed upon making a move, and requires expensive computation at that.
+// It is stored in the Heap by 'Board' as an Arc<BoardState>, as cloning the board can lead to multiple
+// references to the same BoardState.
+//
+// Contains a 'prev' field to point to the BoardState Before the current one. Used as a 'Option<Arc<BoardState>>'
+// in order to account for the possibility of their being no previous move.
+//
+
 #[derive(Clone)]
 pub struct BoardState {
     // Automatically Created
-    pub castling: u8,
+    pub castling: u8, // special castling bits
     pub rule_50: i8,
     pub ply: u8,
     pub ep_square: SQ,
@@ -34,13 +40,14 @@ pub struct BoardState {
     // Recomputed after a move
     pub zobrast: u64,
     pub captured_piece: Option<Piece>,
-    pub checkers_bb: BitBoard,
+    pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
     pub blockers_king: [BitBoard; PLAYER_CNT],
     pub pinners_king: [BitBoard; PLAYER_CNT],
     pub check_sqs: [BitBoard; PIECE_CNT],
 
-    // previous one
+    // Previous state
     pub prev: Option<Arc<BoardState>>,
+
     //  castling      ->  0000WWBB, left = 1 -> king side castle possible, right = 1 -> queen side castle possible
     //  rule50        -> 50 moves without capture, for draws
     //  ply           -> How many moves deep this current thread is
@@ -94,27 +101,13 @@ impl BoardState {
 
 // ***** BOARD ***** //
 
-pub struct Board {
-    // Basic information
-    pub turn: Player,
-    pub bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
-    pub occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
-    pub occ_all: BitBoard, // Total Occupancy BB
-    pub half_moves: u16, // Total moves
-    pub depth: u8, // current depth from actual position
-    pub piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
-    pub piece_locations: PieceLocations,
-    
-    // State of the Board
-    pub state: Arc<BoardState>,
-
-    // Not copied
-    pub undo_moves: Vec<BitMove>,
-
-    // Special Case
-    pub magic_helper: &'static MAGIC_HELPER,
-}
-
+// 'Board' is the big daddy of information. Contains everything that needs to be known about the current
+// state of the Game. It is used by both Engines and Players alike, with the Engines (obviously) containing
+// the original copy of the Board. (Shallow) Copying the Board creates a copy with all the neccesary information
+// about the current state, but doesn't include information about the previous states.
+//
+// BitBoards are stored in the following format (as in bit 0 is Square A1, bit 1 is B1, etc
+//
 //  8 | 56 57 58 59 60 61 62 63
 //  7 | 48 49 50 51 52 53 54 55
 //  6 | 40 41 42 43 44 45 46 47
@@ -127,11 +120,36 @@ pub struct Board {
 //      a  b  c  d  e  f  g  h
 
 
+pub struct Board {
+    // Basic information
+    pub turn: Player, // Current turn
+    pub bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
+    pub occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
+    pub occ_all: BitBoard, // Total Occupancy BB
+    pub half_moves: u16, // Total moves
+    pub depth: u8, // current depth from actual position (Basically, moves since shallow clone was called)
+    pub piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
+    pub piece_locations: PieceLocations,
+    
+    // State of the Board, Un modifiable.
+    // Arc to allow easy and quick copying of boards without copying memory
+    // or recomputing BoardStates.
+    pub state: Arc<BoardState>,
+
+    // List of Moves that have been played so far
+    // undo_moves.len() == depth, as undo_moves is not copied upon
+    // shallow clone
+    pub undo_moves: Vec<BitMove>,
+
+    // Special Case
+    pub magic_helper: &'static MAGIC_HELPER,
+}
+
 
 // Initializers!
 impl Board {
 
-    // Default, starting board
+    // Default, starting position of the board
     pub fn default() -> Board {
         let mut b = Board {
             turn: Player::White,
@@ -143,29 +161,10 @@ impl Board {
             piece_counts: [[0; PIECE_CNT]; PLAYER_CNT],
             piece_locations: PieceLocations::default(),
             state: Arc::new(BoardState::default()),
-            undo_moves: Vec::new(),
+            undo_moves: Vec::with_capacity(100), // As this is the main board, might as well reserve space
             magic_helper: &MAGIC_HELPER
         };
         b.set_zob_hash();
-        b.set_piece_states();
-        b
-    }
-
-    // Simple Version for testing, Skips creation of MagicHelper
-    pub fn simple() -> Board {
-        let mut b = Board {
-            turn: Player::White,
-            bit_boards: copy_piece_bbs(&START_BIT_BOARDS),
-            occ: copy_occ_bbs(&START_OCC_BOARDS),
-            occ_all: START_OCC_ALL,
-            half_moves: 0,
-            depth: 0,
-            piece_counts: [[0; PIECE_CNT]; PLAYER_CNT],
-            piece_locations: PieceLocations::default(),
-            state: Arc::new(BoardState::default()),
-            undo_moves: Vec::new(),
-            magic_helper: &MAGIC_HELPER
-        };
         b.set_piece_states();
         b
     }
@@ -182,12 +181,31 @@ impl Board {
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
-            undo_moves: Vec::new(),
+            undo_moves: Vec::with_capacity(16), // 32 Bytes taken up
             magic_helper: &MAGIC_HELPER,
         }
     }
 
-    // Sets the piece states for non cloning initilization
+    // Returns an EXACT memory representation of that Board.
+    // unsafe as this is to only be used by engines, and is more computationally expensive
+    pub unsafe fn deep_clone(&self) -> Board {
+        Board {
+            turn: self.turn,
+            bit_boards: copy_piece_bbs(&self.bit_boards),
+            occ: copy_occ_bbs(&self.occ),
+            occ_all: self.occ_all,
+            half_moves: self.half_moves,
+            depth: self.depth,
+            piece_counts: self.piece_counts.clone(),
+            piece_locations: self.piece_locations.clone(),
+            state: self.state.clone(),
+            undo_moves: self.undo_moves.clone(), // 32 Bytes taken up
+            magic_helper: &MAGIC_HELPER,
+        }
+    }
+
+    // Helper method for setting the piece states on initilization.
+    // Really only used when creating the Board from scratch, rather than copying
     fn set_piece_states(&mut self) {
         for player in ALL_PLAYERS.iter() {
             for piece in ALL_PIECES.iter() {
@@ -225,54 +243,71 @@ impl Board {
 // Public Move Gen & Mutation Functions
 impl  Board  {
 
-    // Applies the bitmove to the board
+    // Applies the BitMove to the Board
     pub fn apply_move(&mut self, bit_move: BitMove) {
+
+        // Check for stupidity
         assert_ne!(bit_move.get_src(),bit_move.get_dest());
 
+        // Does this move give check?
         let gives_check: bool = self.gives_check(bit_move);
 
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
 
+        // New Arc for the board to have by making a partial clone of the current state
         let mut next_arc_state = Arc::new(self.state.partial_clone());
 
         {
+            // Seperate Block to allow derefencing the state
+            // As there is garunteed only one owner of the Arc, this is allowed
             let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+
+            // Set the prev state
             new_state.prev = Some(self.state.clone());
 
+            // Increment these
             self.half_moves += 1;
             self.depth += 1;
             new_state.rule_50 += 1;
             new_state.ply += 1;
+
 
             let us = self.turn;
             let them = other_player(self.turn);
             let from: SQ = bit_move.get_src();
             let to: SQ = bit_move.get_dest();
             let piece: Piece = self.piece_at_sq(from).unwrap();
+
             let captured: Option<Piece> = if bit_move.is_en_passant() {
                 Some(Piece::P)
             } else {
                 self.piece_at_sq(from)
             };
 
+            // Sanity checks
             assert_eq!(self.color_of_sq(from).unwrap(), us);
 
             if bit_move.is_castle() {
+
+                // Sanity Checks, moved piece should be K, "captured" should be R
+                // As this is the encoding of Castling
                 assert_eq!(captured.unwrap(),Piece::R);
                 assert_eq!(piece,Piece::K);
 
                 let mut k_to: SQ = 0;
                 let mut r_to: SQ = 0;
+                // yay helper methods
                 self.apply_castling(us, to, from, &mut k_to, &mut r_to);
                 zob ^= self.magic_helper.z_piece_at_sq(Piece::R,k_to) ^ self.magic_helper.z_piece_at_sq(Piece::R,r_to);
                 new_state.captured_piece = None;
+                // TODO: Set castling rights Zobrist
                 new_state.castling &= !CASTLE_RIGHTS[us as usize];
             }
 
             // A piece has been captured
             if captured.is_some() {
                 let mut cap_sq: SQ = to;
-                let cap_p: Piece = captured.unwrap();
+                let cap_p: Piece = captured.unwrap(); // This shouldn't panic unless move is void
                 if cap_p == Piece::P && bit_move.move_type() == MoveType::EnPassant {
                     match us {
                         Player::White => cap_sq -= 8,
@@ -289,9 +324,12 @@ impl  Board  {
                     self.remove_piece_c(cap_p,cap_sq,them);
                 }
                 zob ^= self.magic_helper.z_piece_at_sq(cap_p,cap_sq);
+
+                // Reset Rule 50
                 new_state.rule_50 = 0;
             }
 
+            // Update hash for moving piece
             zob ^= self.magic_helper.z_piece_at_sq(piece,to) ^ self.magic_helper.z_piece_at_sq(piece,from);
 
             if self.state.ep_square != NO_SQ {
@@ -299,6 +337,7 @@ impl  Board  {
                 new_state.ep_square = NO_SQ;
             }
 
+            // Update castling rights
             if new_state.castling != 0 && !bit_move.is_castle() {
                 if piece == Piece::K {
                     new_state.castling &= !CASTLE_RIGHTS[us as usize];
@@ -322,10 +361,12 @@ impl  Board  {
                 }
             }
 
+            // Actually move the piece
             if !bit_move.is_castle() && !bit_move.is_promo() {
                 self.move_piece_c(piece, to, from, us);
             }
 
+            // Pawn Moves need special help :(
             if piece == Piece::P {
                 if self.magic_helper.distance_of_sqs(to,from) == 2 {
                     // Double Push
@@ -344,13 +385,13 @@ impl  Board  {
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
 
-            if self.gives_check(bit_move) {
+            if gives_check {
                 new_state.checkers_bb = self.attackers_to(self.king_sq(them),self.get_occupied());
             }
 
             self.turn = them;
             self.undo_moves.push(bit_move);
-            self.set_check_info(new_state);
+            self.set_check_info(new_state); // Set the checking information
         }
         self.state = next_arc_state;
         assert!(self.is_okay());
@@ -740,23 +781,24 @@ impl  Board  {
         let dst_bb: BitBoard = sq_to_bb(dst);
         let opp_king_sq: SQ = self.king_sq(other_player(self.turn));
 
+        // Stupidity Checks
         assert_ne!(src, dst);
         assert_eq!(self.color_of_sq(src).unwrap(),self.turn);
 
-        // Direct check mother fuckas
+        // Searches for direct checks from the pre-computed array
         if self.state.check_sqs[self.piece_at_sq(src).unwrap() as usize] & dst_bb != 0 {
             return true;
         }
 
-        // Discovered check mother fuckas
-        if (self.discovered_check_candidates() & src_bb != 0)
-            && !self.magic_helper.aligned(src, dst, opp_king_sq) {
+        // Discovered (Indirect) checks, where a sniper piece is attacking the king
+        if (self.discovered_check_candidates() & src_bb != 0)  // check if the piece is blocking a sniper
+            && !self.magic_helper.aligned(src, dst, opp_king_sq) { // Make sure the dst square is not aligned
             return true;
         }
 
         match m.move_type() {
-            MoveType::Normal => return false,
-            MoveType::Promotion => {
+            MoveType::Normal => return false, // Nothing to check here
+            MoveType::Promotion => { // check if the Promo Piece attacks king
                 let attacks_bb = match m.promo_piece() {
                     Piece::N => self.magic_helper.knight_moves(dst),
                     Piece::B => self.magic_helper.bishop_moves(self.get_occupied() ^ src_bb, dst),
@@ -767,16 +809,19 @@ impl  Board  {
                 return attacks_bb & sq_to_bb(opp_king_sq) != 0
             },
             MoveType::EnPassant => {
+                // Check for indirect check from the removal of the captured pawn
                 let captured_sq: SQ = make_sq(file_of_sq(dst), rank_of_sq(src));
                 let b: BitBoard = (self.get_occupied() ^ src_bb ^ sq_to_bb(captured_sq)) | dst_bb;
 
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
 
+                // TODO: is this right?
                 return (self.magic_helper.rook_moves(b, opp_king_sq) | turn_sliding_p)
                     & (self.magic_helper.bishop_moves(b, opp_king_sq) | turn_diag_p) != 0;
             },
             MoveType::Castle => {
+                // Check if the rook attacks the King now
                 let k_from: SQ = src;
                 let r_from: SQ = dst;
 
@@ -796,21 +841,19 @@ impl  Board  {
     // Returns the piece that was moved
     pub fn moved_piece(&self, m: BitMove) -> Piece {
         let src = m.get_src();
-        self.piece_at_sq(src).unwrap()
+        self.piece_at_sq(src).unwrap() // panics if no piece here :)
     }
 
     // Returns the piece that was captured, if any
-    pub fn captured_piece(&self, m: BitMove) -> Piece {
+    pub fn captured_piece(&self, m: BitMove) -> Option<Piece> {
         let dst = m.get_dest();
-        self.piece_at_bb(sq_to_bb(dst),other_player(self.turn)).unwrap()
+        self.piece_at_bb(sq_to_bb(dst),other_player(self.turn))
     }
 
 }
 
 // Printing and Debugging Functions
 impl  Board  {
-
-
 
     // Returns a prettified String of the current board
     // Capital Letters are WHITE, lowe case are BLACK
