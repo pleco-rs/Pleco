@@ -3,8 +3,10 @@
 //use templates::Player as Player;
 //use magic_helper::MagicHelper;
 //use std::sync::Arc;
-//
-//
+
+// TODO: EVERYTHING
+
+
 //// TODO: Change so structs of bitboard dont have to be public
 //// Meaning that it stores local copies of the stuff
 //
