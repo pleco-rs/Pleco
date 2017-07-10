@@ -1,3 +1,7 @@
+
+use templates::SQ;
+use templates::Piece;
+
 // A move needs 16 bits to be stored
 //
 // bit  0- 5: destination square (from 0 to 63)
@@ -33,9 +37,6 @@
 
 
 // Castles have the src as the king bit and the dst as the rook
-
-use templates::SQ;
-use templates::Piece;
 
 
 static SRC_MASK: u16 = 0b0000000000111111;
