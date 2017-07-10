@@ -1,9 +1,7 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
-#![feature(type_ascription)]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![feature(test)]
 #![allow(dead_code)]
-#![feature(box_syntax)]
 
 #[macro_use]
 extern crate lazy_static;
