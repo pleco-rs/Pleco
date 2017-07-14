@@ -2,163 +2,138 @@ use templates::*;
 use board::*;
 use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use bit_twiddles::*;
-
-
-// Struct to store repeatedly used information
-pub struct MoveInfos {
-    occupied: BitBoard,
-    us_occupied: BitBoard,
-    them_occupied: BitBoard,
-    us: Player,
-    them: Player,
-}
-
-
-
-impl MoveInfos {
-    pub fn new(board: &Board) -> MoveInfos {
-        let us_p: Player = board.turn;
-        let them_p: Player = other_player(us_p);
-        let us_occ = board.get_occupied_player(us_p);
-        let them_occ = board.get_occupied_player(them_p);
-        MoveInfos {
-            occupied: us_occ | them_occ,
-            us_occupied: us_occ,
-            them_occupied: them_occ,
-            us: us_p,
-            them: them_p
-        }
-    }
-}
+use magic_helper::MagicHelper;
 
 // TODO:
 // MoveGen Classifications:
 // Evasions, Captures, Quiets, Quiet_checks, Evasions, Non Evasions, Legal
 //
-// Evasions: Board is currently in check; Generate moves that block the check or move away
-// Captures:
+// Evasions: Board is currently in check; Generate moves that move the king or Block the attack
+// Captures: This Move captures something;
+// Quiets: Moves that do not capture a piece
+// Non-Evasions: Board is currently in check; Generate moves that do not move the king
 
+// Pieces not needed special considerations when generating (basically everything but pawns)
+const STANDARD_PIECES: [Piece; 5] = [Piece::B, Piece::N, Piece::R, Piece::Q, Piece::K];
 
-pub fn get_moves(board: &Board) -> Vec<BitMove> {
-    let move_info = MoveInfos::new(&board);
-//    let pseduo_moves = get_pseudo_moves(&board, &move_info);
-
-    unimplemented!();
+pub struct MoveGen<'a> {
+    movelist: Vec<BitMove>,
+    board: &'a Board,
+    magic: &'static MagicHelper<'static,'static>,
+    turn: Player,
+    them: Player,
+    occ: BitBoard,
+    us_occ: BitBoard,
+    them_occ: BitBoard,
 }
 
-//fn get_pseudo_moves(board: &Board, move_info: &MoveInfos) -> Vec<PreMoveInfo> {
-//    let mut vec = Vec::with_capacity(256);
-//    get_pawn_moves(&board, move_info.us, &mut vec);
-//    vec
-//}
-
-fn gen_queen_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
-    let mut p_bb: BitBoard = board.piece_bb(move_info.us, Piece::Q);
-    while p_bb != 0 {
-        let b: BitBoard = lsb(p_bb);
-        let src: SQ = bb_to_sq(b);
-        let moves_bb: BitBoard = board.magic_helper.queen_moves(move_info.occupied & !b, src) & !move_info.us_occupied;
-        let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
-        let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
-        pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
-        pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
-        p_bb &= !b;
+impl <'a> MoveGen<'a> {
+    pub fn generate_all(chessboard: &Board) -> Vec<BitMove> {
+        let mut movegen = MoveGen::get_self(&chessboard);
+        movegen.gen_all();
+        movegen.movelist
     }
-    list
-}
 
-
-fn gen_rook_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
-    let mut p_bb: BitBoard = board.piece_bb(move_info.us, Piece::R);
-    while p_bb != 0 {
-        let b: BitBoard = lsb(p_bb);
-        let src: SQ = bb_to_sq(b);
-        let moves_bb: BitBoard = board.magic_helper.rook_moves(move_info.occupied & !b, src) & !move_info.us_occupied;
-        let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
-        let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
-        pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
-        pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
-        p_bb &= !b;
+    fn get_self(chessboard: &'a Board) -> Self {
+        MoveGen {
+            movelist: Vec::with_capacity(25),
+            board: &chessboard,
+            magic: chessboard.magic_helper,
+            turn: chessboard.turn(),
+            them: other_player(chessboard.turn()),
+            occ: chessboard.get_occupied(),
+            us_occ: chessboard.get_occupied_player(chessboard.turn()),
+            them_occ: chessboard.get_occupied_player(other_player(chessboard.turn()))}
     }
-    list
-}
 
-fn gen_bishop_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
-    let mut p_bb: BitBoard = board.piece_bb(move_info.us, Piece::B);
-    while p_bb != 0 {
-        let b: BitBoard = lsb(p_bb);
-        let src: SQ = bb_to_sq(b);
-        let moves_bb: BitBoard = board.magic_helper.bishop_moves(move_info.occupied & !b, src) & !move_info.us_occupied;
-        let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
-        let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
-        pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
-        pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
-        p_bb &= !b;
+    fn generate_castling(&mut self) {
+        unimplemented!();
     }
-    list
-}
 
-fn gen_knight_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
-    let mut p_bb: BitBoard = board.piece_bb(move_info.us, Piece::N);
-    while p_bb != 0 {
-        let b: BitBoard = lsb(p_bb);
-        let src: SQ = bb_to_sq(b);
-        let moves_bb: BitBoard = board.magic_helper.knight_moves(src) & !move_info.us_occupied;
-        let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
-        let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
-        pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
-        pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
-        p_bb &= !b;
+    fn create_promotions(&mut self, dst: SQ, src: SQ) {
+        unimplemented!();
     }
-    list
-}
 
-fn gen_king_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
-    let p_bb: BitBoard = board.piece_bb(move_info.us, Piece::K);
-    let b: BitBoard = lsb(p_bb);
-    let src: SQ = bb_to_sq(b);
-    let moves_bb: BitBoard = board.magic_helper.knight_moves(src) & !move_info.us_occupied;
-    let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
-    let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
-    pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
-    pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
-    list
-}
+    fn pawn_moves(&mut self) {
+        unimplemented!();
+    }
 
+    // Return the moves Bitboard
+    fn moves_bb(&self, piece: Piece, square: SQ) -> BitBoard {
+        assert!(sq_is_okay(square));
+        assert_ne!(piece, Piece::P);
+        match piece {
+            Piece::P => panic!(),
+            Piece::N => self.magic.knight_moves(square),
+            Piece::B => self.magic.bishop_moves(self.occ,square),
+            Piece::R => self.magic.rook_moves(self.occ,square),
+            Piece::Q => self.magic.queen_moves(self.occ,square),
+            Piece::K => self.magic.king_moves(square)
+        }
+    }
 
+    fn gen_all(&mut self) {
+        for piece in STANDARD_PIECES.into_iter() {
+            self.gen_non_pawn_moves(piece.clone());
+        }
+        self.generate_castling();
+        self.pawn_moves();
+    }
 
+    fn gen_non_pawn_moves(&mut self, piece: Piece) {
+        let mut piece_bb: BitBoard = self.board.piece_bb(self.turn, piece);
+        while piece_bb != 0 {
+            let b: BitBoard = lsb(piece_bb);
+            let src: SQ = bb_to_sq(b);
+            let moves_bb: BitBoard = self.moves_bb(piece, src) & !self.us_occ;
+            let mut captures_bb: BitBoard = moves_bb & self.them_occ;
+            let mut non_captures_bb: BitBoard = moves_bb & !self.them_occ;
+            self.move_append_from_bb(&mut captures_bb, src, MoveFlag::Capture {ep_capture:false});
+            self.move_append_from_bb(&mut non_captures_bb, src, MoveFlag::QuietMove );
+            piece_bb &= !b;
+        }
+    }
 
-// Gets pawn attacks from a square
-pub fn pawn_attacks_from(sq: SQ, player: Player) -> BitBoard {
-    match player {
-        Player::White => {
-            let mut board: u64 = 0;
-            if sq < 56 {
-                let file = file_of_sq(sq);
-                if file != 0 {
-                    board |= (1 as u64).wrapping_shl((sq + 7) as u32);
-                }
-                if file != 7 {
-                    board |= (1 as u64).wrapping_shl((sq + 9) as u32);
-                }
+    fn move_append_from_bb(&mut self, bits: &mut BitBoard, src: SQ, move_flag: MoveFlag) {
+        while *bits != 0 {
+            let bit: BitBoard = lsb(*bits);
+            let b_move = BitMove::init(PreMoveInfo{
+                src: src,
+                dst: bb_to_sq(bit),
+                flags: move_flag,
+            });
+            if self.board.legal_move(b_move) {
+                self.movelist.push(b_move);
             }
-            board
-        },
-        Player::Black => {
-            let mut board: u64 = 0;
-            if sq > 7 {
-                let file = file_of_sq(sq);
-                if file != 0 {
-                    board |= (1 as u64).wrapping_shl((sq - 9) as u32);
-                }
-                if file != 7 {
-                    board |= (1 as u64).wrapping_shl((sq - 7) as u32);
-                }
-            }
-            board
+            *bits &= !bit;
         }
     }
 }
+
+
+
+
+
+//fn gen_queen_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
+//    let mut p_bb: BitBoard = board.piece_bb(move_info.us, Piece::Q);
+//    while p_bb != 0 {
+//        let b: BitBoard = lsb(p_bb);
+//        let src: SQ = bb_to_sq(b);
+//        let moves_bb: BitBoard = board.magic_helper.queen_moves(move_info.occupied & !b, src) & !move_info.us_occupied;
+//        let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
+//        let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
+//
+//        pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
+//        pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
+//
+//        p_bb &= !b;
+//    }
+//    list
+//}
+
+
+
+
 
 
 

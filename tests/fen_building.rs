@@ -1,6 +1,6 @@
 extern crate rusty_chess;
 
-use rusty_chess::board as board;
+use rusty_chess::board::Board;
 use rusty_chess::templates::{Piece, Player};
 use std::*;
 

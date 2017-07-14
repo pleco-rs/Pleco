@@ -126,12 +126,12 @@ impl BoardState {
 
 pub struct Board {
     // Basic information
-    pub turn: Player, // Current turn
-    pub bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
-    pub occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
-    pub occ_all: BitBoard, // Total Occupancy BB
-    pub half_moves: u16, // Total moves
-    pub depth: u8, // current depth from actual position (Basically, moves since shallow clone was called)
+    turn: Player, // Current turn
+    bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
+    occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
+    occ_all: BitBoard, // Total Occupancy BB
+    half_moves: u16, // Total moves
+    depth: u8, // current depth from actual position (Basically, moves since shallow clone was called)
     piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
     piece_locations: PieceLocations,
     
@@ -269,6 +269,7 @@ impl Board {
         for (i, file) in b_rep.iter().enumerate() {
             let mut idx = (7 - i) * 8;
             for char in file.chars() {
+                assert!(idx < 64);
                 let dig = char.to_digit(10);
                 if dig.is_some() {
                     idx += dig.unwrap() as usize;
@@ -756,6 +757,8 @@ impl  Board  {
 // General information
 
 impl Board {
+    pub fn turn(&self) -> Player {self.turn}
+
     pub fn zobrist(&self) -> u64 {
         self.state.zobrast
     }
@@ -775,6 +778,14 @@ impl Board {
     pub fn piece_captured_last_turn(&self) -> Option<Piece> {
         self.state.captured_piece
     }
+
+    pub fn magic_helper(&self) -> &'static MagicHelper {&MAGIC_HELPER}
+
+    pub fn ply(&self) -> u8 {self.state.ply}
+
+    pub fn ep_square(&self) -> SQ {self.ep_square()}
+
+
 
 }
 
