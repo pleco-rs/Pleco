@@ -2,13 +2,14 @@ extern crate rusty_chess;
 
 use rusty_chess::board as board;
 use self::board::{Board as Board};
-use rusty_chess::templates::{Piece, Player};
+use rusty_chess::templates::*;
 use rusty_chess::piece_move::*;
+use rusty_chess::*;
 use std::*;
 
 
 #[test]
-fn test__init_counts() {
+fn test_init_counts() {
     let board = Board::default();
     assert_eq!(board.count_piece(Player::White, Piece::P), 8);
     assert_eq!(board.count_piece(Player::White, Piece::N), 2);
@@ -28,3 +29,107 @@ fn test__init_counts() {
     assert_eq!(board.get_occupied(),0xFFFF00000000FFFF);
 }
 
+
+#[test]
+fn basic_move_apply() {
+    let mut b = Board::default();
+    let p1 = PreMoveInfo {
+        src: 12,
+        dst: 28,
+        flags: MoveFlag::DoublePawnPush
+    };
+    let m = BitMove::init(p1);
+    b.apply_move(m);
+    let p2 = PreMoveInfo {
+        src: 51,
+        dst: 35,
+        flags: MoveFlag::DoublePawnPush
+    };
+    let m = BitMove::init(p2);
+    b.apply_move(m);
+    let p3 = PreMoveInfo {
+        src: 28,
+        dst: 35,
+        flags: MoveFlag::Capture {ep_capture: false}
+    };
+    let m = BitMove::init(p3);
+    b.apply_move(m);
+    assert_eq!(b.count_piece(Player::Black,Piece::P),7);
+    b.undo_move();
+    assert_eq!(b.count_piece(Player::Black,Piece::P),8);
+    assert!(!b.in_check());
+}
+
+
+
+#[test]
+fn move_seq_1() {
+    let mut b = board::Board::default();
+    let p = PreMoveInfo {
+        src: 12,
+        dst: 28,
+        flags: MoveFlag::DoublePawnPush
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+    let p = PreMoveInfo {
+        src: 51,
+        dst: 35,
+        flags: MoveFlag::DoublePawnPush
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+    let p = PreMoveInfo {
+        src: 28,
+        dst: 35,
+        flags: MoveFlag::Capture {ep_capture: false}
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+
+    let p = PreMoveInfo {
+        src: 59,
+        dst: 35,
+        flags: MoveFlag::Capture {ep_capture: false}
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+    let p = PreMoveInfo {
+        src: 5,
+        dst: 12,
+        flags: MoveFlag::QuietMove,
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+    let p = PreMoveInfo {
+        src: 35,
+        dst: 8,
+        flags: MoveFlag::Capture {ep_capture: false}
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+    let p = PreMoveInfo {
+        src: 6,
+        dst: 21,
+        flags: MoveFlag::QuietMove
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+
+    let p = piece_move::PreMoveInfo {
+        src: 60,
+        dst: 59,
+        flags: piece_move::MoveFlag::QuietMove
+    };
+    let m = piece_move::BitMove::init(p);
+    b.apply_move(m);
+    let p = PreMoveInfo {
+        src: 4,
+        dst: 7,
+        flags: MoveFlag::Castle{king_side: true}
+    };
+    let m = BitMove::init(p);
+    b.apply_move(m);
+
+
+}

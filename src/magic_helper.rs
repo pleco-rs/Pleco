@@ -362,9 +362,8 @@ impl <'a> MRookTable<'a>  {
         for i in 0..64 { pre_sq_table[i] = PreSMagic::init(); }
 
         // Creates Vector to hold attacks. Has capacity as we know the exact size of this.
-        let mut attacks: Vec<BitBoard> = Vec::with_capacity(ROOK_M_SIZE);
-        // also initializes the attacks as 0
-        for i in 0..ROOK_M_SIZE { attacks.push(0); }
+        let mut attacks: Vec<BitBoard> = vec![0; ROOK_M_SIZE];
+
         // Occupancy tracks occupancy permutations. MAX permutations = subset of 12 bits = 2^12
         // Reference is similar, tracks the sliding moves from a given occupancy
         // Age tracks the best index for a current permutation
@@ -520,9 +519,7 @@ impl <'a> MBishopTable<'a> {
         for i in 0..64 { pre_sq_table[i] = PreSMagic::init(); }
 
         // Creates Vector to hold attacks. Has capacity as we know the exact size of this.
-        let mut attacks: Vec<BitBoard> = Vec::with_capacity(BISHOP_M_SIZE);
-        // also initializes the attacks as 0
-        for i in 0..BISHOP_M_SIZE { attacks.push(0); }
+        let mut attacks: Vec<BitBoard> = vec![0; BISHOP_M_SIZE];
 
         // Occupancy tracks occupancy permutations. MAX permutations = subset of 12 bits = 2^12
         // Reference is similar, tracks the sliding moves from a given occupancy
@@ -734,7 +731,7 @@ fn gen_king_moves() -> [u64; 64] {
         }
         // RIGHT UP
         if file != 7 && index < 56 {
-            mask |= 1 << index + 9;
+            mask |= 1 << (index + 9);
         }
         moves[index] = mask;
     }

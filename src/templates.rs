@@ -126,6 +126,23 @@ pub const START_WHITE_OCC: BitBoard =  0b000000000000000000000000000000000000000
 pub const START_BLACK_OCC: BitBoard =  0b1111111111111111000000000000000000000000000000000000000000000000;
 pub const START_OCC_ALL: BitBoard = START_BLACK_OCC | START_WHITE_OCC;
 
+pub enum CastleType {
+    KingSide = 0,
+    QueenSide = 1,
+}
+
+#[repr(u8)]
+pub enum Square {
+    A1 = 0,  A2, A3, A4, A5, A6, A7, A8,
+    B1 = 8,  B2, B3, B4, B5, B6, B7, B8,
+    C1 = 16, C2, C3, C4, C5, C6, C7, C8,
+    D1 = 24, D2, D3, D4, D5, D6, D7, D8,
+    E1 = 32, E2, E3, E4, E5, E6, E7, E8,
+    F1 = 40, F2, F3, F4, F5, F6, F7, F8,
+    G1 = 48, G2, G3, G4, G5, G6, G7, G8,
+    H1 = 56, H2, H3, H4, H5, H6, H7, H8,
+}
+
 pub const ROOK_BLACK_KSIDE_START: SQ =  63;
 pub const ROOK_BLACK_QSIDE_START: SQ =  56;
 pub const ROOK_WHITE_KSIDE_START: SQ =  7;
@@ -318,4 +335,6 @@ fn format_u64(input: u64) -> String {
     s.push_str(&strin);
     s
 }
+
+
 
