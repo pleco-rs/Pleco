@@ -15,7 +15,8 @@ pub const PIECE_CNT: usize = 6;
 pub const SQ_CNT: usize = 64;
 pub const FILE_CNT: usize = 8;
 pub const RANK_CNT: usize = 8;
-pub const CASTLING_CNT: usize = 4;
+pub const TOTAL_CASTLING_CNT: usize = 4;
+pub const CASTLING_SIDES: usize = 2;
 
 
 #[derive(Copy, Clone)]
@@ -64,6 +65,9 @@ pub enum Rank {
     R7 = 6,
     R8 = 7,
 }
+
+pub const ALL_FILES: [File; FILE_CNT] = [File::A, File::B, File::C, File::D, File::E, File::F, File::G, File::H];
+pub const ALL_RANKS: [Rank; RANK_CNT] = [Rank::R1, Rank::R2, Rank::R3, Rank::R4, Rank::R5, Rank::R6, Rank::R7, Rank::R8];
 
 pub const ALL_PIECES: [Piece; PIECE_CNT] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 
@@ -148,23 +152,16 @@ pub const ROOK_BLACK_QSIDE_START: SQ =  56;
 pub const ROOK_WHITE_KSIDE_START: SQ =  7;
 pub const ROOK_WHITE_QSIDE_START: SQ =  0;
 
+pub const CASTLING_PATH_WHITE_K_SIDE: u64 = (1 as u64) << (Square::F1 as u32) | (1 as u64) << (Square::G1 as u32);
+pub const CASTLING_PATH_WHITE_Q_SIDE: u64 = (1 as u64) << (Square::B1 as u32) | (1 as u64) << (Square::C1 as u32) | (1 as u64) << (Square::D1 as u32);
 
-pub const CASTLE_RIGHTS_WHITE: u8 = 0b00001100;
-pub const CASTLE_RIGHTS_BLACK: u8 = 0b00000011;
+pub const CASTLING_PATH_BLACK_K_SIDE: u64 = (1 as u64) << (Square::F8 as u32) | (1 as u64) << (Square::G8 as u32);
+pub const CASTLING_PATH_BLACK_Q_SIDE: u64 = (1 as u64) << (Square::B8 as u32) | (1 as u64) << (Square::C8 as u32) | (1 as u64) << (Square::D8 as u32);
 
-pub const CASTLE_RIGHTS_WHITE_K: u8 = 0b00001000;
-pub const CASTLE_RIGHTS_BLACK_K: u8 = 0b00000010;
+pub const CASTLING_PATH_WHITE: [u64; CASTLING_SIDES] = [CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE];
+pub const CASTLING_PATH_BLACK: [u64; CASTLING_SIDES] = [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE];
 
-pub const CASTLE_RIGHTS_WHITE_Q: u8 = 0b00000100;
-pub const CASTLE_RIGHTS_BLACK_Q: u8 = 0b00000001;
-
-pub const CASTLE_RIGHTS: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE, CASTLE_RIGHTS_BLACK];
-
-pub const CASTLE_RIGHTS_K: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE_K, CASTLE_RIGHTS_BLACK_K];
-pub const CASTLE_RIGHTS_Q: [u8; PLAYER_CNT] = [CASTLE_RIGHTS_WHITE_Q, CASTLE_RIGHTS_BLACK_Q];
-
-
-
+pub const CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] = [CASTLING_PATH_WHITE, CASTLING_PATH_BLACK];
 
 
 pub const START_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [
@@ -227,19 +224,19 @@ pub fn relative_square(p: Player, sq: SQ) -> SQ {
 }
 
 #[inline]
-pub fn relative_rank_of_sq(p: Player, sq: SQ) -> u8 {
+pub fn relative_rank_of_sq(p: Player, sq: SQ) -> Rank {
     relative_rank(p, rank_of_sq(sq))
 }
 
 #[inline]
-pub fn relative_rank(p: Player, rank: u8) -> u8 {
-    rank ^ (p as u8 * 7)
+pub fn relative_rank(p: Player, rank: Rank) -> Rank {
+    ALL_RANKS[((rank as u8) ^ (p as u8 * 7)) as usize]
 }
 
 
 #[inline]
-pub fn make_sq(file: u8, rank: u8) -> SQ {
-    (rank.wrapping_shl(3) + file) as u8
+pub fn make_sq(file: File, rank: Rank) -> SQ {
+    ((rank as u8).wrapping_shl(3) + (file as u8)) as u8
 }
 
 #[inline]
@@ -258,7 +255,12 @@ pub fn rank_bb(s: SQ) -> BitBoard {
 }
 
 #[inline]
-pub fn rank_of_sq(s: SQ) -> u8 {
+pub fn rank_of_sq(s: SQ) -> Rank {
+    ALL_RANKS[(s >> 3) as usize]
+}
+
+#[inline]
+pub fn rank_idx_of_sq(s: SQ) -> u8 {
     (s >> 3) as u8
 }
 
@@ -268,8 +270,13 @@ pub fn file_bb(s: SQ) -> u64 {
 }
 
 #[inline]
-pub fn file_of_sq(s: SQ) -> u8 {
-    s & 0b00000111
+pub fn file_of_sq(s: SQ) -> File {
+    ALL_FILES[(s & 0b00000111) as usize]
+}
+
+#[inline]
+pub fn file_idx_of_sq(s: SQ) -> u8 {
+    (s & 0b00000111) as u8
 }
 
 // Assumes only one bit!

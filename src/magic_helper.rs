@@ -52,7 +52,7 @@ pub struct MagicHelper<'a, 'b> {
 pub struct Zobrist {
     pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
     pub en_p: [u64; FILE_CNT],
-    pub castle: [u64; CASTLING_CNT],
+    pub castle: [u64; TOTAL_CASTLING_CNT],
     pub side: u64,
 }
 
@@ -62,7 +62,7 @@ impl Zobrist {
         let mut zob = Zobrist {
             sq_piece: [[0; PIECE_CNT]; SQ_CNT],
             en_p: [0; FILE_CNT],
-            castle: [0; CASTLING_CNT],
+            castle: [0; TOTAL_CASTLING_CNT],
             side: 0,
         };
 
@@ -79,7 +79,7 @@ impl Zobrist {
             zob.en_p[i] = rng.rand_change()
         }
 
-        for i in 0..CASTLING_CNT {
+        for i in 0..TOTAL_CASTLING_CNT {
             zob.castle[i] = rng.rand_change()
         }
 
@@ -136,7 +136,7 @@ impl <'a,'b>MagicHelper<'a,'b> {
     // Returns a zobrast hash of the castling rights, as defined by the Board
     #[inline(always)]
     pub fn z_castle_rights(&self, castle: u8) -> u64 {
-        assert!((castle as usize) < CASTLING_CNT);
+        assert!((castle as usize) < TOTAL_CASTLING_CNT);
         self.zobrist.castle[castle as usize]
     }
 
@@ -267,10 +267,10 @@ impl <'a,'b>MagicHelper<'a,'b> {
         // gen white pawn attacks
         for i in 0..56 as u8 {
             let mut bb: u64 = 0;
-            if file_of_sq(i) != 0 {
+            if file_of_sq(i) != File::A {
                 bb |= sq_to_bb(i + 7)
             }
-            if file_of_sq(i) != 7 {
+            if file_of_sq(i) != File::H {
                 bb |= sq_to_bb(i + 9)
             }
             self.pawn_attacks_from[0][i as usize] = bb;
@@ -279,10 +279,10 @@ impl <'a,'b>MagicHelper<'a,'b> {
         // Black pawn attacks
         for i in 8..64 as u8 {
             let mut bb: u64 = 0;
-            if file_of_sq(i) != 0 {
+            if file_of_sq(i) != File::A {
                 bb |= sq_to_bb(i - 9)
             }
-            if file_of_sq(i) != 7 {
+            if file_of_sq(i) != File::H {
                 bb |= sq_to_bb(i - 7)
             }
             self.pawn_attacks_from[1][i as usize] = bb;
@@ -817,8 +817,8 @@ fn init_distance_table() -> [[SQ; 64]; 64] {
 
 // Returns distance of two squares
 pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
-    let x = diff(file_of_sq(sq1),file_of_sq(sq2));
-    let y = diff(rank_of_sq(sq1),rank_of_sq(sq2));
+    let x = diff(rank_idx_of_sq(sq1),file_idx_of_sq(sq2));
+    let y = diff(rank_idx_of_sq(sq1),file_idx_of_sq(sq2));
     cmp::max(x,y)
 }
 

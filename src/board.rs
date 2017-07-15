@@ -4,20 +4,103 @@ use bit_twiddles::*;
 use piece_move::{BitMove,MoveType};
 use std::option::*;
 use std::sync::Arc;
-use std::{mem,fmt};
+use std::{mem,fmt,char};
 use test;
 
 
 
-// Initialize MAGIC_HELPER as a static structure
+// Initialize MAGIC_HELPER as a static structure for everyone to use
 
 lazy_static! {
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
-// ***** BOARD STATE ***** //
 
-// TODO: change casting bits to a type
+// ***** CASTLING STRUCTURE ***** //
+
+// Structure to help with recognizing the various possibilities of castling
+
+bitflags! {
+    pub struct Castling: u8 {
+        const WHITE_K      = 0b00001000;
+        const WHITE_Q      = 0b00000100;
+        const BLACK_K      = 0b00000010;
+        const BLACK_Q      = 0b00000001;
+        const WHITE_ALL    = WHITE_K.bits
+                           | WHITE_Q.bits;
+        const BLACK_ALL    = BLACK_K.bits
+                           | BLACK_Q.bits;
+    }
+}
+
+impl Castling {
+    pub fn remove_player_castling(&mut self, player: Player) {
+        match player {
+            Player::White => self.bits &= BLACK_ALL.bits,
+            Player::Black => self.bits &= WHITE_ALL.bits,
+        }
+    }
+
+    pub fn remove_king_side_castling(&mut self, player: Player) {
+        match player {
+            Player::White => self.bits &= !WHITE_K.bits,
+            Player::Black => self.bits &= !BLACK_K.bits,
+        }
+    }
+
+    pub fn remove_queen_side_castling(&mut self, player: Player) {
+        match player {
+            Player::White => self.bits &= !WHITE_Q.bits,
+            Player::Black => self.bits &= !BLACK_Q.bits,
+        }
+    }
+
+    pub fn castle_rights(&self, player: Player, side: CastleType) -> bool {
+        match player {
+            Player::White => match side {
+                CastleType::KingSide  => self.contains(WHITE_K),
+                CastleType::QueenSide => self.contains(WHITE_Q),
+            },
+            Player::Black => match side {
+                CastleType::KingSide  => self.contains(BLACK_K),
+                CastleType::QueenSide => self.contains(BLACK_Q),
+            }
+        }
+    }
+
+    pub fn pretty_string(&self) -> String {
+        if self.is_empty() {
+            return "-".to_owned();
+        } else {
+            let mut s = String::default();
+            if self.contains(WHITE_K) {
+                s.push('K');
+            }
+            if self.contains(WHITE_Q) {
+                s.push('Q');
+            }
+
+            if self.contains(BLACK_K) {
+                s.push('k');
+            }
+
+            if self.contains(BLACK_Q) {
+                s.push('Q');
+            }
+            assert!(!s.is_empty());
+            return s;
+        }
+    }
+}
+
+
+impl fmt::Display for Castling {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.pretty_string())
+    }
+}
+
+// ***** BOARD STATE ***** //
 
 // 'BoardState' is a structure to hold useful information concerning the current state of the board
 // This is information that is computed upon making a move, and requires expensive computation at that.
@@ -31,7 +114,7 @@ lazy_static! {
 #[derive(Clone)]
 struct BoardState {
     // Automatically Created
-    pub castling: u8, // special castling bits
+    pub castling: Castling, // special castling bits
     pub rule_50: i8,
     pub ply: u8,
     pub ep_square: SQ,
@@ -63,7 +146,7 @@ impl BoardState {
     // Beginning Moves only
     pub fn default() -> BoardState {
         BoardState {
-            castling: 0b00001111,
+            castling: Castling::all(),
             rule_50: 0,
             ply: 0,
             ep_square: 0,
@@ -296,13 +379,13 @@ impl Board {
             _ => panic!()
         };
 
-        let mut castle_bytes: u8 = 0;
+        let mut castle_bytes = Castling::empty();
         for char in det_split[2].chars() {
             match char {
-                'K' => castle_bytes |= 0b1000,
-                'Q' => castle_bytes |= 0b0100,
-                'k' => castle_bytes |= 0b0010,
-                'q' => castle_bytes |= 0b0001,
+                'K' => castle_bytes |= WHITE_K,
+                'Q' => castle_bytes |= WHITE_Q,
+                'k' => castle_bytes |= BLACK_K,
+                'q' => castle_bytes |= BLACK_Q,
                 '-' => {},
                 _   => panic!(),
             }
@@ -370,7 +453,31 @@ impl Board {
     }
 
     pub fn get_fen(&self) -> String {
-        unimplemented!();
+        let mut s = String::default();
+        let mut blanks = 0;
+        for sq in 0..SQ_CNT as u8 {
+            if file_of_sq(sq) == File::A {
+                if rank_of_sq(sq) != Rank::R8 {
+                    s.push('/');
+                }
+            }
+            let piece = self.piece_at_sq(sq);
+            let player = self.player_at_sq(sq);
+            if piece.is_none() {
+                blanks += 1;
+            } else {
+                if blanks != 0 {
+                    s.push(char::from_digit(blanks, 10).unwrap());
+                    blanks = 0;
+                }
+                s.push(PIECE_DISPLAYS[player.unwrap() as usize][piece.unwrap() as usize]);
+            }
+        }
+
+
+
+
+        s
     }
 }
 
@@ -435,7 +542,7 @@ impl  Board  {
                 zob ^= self.magic_helper.z_piece_at_sq(Piece::R,k_to) ^ self.magic_helper.z_piece_at_sq(Piece::R,r_to);
                 new_state.captured_piece = None;
                 // TODO: Set castling rights Zobrist
-                new_state.castling &= !CASTLE_RIGHTS[us as usize];
+                new_state.castling.remove_player_castling(us);
             } else if captured.is_some() {
                 let mut cap_sq: SQ = to;
                 let cap_p: Piece = captured.unwrap(); // This shouldn't panic unless move is void
@@ -446,7 +553,7 @@ impl  Board  {
                     };
                     assert_eq!(piece, Piece::P);
                     assert_eq!(cap_sq, self.state.ep_square);
-                    assert_eq!(relative_rank(us,6), rank_of_sq(to));
+                    assert_eq!(relative_rank(us,Rank::R7), rank_of_sq(to));
                     assert!(self.piece_at_sq(to).is_none());
                     assert_eq!(self.piece_at_sq(cap_sq).unwrap(),Piece::P);
                     assert_eq!(self.player_at_sq(cap_sq).unwrap(),them);
@@ -470,23 +577,23 @@ impl  Board  {
             }
 
             // Update castling rights
-            if new_state.castling != 0 && !bit_move.is_castle() {
+            if !new_state.castling.is_empty() && !bit_move.is_castle() {
                 if piece == Piece::K {
-                    new_state.castling &= !CASTLE_RIGHTS[us as usize];
+                    new_state.castling.remove_player_castling(us);
                 } else if piece == Piece::R {
                     match us {
                         Player::White => {
                             if from == ROOK_WHITE_KSIDE_START {
-                                new_state.castling &= !CASTLE_RIGHTS_WHITE_K;
+                                new_state.castling.remove_king_side_castling(Player::White);
                             } else if from == ROOK_WHITE_QSIDE_START {
-                                new_state.castling &= !CASTLE_RIGHTS_WHITE_Q;
+                                new_state.castling.remove_queen_side_castling(Player::White);
                             }
                         },
                         Player::Black => {
                             if from == ROOK_BLACK_KSIDE_START {
-                                new_state.castling &= !CASTLE_RIGHTS_BLACK_K;
+                                new_state.castling.remove_king_side_castling(Player::Black);
                             } else if from == ROOK_BLACK_QSIDE_START {
-                                new_state.castling &= !CASTLE_RIGHTS_BLACK_Q;
+                                new_state.castling.remove_queen_side_castling(Player::Black);
                             }
                         }
                     }
@@ -892,12 +999,9 @@ impl  Board  {
     pub fn pinned_pieces(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
-}
 
-// Castling
-impl  Board  {
-    pub fn can_castle(&self, player: Player) -> bool {
-        unimplemented!();
+    pub fn caslte_rights(&self, player: Player, side: CastleType) -> bool {
+        self.state.castling.castle_rights(player,side)
     }
 }
 
@@ -1118,7 +1222,7 @@ impl  Board  {
     fn check_basic(&self) -> bool {
         assert_eq!(self.piece_at_sq(self.king_sq(Player::White)).unwrap(), Piece::K);
         assert_eq!(self.piece_at_sq(self.king_sq(Player::Black)).unwrap(), Piece::K);
-        assert!(self.state.ep_square == 0 || self.state.ep_square == 64 || relative_rank(self.turn,self.state.ep_square) != 5);
+        assert!(self.state.ep_square == 0 || self.state.ep_square == 64 || relative_rank_of_sq(self.turn,self.state.ep_square) != Rank::R6);
         true
     }
 

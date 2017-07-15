@@ -1,6 +1,4 @@
-
 use test::Bencher;
-//use std::mem;
 use test;
 
 static POPCNT8: &'static [u8] = &[
@@ -41,8 +39,6 @@ const DEBRUIJ_M: u64 = 0x03f79d71b4cb0a89;
 
 // PopCount: Rust:  22 s
 // PopCount: Old :  37 s
-
-
 
 
 // Returns count of bits
