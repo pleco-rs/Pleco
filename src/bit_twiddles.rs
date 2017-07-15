@@ -1,6 +1,4 @@
-
 use test::Bencher;
-//use std::mem;
 use test;
 
 static POPCNT8: &'static [u8] = &[
@@ -41,8 +39,6 @@ const DEBRUIJ_M: u64 = 0x03f79d71b4cb0a89;
 
 // PopCount: Rust:  22 s
 // PopCount: Old :  37 s
-
-
 
 
 // Returns count of bits
@@ -174,7 +170,7 @@ fn evs_bench_lsb_pop_rust(b: &mut Bencher) {
 
 
 #[bench]
-fn EVS_bench_randomize_super_sparse(b: &mut Bencher) {
+fn evs_bench_randomize_super_sparse(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {

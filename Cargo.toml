@@ -17,6 +17,7 @@ name = "rusty_chess"
 clippy = {version = "*", optional = true}
 lazy_static = "0.2"
 chashmap = {version = "*"}
+bitflags = {version = "*"}
 
 [features]
 default = []

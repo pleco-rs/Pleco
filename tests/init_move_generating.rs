@@ -1,8 +1,6 @@
 extern crate rusty_chess;
 
-use rusty_chess::board::{Board};
-use rusty_chess::templates::{Piece, Player, SQ};
-use rusty_chess::movegen as movegen;
+use rusty_chess::templates::*;
 use rusty_chess::piece_move::*;
 
 
@@ -93,42 +91,42 @@ fn bit_move_promoions() {
     assert!(move_info.is_promo());
     assert_eq!(move_info.promo_piece(), Piece::Q);
 
-    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::P});
+    let move_flag =  MoveFlag::Promotion{capture: false, prom: Piece::P};
     let pre_move_info = PreMoveInfo{src: 9, dst: 42, flags: move_flag};
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
     assert_eq!(move_info.promo_piece(), Piece::Q);
 
-    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::N});
+    let move_flag =  MoveFlag::Promotion{capture: false, prom: Piece::N};
     let pre_move_info = PreMoveInfo{src: 9, dst: 42, flags: move_flag};
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
     assert_eq!(move_info.promo_piece(), Piece::N);
 
-    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::B});
+    let move_flag =  MoveFlag::Promotion{capture: false, prom: Piece::B};
     let pre_move_info = PreMoveInfo{src: 9, dst: 42, flags: move_flag};
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
     assert_eq!(move_info.promo_piece(), Piece::B);
 
-    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::R});
+    let move_flag =  MoveFlag::Promotion{capture: false, prom: Piece::R};
     let pre_move_info = PreMoveInfo{src: 9, dst: 42, flags: move_flag};
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
     assert_eq!(move_info.promo_piece(), Piece::R);
 
-    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::K});
+    let move_flag =  MoveFlag::Promotion{capture: false, prom: Piece::K};
     let pre_move_info = PreMoveInfo{src: 9, dst: 42, flags: move_flag};
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
     assert_eq!(move_info.promo_piece(), Piece::Q);
 
-    let move_flag = ( MoveFlag::Promotion{capture: false, prom: Piece::Q});
+    let move_flag =  MoveFlag::Promotion{capture: false, prom: Piece::Q};
     let pre_move_info = PreMoveInfo{src: 9, dst: 42, flags: move_flag};
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
