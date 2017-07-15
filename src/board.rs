@@ -1001,8 +1001,17 @@ impl  Board  {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
 
-    pub fn caslte_rights(&self, player: Player, side: CastleType) -> bool {
-        self.state.castling.castle_rights(player,side)
+    pub fn can_castle(&self, player: Player, castle_type: CastleType) -> bool {
+        self.state.castling.castle_rights(player,castle_type)
+    }
+
+    pub fn castle_impeded(&self, castle_type: CastleType) -> bool {
+        let path: BitBoard = CASTLING_PATH[self.turn as usize][castle_type as usize];
+        path & self.occ_all != 0
+    }
+
+    pub fn castling_rook_square(&self, castle_type: CastleType) -> SQ {
+        CASTLING_ROOK_START[self.turn as usize][castle_type as usize]
     }
 }
 

@@ -19,7 +19,7 @@ pub const TOTAL_CASTLING_CNT: usize = 4;
 pub const CASTLING_SIDES: usize = 2;
 
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GenTypes {
     Legal,
     Captures,
@@ -130,6 +130,7 @@ pub const START_WHITE_OCC: BitBoard =  0b000000000000000000000000000000000000000
 pub const START_BLACK_OCC: BitBoard =  0b1111111111111111000000000000000000000000000000000000000000000000;
 pub const START_OCC_ALL: BitBoard = START_BLACK_OCC | START_WHITE_OCC;
 
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum CastleType {
     KingSide = 0,
     QueenSide = 1,
@@ -152,6 +153,9 @@ pub const ROOK_BLACK_QSIDE_START: SQ =  56;
 pub const ROOK_WHITE_KSIDE_START: SQ =  7;
 pub const ROOK_WHITE_QSIDE_START: SQ =  0;
 
+pub const CASTLING_ROOK_START: [[SQ; CASTLING_SIDES];PLAYER_CNT] = [[ROOK_WHITE_KSIDE_START,ROOK_WHITE_QSIDE_START],
+                                                                    [ROOK_BLACK_KSIDE_START,ROOK_BLACK_QSIDE_START]];
+
 pub const CASTLING_PATH_WHITE_K_SIDE: u64 = (1 as u64) << (Square::F1 as u32) | (1 as u64) << (Square::G1 as u32);
 pub const CASTLING_PATH_WHITE_Q_SIDE: u64 = (1 as u64) << (Square::B1 as u32) | (1 as u64) << (Square::C1 as u32) | (1 as u64) << (Square::D1 as u32);
 
@@ -161,7 +165,7 @@ pub const CASTLING_PATH_BLACK_Q_SIDE: u64 = (1 as u64) << (Square::B8 as u32) | 
 pub const CASTLING_PATH_WHITE: [u64; CASTLING_SIDES] = [CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE];
 pub const CASTLING_PATH_BLACK: [u64; CASTLING_SIDES] = [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE];
 
-pub const CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] = [CASTLING_PATH_WHITE, CASTLING_PATH_BLACK];
+pub const CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] = [[CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE], [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE]];
 
 
 pub const START_BIT_BOARDS: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = [
