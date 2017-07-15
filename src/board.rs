@@ -1223,7 +1223,7 @@ impl  Board  {
     fn check_basic(&self) -> bool {
         assert_eq!(self.piece_at_sq(self.king_sq(Player::White)).unwrap(), Piece::K);
         assert_eq!(self.piece_at_sq(self.king_sq(Player::Black)).unwrap(), Piece::K);
-        assert!(self.state.ep_square == 0 || self.state.ep_square == 64 || relative_rank_of_sq(self.turn,self.state.ep_square) != Rank::R6);
+        assert!(self.state.ep_square == 0 || self.state.ep_square == 64 || relative_rank_of_sq(self.turn,self.state.ep_square) == Rank::R6);
         true
     }
 

@@ -817,8 +817,8 @@ fn init_distance_table() -> [[SQ; 64]; 64] {
 
 // Returns distance of two squares
 pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
-    let x = diff(rank_idx_of_sq(sq1),file_idx_of_sq(sq2));
-    let y = diff(rank_idx_of_sq(sq1),file_idx_of_sq(sq2));
+    let x = diff(rank_idx_of_sq(sq1),rank_idx_of_sq(sq2));
+    let y = diff(file_idx_of_sq(sq1),file_idx_of_sq(sq2));
     cmp::max(x,y)
 }
 
