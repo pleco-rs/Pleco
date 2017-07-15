@@ -14,7 +14,6 @@ pub mod bit_twiddles;
 pub mod movegen;
 pub mod piece_move;
 pub mod templates;
-pub mod fen;
 pub mod magic_helper;
 pub mod transposition_table;
 

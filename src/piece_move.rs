@@ -1,6 +1,6 @@
 
-use templates::SQ;
-use templates::Piece;
+use templates::*;
+use std::fmt;
 
 // A move needs 16 bits to be stored
 //
@@ -46,7 +46,7 @@ static CP_MASK: u16 = 0b0100000000000000;
 static FLAG_MASK: u16 = 0b1111000000000000;
 static SP_MASK: u16 = 0b0011000000000000;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct BitMove {
     data: u16,
 }
@@ -68,12 +68,19 @@ pub enum MoveType {
     Normal
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone,PartialEq)]
 pub struct PreMoveInfo {
     pub src: SQ,
     pub dst: SQ,
     pub flags: MoveFlag,
 }
+
+impl fmt::Display for BitMove {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.stringify())
+    }
+}
+
 
 
 // https://chessprogramming.wikispaces.com/Encoding+Moves
@@ -180,6 +187,22 @@ impl BitMove {
         if self.is_promo() {return MoveType::Promotion}
         if self.is_en_passant() { return MoveType::EnPassant}
         MoveType::Normal
+    }
+
+    pub fn stringify(&self) -> String {
+        let src = parse_sq(self.get_src());
+        let mut s = format!("{}{}",src,self.get_dest());
+        if self.is_promo() {
+            let char = match self.promo_piece() {
+                Piece::B => 'b',
+                Piece::N => 'k',
+                Piece::R => 'r',
+                Piece::Q => 'q',
+                _ => unreachable!()
+            };
+            s.push(char);
+        }
+        s
     }
 }
 

@@ -174,7 +174,7 @@ fn evs_bench_lsb_pop_rust(b: &mut Bencher) {
 
 
 #[bench]
-fn EVS_bench_randomize_super_sparse(b: &mut Bencher) {
+fn evs_bench_randomize_super_sparse(b: &mut Bencher) {
     b.iter(|| {
         let n: u64 = test::black_box(TRAILS);
         (0..n).fold(0, |a, c| {

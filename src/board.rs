@@ -1,11 +1,10 @@
 use templates::*;
 use magic_helper::MagicHelper;
 use bit_twiddles::*;
-use piece_move::{BitMove,MoveType,MoveFlag,PreMoveInfo};
+use piece_move::{BitMove,MoveType};
 use std::option::*;
 use std::sync::Arc;
-use std::mem;
-use std::fmt;
+use std::{mem,fmt};
 use test;
 
 
@@ -368,6 +367,10 @@ impl Board {
         b.state = board_s;
         b.set_zob_hash();
         b
+    }
+
+    pub fn get_fen(&self) -> String {
+        unimplemented!();
     }
 }
 
@@ -783,7 +786,7 @@ impl Board {
 
     pub fn ply(&self) -> u8 {self.state.ply}
 
-    pub fn ep_square(&self) -> SQ {self.ep_square()}
+    pub fn ep_square(&self) -> SQ {self.state.ep_square}
 
 
 
@@ -1226,7 +1229,7 @@ impl PieceLocations {
     }
 
     pub fn player_at(&self, square: SQ) -> Option<Player> {
-        let mut byte: u8 = self.data[square as usize];
+        let byte: u8 = self.data[square as usize];
         if byte == 0b0111 || byte == 0b1111 {
             return None;
         }

@@ -187,6 +187,8 @@ pub const SQ_DISPLAY_ORDER: [SQ; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
 pub const PIECE_DISPLAYS: [[char; PIECE_CNT]; PLAYER_CNT] = [['P', 'N', 'B', 'R', 'Q', 'K'],
                                                              ['p', 'n', 'b', 'r', 'q', 'k']];
 
+pub const FILE_DISPLAYS: [char; FILE_CNT] = ['a','b','c','d','e','f','g','h'];
+pub const RANK_DISPLAYS: [char; FILE_CNT] = ['1','2','3','4','5','6','7','8'];
 
 
 // Yes
@@ -282,6 +284,16 @@ pub fn bb_to_sq(b: BitBoard) -> SQ {
 pub fn sq_to_bb(s: SQ) -> BitBoard {
     assert!(sq_is_okay(s));
     (1 as u64).wrapping_shl(s as u32)
+}
+
+// Returns the String of a given square
+#[inline]
+pub fn parse_sq(s: SQ) -> String {
+    assert!(sq_is_okay(s));
+    let mut str = String::default();
+    str.push(FILE_DISPLAYS[file_of_sq(s) as usize]);
+    str.push(RANK_DISPLAYS[rank_of_sq(s) as usize]);
+    str
 }
 
 // Function to make sure a Square is okay

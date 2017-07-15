@@ -50,8 +50,23 @@ impl <'a> MoveGen<'a> {
         unimplemented!();
     }
 
-    fn create_promotions(&mut self, dst: SQ, src: SQ) {
-        unimplemented!();
+    fn create_promotions(&mut self, dst: SQ, src: SQ, is_capture: bool) {
+        let prom_pieces = [Piece::Q, Piece::N, Piece::R, Piece::B];
+        for piece in prom_pieces.into_iter() {
+            if is_capture {
+                self.movelist.push(BitMove::init(PreMoveInfo {
+                    src: src,
+                    dst: dst,
+                    flags: MoveFlag::Promotion {capture: true, prom: piece.clone()},
+                }));
+            } else {
+                self.movelist.push(BitMove::init(PreMoveInfo {
+                    src: src,
+                    dst: dst,
+                    flags: MoveFlag::Promotion {capture: false, prom: piece.clone()},
+                }));
+            }
+        }
     }
 
     fn pawn_moves(&mut self) {
@@ -59,6 +74,7 @@ impl <'a> MoveGen<'a> {
     }
 
     // Return the moves Bitboard
+    #[inline]
     fn moves_bb(&self, piece: Piece, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         assert_ne!(piece, Piece::P);
@@ -94,6 +110,7 @@ impl <'a> MoveGen<'a> {
         }
     }
 
+    #[inline]
     fn move_append_from_bb(&mut self, bits: &mut BitBoard, src: SQ, move_flag: MoveFlag) {
         while *bits != 0 {
             let bit: BitBoard = lsb(*bits);
@@ -107,53 +124,5 @@ impl <'a> MoveGen<'a> {
             }
             *bits &= !bit;
         }
-    }
-}
-
-
-
-
-
-//fn gen_queen_moves(board: &Board, move_info: &MoveInfos, mut list: Vec<PreMoveInfo>) -> Vec<PreMoveInfo> {
-//    let mut p_bb: BitBoard = board.piece_bb(move_info.us, Piece::Q);
-//    while p_bb != 0 {
-//        let b: BitBoard = lsb(p_bb);
-//        let src: SQ = bb_to_sq(b);
-//        let moves_bb: BitBoard = board.magic_helper.queen_moves(move_info.occupied & !b, src) & !move_info.us_occupied;
-//        let captures_bb: BitBoard = moves_bb & move_info.them_occupied;
-//        let non_captures_bb: BitBoard = moves_bb & !move_info.them_occupied;
-//
-//        pre_move_info_from_bb(&mut list, src, captures_bb, MoveFlag::Capture {ep_capture: false});
-//        pre_move_info_from_bb(&mut list, src, non_captures_bb, MoveFlag::QuietMove);
-//
-//        p_bb &= !b;
-//    }
-//    list
-//}
-
-
-
-
-
-
-
-
-#[inline]
-fn pre_move_info_from_bb(pre_move_list: &mut Vec<PreMoveInfo>, source_sq: SQ, mut move_bb: BitBoard, flag: MoveFlag) {
-    while move_bb != 0 {
-        let bit: BitBoard = lsb(move_bb);
-        pre_move_list.push(PreMoveInfo {src: source_sq, dst: bb_to_sq(bit), flags: flag});
-        move_bb ^= bit;
-    }
-}
-
-
-pub fn bit_scan_forward_list(input_bits: u64, list: &mut Vec<u8>) {
-    let mut bits = input_bits;
-    while bits != 0 {
-        let pos = bit_scan_forward(bits);
-        list.push(pos);
-        let pos = (1u64).checked_shl(pos as u32).unwrap();
-        bits &= !(pos) as u64;
     }
 }

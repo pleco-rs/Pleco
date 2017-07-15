@@ -1,6 +1,6 @@
 extern crate rusty_chess;
-use rusty_chess::{board,piece_move,templates};
-use templates::*;
+use rusty_chess::{board,piece_move};
+
 
 
 
