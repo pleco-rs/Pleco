@@ -4,6 +4,7 @@ use bit_twiddles::*;
 use piece_move::{BitMove,MoveType};
 use std::option::*;
 use std::sync::Arc;
+use bitflags;
 use std::{mem,fmt,char};
 use test;
 
@@ -1387,20 +1388,20 @@ impl PieceLocations {
 
 
 // Testing
-
-#[test]
-fn piece_locations_cloning() {
-    let mut p = PieceLocations::default();
-    p.place(23,Player::White, Piece::Q);
-    let mut q = p.clone();
-    assert_eq!(q.piece_at(23).unwrap(),Piece::Q);
-    q.remove(23);
-    assert!(q.piece_at(23).is_none());
-    assert_eq!(p.piece_at(23).unwrap(),Piece::Q);
-}
-
-
-
-
+//
+//#[test]
+//fn piece_locations_cloning() {
+//    let mut p = PieceLocations::default();
+//    p.place(23,Player::White, Piece::Q);
+//    let mut q = p.clone();
+//    assert_eq!(q.piece_at(23).unwrap(),Piece::Q);
+//    q.remove(23);
+//    assert!(q.piece_at(23).is_none());
+//    assert_eq!(p.piece_at(23).unwrap(),Piece::Q);
+//}
+//
+//
+//
+//
 
 
