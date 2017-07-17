@@ -1,5 +1,6 @@
 use templates::*;
 use magic_helper::MagicHelper;
+use movegen::MoveGen;
 use bit_twiddles::*;
 use piece_move::{BitMove,MoveType};
 use std::option::*;
@@ -150,7 +151,7 @@ impl BoardState {
             castling: Castling::all(),
             rule_50: 0,
             ply: 0,
-            ep_square: 0,
+            ep_square: NO_SQ,
             zobrast: 0,
             captured_piece: None,
             checkers_bb: 0,
@@ -684,11 +685,11 @@ impl  Board  {
     }
 
     pub fn generate_moves(&self) -> Vec<BitMove> {
-        unimplemented!();
+        MoveGen::generate(&self)
     }
 
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
-        unimplemented!();
+        MoveGen::generate_of_type(&self, gen_type)
     }
 }
 
@@ -824,11 +825,6 @@ impl  Board  {
 
         result
     }
-}
-
-
-// Zobrist and move making for hashing
-impl  Board  {
 
     //    pub struct Zobrist {
     //      sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
@@ -860,8 +856,6 @@ impl  Board  {
 
         Arc::get_mut(&mut self.state).unwrap().zobrast = zob;
     }
-
-
 
 }
 
@@ -1037,13 +1031,9 @@ impl  Board  {
     pub fn pieces_pinned(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
-}
-
-
-impl  Board  {
     // Attacks to / From a given square
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
-              (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
+        (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
             | (self.magic_helper.pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, Piece::P))
             | (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(Piece::N))
             | (self.magic_helper.rook_moves(occupied,sq) & (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black)))
@@ -1051,6 +1041,7 @@ impl  Board  {
             | (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(Piece::K))
     }
 }
+
 
 // Move Testing
 impl  Board  {
@@ -1086,7 +1077,8 @@ impl  Board  {
 
     // Used to check for Hashing errors from TT Tables
     pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
-        unimplemented!();
+        // TODO: need to implemented
+        m.get_dest() != m.get_src()
     }
 
     // Checks if a move will give check to the opposing player's King

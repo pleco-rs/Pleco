@@ -1,5 +1,6 @@
 extern crate rusty_chess;
 
+use rusty_chess::board::*;
 use rusty_chess::templates::*;
 use rusty_chess::piece_move::*;
 
@@ -29,6 +30,13 @@ fn bit_move_position() {
     assert!(!bit_move.is_queen_castle());
     assert!(!bit_move.is_double_push().0);
     assert!(!bit_move.is_en_passant());
+}
+
+#[test]
+fn test_opening_position() {
+    let mut b = Board::default();
+    let moves = b.generate_moves();
+    assert_eq!(moves.len(),(8 * 2) + (2 * 2));
 }
 
 #[test]

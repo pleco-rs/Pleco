@@ -191,7 +191,8 @@ impl BitMove {
 
     pub fn stringify(&self) -> String {
         let src = parse_sq(self.get_src());
-        let mut s = format!("{}{}",src,self.get_dest());
+        let dst = parse_sq(self.get_dest());
+        let mut s = format!("{}{}",src,dst);
         if self.is_promo() {
             let char = match self.promo_piece() {
                 Piece::B => 'b',

@@ -28,13 +28,19 @@ pub struct MoveGen<'a> {
 }
 
 impl <'a> MoveGen<'a> {
-    pub fn gen(chessboard: &Board) -> Vec<BitMove> {
+    pub fn generate(chessboard: &Board) -> Vec<BitMove> {
         let mut movegen = MoveGen::get_self(&chessboard);
         if chessboard.in_check() {
             movegen.generate_evasions();
         } else {
-            movegen.generate(GenTypes::Legal);
+            movegen.gen(GenTypes::Legal);
         }
+        movegen.movelist
+    }
+
+    pub fn generate_of_type(chessboard: &Board, gen_type: GenTypes) -> Vec<BitMove> {
+        let mut movegen = MoveGen::get_self(&chessboard);
+        movegen.gen(gen_type);
         movegen.movelist
     }
 
@@ -52,13 +58,12 @@ impl <'a> MoveGen<'a> {
 
     // Generate Based on gen_type
     // Helper function, as make assumptions
-    fn generate(&mut self, gen_type: GenTypes) {
+    fn gen(&mut self, gen_type: GenTypes) {
         match gen_type {
             GenTypes::Legal => {
-                self.generate_castling(u64::max_value());
+                self.generate_castling();
                 self.gen_non_pawn_king(u64::max_value());
                 self.generate_king_moves(u64::max_value());
-                self.generate_castling(u64::max_value());
                 self.generate_pawn_moves(u64::max_value(),GenTypes::Legal);
             },
             GenTypes::Evasions => {
@@ -85,7 +90,7 @@ impl <'a> MoveGen<'a> {
             sliders &= !(sq_to_bb(check_sq));
         }
 
-        let mut k_moves: BitBoard = self.magic.king_moves(ksq) & !slider_attacks & !self.us_occ;
+        let k_moves: BitBoard = self.magic.king_moves(ksq) & !slider_attacks & !self.us_occ;
 
         let mut captures_bb: BitBoard = k_moves & self.them_occ;
         let mut non_captures_bb: BitBoard = k_moves & !self.them_occ;
@@ -104,12 +109,12 @@ impl <'a> MoveGen<'a> {
         self.moves_per_piece(Piece::K, target);
     }
 
-    fn generate_castling(&mut self, target: BitBoard) {
-        self.castling_side(target,CastleType::QueenSide);
-        self.castling_side(target,CastleType::KingSide);
+    fn generate_castling(&mut self) {
+        self.castling_side(CastleType::QueenSide);
+        self.castling_side(CastleType::KingSide);
     }
 
-    fn castling_side(&mut self, target: BitBoard, side: CastleType) {
+    fn castling_side(&mut self, side: CastleType) {
         if !self.board.castle_impeded(side) && self.board.can_castle(self.turn,side) {
             let king_side: bool = {side == CastleType::KingSide};
 

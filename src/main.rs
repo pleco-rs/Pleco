@@ -1,5 +1,5 @@
 extern crate rusty_chess;
-use rusty_chess::{board,piece_move};
+use rusty_chess::{board,piece_move,templates};
 
 
 
@@ -91,6 +91,34 @@ fn main() {
     b.apply_move(m);
     b.fancy_print();
 
+    let p = piece_move::PreMoveInfo {
+        src: templates::Square::A2 as u8,
+        dst: templates::Square::B1 as u8,
+        flags: piece_move::MoveFlag::Capture {ep_capture: false}
+    };
+    let m = piece_move::BitMove::init(p);
+    b.apply_move(m);
+    b.fancy_print();
 
+    let p = piece_move::PreMoveInfo {
+        src: templates::Square::A2 as u8,
+        dst: templates::Square::B1 as u8,
+        flags: piece_move::MoveFlag::Capture {ep_capture: false}
+    };
+    let m = piece_move::BitMove::init(p);
+    b.apply_move(m);
+    b.fancy_print();
+
+
+
+
+
+    let moves = b.generate_moves();
+
+    for x in moves.iter() {
+        println!("{}",x)
+    }
+
+    println!("{}",moves.len());
 
 }
