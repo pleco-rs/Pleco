@@ -1,6 +1,6 @@
-# rusty-chess
+# Pleco
 
-[![Build Status](https://api.travis-ci.org/sfleischman105/rusty_chess.svg?branch=master)](https://travis-ci.org/sfleischman105/rusty_chess)
-[![Build Status](https://api.travis-ci.org/sfleischman105/rusty_chess.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/rusty_chess)
+[![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
+[![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
 
-Rusty-chess is a chess Engine inspired by Stockfish, written entirely in Rust.  
+Pleco is a chess Engine inspired by Stockfish, written entirely in Rust.  
