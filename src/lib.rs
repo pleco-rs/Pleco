@@ -12,7 +12,6 @@ extern crate bitflags;
 extern crate lazy_static;
 
 extern crate chashmap;
-extern crate rand;
 
 extern crate test;
 pub mod board;
@@ -22,6 +21,7 @@ pub mod piece_move;
 pub mod templates;
 pub mod magic_helper;
 pub mod transposition_table;
+pub mod timer;
 
 
 

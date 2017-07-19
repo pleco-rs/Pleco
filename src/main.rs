@@ -15,7 +15,14 @@ fn main() {
         let moves = b.generate_moves();
         let len = moves.len();
         let mut x: usize = rand::random::<usize>();
-        if x >= len {
+        'outer: loop {
+            if x >= len {
+                x = rand::random::<usize>() % len;
+            } else {
+                let cap = b.captured_piece(moves[x]);
+                if cap.is_some() {
+                    if cap.unwrap(b.captured_piece(moves[x])
+        if x >= len || b.captured_piece(moves[x]) == templates::Piece::K {
             x = rand::random::<usize>() % len;
         }
         println!("{}",moves[x]);
