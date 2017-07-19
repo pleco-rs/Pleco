@@ -1,5 +1,6 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(test, allow(dead_code))]
 
 #![feature(test)]
 #![allow(dead_code)]
@@ -11,6 +12,7 @@ extern crate bitflags;
 extern crate lazy_static;
 
 extern crate chashmap;
+extern crate rand;
 
 extern crate test;
 pub mod board;

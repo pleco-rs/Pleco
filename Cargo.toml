@@ -18,6 +18,7 @@ clippy = {version = "*", optional = true}
 lazy_static = "0.2"
 chashmap = {version = "*"}
 bitflags = {version = "*"}
+rand = "0.3"
 
 [features]
 default = []

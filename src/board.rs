@@ -1,5 +1,6 @@
 use templates::*;
 use magic_helper::MagicHelper;
+use movegen::MoveGen;
 use bit_twiddles::*;
 use piece_move::{BitMove,MoveType};
 use std::option::*;
@@ -71,7 +72,7 @@ impl Castling {
 
     pub fn pretty_string(&self) -> String {
         if self.is_empty() {
-            return "-".to_owned();
+            "-".to_owned()
         } else {
             let mut s = String::default();
             if self.contains(WHITE_K) {
@@ -89,7 +90,7 @@ impl Castling {
                 s.push('Q');
             }
             assert!(!s.is_empty());
-            return s;
+            s
         }
     }
 }
@@ -117,7 +118,7 @@ struct BoardState {
     // Automatically Created
     pub castling: Castling, // special castling bits
     pub rule_50: i8,
-    pub ply: u8,
+    pub ply: u8, // How deep are we?
     pub ep_square: SQ,
 
     // Recomputed after a move
@@ -150,7 +151,7 @@ impl BoardState {
             castling: Castling::all(),
             rule_50: 0,
             ply: 0,
-            ep_square: 0,
+            ep_square: NO_SQ,
             zobrast: 0,
             captured_piece: None,
             checkers_bb: 0,
@@ -456,9 +457,14 @@ impl Board {
     pub fn get_fen(&self) -> String {
         let mut s = String::default();
         let mut blanks = 0;
-        for sq in 0..SQ_CNT as u8 {
+        for idx in 0..SQ_CNT as u8 {
+            let sq = (idx % 8) + (8 * (7 - (idx / 8)));
             if file_of_sq(sq) == File::A {
                 if rank_of_sq(sq) != Rank::R8 {
+                    if blanks != 0 {
+                        s.push(char::from_digit(blanks, 10).unwrap());
+                        blanks = 0;
+                    }
                     s.push('/');
                 }
             }
@@ -474,9 +480,25 @@ impl Board {
                 s.push(PIECE_DISPLAYS[player.unwrap() as usize][piece.unwrap() as usize]);
             }
         }
-
-
-
+        s.push(' ');
+        s.push( match self.turn {
+            Player::White => 'w',
+            Player::Black => 'b',
+        });
+        s.push(' ');
+        s.push_str(&(self.state.castling.pretty_string()));
+        s.push(' ');
+        if self.ep_square() == NO_SQ {
+            s.push('-');
+        } else {
+            let ep = self.ep_square();
+            s.push(FILE_DISPLAYS[file_idx_of_sq(ep) as usize]);
+            s.push(RANK_DISPLAYS[rank_idx_of_sq(ep) as usize]);
+        }
+        s.push(' ');
+        s.push_str(&format!("{}",self.rule_50()));
+        s.push(' ');
+        s.push_str(&format!("{}",(self.half_moves / 2)+ 1));
 
         s
     }
@@ -684,11 +706,11 @@ impl  Board  {
     }
 
     pub fn generate_moves(&self) -> Vec<BitMove> {
-        unimplemented!();
+        MoveGen::generate(&self,GenTypes::All)
     }
 
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
-        unimplemented!();
+        MoveGen::generate(&self, gen_type)
     }
 }
 
@@ -824,11 +846,6 @@ impl  Board  {
 
         result
     }
-}
-
-
-// Zobrist and move making for hashing
-impl  Board  {
 
     //    pub struct Zobrist {
     //      sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
@@ -860,8 +877,6 @@ impl  Board  {
 
         Arc::get_mut(&mut self.state).unwrap().zobrast = zob;
     }
-
-
 
 }
 
@@ -1037,13 +1052,9 @@ impl  Board  {
     pub fn pieces_pinned(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
-}
-
-
-impl  Board  {
     // Attacks to / From a given square
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
-              (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
+        (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
             | (self.magic_helper.pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, Piece::P))
             | (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(Piece::N))
             | (self.magic_helper.rook_moves(occupied,sq) & (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black)))
@@ -1051,6 +1062,7 @@ impl  Board  {
             | (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(Piece::K))
     }
 }
+
 
 // Move Testing
 impl  Board  {
@@ -1086,7 +1098,8 @@ impl  Board  {
 
     // Used to check for Hashing errors from TT Tables
     pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
-        unimplemented!();
+        // TODO: need to implemented
+        m.get_dest() != m.get_src()
     }
 
     // Checks if a move will give check to the opposing player's King

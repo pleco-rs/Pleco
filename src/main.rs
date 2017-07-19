@@ -1,11 +1,37 @@
 extern crate rusty_chess;
-use rusty_chess::{board,piece_move};
+extern crate rand;
+use rusty_chess::{board,piece_move,templates};
 
 
 
 
 
 fn main() {
+    let mut b = board::Board::default();
+    let mut i = 0;
+    while i < 100 {
+        b.fancy_print();
+        println!("{}",b.get_fen());
+        let moves = b.generate_moves();
+        let len = moves.len();
+        let mut x: usize = rand::random::<usize>();
+        if x >= len {
+            x = rand::random::<usize>() % len;
+        }
+        println!("{}",moves[x]);
+        println!();
+
+        b.apply_move(moves[x]);
+        i += 1;
+    }
+
+    b.fancy_print();
+
+
+}
+
+
+fn test_moving() {
     let mut b = board::Board::default();
     let p = piece_move::PreMoveInfo {
         src: 12,
@@ -32,11 +58,11 @@ fn main() {
     let m = piece_move::BitMove::init(p);
     b.apply_move(m);
     b.fancy_print();
-//
-//    templates::print_bitboard(b.get_occupied_player(templates::Player::White));
-//    println!("");
-//    templates::print_bitboard(b.get_occupied_player(templates::Player::Black));
-//    templates::print_bitboard(b.get_occupied());
+    //
+    //    templates::print_bitboard(b.get_occupied_player(templates::Player::White));
+    //    println!("");
+    //    templates::print_bitboard(b.get_occupied_player(templates::Player::Black));
+    //    templates::print_bitboard(b.get_occupied());
     let p = piece_move::PreMoveInfo {
         src: 59,
         dst: 35,
@@ -91,6 +117,34 @@ fn main() {
     b.apply_move(m);
     b.fancy_print();
 
+    let p = piece_move::PreMoveInfo {
+        src: templates::Square::A2 as u8,
+        dst: templates::Square::B1 as u8,
+        flags: piece_move::MoveFlag::Capture {ep_capture: false}
+    };
+    let m = piece_move::BitMove::init(p);
+    b.apply_move(m);
+    b.fancy_print();
 
+    let p = piece_move::PreMoveInfo {
+        src: templates::Square::A2 as u8,
+        dst: templates::Square::B1 as u8,
+        flags: piece_move::MoveFlag::Capture {ep_capture: false}
+    };
+    let m = piece_move::BitMove::init(p);
+    b.apply_move(m);
+    b.fancy_print();
+
+
+
+
+
+    let moves = b.generate_moves();
+
+    for x in moves.iter() {
+        println!("{}",x)
+    }
+
+    println!("{}",moves.len());
 
 }

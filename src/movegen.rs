@@ -14,6 +14,24 @@ use magic_helper::MagicHelper;
 // Non-Evasions: Board is currently in check; Generate moves that do not move the king
 
 // Pieces not needed special considerations when generating (basically everything but pawns)
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum PriGenType {
+    Legal,
+    Captures,
+    Quiets,
+    Evasions,
+    NonEvasions,
+    QuietChecks
+}
+
+// public
+// all
+// captures
+// quiets
+// checks
+
+
 const STANDARD_PIECES: [Piece; 4] = [Piece::B, Piece::N, Piece::R, Piece::Q];
 
 pub struct MoveGen<'a> {
@@ -28,15 +46,35 @@ pub struct MoveGen<'a> {
 }
 
 impl <'a> MoveGen<'a> {
-    pub fn gen(chessboard: &Board) -> Vec<BitMove> {
+    pub fn generate(chessboard: &Board, gen_type: GenTypes) -> Vec<BitMove> {
         let mut movegen = MoveGen::get_self(&chessboard);
+        let target: BitBoard = match gen_type {
+            GenTypes::All => u64::max_value(),
+            GenTypes::Captures => movegen.them_occ,
+            GenTypes::Quiets => !movegen.them_occ,
+            GenTypes::QuietChecks => u64::max_value(),
+        };
         if chessboard.in_check() {
-            movegen.generate_evasions();
+            assert_ne!(gen_type,GenTypes::QuietChecks);
+            movegen.generate_evasions(target);
+        } else if gen_type == GenTypes::QuietChecks {
+
         } else {
-            movegen.generate(GenTypes::Legal);
+            if gen_type != GenTypes::Captures {
+                movegen.generate_castling();
+            }
+            movegen.gen_non_pawn_king(target);
+            movegen.generate_pawn_moves(target, match gen_type {
+                GenTypes::All => PriGenType::Legal,
+                GenTypes::Captures => PriGenType::Captures,
+                GenTypes::Quiets => PriGenType::Quiets,
+                GenTypes::QuietChecks => unreachable!(),
+            });
+            movegen.generate_king_moves(target);
         }
         movegen.movelist
     }
+
 
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
@@ -50,28 +88,8 @@ impl <'a> MoveGen<'a> {
             them_occ: chessboard.get_occupied_player(other_player(chessboard.turn()))}
     }
 
-    // Generate Based on gen_type
-    // Helper function, as make assumptions
-    fn generate(&mut self, gen_type: GenTypes) {
-        match gen_type {
-            GenTypes::Legal => {
-                self.generate_castling(u64::max_value());
-                self.gen_non_pawn_king(u64::max_value());
-                self.generate_king_moves(u64::max_value());
-                self.generate_castling(u64::max_value());
-                self.generate_pawn_moves(u64::max_value(),GenTypes::Legal);
-            },
-            GenTypes::Evasions => {
-                self.generate_evasions();
-            },
-            GenTypes::Captures => { unimplemented!() },
-            GenTypes::Quiets => { unimplemented!() },
-            GenTypes::NonEvasions => { unimplemented!() },
-            GenTypes::QuietChecks => { unimplemented!() },
-        }
-    }
 
-    fn generate_evasions(&mut self) {
+    fn generate_evasions(&mut self, target: BitBoard) {
         let ksq: SQ = self.board.king_sq(self.turn);
 
         let mut slider_attacks: BitBoard = 0;
@@ -85,17 +103,17 @@ impl <'a> MoveGen<'a> {
             sliders &= !(sq_to_bb(check_sq));
         }
 
-        let mut k_moves: BitBoard = self.magic.king_moves(ksq) & !slider_attacks & !self.us_occ;
+        let k_moves: BitBoard = self.magic.king_moves(ksq) & !slider_attacks & !self.us_occ;
 
-        let mut captures_bb: BitBoard = k_moves & self.them_occ;
-        let mut non_captures_bb: BitBoard = k_moves & !self.them_occ;
+        let mut captures_bb: BitBoard = k_moves & self.them_occ & target;
+        let mut non_captures_bb: BitBoard = k_moves & !self.them_occ & target;
         self.move_append_from_bb(&mut captures_bb, ksq, MoveFlag::Capture {ep_capture:false});
         self.move_append_from_bb(&mut non_captures_bb, ksq, MoveFlag::QuietMove );
 
         if !more_than_one(self.board.checkers()) {
             let checking_sq: SQ = bit_scan_forward(self.board.checkers());
-            let target: BitBoard = self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq);
-            self.generate_pawn_moves(target,GenTypes::Evasions);
+            let target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq) & target);
+            self.generate_pawn_moves(target,PriGenType::Evasions);
             self.gen_non_pawn_king(target);
         }
     }
@@ -104,12 +122,12 @@ impl <'a> MoveGen<'a> {
         self.moves_per_piece(Piece::K, target);
     }
 
-    fn generate_castling(&mut self, target: BitBoard) {
-        self.castling_side(target,CastleType::QueenSide);
-        self.castling_side(target,CastleType::KingSide);
+    fn generate_castling(&mut self) {
+        self.castling_side(CastleType::QueenSide);
+        self.castling_side(CastleType::KingSide);
     }
 
-    fn castling_side(&mut self, target: BitBoard, side: CastleType) {
+    fn castling_side(&mut self, side: CastleType) {
         if !self.board.castle_impeded(side) && self.board.can_castle(self.turn,side) {
             let king_side: bool = {side == CastleType::KingSide};
 
@@ -169,7 +187,7 @@ impl <'a> MoveGen<'a> {
         }
     }
 
-    fn generate_pawn_moves(&mut self, target: BitBoard, gen_type: GenTypes) {
+    fn generate_pawn_moves(&mut self, target: BitBoard, gen_type: PriGenType) {
         let rank_8: BitBoard = if self.turn == Player::White {RANK_8} else {RANK_1};
         let rank_7: BitBoard = if self.turn == Player::White {RANK_7} else {RANK_2};
         let rank_3: BitBoard = if self.turn == Player::White {RANK_3} else {RANK_6};
@@ -178,11 +196,6 @@ impl <'a> MoveGen<'a> {
             Box::new(|x: SQ| x.wrapping_sub(8))
         } else {
             Box::new(|x: SQ| x.wrapping_add(8))
-        };
-        let up: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
-            Box::new(|x: SQ| x.wrapping_add(8))
-        } else {
-            Box::new(|x: SQ| x.wrapping_sub(8))
         };
         let left_down: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
             Box::new(|x: SQ| x.wrapping_sub(9))
@@ -218,29 +231,29 @@ impl <'a> MoveGen<'a> {
 
         let mut empty_squares: BitBoard = 0;
 
-        let enemies: BitBoard = if gen_type == GenTypes::Evasions {
+        let enemies: BitBoard = if gen_type == PriGenType::Evasions {
             self.them_occ & target
-        } else if gen_type == GenTypes::Captures {
+        } else if gen_type == PriGenType::Captures {
             target
         } else {
             self.them_occ
         };
 
         // Single and Double Pawn Pushes
-        if gen_type != GenTypes::Captures {
-            empty_squares = if gen_type == GenTypes::Quiets || gen_type == GenTypes::QuietChecks {
+        if gen_type != PriGenType::Captures {
+            empty_squares = if gen_type == PriGenType::Quiets || gen_type == PriGenType::QuietChecks {
                 target
             } else { !self.occ };
 
             let mut push_one: BitBoard = empty_squares & shift_up(pawns_not_rank_7) & target;
             let mut push_two: BitBoard = shift_up(push_one & rank_3) & empty_squares & target;
 
-            if gen_type == GenTypes::Evasions {
+            if gen_type == PriGenType::Evasions {
                 push_one &= target;
                 push_two &= target;
             }
 
-            if gen_type == GenTypes::QuietChecks {
+            if gen_type == PriGenType::QuietChecks {
                 let ksq: SQ = self.board.king_sq(self.them);
                 push_one &= self.magic.pawn_attacks_from(ksq, self.them);
                 push_two &= self.magic.pawn_attacks_from(ksq, self.them);
@@ -281,10 +294,10 @@ impl <'a> MoveGen<'a> {
         }
 
         // Promotions
-        if pawns_rank_7 != 0 && (gen_type != GenTypes::Evasions || (target & rank_8) != 0){
-            if gen_type == GenTypes::Captures {
+        if pawns_rank_7 != 0 && (gen_type != PriGenType::Evasions || (target & rank_8) != 0){
+            if gen_type == PriGenType::Captures {
                 empty_squares = !self.them_occ;
-            } else if gen_type == GenTypes::Evasions {
+            } else if gen_type == PriGenType::Evasions {
                 empty_squares &= target;
             }
 
@@ -315,8 +328,8 @@ impl <'a> MoveGen<'a> {
         }
 
         // Captures
-        if gen_type == GenTypes::Captures || gen_type == GenTypes::Evasions
-            || gen_type == GenTypes::NonEvasions || gen_type == GenTypes::Legal {
+        if gen_type == PriGenType::Captures || gen_type == PriGenType::Evasions
+            || gen_type == PriGenType::NonEvasions || gen_type == PriGenType::Legal {
 
             let mut left_cap: BitBoard = shift_left_up(pawns_not_rank_7) & enemies;
             let mut right_cap: BitBoard = shift_right_up(pawns_not_rank_7) & enemies;
@@ -346,7 +359,7 @@ impl <'a> MoveGen<'a> {
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
                 assert_eq!(rank_of_sq(ep_sq), relative_rank(self.turn,Rank::R6));
-                if gen_type != GenTypes::Evasions || target & sq_to_bb(down(ep_sq)) != 0 {
+                if gen_type != PriGenType::Evasions || target & sq_to_bb(down(ep_sq)) != 0 {
                     left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, self.them);
 
                     while left_cap != 0 {
