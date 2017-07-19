@@ -21,13 +21,18 @@ pub const CASTLING_SIDES: usize = 2;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GenTypes {
-    Legal,
+    All,
     Captures,
     Quiets,
-    Evasions,
-    NonEvasions,
-    QuietChecks
+    QuietChecks,
 }
+
+// Legal Moves:
+//      Evasions: In check
+//      Non-Evasions: Not in Check
+//
+
+
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]

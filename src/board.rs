@@ -72,7 +72,7 @@ impl Castling {
 
     pub fn pretty_string(&self) -> String {
         if self.is_empty() {
-            return "-".to_owned();
+            "-".to_owned()
         } else {
             let mut s = String::default();
             if self.contains(WHITE_K) {
@@ -90,7 +90,7 @@ impl Castling {
                 s.push('Q');
             }
             assert!(!s.is_empty());
-            return s;
+            s
         }
     }
 }
@@ -118,7 +118,7 @@ struct BoardState {
     // Automatically Created
     pub castling: Castling, // special castling bits
     pub rule_50: i8,
-    pub ply: u8,
+    pub ply: u8, // How deep are we?
     pub ep_square: SQ,
 
     // Recomputed after a move
@@ -457,9 +457,14 @@ impl Board {
     pub fn get_fen(&self) -> String {
         let mut s = String::default();
         let mut blanks = 0;
-        for sq in 0..SQ_CNT as u8 {
+        for idx in 0..SQ_CNT as u8 {
+            let sq = (idx % 8) + (8 * (7 - (idx / 8)));
             if file_of_sq(sq) == File::A {
                 if rank_of_sq(sq) != Rank::R8 {
+                    if blanks != 0 {
+                        s.push(char::from_digit(blanks, 10).unwrap());
+                        blanks = 0;
+                    }
                     s.push('/');
                 }
             }
@@ -475,9 +480,25 @@ impl Board {
                 s.push(PIECE_DISPLAYS[player.unwrap() as usize][piece.unwrap() as usize]);
             }
         }
-
-
-
+        s.push(' ');
+        s.push( match self.turn {
+            Player::White => 'w',
+            Player::Black => 'b',
+        });
+        s.push(' ');
+        s.push_str(&(self.state.castling.pretty_string()));
+        s.push(' ');
+        if self.ep_square() == NO_SQ {
+            s.push('-');
+        } else {
+            let ep = self.ep_square();
+            s.push(FILE_DISPLAYS[file_idx_of_sq(ep) as usize]);
+            s.push(RANK_DISPLAYS[rank_idx_of_sq(ep) as usize]);
+        }
+        s.push(' ');
+        s.push_str(&format!("{}",self.rule_50()));
+        s.push(' ');
+        s.push_str(&format!("{}",(self.half_moves / 2)+ 1));
 
         s
     }
@@ -685,11 +706,11 @@ impl  Board  {
     }
 
     pub fn generate_moves(&self) -> Vec<BitMove> {
-        MoveGen::generate(&self)
+        MoveGen::generate(&self,GenTypes::All)
     }
 
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
-        MoveGen::generate_of_type(&self, gen_type)
+        MoveGen::generate(&self, gen_type)
     }
 }
 

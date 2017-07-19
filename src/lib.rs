@@ -12,6 +12,7 @@ extern crate bitflags;
 extern crate lazy_static;
 
 extern crate chashmap;
+extern crate rand;
 
 extern crate test;
 pub mod board;
