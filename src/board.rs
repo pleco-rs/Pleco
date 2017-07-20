@@ -87,7 +87,7 @@ impl Castling {
             }
 
             if self.contains(BLACK_Q) {
-                s.push('Q');
+                s.push('q');
             }
             assert!(!s.is_empty());
             s
@@ -118,7 +118,7 @@ struct BoardState {
     // Automatically Created
     pub castling: Castling, // special castling bits
     pub rule_50: i8,
-    pub ply: u8, // How deep are we?
+    pub ply: u16, // How deep are we?
     pub ep_square: SQ,
 
     // Recomputed after a move
@@ -215,7 +215,7 @@ pub struct Board {
     occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
     occ_all: BitBoard, // Total Occupancy BB
     half_moves: u16, // Total moves
-    depth: u8, // current depth from actual position (Basically, moves since shallow clone was called)
+    depth: u16, // current depth from actual position (Basically, moves since shallow clone was called)
     piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
     piece_locations: PieceLocations,
     
@@ -893,7 +893,7 @@ impl Board {
         self.half_moves
     }
 
-    pub fn depth(&self) -> u8 {
+    pub fn depth(&self) -> u16 {
         self.depth
     }
 
@@ -907,7 +907,7 @@ impl Board {
 
     pub fn magic_helper(&self) -> &'static MagicHelper {&MAGIC_HELPER}
 
-    pub fn ply(&self) -> u8 {self.state.ply}
+    pub fn ply(&self) -> u16 {self.state.ply}
 
     pub fn ep_square(&self) -> SQ {self.state.ep_square}
 

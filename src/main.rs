@@ -4,12 +4,13 @@ use rusty_chess::{board,piece_move,templates};
 
 
 
-
+// rnbqkbn1/1ppppppr/7p/p7/7P/4PN2/PPPPQPP1/RNB1KBR b Qq - 1 5
+// r2qkbnr/p2ppp2/n5pp/1p2P3/2p2P2/2P3QP/PP1P2P1/RNB1K1NR b kq - 1 12
 
 fn main() {
     let mut b = board::Board::default();
     let mut i = 0;
-    while i < 100 {
+    while i < 1000 {
         b.fancy_print();
         println!("{}",b.get_fen());
         let moves = b.generate_moves();
@@ -21,10 +22,18 @@ fn main() {
             } else {
                 let cap = b.captured_piece(moves[x]);
                 if cap.is_some() {
-                    if cap.unwrap(b.captured_piece(moves[x])
-        if x >= len || b.captured_piece(moves[x]) == templates::Piece::K {
-            x = rand::random::<usize>() % len;
+                    if cap.unwrap() != templates::Piece::K {
+                        break 'outer;
+                    } else {
+                        x = rand::random::<usize>() % len;
+                    }
+                } else {
+                    break 'outer;
+                }
+            }
         }
+
+
         println!("{}",moves[x]);
         println!();
 
