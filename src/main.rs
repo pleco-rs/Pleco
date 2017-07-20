@@ -6,16 +6,19 @@ use rusty_chess::{board,piece_move,templates};
 
 // rnbqkbn1/1ppppppr/7p/p7/7P/4PN2/PPPPQPP1/RNB1KBR b Qq - 1 5
 // r2qkbnr/p2ppp2/n5pp/1p2P3/2p2P2/2P3QP/PP1P2P1/RNB1K1NR b kq - 1 12
+// r1b1qk1r/pppppp1p/4Nn1b/8/1n1P2PP/8/PPP1PP2/R1BQKB1R w KQ - 1 12
+// 3k1b1r/r1p2p2/6p1/2PpQ1qp/pPp3BP/3P4/P2NK1R1/R1B b - - 0 32
+// 1r1qkbn1/p2B2pr/b4QP1/1ppp4/P2n1P1p/2P5/1P2P2P/RNB1K1NR b KQ - 2 16
 
 fn main() {
     let mut b = board::Board::default();
     let mut i = 0;
-    while i < 1000 {
+    while i < 30000 {
         b.fancy_print();
         println!("{}",b.get_fen());
         let moves = b.generate_moves();
         let len = moves.len();
-        let mut x: usize = rand::random::<usize>();
+        let mut x: usize = rand::random::<usize>() % len;
         'outer: loop {
             if x >= len {
                 x = rand::random::<usize>() % len;

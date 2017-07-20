@@ -112,7 +112,7 @@ impl <'a> MoveGen<'a> {
 
         if !more_than_one(self.board.checkers()) {
             let checking_sq: SQ = bit_scan_forward(self.board.checkers());
-            let target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq) & target);
+            let target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq)) & target;
             self.generate_pawn_moves(target,PriGenType::Evasions);
             self.gen_non_pawn_king(target);
         }

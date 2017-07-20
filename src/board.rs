@@ -117,7 +117,7 @@ impl fmt::Display for Castling {
 struct BoardState {
     // Automatically Created
     pub castling: Castling, // special castling bits
-    pub rule_50: i8,
+    pub rule_50: i16,
     pub ply: u16, // How deep are we?
     pub ep_square: SQ,
 
@@ -419,7 +419,7 @@ impl Board {
 
         let mut board_s = Arc::new(BoardState {
             castling: castle_bytes,
-            rule_50: det_split[4].parse::<i8>().unwrap(),
+            rule_50: det_split[4].parse::<i16>().unwrap(),
             ply: 0,
             ep_square: ep_sq,
             zobrast: 0,
@@ -897,7 +897,7 @@ impl Board {
         self.depth
     }
 
-    pub fn rule_50(&self) -> i8 {
+    pub fn rule_50(&self) -> i16 {
         self.state.rule_50
     }
 
@@ -953,7 +953,7 @@ impl  Board  {
 
     // Bitboard of the pieces of both sides
     pub fn piece_bb_both_players(&self, piece: Piece) -> BitBoard {
-        self.bit_boards[Player::White as usize][piece as usize] ^ self.bit_boards[Player::White as usize][piece as usize]
+        self.bit_boards[Player::White as usize][piece as usize] ^ self.bit_boards[Player::Black as usize][piece as usize]
     }
 
     // BitBoard of both players for both pieces
