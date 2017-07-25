@@ -205,5 +205,9 @@ impl BitMove {
         }
         s
     }
+
+    pub fn get_raw(&self) -> u16 {
+        self.data
+    }
 }
 

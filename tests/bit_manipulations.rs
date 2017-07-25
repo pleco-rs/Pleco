@@ -1,6 +1,6 @@
-extern crate rusty_chess;
+extern crate Pleco;
 
-use rusty_chess::bit_twiddles as bit_twiddles;
+use Pleco::bit_twiddles as bit_twiddles;
 
 
 #[test]

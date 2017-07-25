@@ -236,20 +236,26 @@ impl <'a,'b>MagicHelper<'a,'b> {
                 for j in 0..64 as SQ {
                     let mut line_board: BitBoard = sliding_attack(&DELTAS[d], i, 0) & sliding_attack(&DELTAS[d], j, 0);
                     line_board |= ((1 as u64) << i) | ((1 as u64) << j);
-                    self.line_bitboard[i as usize][i as usize] |= line_board;
+                    self.line_bitboard[i as usize][j as usize] |= line_board;
                 }
             }
         }
     }
     fn gen_between_bbs(&mut self) {
-        for d in 0..DELTAS.len() {
-            for i in 0..64 as SQ {
-                for j in 0..64 as SQ {
-                    self.between_sqs_bb[i as usize][i as usize] |= sliding_attack(&DELTAS[d], j, ((1 as u64) << i))
-                        & sliding_attack(&DELTAS[d], i, ((1 as u64) << j));
+        for i in 0..64 as SQ {
+            for j in 0..64 as SQ {
+                let i_bb: BitBoard = (1 as u64) << i;
+                let j_bb: BitBoard = (1 as u64) << j;
+                if self.rook_moves(0,i) & j_bb != 0 {
+                    self.between_sqs_bb[i as usize][j as usize] = self.rook_moves(i_bb, j) & self.rook_moves(j_bb, i);
+                } else if self.bishop_moves(0,i) & j_bb != 0 {
+                    self.between_sqs_bb[i as usize][j as usize] = self.bishop_moves(i_bb, j) & self.bishop_moves(j_bb, i);
+                } else {
+                    self.between_sqs_bb[i as usize][j as usize] = 0;
                 }
             }
         }
+
     }
 
     // Generates adjacent files of a given file

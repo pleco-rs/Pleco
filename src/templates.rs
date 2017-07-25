@@ -1,7 +1,5 @@
 use bit_twiddles;
 use std::mem;
-use piece_move::BitMove;
-//use std::ptr;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
@@ -18,7 +16,6 @@ pub const FILE_CNT: usize = 8;
 pub const RANK_CNT: usize = 8;
 pub const TOTAL_CASTLING_CNT: usize = 4;
 pub const CASTLING_SIDES: usize = 2;
-
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GenTypes {

@@ -1,6 +1,10 @@
-extern crate rusty_chess;
+extern crate Pleco;
 extern crate rand;
-use rusty_chess::{board,piece_move,templates};
+use Pleco::{board,piece_move,templates,timer};
+use Pleco::bots::simple_bot::SimpleBot;
+use Pleco::bots::random_bot::RandomBot;
+use Pleco::engine::Searcher;
+use Pleco::templates::print_bitboard;
 
 
 
@@ -11,44 +15,39 @@ use rusty_chess::{board,piece_move,templates};
 // 1r1qkbn1/p2B2pr/b4QP1/1ppp4/P2n1P1p/2P5/1P2P2P/RNB1K1NR b KQ - 2 16
 
 fn main() {
+    sample_run();
+}
+
+fn test_between() {
+    let mut b = board::Board::default();
+    let m = b.magic_helper;
+    print_bitboard(m.between_bb(24,60));
+}
+
+fn sample_run() {
     let mut b = board::Board::default();
     let mut i = 0;
-    while i < 30000 {
-        b.fancy_print();
-        println!("{}",b.get_fen());
-        let moves = b.generate_moves();
-        let len = moves.len();
-        let mut x: usize = rand::random::<usize>() % len;
-        'outer: loop {
-            if x >= len {
-                x = rand::random::<usize>() % len;
-            } else {
-                let cap = b.captured_piece(moves[x]);
-                if cap.is_some() {
-                    if cap.unwrap() != templates::Piece::K {
-                        break 'outer;
-                    } else {
-                        x = rand::random::<usize>() % len;
-                    }
-                } else {
-                    break 'outer;
-                }
-            }
+    b.fancy_print();
+    while i < 200 {
+        if b.checkmate() {
+            println!("Checkmate")
         }
-
-
-        println!("{}",moves[x]);
-        println!();
-
-        b.apply_move(moves[x]);
-        i += 1;
+            else {
+                if i % 2 == 0 {
+                    let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+                    println!("{}'s move: {}",SimpleBot::name(),mov);
+                    b.apply_move(mov);
+                } else {
+                    let mov = RandomBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+                    println!("{}'s move: {}",RandomBot::name(),mov);
+                    b.apply_move(mov);
+                }
+                b.fancy_print();
+            }
     }
 
     b.fancy_print();
-
-
 }
-
 
 fn test_moving() {
     let mut b = board::Board::default();

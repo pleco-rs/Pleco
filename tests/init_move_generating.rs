@@ -1,8 +1,8 @@
-extern crate rusty_chess;
+extern crate Pleco;
 
-use rusty_chess::board::*;
-use rusty_chess::templates::*;
-use rusty_chess::piece_move::*;
+use Pleco::board::*;
+use Pleco::templates::*;
+use Pleco::piece_move::*;
 
 
 

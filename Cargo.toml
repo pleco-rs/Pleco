@@ -1,5 +1,5 @@
 [package]
-name = "rusty_chess"
+name = "Pleco"
 version = "0.1.0"
 authors = ["stephenf <stephenf@cs.washington.edu>"]
 
@@ -11,7 +11,7 @@ include = [
 ]
 
 [lib]
-name = "rusty_chess"
+name = "Pleco"
 
 [dependencies]
 clippy = {version = "*", optional = true}
@@ -19,6 +19,8 @@ lazy_static = "0.2"
 chashmap = {version = "*"}
 bitflags = {version = "*"}
 rand = "0.3"
+chrono = "0.4"
+rayon = {version = "*"}
 
 [features]
 default = []

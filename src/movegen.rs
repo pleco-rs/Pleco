@@ -128,7 +128,8 @@ impl <'a> MoveGen<'a> {
     }
 
     fn castling_side(&mut self, side: CastleType) {
-        if !self.board.castle_impeded(side) && self.board.can_castle(self.turn,side) {
+        if !self.board.castle_impeded(side) && self.board.can_castle(self.turn,side) &&
+            self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(Piece::R) {
             let king_side: bool = {side == CastleType::KingSide};
 
             let ksq: SQ = self.board.king_sq(self.turn);
