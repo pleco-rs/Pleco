@@ -2,13 +2,13 @@ use board::*;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
-use eval::*;
+use bots::eval::*;
 use test;
 use test::Bencher;
 use timer;
 
 
-const MAX_PLY: u16 = 5;
+const MAX_PLY: u16 = 3;
 
 pub struct SimpleBot {
     board: Board,
@@ -90,8 +90,8 @@ fn eval_board(bot: &mut SimpleBot) -> BestMove {
 fn bench_simple_bot(b: &mut Bencher) {
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
-        let iter = 10;
-        (0..50).fold(0, |a: u64, c| {
+        let iter = 2;
+        (0..iter).fold(0, |a: u64, c| {
             let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
             b.apply_move(mov);
             a ^ (b.zobrist()) }

@@ -2,7 +2,7 @@ use board::*;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
-use eval::*;
+use bots::eval::*;
 use rayon;
 use test::Bencher;
 use test;
@@ -35,7 +35,7 @@ impl BestMove {
 }
 
 const MAX_PLY: u16 = 5;
-const DIVIDE_CUTOFF: usize = 4;
+const DIVIDE_CUTOFF: usize = 5;
 
 // depth: depth from given
 // half_moves: total moves
@@ -70,7 +70,7 @@ fn parallel_minimax(board: &mut Board) -> BestMove {
 }
 
 fn parallel_task(slice: &[BitMove], board: &mut Board) -> BestMove {
-    if slice.len() <= DIVIDE_CUTOFF {
+    if slice.len() <= DIVIDE_CUTOFF || board.depth() == MAX_PLY - 2 {
         let mut best_value: i16 = NEG_INFINITY;
         let mut best_move: Option<BitMove> = None;
         for mov in slice {
@@ -110,8 +110,8 @@ fn eval_board(board: &mut Board) -> BestMove {
 fn bench_parallel(b: &mut Bencher) {
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
-        let iter = 10;
-        (0..50).fold(0, |a: u64, c| {
+        let iter = 2;
+        (0..iter).fold(0, |a: u64, c| {
             let mov = ParallelSearcher::best_move(b.shallow_clone(),timer::Timer::new(20));
             b.apply_move(mov);
             a ^ (b.zobrist()) }
