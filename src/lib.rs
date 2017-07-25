@@ -22,10 +22,8 @@ pub mod movegen;
 pub mod piece_move;
 pub mod templates;
 pub mod magic_helper;
-pub mod transposition_table;
 pub mod timer;
 pub mod engine;
-pub mod eval;
 
 pub mod bots;
 

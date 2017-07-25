@@ -251,7 +251,7 @@ impl Board {
             occ_all: START_OCC_ALL,
             half_moves: 0,
             depth: 0,
-            piece_counts: [[0; PIECE_CNT]; PLAYER_CNT],
+            piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
             piece_locations: PieceLocations::default(),
             state: Arc::new(BoardState::default()),
             undo_moves: Vec::with_capacity(100), // As this is the main board, might as well reserve space
@@ -356,6 +356,11 @@ impl Board {
             }
         }
         self.occ_all = self.occupied_black() | self.occupied_white();
+        for player in &ALL_PLAYERS {
+            for piece in &ALL_PIECES {
+                self.piece_counts[*player as usize][*piece as usize] = popcount64(self.piece_bb(*player,*piece));
+            }
+        }
     }
 
     // Creates a new Board from a fen string
@@ -585,14 +590,14 @@ impl  Board  {
             } else if captured.is_some() {
                 let mut cap_sq: SQ = to;
                 let cap_p: Piece = captured.unwrap(); // This shouldn't panic unless move is void
-                if cap_p == Piece::P && bit_move.move_type() == MoveType::EnPassant {
+                if cap_p == Piece::P && bit_move.is_en_passant() {
+                    assert_eq!(cap_sq, self.state.ep_square);
                     match us {
                         Player::White => cap_sq -= 8,
                         Player::Black => cap_sq += 8,
                     };
                     assert_eq!(piece, Piece::P);
-                    assert_eq!(cap_sq, self.state.ep_square);
-                    assert_eq!(relative_rank(us,Rank::R7), rank_of_sq(to));
+                    assert_eq!(relative_rank(us,Rank::R6), rank_of_sq(to));
                     assert!(self.piece_at_sq(to).is_none());
                     assert_eq!(self.piece_at_sq(cap_sq).unwrap(),Piece::P);
                     assert_eq!(self.player_at_sq(cap_sq).unwrap(),them);
@@ -685,7 +690,8 @@ impl  Board  {
         let us: Player = self.turn;
         let from: SQ = undo_move.get_src();
         let to: SQ = undo_move.get_dest();
-        let piece_on: Option<Piece> = self.piece_at_sq(to);
+        let mut piece_on: Option<Piece> = self.piece_at_sq(to);
+
 
         assert!(self.piece_at_sq(from).is_none() || undo_move.is_castle());
 
@@ -695,6 +701,8 @@ impl  Board  {
 
             self.remove_piece_c(piece_on.unwrap(),to,us);
             self.put_piece_c(Piece::P,to,us);
+            piece_on = Some(Piece::P);
+
         }
 
         if undo_move.is_castle() {

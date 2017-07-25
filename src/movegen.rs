@@ -198,6 +198,11 @@ impl <'a> MoveGen<'a> {
         } else {
             Box::new(|x: SQ| x.wrapping_add(8))
         };
+        let up: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
+            Box::new(|x: SQ| x.wrapping_add(8))
+        } else {
+            Box::new(|x: SQ| x.wrapping_sub(8))
+        };
         let left_down: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
             Box::new(|x: SQ| x.wrapping_sub(9))
         } else {
@@ -368,8 +373,8 @@ impl <'a> MoveGen<'a> {
                         let src: SQ = bb_to_sq(bit);
                         self.check_and_add(BitMove::init(PreMoveInfo {
                             src: src,
-                            dst: down(ep_sq),
-                            flags: MoveFlag::Capture { ep_capture: false }
+                            dst: ep_sq,
+                            flags: MoveFlag::Capture { ep_capture: true }
                         }));
                         left_cap &= !bit;
                     }

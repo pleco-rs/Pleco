@@ -35,13 +35,18 @@ fn sample_run() {
             println!("Checkmate");
             i = max;
         } else {
-            if i % 2 == 0 {
-                let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-                println!("{}'s move: {}",SimpleBot::name(),mov);
+            if i % 5 == 0 {
+                let mov = RandomBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+                println!("{}'s move: {}",RandomBot::name(),mov);
+                b.apply_move(mov);
+            }
+            else if i % 2 == 0 {
+                let mov = ParallelSearcher::best_move(b.shallow_clone(),timer::Timer::new(20));
+                println!("{}'s move: {}",ParallelSearcher::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-                println!("{}'s move: {}",SimpleBot::name(),mov);
+                let mov = ParallelSearcher::best_move(b.shallow_clone(),timer::Timer::new(20));
+                println!("{}'s move: {}",ParallelSearcher::name(),mov);
                 b.apply_move(mov);
             }
             println!();
