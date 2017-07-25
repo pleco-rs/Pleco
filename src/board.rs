@@ -281,6 +281,23 @@ impl Board {
         }
     }
 
+    // Returns Shallow clone of current board with no Past Move List
+    pub fn parallel_clone(&self) -> Board {
+        Board {
+            turn: self.turn,
+            bit_boards: copy_piece_bbs(&self.bit_boards),
+            occ: copy_occ_bbs(&self.occ),
+            occ_all: self.occ_all,
+            half_moves: self.half_moves,
+            depth: self.depth,
+            piece_counts: self.piece_counts.clone(),
+            piece_locations: self.piece_locations.clone(),
+            state: self.state.clone(),
+            undo_moves: Vec::with_capacity(10), // 32 Bytes taken up
+            magic_helper: &MAGIC_HELPER,
+        }
+    }
+
     // Returns an EXACT memory representation of that Board.
     // unsafe as this is to only be used by engines, and is more computationally expensive
     pub unsafe fn deep_clone(&self) -> Board {
@@ -718,26 +735,12 @@ impl  Board  {
     // After a move is made, Information about the checking situation is created
     fn set_check_info(&self, board_state: &mut BoardState) {
         let mut white_pinners = 0;
-
-
-//        if self.zobrist() == 17959625815994702195 {
-//            println!("WHITE");
-//        }
-
-
         {
             board_state.blockers_king[Player::White as usize]  =
             self.slider_blockers(self.occupied_black(), self.king_sq(Player::White), &mut white_pinners)
         };
 
         board_state.pinners_king[Player::White as usize] = white_pinners;
-
-
-//        if self.zobrist() == 17959625815994702195 {
-//            println!("BLACK");
-//        }
-
-
         let mut black_pinners = 0;
         {
             board_state.blockers_king[Player::Black as usize]  =
@@ -753,8 +756,8 @@ impl  Board  {
         board_state.check_sqs[Piece::N as usize] = self.magic_helper.knight_moves(ksq);
         board_state.check_sqs[Piece::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
         board_state.check_sqs[Piece::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
-        board_state.check_sqs[Piece::Q as usize] = self.state.check_sqs[Piece::B as usize]
-                                                 | self.state.check_sqs[Piece::R as usize];
+        board_state.check_sqs[Piece::Q as usize] = board_state.check_sqs[Piece::B as usize]
+                                                 | board_state.check_sqs[Piece::R as usize];
         board_state.check_sqs[Piece::K  as usize] = 0;
     }
 
@@ -799,7 +802,6 @@ impl  Board  {
     // move a piece, color is known
     fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ, player: Player) {
         assert_ne!(from, to);
-        assert_eq!(self.piece_at_sq(from).unwrap(),piece);
         let comb_bb = sq_to_bb(from) | sq_to_bb(to);
 
         self.occ_all ^= comb_bb;
@@ -847,24 +849,12 @@ impl  Board  {
             (self.magic_helper.rook_moves(0, s)   & (self.piece_two_bb_both_players(Piece::R, Piece::Q)))
           | (self.magic_helper.bishop_moves(0, s) & (self.piece_two_bb_both_players(Piece::B, Piece::Q))));
 
-        if self.zobrist() == 17959625815994702195 {
-            println!("snipers");
-            print_bitboard(snipers);
-        }
 
         while snipers != 0 {
             let lsb: BitBoard = lsb(snipers);
             let sniper_sq: SQ = bb_to_sq(lsb);
 
             let b: BitBoard = self.magic_helper.between_bb(s,sniper_sq) & occupied;
-            if self.zobrist() == 17959625815994702195 {
-                println!("between = ");
-                print_bitboard(self.magic_helper.between_bb(s,sniper_sq));
-                println!("queen moves =");
-                print_bitboard(self.magic_helper.queen_moves(0,s));
-                print_bitboard(self.magic_helper.queen_moves(0,sniper_sq));
-                print_bitboard(self.magic_helper.queen_moves(lsb,s));
-            }
 
             if !more_than_one(b) {
                 result |= b;
@@ -874,12 +864,6 @@ impl  Board  {
                 }
             }
             snipers &= !lsb;
-        }
-        if self.zobrist() == 17959625815994702195 {
-            println!("blockers");
-            print_bitboard(result);
-            println!("pinners");
-            print_bitboard(*pinners);
         }
 
         result
@@ -1140,7 +1124,7 @@ impl  Board  {
         }
 
         // Making sure not moving a pinned piece
-        (self.pinned_pieces(self.turn) & src_bb) == 0 || self.magic_helper.aligned(src,dst, self.king_sq(self.turn))
+        (self.pinned_pieces(self.turn) & src_bb) == 0 || self.magic_helper.aligned(src, dst, self.king_sq(self.turn))
     }
 
     // Used to check for Hashing errors from TT Tables
@@ -1272,6 +1256,15 @@ impl  Board  {
 
         println!("Checkers ");
         print_bitboard(self.state.checkers_bb);
+
+        println!("Bishop check sqs");
+        print_bitboard(self.state.check_sqs[Piece::B as usize]);
+
+        println!("Rook check sqs");
+        print_bitboard(self.state.check_sqs[Piece::R as usize]);
+
+        println!("Queen check sqs");
+        print_bitboard(self.state.check_sqs[Piece::Q as usize]);
     }
 
     // prints a prettified representation of the board

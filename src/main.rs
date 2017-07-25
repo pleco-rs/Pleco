@@ -3,6 +3,7 @@ extern crate rand;
 use Pleco::{board,piece_move,templates,timer};
 use Pleco::bots::simple_bot::SimpleBot;
 use Pleco::bots::random_bot::RandomBot;
+use Pleco::bots::parallel_minimax_bot::ParallelSearcher;
 use Pleco::engine::Searcher;
 use Pleco::templates::print_bitboard;
 
@@ -25,25 +26,28 @@ fn test_between() {
 }
 
 fn sample_run() {
+    let max = 200;
     let mut b = board::Board::default();
     let mut i = 0;
     b.fancy_print();
-    while i < 200 {
+    while i < max {
         if b.checkmate() {
-            println!("Checkmate")
-        }
-            else {
-                if i % 2 == 0 {
-                    let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-                    println!("{}'s move: {}",SimpleBot::name(),mov);
-                    b.apply_move(mov);
-                } else {
-                    let mov = RandomBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-                    println!("{}'s move: {}",RandomBot::name(),mov);
-                    b.apply_move(mov);
-                }
-                b.fancy_print();
+            println!("Checkmate");
+            i = max;
+        } else {
+            if i % 2 == 0 {
+                let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+                println!("{}'s move: {}",SimpleBot::name(),mov);
+                b.apply_move(mov);
+            } else {
+                let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+                println!("{}'s move: {}",SimpleBot::name(),mov);
+                b.apply_move(mov);
             }
+            println!();
+            b.fancy_print();
+        }
+        i += 1;
     }
 
     b.fancy_print();

@@ -3,6 +3,9 @@ use timer::*;
 use piece_move::*;
 use engine::Searcher;
 use eval::*;
+use test;
+use test::Bencher;
+use timer;
 
 
 const MAX_PLY: u16 = 5;
@@ -55,7 +58,6 @@ fn minimax(bot: &mut SimpleBot) -> BestMove {
     }
 
     let moves = bot.board.generate_moves();
-//    println!("length = {}", moves.len());
     if moves.len() == 0 {
         if bot.board.in_check() {
             return BestMove::new(NEG_INFINITY - (bot.board.depth() as i16));
@@ -66,47 +68,10 @@ fn minimax(bot: &mut SimpleBot) -> BestMove {
     let mut best_value: i16 = NEG_INFINITY;
     let mut best_move: Option<BitMove> = None;
     for mov in moves {
-        // && mov.stringify().to_owned().eq("d7d6")
-//        if bot.board.depth() == 3 && mov.stringify().to_owned().eq("d7d6")
-//            && bot.board.zobrist() == 15536998096656736002 {
-//            println!("Applying move: {}. Depth is: {}",mov,bot.board.depth());
-//            println!("Move raw {}",mov.get_raw());
-//
-//            println!("Board looks like this beforehand:");
-//            bot.board.fancy_print();
-//            println!();
-//            println!();
-//            println!("Applying Move");
-//            bot.board.apply_move(mov);
-//            println!("Move applied");
-//        } else if bot.board.depth() == 2 && mov.stringify().to_owned().eq("d1a4")
-//            && bot.board.zobrist() == 17959625815994702195 {
-//            println!("Applying move: {}. Depth is: {}",mov,bot.board.depth());
-//            println!("Move raw {}",mov.get_raw());
-//            println!("Board looks like this beforehand:");
-//            bot.board.fancy_print();
-//            println!();
-//            println!();
-//            println!("Applying Move");
-//            bot.board.apply_move(mov);
-//            println!("Move applied");
-//        } else {
-//            bot.board.apply_move(mov);
-//        }
-
-        println!("Applying move: {}. Depth is: {}",mov,bot.board.depth());
-        println!("Move raw {}",mov.get_raw());
-        println!("Board looks like this beforehand:");
-        bot.board.fancy_print();
-        println!();
-        println!();
-        println!("Applying Move");
-            bot.board.apply_move(mov);
-
+        bot.board.apply_move(mov);
         let mut returned_move: BestMove = minimax(bot);
         returned_move.negate();
         bot.board.undo_move();
-//        println!("undoing");
         if returned_move.score > best_value {
             best_value = returned_move.score;
             best_move = Some(mov);
@@ -118,5 +83,19 @@ fn minimax(bot: &mut SimpleBot) -> BestMove {
 
 fn eval_board(bot: &mut SimpleBot) -> BestMove {
     BestMove::new(Eval::eval(&bot.board))
+}
+
+
+#[bench]
+fn bench_simple_bot(b: &mut Bencher) {
+    b.iter(|| {
+        let mut b: Board = test::black_box(Board::default());
+        let iter = 10;
+        (0..50).fold(0, |a: u64, c| {
+            let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+            b.apply_move(mov);
+            a ^ (b.zobrist()) }
+        )
+    })
 }
 
