@@ -29,7 +29,7 @@ impl BestMove {
     }
 
     pub fn negate(&mut self) {
-        self.score.wrapping_mul(-1);
+        self.score.wrapping_neg();
     }
 }
 
@@ -44,15 +44,19 @@ impl Searcher for SimpleBot {
     }
 
     fn best_move(board: Board, timer: Timer) -> BitMove {
+        SimpleBot::best_move_depth(board, timer, MAX_PLY)
+    }
+
+    fn best_move_depth(board: Board, timer: Timer, max_depth: u16) -> BitMove {
         let mut b = SimpleBot {board: board, timer: timer};
-        minimax(&mut b).best_move.unwrap()
+        minimax(&mut b, max_depth).best_move.unwrap()
     }
 
 }
 
-fn minimax(bot: &mut SimpleBot) -> BestMove {
+fn minimax(bot: &mut SimpleBot, max_depth: u16) -> BestMove {
 //    println!("depth = {}", bot.board.depth());
-    if bot.board.depth() == MAX_PLY {
+    if bot.board.depth() == max_depth {
 
        return eval_board(bot);
     }
@@ -69,7 +73,7 @@ fn minimax(bot: &mut SimpleBot) -> BestMove {
     let mut best_move: Option<BitMove> = None;
     for mov in moves {
         bot.board.apply_move(mov);
-        let mut returned_move: BestMove = minimax(bot);
+        let mut returned_move: BestMove = minimax(bot, max_depth);
         returned_move.negate();
         bot.board.undo_move();
         if returned_move.score > best_value {
@@ -87,12 +91,12 @@ fn eval_board(bot: &mut SimpleBot) -> BestMove {
 
 
 #[bench]
-fn bench_simple_bot(b: &mut Bencher) {
+fn bench_bot_ply_4__simple_bot(b: &mut Bencher) {
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
         let iter = 2;
         (0..iter).fold(0, |a: u64, c| {
-            let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+            let mov = SimpleBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),4);
             b.apply_move(mov);
             a ^ (b.zobrist()) }
         )

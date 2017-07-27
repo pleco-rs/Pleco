@@ -19,4 +19,10 @@ impl Searcher for RandomBot {
         let moves = bot.board.generate_moves();
         moves[rand::random::<usize>() % moves.len()]
     }
+
+    fn best_move_depth(board: Board, timer: Timer, depth: u16) -> BitMove {
+        let bot = RandomBot { board: board, timer: timer};
+        let moves = bot.board.generate_moves();
+        moves[rand::random::<usize>() % moves.len()]
+    }
 }

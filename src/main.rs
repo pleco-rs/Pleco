@@ -4,6 +4,7 @@ use Pleco::{board,piece_move,templates,timer};
 use Pleco::bots::simple_bot::SimpleBot;
 use Pleco::bots::random_bot::RandomBot;
 use Pleco::bots::parallel_minimax_bot::ParallelSearcher;
+use Pleco::bots::alphabeta_bot::AlphaBetaBot;
 use Pleco::engine::Searcher;
 use Pleco::templates::print_bitboard;
 
@@ -35,17 +36,18 @@ fn sample_run() {
             println!("Checkmate");
             i = max;
         } else {
-            if i % 11 == 0 {
-                let mov = RandomBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-                println!("{}'s move: {}",RandomBot::name(),mov);
-                b.apply_move(mov);
-            } else if i % 2 == 0 {
-                let mov = ParallelSearcher::best_move(b.shallow_clone(),timer::Timer::new(20));
-                println!("{}'s move: {}",ParallelSearcher::name(),mov);
+//            if i % 11 == 0 {
+//                let mov = RandomBot::best_move(b.shallow_clone(),timer::Timer::new(20));
+//                println!("{}'s move: {}",RandomBot::name(),mov);
+//                b.apply_move(mov);
+//            } else
+            if i % 2 == 0 {
+                let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),6);
+                println!("{}'s move: {}",AlphaBetaBot::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = SimpleBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-                println!("{}'s move: {}",SimpleBot::name(),mov);
+                let mov = ParallelSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),5);
+                println!("{}'s move: {}",ParallelSearcher::name(),mov);
                 b.apply_move(mov);
             }
             println!();

@@ -1,0 +1,231 @@
+use board::*;
+use std::cmp::Ordering;
+use timer::*;
+use piece_move::*;
+use engine::Searcher;
+use bots::eval::*;
+use rayon;
+use rayon::prelude::*;
+use test::Bencher;
+use test;
+use timer;
+
+
+pub struct JamboreeSearcher {
+    board: Board,
+    timer: Timer,
+}
+
+pub struct BestMove {
+    best_move: Option<BitMove>,
+    score: i16,
+}
+
+impl BestMove {
+    pub fn new(score: i16) -> Self {
+        BestMove{
+            best_move: None,
+            score: score
+        }
+    }
+
+    pub fn negate(mut self) -> Self {
+        self.score.wrapping_neg();
+        self
+    }
+
+    pub fn score(&self) -> i16 {self.score}
+}
+
+
+
+
+const MAX_PLY: u16 = 5;
+
+const DIVIDE_CUTOFF: usize = 5;
+const DIVISOR_SEQ: usize = 4;
+
+// depth: depth from given
+// half_moves: total moves
+
+impl Searcher for JamboreeSearcher {
+
+    fn name() -> &'static str {
+        "Parallel Searcher"
+    }
+
+    fn best_move(mut board: Board, timer: Timer) -> BitMove {
+        JamboreeSearcher::best_move_depth(board, timer, MAX_PLY)
+    }
+
+    fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
+        let alpha = NEG_INFINITY;
+        let beta = INFINITY;
+        jamboree(&mut board, alpha, beta, max_depth, 2).best_move.unwrap()
+    }
+}
+
+fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16) -> BestMove {
+    if board.depth() == max_depth {
+        return eval_board(board);
+    }
+
+    if board.depth() >= max_depth - plys_seq {
+        return alpha_beta_search(board, alpha, beta, max_depth);
+    }
+
+    let moves = board.generate_moves();
+    if moves.len() == 0 {
+        if board.in_check() {
+            return BestMove::new(NEG_INFINITY - (board.depth() as i16));
+        } else {
+            return BestMove::new(STALEMATE);
+        }
+    }
+
+    let amount_seq: usize = 1 + (moves.len() / DIVIDE_CUTOFF) as usize;
+    let (seq, non_seq) = moves.split_at(amount_seq);
+
+    let mut best_move: Option<BitMove> = None;
+    for mov in seq {
+        board.apply_move(*mov);
+        let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
+        board.undo_move();
+
+        if return_move.score > alpha  {
+            alpha = return_move.score;
+            best_move = Some(*mov);
+        }
+
+        if alpha >= beta {
+            return BestMove{best_move: Some(*mov), score: alpha};
+        }
+    }
+
+    let returned_move = parallel_task(non_seq, board, alpha, beta, max_depth, plys_seq);
+
+    if returned_move.score > alpha {
+        return returned_move;
+    } else {
+        return BestMove{best_move: best_move, score: alpha};
+    }
+}
+
+fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16) -> BestMove {
+    let mut best_move: Option<BitMove> = None;
+    if slice.len() <= DIVIDE_CUTOFF {
+        for mov in slice {
+            board.apply_move(*mov);
+            let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
+            board.undo_move();
+
+            if return_move.score > alpha  {
+                alpha = return_move.score;
+                best_move = Some(*mov);
+            }
+
+            if alpha >= beta {
+                return BestMove{best_move: Some(*mov), score: alpha};
+            }
+        }
+
+    } else {
+        let mid_point = slice.len() / 2;
+        let (left, right) = slice.split_at(mid_point);
+        let mut left_clone = board.parallel_clone();
+
+        let (left_move, right_move) = rayon::join (
+            || parallel_task(left, &mut left_clone, alpha, beta, max_depth, plys_seq),
+            || parallel_task(right, board, alpha, beta, max_depth, plys_seq));
+
+        if left_move.score > alpha{
+            alpha = left_move.score;
+            best_move = left_move.best_move;
+        }
+        if right_move.score > alpha {
+            alpha = right_move.score;
+            best_move = right_move.best_move;
+        }
+    }
+    BestMove{best_move: best_move, score: alpha}
+
+}
+
+
+
+fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
+    if board.depth() == max_depth {
+        return eval_board(board);
+    }
+
+    let moves = board.generate_moves();
+
+    if moves.len() == 0 {
+        if board.in_check() {
+            return BestMove::new(NEG_INFINITY - (board.depth() as i16));
+        } else {
+            return BestMove::new(-STALEMATE);
+        }
+    }
+    let mut best_move: Option<BitMove> = None;
+    for mov in moves {
+        board.apply_move(mov);
+        let return_move = alpha_beta_search(board, -beta, -alpha, max_depth).negate();
+        board.undo_move();
+
+        if return_move.score > alpha  {
+            alpha = return_move.score;
+            best_move = Some(mov);
+        }
+
+        if alpha >= beta {
+            return BestMove{best_move: Some(mov), score: alpha};
+        }
+    }
+
+    BestMove{best_move: best_move, score: alpha}
+}
+
+fn eval_board(board: &mut Board) -> BestMove {
+    BestMove::new(Eval::eval(&board))
+}
+
+#[bench]
+fn bench_bot_ply_4__jamboree_bot(b: &mut Bencher) {
+    b.iter(|| {
+        let mut b: Board = test::black_box(Board::default());
+        let iter = 2;
+        (0..iter).fold(0, |a: u64, c| {
+            let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),4);
+            b.apply_move(mov);
+            a ^ (b.zobrist()) }
+        )
+    })
+}
+
+#[bench]
+fn bench_bot_ply_5__jamboree_bot(b: &mut Bencher) {
+    b.iter(|| {
+        let mut b: Board = test::black_box(Board::default());
+        let iter = 2;
+        (0..iter).fold(0, |a: u64, c| {
+            let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),5);
+            b.apply_move(mov);
+            a ^ (b.zobrist()) }
+        )
+    })
+}
+
+
+#[bench]
+fn bench_bot_ply_6__jamboree_bot(b: &mut Bencher) {
+    b.iter(|| {
+        let mut b: Board = test::black_box(Board::default());
+        let iter = 2;
+        (0..iter).fold(0, |a: u64, c| {
+            let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),6);
+            b.apply_move(mov);
+            a ^ (b.zobrist()) }
+        )
+    })
+}

@@ -27,10 +27,13 @@ bitflags! {
         const WHITE_Q      = 0b00000100;
         const BLACK_K      = 0b00000010;
         const BLACK_Q      = 0b00000001;
+        const WHITE_CASTLE = 0b01000000;
+        const BLACK_CASTLE = 0b00010000;
         const WHITE_ALL    = WHITE_K.bits
                            | WHITE_Q.bits;
         const BLACK_ALL    = BLACK_K.bits
                            | BLACK_Q.bits;
+
     }
 }
 
@@ -66,6 +69,20 @@ impl Castling {
                 CastleType::KingSide  => self.contains(BLACK_K),
                 CastleType::QueenSide => self.contains(BLACK_Q),
             }
+        }
+    }
+
+    pub fn set_castling(&mut self, player: Player) {
+        match player {
+            Player::White => self.bits |= WHITE_CASTLE.bits,
+            Player::Black => self.bits |= BLACK_CASTLE.bits,
+        }
+    }
+
+    pub fn has_castled(&self, player: Player) -> bool {
+        match player {
+            Player::White => self.contains(WHITE_CASTLE),
+            Player::Black => self.contains(BLACK_CASTLE),
         }
     }
 
@@ -587,6 +604,7 @@ impl  Board  {
                 new_state.captured_piece = None;
                 // TODO: Set castling rights Zobrist
                 new_state.castling.remove_player_castling(us);
+                new_state.castling.set_castling(us);
             } else if captured.is_some() {
                 let mut cap_sq: SQ = to;
                 let cap_p: Piece = captured.unwrap(); // This shouldn't panic unless move is void
@@ -1062,6 +1080,10 @@ impl  Board  {
 
     pub fn last_move(&self) -> Option<BitMove> {
         self.undo_moves.first().map(|b| b.clone())
+    }
+
+    pub fn has_castled(&self, player: Player) -> bool {
+        self.state.castling.has_castled(player)
     }
 }
 

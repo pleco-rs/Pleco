@@ -1,9 +1,11 @@
 use board::*;
+use std::cmp::Ordering;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
 use bots::eval::*;
 use rayon;
+use rayon::prelude::*;
 use test::Bencher;
 use test;
 use timer;
@@ -29,13 +31,19 @@ impl BestMove {
         }
     }
 
-    pub fn negate(&mut self) {
-        self.score.wrapping_mul(-1);
+    pub fn negate(mut self) -> Self {
+        self.score.wrapping_neg();
+        self
     }
+
+    pub fn score(&self) -> i16 {self.score}
 }
 
+
+
+
 const MAX_PLY: u16 = 5;
-const DIVIDE_CUTOFF: usize = 5;
+const DIVIDE_CUTOFF: usize = 8;
 
 // depth: depth from given
 // half_moves: total moves
@@ -47,13 +55,18 @@ impl Searcher for ParallelSearcher {
     }
 
     fn best_move(mut board: Board, timer: Timer) -> BitMove {
-        parallel_minimax(&mut board).best_move.unwrap()
+        ParallelSearcher::best_move_depth(board, timer, MAX_PLY)
     }
+
+    fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
+        parallel_minimax(&mut board, max_depth).best_move.unwrap()
+    }
+
 
 }
 
-fn parallel_minimax(board: &mut Board) -> BestMove {
-    if board.depth() == MAX_PLY {
+fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
+    if board.depth() == max_depth {
         return eval_board(board);
     }
 
@@ -65,18 +78,17 @@ fn parallel_minimax(board: &mut Board) -> BestMove {
             return BestMove::new(STALEMATE);
         }
     } else {
-        return parallel_task(&moves, board);
+        return parallel_task(&moves, board, max_depth);
     }
 }
 
-fn parallel_task(slice: &[BitMove], board: &mut Board) -> BestMove {
-    if slice.len() <= DIVIDE_CUTOFF || board.depth() == MAX_PLY - 2 {
+fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMove {
+    if board.depth() == max_depth - 2 ||  slice.len() <= DIVIDE_CUTOFF {
         let mut best_value: i16 = NEG_INFINITY;
         let mut best_move: Option<BitMove> = None;
         for mov in slice {
             board.apply_move(*mov);
-            let mut returned_move: BestMove = parallel_minimax(board);
-            returned_move.negate();
+            let mut returned_move: BestMove = parallel_minimax(board, max_depth).negate();
             board.undo_move();
             if returned_move.score > best_value {
                 best_value = returned_move.score;
@@ -90,8 +102,8 @@ fn parallel_task(slice: &[BitMove], board: &mut Board) -> BestMove {
         let mut left_clone = board.parallel_clone();
 
         let (left_move, right_move) = rayon::join(
-            || parallel_task(left, &mut left_clone),
-            || parallel_task(right, board));
+            || parallel_task(left, &mut left_clone, max_depth),
+            || parallel_task(right, board, max_depth));
 
         if left_move.score > right_move.score {
             return left_move;
@@ -107,12 +119,12 @@ fn eval_board(board: &mut Board) -> BestMove {
 
 
 #[bench]
-fn bench_parallel(b: &mut Bencher) {
+fn bench_bot_ply_4__parallel_bot(b: &mut Bencher) {
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
         let iter = 2;
         (0..iter).fold(0, |a: u64, c| {
-            let mov = ParallelSearcher::best_move(b.shallow_clone(),timer::Timer::new(20));
+            let mov = ParallelSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),4);
             b.apply_move(mov);
             a ^ (b.zobrist()) }
         )
