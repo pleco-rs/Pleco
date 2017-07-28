@@ -26,7 +26,7 @@ impl BestMove {
     }
 
     pub fn negate(mut self) -> Self {
-        self.score.wrapping_neg();
+        self.score *= -1;
         self
     }
 }
@@ -39,24 +39,23 @@ pub struct AlphaBetaBot {
 
 impl Searcher for AlphaBetaBot {
     fn name() -> &'static str {
-        "Random Searcher"
+        "AlphaBeta Searcher"
     }
 
     fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
         let mut bot = AlphaBetaBot { board: board, timer: timer};
         let alpha: i16 = NEG_INFINITY;
         let beta:  i16 = INFINITY;
-        alpha_beta_search(&mut bot.board.parallel_clone(), alpha, beta, max_depth).best_move.unwrap()
+        alpha_beta_search(&mut bot.board.shallow_clone(), alpha, beta, max_depth).best_move.unwrap()
     }
 
     fn best_move(mut board: Board, timer: Timer) -> BitMove {
         AlphaBetaBot::best_move_depth(board, timer, MAX_PLY)
     }
-
-
 }
 
 fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
+
     if board.depth() == max_depth {
         return eval_board(board);
     }
@@ -65,7 +64,7 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     if moves.len() == 0 {
         if board.in_check() {
-            return BestMove::new(NEG_INFINITY - (board.depth() as i16));
+            return BestMove::new(MATE + (board.depth() as i16));
         } else {
             return BestMove::new(-STALEMATE);
         }
@@ -73,8 +72,14 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
     let mut best_move: Option<BitMove> = None;
     for mov in moves {
         board.apply_move(mov);
+//        board.pretty_print();
+//        println!();
+//        println!("Applying move: {}", mov);
+//        println!("DEEPER ///////////////////////////////////////");
         let return_move = alpha_beta_search(board, -beta, -alpha, max_depth).negate();
         board.undo_move();
+//        println!("UP     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+//        println!("Current Alpha: {}, returned_move_score: {}",alpha,return_move.score);
 
         if return_move.score > alpha  {
             alpha = return_move.score;
@@ -90,7 +95,10 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 }
 
 fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval(&board))
+    let m = BestMove::new(Eval::eval_low(&board));
+//    println!("score {} at eval", m.score);
+//    board.pretty_print();
+    m
 }
 
 #[bench]

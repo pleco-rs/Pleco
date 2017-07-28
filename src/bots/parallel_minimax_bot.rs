@@ -32,7 +32,7 @@ impl BestMove {
     }
 
     pub fn negate(mut self) -> Self {
-        self.score.wrapping_neg();
+        self.score *= -1;
         self
     }
 
@@ -59,7 +59,7 @@ impl Searcher for ParallelSearcher {
     }
 
     fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
-        parallel_minimax(&mut board, max_depth).best_move.unwrap()
+        parallel_minimax(&mut board.shallow_clone(), max_depth).best_move.unwrap()
     }
 
 
@@ -73,7 +73,7 @@ fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.len() == 0 {
         if board.in_check() {
-            return BestMove::new(NEG_INFINITY - (board.depth() as i16));
+            return BestMove::new(MATE + (board.depth() as i16));
         } else {
             return BestMove::new(STALEMATE);
         }
@@ -114,7 +114,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
 }
 
 fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval(&board))
+    BestMove::new(Eval::eval_low(&board))
 }
 
 

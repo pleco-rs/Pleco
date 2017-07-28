@@ -698,6 +698,8 @@ impl  Board  {
         assert!(self.is_okay());
     }
 
+    // Un-do's the last move played
+    // Cannot do directly after a non-deep clone, fen init, or in the beginning of a game
     pub fn undo_move(&mut self) {
         assert!(!self.undo_moves.is_empty());
         assert!(self.state.prev.is_some());
@@ -746,10 +748,12 @@ impl  Board  {
         assert!(self.is_okay());
     }
 
+    // generate mall possible moves for the current player to move
     pub fn generate_moves(&self) -> Vec<BitMove> {
         MoveGen::generate(&self,GenTypes::All)
     }
 
+    // generate moves of a certain type
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
         MoveGen::generate(&self, gen_type)
     }
@@ -767,6 +771,7 @@ impl  Board  {
         };
 
         board_state.pinners_king[Player::White as usize] = white_pinners;
+
         let mut black_pinners = 0;
         {
             board_state.blockers_king[Player::Black as usize]  =
@@ -838,6 +843,7 @@ impl  Board  {
         self.piece_locations.place(to,player,piece);
     }
 
+    // helper function for handling castles of apply_move
     fn apply_castling(&mut self, player: Player, k_src: SQ, r_src: SQ, k_dst: &mut SQ, r_dst: &mut SQ) {
         let king_side: bool = k_src < r_src;
 
@@ -853,6 +859,7 @@ impl  Board  {
         self.move_piece_c(Piece::R,r_src,*r_dst,player);
     }
 
+    // helper function for undo-ing castles of undo_move()
     fn remove_castling(&mut self, player: Player, k_src: SQ, r_src: SQ) {
         let k_dst: SQ = self.king_sq(player);
         let king_side: bool = k_src < r_src;
@@ -949,6 +956,7 @@ impl Board {
         self.state.rule_50
     }
 
+    // Piece, if any, that was last captured
     pub fn piece_captured_last_turn(&self) -> Option<Piece> {
         self.state.captured_piece
     }
@@ -958,9 +966,6 @@ impl Board {
     pub fn ply(&self) -> u16 {self.state.ply}
 
     pub fn ep_square(&self) -> SQ {self.state.ep_square}
-
-
-
 
 }
 
@@ -1065,23 +1070,29 @@ impl  Board  {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
 
+    // Return if a player has the possibility of castling.
+    // Doesn't check for can castle at that very moment
     pub fn can_castle(&self, player: Player, castle_type: CastleType) -> bool {
         self.state.castling.castle_rights(player,castle_type)
     }
 
+    // Check if the castle path is impeded for the current player
     pub fn castle_impeded(&self, castle_type: CastleType) -> bool {
         let path: BitBoard = CASTLING_PATH[self.turn as usize][castle_type as usize];
         path & self.occ_all != 0
     }
 
+    // Square of the Rook that is involved with the current player's castle
     pub fn castling_rook_square(&self, castle_type: CastleType) -> SQ {
         CASTLING_ROOK_START[self.turn as usize][castle_type as usize]
     }
 
+    // Return the last move played, if any
     pub fn last_move(&self) -> Option<BitMove> {
         self.undo_moves.first().map(|b| b.clone())
     }
 
+    // Returns if the current player has castled ever
     pub fn has_castled(&self, player: Player) -> bool {
         self.state.castling.has_castled(player)
     }
@@ -1302,6 +1313,7 @@ impl  Board  {
         println!("{}",self.pretty_string());
     }
 
+    // Print the board alongside useful information
     pub fn fancy_print(&self) {
         self.pretty_print();
         println!("Castling bits: {:b}, Rule 50: {}, ep_sq: {}", self.state.castling, self.state.rule_50, self.state.ep_square);

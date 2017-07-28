@@ -30,7 +30,7 @@ impl BestMove {
     }
 
     pub fn negate(mut self) -> Self {
-        self.score.wrapping_neg();
+        self.score *= -1;
         self
     }
 
@@ -51,7 +51,7 @@ const DIVISOR_SEQ: usize = 4;
 impl Searcher for JamboreeSearcher {
 
     fn name() -> &'static str {
-        "Parallel Searcher"
+        "Jamboree Searcher"
     }
 
     fn best_move(mut board: Board, timer: Timer) -> BitMove {
@@ -61,12 +61,13 @@ impl Searcher for JamboreeSearcher {
     fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
         let alpha = NEG_INFINITY;
         let beta = INFINITY;
-        jamboree(&mut board, alpha, beta, max_depth, 2).best_move.unwrap()
+        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2).best_move.unwrap()
     }
 }
 
 fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16) -> BestMove {
-    if board.depth() == max_depth {
+    assert!(alpha <= beta);
+    if board.depth() >= max_depth {
         return eval_board(board);
     }
 
@@ -77,7 +78,7 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
     let moves = board.generate_moves();
     if moves.len() == 0 {
         if board.in_check() {
-            return BestMove::new(NEG_INFINITY - (board.depth() as i16));
+            return BestMove::new(MATE + (board.depth() as i16));
         } else {
             return BestMove::new(STALEMATE);
         }
@@ -162,7 +163,7 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     if moves.len() == 0 {
         if board.in_check() {
-            return BestMove::new(NEG_INFINITY - (board.depth() as i16));
+            return BestMove::new(MATE + (board.depth() as i16));
         } else {
             return BestMove::new(-STALEMATE);
         }
@@ -187,8 +188,12 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 }
 
 fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval(&board))
+    BestMove::new(Eval::eval_low(board))
 }
+
+
+
+
 
 #[bench]
 fn bench_bot_ply_4__jamboree_bot(b: &mut Bencher) {

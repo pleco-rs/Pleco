@@ -72,8 +72,8 @@ pub struct Eval<'a> {
 pub const MIN: i16 = 0b1000000000000000;
 pub const MAX: i16 = 0b0111111111111111;
 
-pub const INFINITY: i16 = 30000;
-pub const NEG_INFINITY: i16 = -30000;
+pub const INFINITY: i16 = 30_002;
+pub const NEG_INFINITY: i16 = -30_001;
 pub const STALEMATE: i16 = 0;
 
 pub const PAWN_VALUE: i16 = 100;
@@ -83,29 +83,33 @@ pub const ROOK_VALUE: i16 = 500;
 pub const QUEEN_VALUE: i16 = 800;
 pub const KING_VALUE: i16 = 350;
 
-pub const CASTLE_ABILITY: i16 = 10;
-pub const CASTLE_BONUS: i16 = 32;
+pub const CASTLE_ABILITY: i16 = 7;
+pub const CASTLE_BONUS: i16 = 20;
 
-pub const KING_BOTTOM: i16 = 25;
+pub const KING_BOTTOM: i16 = 13;
+
+pub const MATE: i16 = -25000;
+pub const CHECK: i16 = 40;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
 pub const PIECE_VALS: [i16; PIECE_CNT] = [PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE];
 
 
 impl <'a> Eval<'a> {
-    pub fn eval(board: &Board) -> i16 {
-        let eval = Eval{
+    pub fn eval_low(board: &Board) -> i16 {
+        let eval = Eval {
             board: &board,
             us: board.turn(),
             them: other_player(board.turn())
         };
-        eval.eval_all()
+        eval.eval_simple()
+
     }
 }
 
 
 impl <'a> Eval<'a> {
-    fn eval_all(&self) -> i16 {
+    fn eval_simple(&self) -> i16 {
         self.eval_piece_counts()
             + self.eval_castling()
             + self.eval_king_pos()
@@ -139,10 +143,14 @@ impl <'a> Eval<'a> {
         score
     }
 
+
+
     fn eval_king_pos(&self) -> i16 {
         let mut score: i16 = 0;
 //        if rank_of_sq(self.board.king_sq(self.us)) == Rank::R1 || rank_of_sq(self.board.king_sq(self.us)) == Rank::R8 {score += KING_BOTTOM}
 //        if rank_of_sq(self.board.king_sq(self.them)) == Rank::R1 || rank_of_sq(self.board.king_sq(self.them)) == Rank::R8 {score -= KING_BOTTOM}
+
+        if self.board.in_check() { score -= CHECK}
 
         score
     }
@@ -171,7 +179,7 @@ impl <'a> Eval<'a> {
         let mut them_pb = self.board.piece_bb(self.them, Piece::N);
         while us_b != 0 {
             let lsb = lsb(us_b);
-            score +=  BISHOP_POS[self.us as usize][bb_to_sq(lsb) as usize];
+            score +=  KNIGHT_POS[self.us as usize][bb_to_sq(lsb) as usize];
             us_b &= !lsb;
         }
 
@@ -223,38 +231,38 @@ impl <'a> Eval<'a> {
 
         for i in 0..FILE_CNT {
             if files_us[i] > 1 {
-                score -= (files_us[i] * 5) as i16;
+                score -= (files_us[i] * 3) as i16;
             }
             if files_them[i] > 1 {
-                score += (files_them[i] * 5) as i16;
+                score += (files_them[i] * 3) as i16;
             }
 
             if i > 0 && i < 7 {
                 if files_us[i] != 0 {
                     if files_us[i - 1] != 0 {
                         if files_us[i + 1] != 0 {
-                            score += 25;
+                            score += 7;
                         } else {
-                            score += 11;
+                            score += 3;
                         }
                     } else if files_us[i + 1] != 0 {
-                        score += 11;
+                        score += 3;
                     } else {
-                        score -= 19;
+                        score -= 4;
                     }
                 }
 
                 if files_them[i] != 0 {
                     if files_them[i - 1] != 0 {
                         if files_them[i + 1] != 0 {
-                            score -= 25;
+                            score -= 7;
                         } else {
-                            score -= 11;
+                            score -= 3;
                         }
                     } else if files_them[i + 1] != 0 {
-                        score -= 11;
+                        score -= 3;
                     } else {
-                        score += 19;
+                        score += 4;
                     }
                 }
             }

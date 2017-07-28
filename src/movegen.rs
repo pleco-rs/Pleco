@@ -4,16 +4,16 @@ use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use bit_twiddles::*;
 use magic_helper::MagicHelper;
 
-// TODO:
 // MoveGen Classifications:
 // Evasions, Captures, Quiets, Quiet_checks, Evasions, Non Evasions, Legal
 //
-// Evasions: Board is currently in check; Generate moves that move the king or Block the attack
-// Captures: This Move captures something;
-// Quiets: Moves that do not capture a piece
-// Non-Evasions: Board is currently in check; Generate moves that do not move the king
-
-// Pieces not needed special considerations when generating (basically everything but pawns)
+// Private generation type to match requested type
+// Legal -> All Moves
+// Captures -> Captures only, even if in check
+// Quiets -> Non captures, even if in check
+// Evasions -> In check, any move that will get out of check
+// Non Evasions -> Not in Check, generate all moves
+// Quiet Checks -> Non captures that give check
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum PriGenType {
@@ -25,44 +25,59 @@ enum PriGenType {
     QuietChecks
 }
 
-// public
-// all
-// captures
-// quiets
-// checks
+
+// Public GenTypes are:
+//     All        --> All moves
+//     Captures   --> Captures only
+//     Quiets     --> Non captures
+//     Checks     --> Moves potentially giving check (Note, board cannot be in check)
 
 
+// Pieces to generate moves with inter changably
 const STANDARD_PIECES: [Piece; 4] = [Piece::B, Piece::N, Piece::R, Piece::Q];
 
+// Struct to house some basic information about the board, quick access to magic helper,
+// current turn, etc.
 pub struct MoveGen<'a> {
     movelist: Vec<BitMove>,
     board: &'a Board,
     magic: &'static MagicHelper<'static,'static>,
     turn: Player,
     them: Player,
-    occ: BitBoard,
-    us_occ: BitBoard,
-    them_occ: BitBoard,
+    occ: BitBoard,       // Squares occupied by all
+    us_occ: BitBoard,    // squares occupied by player to move
+    them_occ: BitBoard,  // Squares occupied by the opposing player
 }
 
 impl <'a> MoveGen<'a> {
+
+    // Returns vector of all moves for a given board & GenType
     pub fn generate(chessboard: &Board, gen_type: GenTypes) -> Vec<BitMove> {
         let mut movegen = MoveGen::get_self(&chessboard);
+
+        // target = Bitboard of squares the generator should aim for
         let target: BitBoard = match gen_type {
             GenTypes::All => u64::max_value(),
             GenTypes::Captures => movegen.them_occ,
             GenTypes::Quiets => !movegen.them_occ,
             GenTypes::QuietChecks => u64::max_value(),
         };
-        if chessboard.in_check() {
-            assert_ne!(gen_type,GenTypes::QuietChecks);
-            movegen.generate_evasions(target);
-        } else if gen_type == GenTypes::QuietChecks {
 
+        if chessboard.in_check() {
+            // We are in check, so we should not be looking for checks at this time
+            assert_ne!(gen_type,GenTypes::QuietChecks);
+            // Generate evasions
+            movegen.generate_evasions(target);
+
+        } else if gen_type == GenTypes::QuietChecks {
+            unimplemented!();
         } else {
+
+            // Capture moves cannot include castling
             if gen_type != GenTypes::Captures {
                 movegen.generate_castling();
             }
+
             movegen.gen_non_pawn_king(target);
             movegen.generate_pawn_moves(target, match gen_type {
                 GenTypes::All => PriGenType::Legal,
@@ -76,6 +91,7 @@ impl <'a> MoveGen<'a> {
     }
 
 
+    // Helper function to setup the MoveGen structure
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
             movelist: Vec::with_capacity(25),
@@ -88,48 +104,62 @@ impl <'a> MoveGen<'a> {
             them_occ: chessboard.get_occupied_player(other_player(chessboard.turn()))}
     }
 
-
+    // Helper function to generate evasions
     fn generate_evasions(&mut self, target: BitBoard) {
         let ksq: SQ = self.board.king_sq(self.turn);
 
         let mut slider_attacks: BitBoard = 0;
+
+        // Pieces that could possibly attack the king with sliding attacks
         let mut sliders = self.board.checkers() & (self.board.piece_bb(self.them,Piece::Q)
                                                     | self.board.piece_bb(self.them,Piece::R)
                                                     | self.board.piece_bb(self.them,Piece::B));
 
+        // This is getting all the squares that are attacked by sliders
         while sliders != 0 {
             let check_sq: SQ = bit_scan_forward(sliders);
             slider_attacks |= self.magic.line_bb(check_sq,ksq) ^ sq_to_bb(check_sq);
             sliders &= !(sq_to_bb(check_sq));
         }
 
+        // Possible king moves, Where the king cannot move into a slider / own pieces
         let k_moves: BitBoard = self.magic.king_moves(ksq) & !slider_attacks & !self.us_occ;
 
+        // Seperate captures and non captures
         let mut captures_bb: BitBoard = k_moves & self.them_occ & target;
         let mut non_captures_bb: BitBoard = k_moves & !self.them_occ & target;
         self.move_append_from_bb(&mut captures_bb, ksq, MoveFlag::Capture {ep_capture:false});
         self.move_append_from_bb(&mut non_captures_bb, ksq, MoveFlag::QuietMove );
 
+        // If there is only one checking square, we can block or capture the piece
         if !more_than_one(self.board.checkers()) {
             let checking_sq: SQ = bit_scan_forward(self.board.checkers());
+
+            // Squares that allow a block or capture of the sliding piece
             let target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq)) & target;
+
             self.generate_pawn_moves(target,PriGenType::Evasions);
             self.gen_non_pawn_king(target);
         }
     }
 
+    // Generate king moves with a given target
     fn generate_king_moves(&mut self, target: BitBoard) {
         self.moves_per_piece(Piece::K, target);
     }
 
+    // Generates castling for both sides
     fn generate_castling(&mut self) {
         self.castling_side(CastleType::QueenSide);
         self.castling_side(CastleType::KingSide);
     }
 
+    // Generates castling for a single side
     fn castling_side(&mut self, side: CastleType) {
+        // Make sure we can castle AND the space between the king / rook is clear AND the piece at castling_side is a Rook
         if !self.board.castle_impeded(side) && self.board.can_castle(self.turn,side) &&
             self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(Piece::R) {
+
             let king_side: bool = {side == CastleType::KingSide};
 
             let ksq: SQ = self.board.king_sq(self.turn);
@@ -149,6 +179,9 @@ impl <'a> MoveGen<'a> {
 
             let mut s: SQ = k_to;
             let mut can_castle: bool = true;
+
+            // Loop through all the squares the king goes through
+            // If any enemies attack that square, cannot castle
             'outer: while s != ksq {
                 let attackers = self.board.attackers_to(s,self.occ) & enemies;
                 if attackers != 0 {
@@ -168,12 +201,14 @@ impl <'a> MoveGen<'a> {
         }
     }
 
+    // Generate non-pawn and non-king moves for a target
     fn gen_non_pawn_king(&mut self, target: BitBoard) {
         for piece in STANDARD_PIECES.into_iter() {
             self.moves_per_piece(piece.clone(), target);
         }
     }
 
+    // Get the captures and non-captures for a piece
     fn moves_per_piece(&mut self, piece: Piece, target: BitBoard) {
         let mut piece_bb: BitBoard = self.board.piece_bb(self.turn, piece);
         while piece_bb != 0 {
@@ -188,48 +223,31 @@ impl <'a> MoveGen<'a> {
         }
     }
 
+    // Generate pawn moves
     fn generate_pawn_moves(&mut self, target: BitBoard, gen_type: PriGenType) {
         let rank_8: BitBoard = if self.turn == Player::White {RANK_8} else {RANK_1};
         let rank_7: BitBoard = if self.turn == Player::White {RANK_7} else {RANK_2};
         let rank_3: BitBoard = if self.turn == Player::White {RANK_3} else {RANK_6};
 
-        let down: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
-            Box::new(|x: SQ| x.wrapping_sub(8))
+        let (down, up, left_down, right_down, shift_up, shift_left_up, shift_right_up):
+        (Box<Fn(SQ) -> SQ>, Box<Fn(SQ) -> SQ>, Box<Fn(SQ) -> SQ>, Box<Fn(SQ) -> SQ>,
+         Box<Fn(u64) -> u64>, Box<Fn(u64) -> u64>, Box<Fn(u64) -> u64>) = if self.turn == Player::White {
+            (Box::new(|x: SQ| x.wrapping_sub(8)), // Down
+             Box::new(|x: SQ| x.wrapping_add(8)), // Up
+             Box::new(|x: SQ| x.wrapping_sub(9)), // left_down
+             Box::new(|x: SQ| x.wrapping_sub(7)), // right_down
+             Box::new(|x: u64| x.wrapping_shl(8)), // Shift_up
+             Box::new(|x: u64| (x & !FILE_A).wrapping_shl(7)), // Shift_left_up
+             Box::new(|x: u64| (x & !FILE_H).wrapping_shl(9)) ) // Shift_Right_up
         } else {
-            Box::new(|x: SQ| x.wrapping_add(8))
+            (Box::new(|x: SQ| x.wrapping_add(8)),
+             Box::new(|x: SQ| x.wrapping_sub(8)),
+             Box::new(|x: SQ| x.wrapping_add(9)),
+             Box::new(|x: SQ| x.wrapping_add(7)),
+             Box::new(|x: u64| x.wrapping_shr(8)),
+             Box::new(|x: u64| (x & !FILE_H).wrapping_shr(7)),
+             Box::new(|x: u64| (x & !FILE_A).wrapping_shr(9)))
         };
-        let up: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
-            Box::new(|x: SQ| x.wrapping_add(8))
-        } else {
-            Box::new(|x: SQ| x.wrapping_sub(8))
-        };
-        let left_down: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
-            Box::new(|x: SQ| x.wrapping_sub(9))
-        } else {
-            Box::new(|x: SQ| x.wrapping_add(9))
-        };
-        let right_down: Box<Fn(SQ) -> SQ> = if self.turn == Player::White {
-            Box::new(|x: SQ| x.wrapping_sub(7))
-        } else {
-            Box::new(|x: SQ| x.wrapping_add(7))
-        };
-
-        let shift_up: Box<Fn(u64) -> u64> = if self.turn == Player::White {
-            Box::new(|x: u64| x.wrapping_shl(8))
-        } else {
-            Box::new(|x: u64| x.wrapping_shr(8))
-        };
-        let shift_left_up: Box<Fn(u64) -> u64> = if self.turn == Player::White {
-            Box::new(|x: u64| (x & !FILE_A).wrapping_shl(7) )
-        } else {
-            Box::new(|x: u64| (x & !FILE_H).wrapping_shr(7))
-        };
-        let shift_right_up: Box<Fn(u64) -> u64> = if self.turn == Player::White {
-            Box::new(|x: u64| (x & !FILE_H).wrapping_shl(9))
-        } else {
-            Box::new(|x: u64| (x & !FILE_A).wrapping_shr(9))
-        };
-
 
         let all_pawns: BitBoard = self.board.piece_bb(self.turn,Piece::P);
         let pawns_rank_7: BitBoard = all_pawns & rank_7;
@@ -251,8 +269,8 @@ impl <'a> MoveGen<'a> {
                 target
             } else { !self.occ };
 
-            let mut push_one: BitBoard = empty_squares & shift_up(pawns_not_rank_7) & target;
-            let mut push_two: BitBoard = shift_up(push_one & rank_3) & empty_squares & target;
+            let mut push_one: BitBoard = empty_squares & shift_up(pawns_not_rank_7);
+            let mut push_two: BitBoard = shift_up(push_one & rank_3) & empty_squares;
 
             if gen_type == PriGenType::Evasions {
                 push_one &= target;
@@ -383,6 +401,7 @@ impl <'a> MoveGen<'a> {
         }
     }
 
+    // Helper function for creating promotions
     fn create_promotions(&mut self, dst: SQ, src: SQ, is_capture: bool) {
         let prom_pieces = [Piece::Q, Piece::N, Piece::R, Piece::B];
         for piece in prom_pieces.into_iter() {

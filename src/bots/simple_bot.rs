@@ -29,7 +29,7 @@ impl BestMove {
     }
 
     pub fn negate(&mut self) {
-        self.score.wrapping_neg();
+        self.score = self.score.wrapping_neg();
     }
 }
 
@@ -64,7 +64,7 @@ fn minimax(bot: &mut SimpleBot, max_depth: u16) -> BestMove {
     let moves = bot.board.generate_moves();
     if moves.len() == 0 {
         if bot.board.in_check() {
-            return BestMove::new(NEG_INFINITY - (bot.board.depth() as i16));
+            return BestMove::new(MATE + (bot.board.depth() as i16));
         } else {
             return BestMove::new(STALEMATE);
         }
@@ -86,7 +86,7 @@ fn minimax(bot: &mut SimpleBot, max_depth: u16) -> BestMove {
 }
 
 fn eval_board(bot: &mut SimpleBot) -> BestMove {
-    BestMove::new(Eval::eval(&bot.board))
+    BestMove::new(Eval::eval_low(&bot.board))
 }
 
 
