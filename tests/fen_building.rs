@@ -1,7 +1,7 @@
-extern crate rusty_chess;
+extern crate Pleco;
 
-use rusty_chess::board::Board;
-use rusty_chess::templates::{Piece, Player};
+use Pleco::board::Board;
+use Pleco::templates::{Piece, Player};
 use std::*;
 
 

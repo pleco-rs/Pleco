@@ -91,6 +91,7 @@ pub fn lsb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
 
+// Returns the Most Significant Bit
 #[inline(always)]
 pub fn msb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.leading_zeros())

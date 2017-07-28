@@ -1,6 +1,5 @@
 use bit_twiddles;
 use std::mem;
-//use std::ptr;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
@@ -18,7 +17,6 @@ pub const RANK_CNT: usize = 8;
 pub const TOTAL_CASTLING_CNT: usize = 4;
 pub const CASTLING_SIDES: usize = 2;
 
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GenTypes {
     All,
@@ -26,12 +24,6 @@ pub enum GenTypes {
     Quiets,
     QuietChecks,
 }
-
-// Legal Moves:
-//      Evasions: In check
-//      Non-Evasions: Not in Check
-//
-
 
 
 #[repr(u8)]

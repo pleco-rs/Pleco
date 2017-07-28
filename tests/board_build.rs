@@ -1,10 +1,10 @@
-extern crate rusty_chess;
+extern crate Pleco;
 
-use rusty_chess::board as board;
+use Pleco::board as board;
 use self::board::{Board as Board};
-use rusty_chess::templates::*;
-use rusty_chess::piece_move::*;
-use rusty_chess::*;
+use Pleco::templates::*;
+use Pleco::piece_move::*;
+use Pleco::*;
 use std::*;
 
 

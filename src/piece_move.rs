@@ -39,12 +39,12 @@ use std::fmt;
 // Castles have the src as the king bit and the dst as the rook
 
 
-static SRC_MASK: u16 = 0b0000000000111111;
-static DST_MASK: u16 = 0b0000111111000000;
-static PR_MASK: u16 = 0b1000000000000000;
-static CP_MASK: u16 = 0b0100000000000000;
+static SRC_MASK: u16 =  0b0000000000111111;
+static DST_MASK: u16 =  0b0000111111000000;
+static PR_MASK: u16 =   0b1000000000000000;
+static CP_MASK: u16 =   0b0100000000000000;
 static FLAG_MASK: u16 = 0b1111000000000000;
-static SP_MASK: u16 = 0b0011000000000000;
+static SP_MASK: u16 =   0b0011000000000000;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct BitMove {
@@ -123,7 +123,7 @@ impl BitMove {
     pub fn is_quiet_move(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 0 }
 
     #[inline(always)]
-    pub fn is_promo(&self) -> bool { ((self.data & PR_MASK) >> 15) == 1 }
+    pub fn is_promo(&self) -> bool { (self.data & PR_MASK) != 0 }
 
     #[inline(always)]
     pub fn get_dest(&self) -> SQ { ((self.data & DST_MASK) >> 6) as u8 }
@@ -196,7 +196,7 @@ impl BitMove {
         if self.is_promo() {
             let char = match self.promo_piece() {
                 Piece::B => 'b',
-                Piece::N => 'k',
+                Piece::N => 'n',
                 Piece::R => 'r',
                 Piece::Q => 'q',
                 _ => unreachable!()
@@ -204,6 +204,10 @@ impl BitMove {
             s.push(char);
         }
         s
+    }
+
+    pub fn get_raw(&self) -> u16 {
+        self.data
     }
 }
 

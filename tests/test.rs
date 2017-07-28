@@ -1,6 +1,6 @@
 #![feature(test)]
 
-extern crate rusty_chess;
+extern crate Pleco;
 extern crate test;
 
 mod bit_manipulations;
