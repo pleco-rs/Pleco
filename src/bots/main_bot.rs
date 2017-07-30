@@ -300,7 +300,7 @@ fn mvv_lva_sort(moves: &mut[BitMove], board: &Board) {
     moves.sort_by_key(|a| {
         let piece = board.piece_at_sq((*a).get_src()).unwrap();
 
-        if a.is_capture() {
+        if a.is_capture()  {
             value_of_piece(board.captured_piece(*a).unwrap())
                 - value_of_piece(piece)
         } else if piece == Piece::P {

@@ -1320,6 +1320,9 @@ impl  Board  {
 
     // Returns the piece that was captured, if any
     pub fn captured_piece(&self, m: BitMove) -> Option<Piece> {
+        if m.is_en_passant() {
+            return Some(Piece::P);
+        }
         let dst = m.get_dest();
         self.piece_at_bb(sq_to_bb(dst),other_player(self.turn))
     }
