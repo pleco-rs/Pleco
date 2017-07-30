@@ -23,6 +23,7 @@ The internal Board Implementation aims to have the following features upon compl
 - [ ] Allowing matches against Human Player
 
 
+
 The AI Bot aims to have the following features:
 - [x] Alpha-Beta pruning
 - [x] Multi-threaded search with rayon.rs

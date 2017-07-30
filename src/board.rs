@@ -6,6 +6,7 @@ use piece_move::{BitMove,MoveType};
 use std::option::*;
 use std::sync::Arc;
 use std::{mem,fmt,char};
+use std::hash::{Hash,Hasher};
 use test;
 
 
@@ -86,8 +87,15 @@ impl Castling {
         }
     }
 
+    pub fn no_castling(&self) -> bool {
+        !self.contains(WHITE_K) &&
+        !self.contains(WHITE_Q) &&
+        !self.contains(BLACK_K) &&
+        !self.contains(BLACK_Q)
+    }
+
     pub fn pretty_string(&self) -> String {
-        if self.is_empty() {
+        if self.no_castling() {
             "-".to_owned()
         } else {
             let mut s = String::default();
@@ -231,7 +239,7 @@ pub struct Board {
     occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
     occ_all: BitBoard, // Total Occupancy BB
     half_moves: u16, // Total moves
-    depth: u16, // current depth from actual position (Basically, moves since shallow clone was called)
+    depth: u16, // current depth from actual position that has been travelled
     piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
     piece_locations: PieceLocations,
     
@@ -365,7 +373,7 @@ impl Board {
         for sq in 0..SQ_CNT as SQ {
             let player_piece = self.piece_locations.player_piece_at(sq);
             if player_piece.is_some() {
-                let player = player_piece.unwrap().0;
+                let player: Player = player_piece.unwrap().0;
                 let piece = player_piece.unwrap().1;
                 let bb = sq_to_bb(sq);
                 self.bit_boards[player as usize][piece as usize] |= bb;
@@ -539,6 +547,12 @@ impl Board {
         s.push_str(&format!("{}",(self.half_moves / 2)+ 1));
 
         s
+    }
+}
+
+impl Hash for Board {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.zobrist().hash(state);
     }
 }
 
@@ -746,6 +760,47 @@ impl  Board  {
         self.half_moves -= 1;
         self.depth -= 1;
         assert!(self.is_okay());
+    }
+
+    // Apply a null move. For evaluation purposes only
+    pub fn apply_null_move(&mut self) {
+        assert!(self.checkers() != 0);
+
+        let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
+
+        self.depth += 1;
+        // New Arc for the board to have by making a partial clone of the current state
+        let mut next_arc_state = Arc::new(self.state.partial_clone());
+
+        {
+            let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+
+            new_state.rule_50 += 1;
+            new_state.ply += 1;
+
+            new_state.prev = Some(self.state.clone());
+
+            if self.state.ep_square != NO_SQ {
+                zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
+                new_state.ep_square = NO_SQ;
+            }
+
+            new_state.zobrast = zob;
+            self.turn = other_player(self.turn);
+            self.undo_moves.push(BitMove::null());
+            self.set_check_info(new_state);
+        }
+        self.state = next_arc_state;
+        assert!(self.is_okay());
+    }
+
+    // Undoing a null move
+    pub fn undo_null_move(&mut self) {
+        assert!(!self.undo_moves.is_empty());
+        let null_move = self.undo_moves.pop().unwrap();
+        assert!(null_move.is_null());
+        self.turn = other_player(self.turn);
+        self.state = self.state.get_prev().unwrap();
     }
 
     // generate mall possible moves for the current player to move
@@ -1025,6 +1080,10 @@ impl  Board  {
         self.piece_counts[player as usize].iter().sum()
     }
 
+    pub fn count_all_pieces(&self) -> u8 {
+        self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
+    }
+
     // Returns the piece at the given place. Number of bits must be equal to 1, or else won't work
     pub fn piece_at_bb(&self, src_bit: BitBoard, player: Player) -> Option<Piece> {
         let sq: SQ = bb_to_sq(src_bit);
@@ -1070,6 +1129,14 @@ impl  Board  {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
 
+    pub fn all_pinned_pieces(&self, player: Player) -> BitBoard {
+        self.state.blockers_king[player as usize]
+    }
+
+    pub fn pinning_pieces(&self, player: Player) -> BitBoard {
+        self.state.pinners_king[player as usize]
+    }
+
     // Return if a player has the possibility of castling.
     // Doesn't check for can castle at that very moment
     pub fn can_castle(&self, player: Player, castle_type: CastleType) -> bool {
@@ -1095,6 +1162,10 @@ impl  Board  {
     // Returns if the current player has castled ever
     pub fn has_castled(&self, player: Player) -> bool {
         self.state.castling.has_castled(player)
+    }
+
+    pub fn piece_last_captured(&self) -> Option<Piece> {
+        self.state.captured_piece
     }
 }
 

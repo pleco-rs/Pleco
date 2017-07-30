@@ -320,7 +320,7 @@ impl <'a> MoveGen<'a> {
         // Promotions
         if pawns_rank_7 != 0 && (gen_type != PriGenType::Evasions || (target & rank_8) != 0){
             if gen_type == PriGenType::Captures {
-                empty_squares = !self.them_occ;
+                empty_squares = !self.occ;
             } else if gen_type == PriGenType::Evasions {
                 empty_squares &= target;
             }

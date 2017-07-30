@@ -4,6 +4,7 @@ use Pleco::{board,piece_move,templates,timer};
 use Pleco::bots::simple_bot::SimpleBot;
 use Pleco::bots::random_bot::RandomBot;
 use Pleco::bots::parallel_minimax_bot::ParallelSearcher;
+use Pleco::bots::main_bot::MainBot;
 use Pleco::bots::alphabeta_bot::AlphaBetaBot;
 use Pleco::bots::jamboree_bot::JamboreeSearcher;
 use Pleco::engine::Searcher;
@@ -18,6 +19,7 @@ use Pleco::templates::print_bitboard;
 // 1r1qkbn1/p2B2pr/b4QP1/1ppp4/P2n1P1p/2P5/1P2P2P/RNB1K1NR b KQ - 2 16
 
 fn main() {
+//    gen_random_fens();
     sample_run();
 }
 
@@ -28,7 +30,7 @@ fn test_between() {
 }
 
 fn sample_run() {
-    let max = 200;
+    let max = 400;
     let mut b = board::Board::default();
     let mut i = 0;
     println!("Starting Board");
@@ -47,12 +49,12 @@ fn sample_run() {
             if i % 2 == 0 {
                 println!("------------------------------------------------");
                 println!();
-                let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),6);
+                let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),6);
                 println!("{}'s move: {}",JamboreeSearcher::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),5);
-                println!("{}'s move: {}",AlphaBetaBot::name(),mov);
+                let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),6);
+                println!("{}'s move: {}",MainBot::name(),mov);
                 b.apply_move(mov);
             }
             println!();
@@ -62,6 +64,75 @@ fn sample_run() {
     }
 
     b.fancy_print();
+}
+
+fn test_multiple() {
+
+    let max = 400;
+    let mut b = board::Board::default();
+    let mut i = 0; let max = 400;
+    let mut b = board::Board::default();
+    let mut i = 0;
+}
+
+fn gen_random_fens() {
+    let mut b = board::Board::default();
+    println!("[");
+    println!("\"{}\",",b.get_fen());
+
+    let quota = 4;
+    let moves = 0;
+
+    let max = 200;
+    let mut i = 0;
+
+    let mut beginning_count = 0;
+    let mut middle_count = 0;
+    let mut end_count = 0;
+
+    while beginning_count + middle_count + end_count <= (quota * 3) - 1 {
+        if i == 0 {
+            let mov = RandomBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),1);
+            b.apply_move(mov);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),1);
+            b.apply_move(mov);
+        }
+        if b.checkmate() || i > max {
+            if beginning_count + middle_count + end_count > quota * 3 {
+                i = max;
+            } else {
+                i = 0;
+                b = board::Board::default();
+            }
+        } else {
+            if i % 11 == 9 {
+                let mov = RandomBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),1);
+                b.apply_move(mov);
+            } else if i % 2 == 0 {
+                let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                b.apply_move(mov);
+            } else {
+                let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                b.apply_move(mov);
+            }
+            i += 1;
+        }
+
+        if b.zobrist() % 23 == 11 && b.moves_played() > 7 {
+            if b.count_all_pieces() < 13 && end_count < quota {
+                println!("\"{}\",",b.get_fen());
+                end_count += 1;
+            } else if b.count_all_pieces() < 24 && middle_count < quota {
+                println!("\"{}\",",b.get_fen());
+                middle_count += 1;
+            } else if beginning_count < quota {
+                println!("\"{}\",",b.get_fen());
+                middle_count += 1;
+            }
+        }
+    }
+
+    println!("]");
 }
 
 fn test_moving() {

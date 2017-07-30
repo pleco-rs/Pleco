@@ -115,6 +115,14 @@ impl BitMove {
         BitMove { data: (flag_bits << 12) | src | dst }
     }
 
+    pub fn null() -> Self {
+        BitMove {data: 0}
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.data == 0
+    }
+
     // Note: Encompasses two missing Spots
     #[inline(always)]
     pub fn is_capture(&self) -> bool { ((self.data & CP_MASK) >> 14) == 1 }
