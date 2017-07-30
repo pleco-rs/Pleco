@@ -54,11 +54,11 @@ impl Searcher for ParallelSearcher {
         "Parallel Searcher"
     }
 
-    fn best_move(mut board: Board, timer: Timer) -> BitMove {
+    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
         ParallelSearcher::best_move_depth(board, timer, MAX_PLY)
     }
 
-    fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
+    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
         parallel_minimax(&mut board.shallow_clone(), max_depth).best_move.unwrap()
     }
 
@@ -117,16 +117,21 @@ fn eval_board(board: &mut Board) -> BestMove {
     BestMove::new(Eval::eval_low(&board))
 }
 
-
-#[bench]
-fn bench_bot_ply_4__parallel_bot(b: &mut Bencher) {
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = 2;
-        (0..iter).fold(0, |a: u64, c| {
-            let mov = ParallelSearcher::best_move_depth(b.shallow_clone(),timer::Timer::new(20),4);
-            b.apply_move(mov);
-            a ^ (b.zobrist()) }
-        )
-    })
-}
+//
+//#[bench]
+//fn bench_bot_ply_3__parallel_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ParallelSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}

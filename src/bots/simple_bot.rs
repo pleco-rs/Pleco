@@ -12,7 +12,6 @@ const MAX_PLY: u16 = 3;
 
 pub struct SimpleBot {
     board: Board,
-    timer: Timer,
 }
 
 pub struct BestMove {
@@ -43,12 +42,12 @@ impl Searcher for SimpleBot {
         "Simple Searcher"
     }
 
-    fn best_move(board: Board, timer: Timer) -> BitMove {
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
         SimpleBot::best_move_depth(board, timer, MAX_PLY)
     }
 
-    fn best_move_depth(board: Board, timer: Timer, max_depth: u16) -> BitMove {
-        let mut b = SimpleBot {board: board, timer: timer};
+    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+        let mut b = SimpleBot {board: board};
         minimax(&mut b, max_depth).best_move.unwrap()
     }
 
@@ -91,13 +90,18 @@ fn eval_board(bot: &mut SimpleBot) -> BestMove {
 
 
 #[bench]
-fn bench_bot_ply_4__simple_bot(b: &mut Bencher) {
+fn bench_bot_ply_3__simple_bot(b: &mut Bencher) {
+    use templates::TEST_FENS;
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
-        let iter = 2;
+        let iter = TEST_FENS.len();
+        let mut i = 0;
         (0..iter).fold(0, |a: u64, c| {
-            let mov = SimpleBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),4);
+            //            println!("{}",TEST_FENS[i]);
+            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+            let mov = SimpleBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
             b.apply_move(mov);
+            i += 1;
             a ^ (b.zobrist()) }
         )
     })

@@ -1,10 +1,17 @@
 use bit_twiddles;
 use std::mem;
+use std::fmt;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
     White = 0,
     Black = 1,
+}
+
+impl fmt::Display for Player {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", if self == &Player::White {"White"} else {"Black"})
+    }
 }
 
 pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
@@ -25,6 +32,10 @@ pub enum GenTypes {
     QuietChecks,
 }
 
+pub enum GameState {
+
+}
+
 
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -35,6 +46,18 @@ pub enum Piece {
     B = 2,
     N = 1,
     P = 0,
+}
+
+impl fmt::Display for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", if self == &Piece::P {"Pawn"}
+                else if self == &Piece::N {"Knight"}
+                else if self == &Piece::B {"Bishop"}
+                else if self == &Piece::R {"Rook"}
+                else if self == &Piece::Q {"Queen"}
+            else {"King"}
+        )
+    }
 }
 
 #[repr(u8)]
@@ -189,6 +212,14 @@ pub const FILE_DISPLAYS: [char; FILE_CNT] = ['a','b','c','d','e','f','g','h'];
 pub const RANK_DISPLAYS: [char; FILE_CNT] = ['1','2','3','4','5','6','7','8'];
 
 
+pub const TEST_FENS: [&str; 5] = [
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "rnr5/pN1kppb1/5n1p/2p5/8/1P2PP2/3B2PP/5KNR w - - 6 27",
+    "2r5/1r3k2/p7/2B2N1p/4PP2/1P6/2n3PP/7K b - - 0 40",
+    "8/8/5r2/1p5p/6kP/4n3/7K/ w - - 0 57",
+    "rnb1k1nr/ppp4p/1b1pppp1/8/4P2P/1Q3N2/PPPP1PP1/RNB1KB1R b KQkq - 1 10",
+];
+
 // Yes
 #[inline]
 pub fn copy_piece_bbs(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT]) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
@@ -218,6 +249,17 @@ pub fn other_player(p: Player) -> Player {
     }
 }
 
+#[inline]
+pub fn value_of_piece(p: Piece) -> i8 {
+    match p {
+        Piece::P => 1,
+        Piece::N => 3,
+        Piece::B => 3,
+        Piece::R => 5,
+        Piece::Q => 8,
+        Piece::K => 0
+    }
+}
 #[inline]
 pub fn relative_square(p: Player, sq: SQ) -> SQ {
     assert!(sq_is_okay(sq));

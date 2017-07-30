@@ -32,7 +32,7 @@ impl BestMove {
 }
 
 
-pub struct AlphaBetaBot {
+pub struct  AlphaBetaBot {
     board: Board,
     timer: Timer,
 }
@@ -42,14 +42,13 @@ impl Searcher for AlphaBetaBot {
         "AlphaBeta Searcher"
     }
 
-    fn best_move_depth(mut board: Board, timer: Timer, max_depth: u16) -> BitMove {
-        let mut bot = AlphaBetaBot { board: board, timer: timer};
+    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
         let alpha: i16 = NEG_INFINITY;
         let beta:  i16 = INFINITY;
-        alpha_beta_search(&mut bot.board.shallow_clone(), alpha, beta, max_depth).best_move.unwrap()
+        alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth).best_move.unwrap()
     }
 
-    fn best_move(mut board: Board, timer: Timer) -> BitMove {
+    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
         AlphaBetaBot::best_move_depth(board, timer, MAX_PLY)
     }
 }
@@ -101,43 +100,67 @@ fn eval_board(board: &mut Board) -> BestMove {
     m
 }
 
-#[bench]
-fn bench_bot_ply_4__alphabeta_bot(b: &mut Bencher) {
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = 2;
-        (0..iter).fold(0, |a: u64, c| {
-            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),4);
-            b.apply_move(mov);
-            a ^ (b.zobrist()) }
-        )
-    })
-}
-
-#[bench]
-fn bench_bot_ply_5__alphabeta_bot(b: &mut Bencher) {
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = 2;
-        (0..iter).fold(0, |a: u64, c| {
-            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),5);
-            b.apply_move(mov);
-            a ^ (b.zobrist()) }
-        )
-    })
-}
-
-#[bench]
-fn bench_bot_ply_6__alphabeta_bot(b: &mut Bencher) {
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = 2;
-        (0..iter).fold(0, |a: u64, c| {
-            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),timer::Timer::new(20),6);
-            b.apply_move(mov);
-            a ^ (b.zobrist()) }
-        )
-    })
+#[test]
+pub fn test_fens() {
+    use templates::TEST_FENS;
+    for str in TEST_FENS.iter() {
+        Board::new_from_fen(str);
+    }
 }
 
 
+//#[bench]
+//fn bench_bot_ply_3__alphabeta_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+////            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
+//
+//#[bench]
+//fn bench_bot_ply_4__alphabeta_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),4);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
+//
+//#[bench]
+//fn bench_bot_ply_5__alphabeta_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
+//
+//
