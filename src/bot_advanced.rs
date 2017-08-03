@@ -1,11 +1,11 @@
-use board::Board;
+use board::*;
 use std::cmp::Ordering;
 use timer::*;
 use templates::*;
-
+use std::thread;
 use piece_move::BitMove;
-use engine::Searcher;
-use bots::eval::*;
+use engine::*;
+use eval::*;
 use rayon;
 use rayon::prelude::*;
 use test::Bencher;
@@ -17,33 +17,33 @@ const MAX_PLY: u16 = 5;
 const DIVIDE_CUTOFF: usize = 6;
 const DIVISOR_SEQ: usize = 5;
 
+//                            0   1   2   3   4   5   6   7   8   9
+static PLYS_SEQ: [u16; 10] = [0 , 1,  2,  2,  2,  2,  2,  3,  3,  3];
 
-pub struct BestMove {
-    pub best_move: Option<BitMove>,
-    pub score: i16,
-}
-
-impl BestMove {
-    pub fn new(score: i16) -> Self {
-        BestMove{
-            best_move: None,
-            score: score
-        }
-    }
-
-    pub fn negate(mut self) -> Self {
-        self.score *= -1;
-        self
-    }
-}
 
 
 pub struct MainBot {
     board: Board,
     timer: Timer,
 }
-//                            0   1   2   3   4   5   6   7   8   9
-static PLYS_SEQ: [u16; 10] = [0 , 1,  2,  2,  2,  2,  2,  3,  3,  3];
+
+impl Searcher for MainBot {
+    fn name() -> &'static str {
+        "Pleco Searcher"
+    }
+
+    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+        iterative_deepening(board, timer, max_depth)
+        //        let alpha: i16 = NEG_INFINITY;
+        //        let beta:  i16 = INFINITY;
+        //        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2).best_move.unwrap()
+    }
+
+    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
+        MainBot::best_move_depth(board, timer, MAX_PLY)
+    }
+}
+
 
 fn iterative_deepening(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
    // for each level from 1 to max depth, search the node and return the best move and score
@@ -89,22 +89,8 @@ fn iterative_deepening(mut board: Board, timer: &Timer, max_depth: u16) -> BitMo
     best_move.best_move.unwrap()
 }
 
-impl Searcher for MainBot {
-    fn name() -> &'static str {
-        "Main Searcher"
-    }
 
-    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
-        iterative_deepening(board, timer, max_depth)
-//        let alpha: i16 = NEG_INFINITY;
-//        let beta:  i16 = INFINITY;
-//        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2).best_move.unwrap()
-    }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
-        MainBot::best_move_depth(board, timer, MAX_PLY)
-    }
-}
 fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16) -> BestMove {
     assert!(alpha <= beta);
     if board.depth() >= max_depth {
@@ -318,13 +304,29 @@ fn mvv_lva_sort(moves: &mut[BitMove], board: &Board) {
 
 fn eval_board(board: &mut Board) -> BestMove {
     let m = BestMove::new(Eval::eval_low(&board));
-    //    println!("score {} at eval", m.score);
-    //    board.pretty_print();
     m
 }
 
 
 
+pub struct BestMove {
+    pub best_move: Option<BitMove>,
+    pub score: i16,
+}
+
+impl BestMove {
+    pub fn new(score: i16) -> Self {
+        BestMove{
+            best_move: None,
+            score: score
+        }
+    }
+
+    pub fn negate(mut self) -> Self {
+        self.score *= -1;
+        self
+    }
+}
 
 
 
@@ -339,7 +341,7 @@ fn bench_bot_ply_3__main_bot(b: &mut Bencher) {
         (0..iter).fold(0, |a: u64, c| {
             //            println!("{}",TEST_FENS[i]);
             let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
+            let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 3);
             b.apply_move(mov);
             i += 1;
             a ^ (b.zobrist()) }
@@ -357,7 +359,7 @@ fn bench_bot_ply_4__main_bot(b: &mut Bencher) {
         (0..iter).fold(0, |a: u64, c| {
             //            println!("{}",TEST_FENS[i]);
             let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),4);
+            let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
             b.apply_move(mov);
             i += 1;
             a ^ (b.zobrist()) }
@@ -376,7 +378,7 @@ fn bench_bot_ply_5__main_bot(b: &mut Bencher) {
         (0..iter).fold(0, |a: u64, c| {
             //            println!("{}",TEST_FENS[i]);
             let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+            let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
             b.apply_move(mov);
             i += 1;
             a ^ (b.zobrist()) }

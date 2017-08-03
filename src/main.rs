@@ -1,12 +1,12 @@
 extern crate Pleco;
 extern crate rand;
 use Pleco::{board,piece_move,templates,timer};
-use Pleco::bots::simple_bot::SimpleBot;
-use Pleco::bots::random_bot::RandomBot;
-use Pleco::bots::parallel_minimax_bot::ParallelSearcher;
-use Pleco::bots::main_bot::MainBot;
-use Pleco::bots::alphabeta_bot::AlphaBetaBot;
-use Pleco::bots::jamboree_bot::JamboreeSearcher;
+use Pleco::bot_minimax::SimpleBot;
+use Pleco::bot_random::RandomBot;
+use Pleco::bot_parallel_minimax::ParallelSearcher;
+use Pleco::bot_advanced::MainBot;
+use Pleco::bot_alphabeta::AlphaBetaBot;
+use Pleco::bot_jamboree::JamboreeSearcher;
 use Pleco::engine::Searcher;
 use Pleco::templates::print_bitboard;
 
@@ -53,8 +53,8 @@ fn sample_run() {
                 println!("{}'s move: {}",JamboreeSearcher::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),6);
-                println!("{}'s move: {}",MainBot::name(),mov);
+                let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 6);
+                println!("{}'s move: {}", MainBot::name(), mov);
                 b.apply_move(mov);
             }
             println!();
@@ -112,7 +112,7 @@ fn gen_random_fens() {
                 let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
                 b.apply_move(mov);
             } else {
-                let mov = MainBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
                 b.apply_move(mov);
             }
             i += 1;

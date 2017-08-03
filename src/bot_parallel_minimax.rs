@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
-use bots::eval::*;
+use eval::*;
 use rayon;
 use rayon::prelude::*;
 use test::Bencher;

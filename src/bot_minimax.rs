@@ -2,7 +2,7 @@ use board::*;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
-use bots::eval::*;
+use eval::*;
 use test;
 use test::Bencher;
 use timer;

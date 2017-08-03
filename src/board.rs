@@ -1181,6 +1181,10 @@ impl  Board  {
         self.in_check() && self.generate_moves().is_empty()
     }
 
+    pub fn stalemate(&self) -> bool {
+        !self.in_check() && self.generate_moves().is_empty()
+    }
+
     // Checks on the current player's king
     pub fn checkers(&self) -> BitBoard {
         self.state.checkers_bb
@@ -1393,7 +1397,7 @@ impl  Board  {
         println!("Castling bits: {:b}, Rule 50: {}, ep_sq: {}", self.state.castling, self.state.rule_50, self.state.ep_square);
         println!("Total Moves: {}, ply: {}, depth: {}", self.half_moves, self.state.ply, self.depth);
         println!("Zobrist: {:x}", self.state.zobrast);
-        println!("");
+        println!();
 
 
     }

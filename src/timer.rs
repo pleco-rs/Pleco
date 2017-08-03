@@ -56,7 +56,7 @@ impl Timer {
     }
 
     pub fn out_of_time(&self) -> bool {
-        self.seconds_remaining[self.turn as usize] > 0
+        self.seconds_remaining[self.turn as usize] <= 0
     }
 }
 
