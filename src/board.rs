@@ -509,7 +509,7 @@ impl Board {
                 if blanks != 0 {
                     s.push(char::from_digit(blanks, 10).unwrap());
                     blanks = 0;
-                }
+                    }
                 s.push('/');
             }
             let piece = self.piece_at_sq(sq);
@@ -699,7 +699,7 @@ impl  Board  {
             new_state.zobrast = zob;
 
             if gives_check {
-                new_state.checkers_bb = self.attackers_to(self.king_sq(them),self.get_occupied());
+                new_state.checkers_bb = self.attackers_to(self.king_sq(them),self.get_occupied()) & self.get_occupied_player(us);
             }
 
             self.turn = them;
