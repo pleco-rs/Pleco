@@ -28,6 +28,8 @@ rand = "0.3"
 chrono = "0.4"
 rayon = "0.8.2"
 futures = "0.1.14"
+parking_lot = {version = "*"}
+owning_ref = {version = "*"}
 
 [features]
 default = []

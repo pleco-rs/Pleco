@@ -73,12 +73,12 @@ fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.len() == 0 {
         if board.in_check() {
-            return BestMove::new(MATE + (board.depth() as i16));
+            BestMove::new(MATE + (board.depth() as i16))
         } else {
-            return BestMove::new(STALEMATE);
+            BestMove::new(STALEMATE)
         }
     } else {
-        return parallel_task(&moves, board, max_depth);
+        parallel_task(&moves, board, max_depth)
     }
 }
 
@@ -95,7 +95,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
                 best_move = Some(*mov);
             }
         }
-        return BestMove{best_move: best_move, score: best_value};
+        BestMove{best_move: best_move, score: best_value}
     } else {
         let mid_point = slice.len() / 2;
         let (left, right) = slice.split_at(mid_point);
@@ -106,9 +106,9 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
             || parallel_task(right, board, max_depth));
 
         if left_move.score > right_move.score {
-            return left_move;
+            left_move
         } else {
-            return right_move;
+            right_move
         }
     }
 }

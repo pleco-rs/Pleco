@@ -96,7 +96,7 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE
 impl <'a> Eval<'a> {
     pub fn eval_low(board: &Board) -> i16 {
         let eval = Eval {
-            board: &board,
+            board: board,
             us: board.turn(),
             them: other_player(board.turn())
         };
@@ -257,19 +257,17 @@ fn eval_pawns(board: &Board, turn: Player) -> i16 {
         if file_counts[i] > 1 {
             score -= (file_counts[i] * 3) as i16;
         }
-        if i > 0 && i < 7 {
-            if file_counts[i] > 0 {
-                if file_counts[i - 1] != 0 {
-                    if file_counts[i + 1] != 0 {
-                        score += 7;
-                    } else {
-                        score += 3;
-                    }
-                } else if file_counts[i + 1] != 0 {
-                    score += 3;
+        if i > 0 && i < 7 && file_counts[i] > 0 {
+            if file_counts[i - 1] != 0 {
+                if file_counts[i + 1] != 0 {
+                    score += 7;
                 } else {
-                    score -= 4;
+                    score += 3;
                 }
+            } else if file_counts[i + 1] != 0 {
+                score += 3;
+            } else {
+                score -= 4;
             }
         }
     }

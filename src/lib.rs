@@ -16,6 +16,8 @@ extern crate chrono;
 extern crate test;
 extern crate rayon;
 extern crate futures;
+extern crate parking_lot;
+extern crate owning_ref;
 
 
 pub mod board;
@@ -36,6 +38,7 @@ pub mod transposition_table;
 pub mod bot_alphabeta;
 pub mod bot_jamboree;
 pub mod bot_advanced;
+pub mod bot_expert;
 
 pub mod eval;
 

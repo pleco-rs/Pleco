@@ -31,7 +31,7 @@ static DEBRUIJ_T: &'static [u8] = &[
     13, 18,  8, 12,  7,  6,  5, 63
 ];
 
-const DEBRUIJ_M: u64 = 0x03f79d71b4cb0a89;
+const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 
 // BitScanForward: Djuin:            9 s
 // BitScanForward: PopCount - Old : 18 s
@@ -115,7 +115,7 @@ fn popcount_old(x: u64) -> u8 {
 
 
 
-pub const TRAILS: u64 = 17000;
+pub const TRAILS: u64 = 17_000;
 
 
 #[bench]

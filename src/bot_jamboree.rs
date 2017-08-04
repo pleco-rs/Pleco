@@ -106,9 +106,9 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
     let returned_move = parallel_task(non_seq, board, alpha, beta, max_depth, plys_seq);
 
     if returned_move.score > alpha {
-        return returned_move;
+        returned_move
     } else {
-        return BestMove{best_move: best_move, score: alpha};
+        BestMove{best_move: best_move, score: alpha}
     }
 }
 

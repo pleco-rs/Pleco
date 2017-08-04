@@ -24,12 +24,12 @@ lazy_static! {
 
 bitflags! {
     pub struct Castling: u8 {
-        const WHITE_K      = 0b00001000;
-        const WHITE_Q      = 0b00000100;
-        const BLACK_K      = 0b00000010;
-        const BLACK_Q      = 0b00000001;
-        const WHITE_CASTLE = 0b01000000;
-        const BLACK_CASTLE = 0b00010000;
+        const WHITE_K      = 0b0000_1000;
+        const WHITE_Q      = 0b0000_0100;
+        const BLACK_K      = 0b0000_0010;
+        const BLACK_Q      = 0b0000_0001;
+        const WHITE_CASTLE = 0b0100_0000;
+        const BLACK_CASTLE = 0b0001_0000;
         const WHITE_ALL    = WHITE_K.bits
                            | WHITE_Q.bits;
         const BLACK_ALL    = BLACK_K.bits
@@ -505,14 +505,12 @@ impl Board {
         let mut blanks = 0;
         for idx in 0..SQ_CNT as u8 {
             let sq = (idx % 8) + (8 * (7 - (idx / 8)));
-            if file_of_sq(sq) == File::A {
-                if rank_of_sq(sq) != Rank::R8 {
-                    if blanks != 0 {
-                        s.push(char::from_digit(blanks, 10).unwrap());
-                        blanks = 0;
-                    }
-                    s.push('/');
+            if file_of_sq(sq) == File::A && rank_of_sq(sq) != Rank::R8 {
+                if blanks != 0 {
+                    s.push(char::from_digit(blanks, 10).unwrap());
+                    blanks = 0;
                 }
+                s.push('/');
             }
             let piece = self.piece_at_sq(sq);
             let player = self.player_at_sq(sq);

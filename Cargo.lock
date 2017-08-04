@@ -8,6 +8,8 @@ dependencies = [
  "clippy 0.0.148 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "owning_ref 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

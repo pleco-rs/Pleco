@@ -4,7 +4,7 @@ use Pleco::{board,piece_move,templates,timer};
 use Pleco::bot_minimax::SimpleBot;
 use Pleco::bot_random::RandomBot;
 use Pleco::bot_parallel_minimax::ParallelSearcher;
-use Pleco::bot_advanced::MainBot;
+use Pleco::bot_advanced::AdvancedBot;
 use Pleco::bot_alphabeta::AlphaBetaBot;
 use Pleco::bot_jamboree::JamboreeSearcher;
 use Pleco::engine::Searcher;
@@ -53,8 +53,8 @@ fn sample_run() {
                 println!("{}'s move: {}",JamboreeSearcher::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 6);
-                println!("{}'s move: {}", MainBot::name(), mov);
+                let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 6);
+                println!("{}'s move: {}", AdvancedBot::name(), mov);
                 b.apply_move(mov);
             }
             println!();
@@ -66,14 +66,7 @@ fn sample_run() {
     b.fancy_print();
 }
 
-fn test_multiple() {
 
-    let max = 400;
-    let mut b = board::Board::default();
-    let mut i = 0; let max = 400;
-    let mut b = board::Board::default();
-    let mut i = 0;
-}
 
 fn gen_random_fens() {
     let mut b = board::Board::default();
@@ -112,7 +105,7 @@ fn gen_random_fens() {
                 let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
                 b.apply_move(mov);
             } else {
-                let mov = MainBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
                 b.apply_move(mov);
             }
             i += 1;
