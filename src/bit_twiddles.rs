@@ -31,7 +31,7 @@ static DEBRUIJ_T: &'static [u8] = &[
     13, 18,  8, 12,  7,  6,  5, 63
 ];
 
-const DEBRUIJ_M: u64 = 0x03f79d71b4cb0a89;
+const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 
 // BitScanForward: Djuin:            9 s
 // BitScanForward: PopCount - Old : 18 s
@@ -41,34 +41,62 @@ const DEBRUIJ_M: u64 = 0x03f79d71b4cb0a89;
 // PopCount: Old :  37 s
 
 
-// Returns count of bits
+/// Counts the number of bits
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::bit_twiddles::*;
+///
+/// assert_eq!(popcount64(0b1001), 2);
+/// ```
 #[inline(always)]
 pub fn popcount64(x: u64) -> u8 {
      x.count_ones() as u8
 }
 
-
-//// Pops and Returns the lsb
-//#[inline]
-//pub fn pop_lsb(x: &mut u64) -> u64 {
-//    let lsb: Bitboard = lsb(*x);
-//    x &= !lsb;
-//    lsb
-//}
-
-// Returns index of the LSB
+/// Returns index of the Least Significant Bit
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::bit_twiddles::*;
+///
+/// assert_eq!(bit_scan_forward(0b10100),2)
+/// ```
+///
 #[inline(always)]
 pub fn bit_scan_forward(bits: u64) -> u8 {
     assert_ne!(bits, 0);
     DEBRUIJ_T[(((bits ^ bits.wrapping_sub(1)).wrapping_mul(DEBRUIJ_M)).wrapping_shr(58)) as usize]
 }
 
+/// Returns index of the Least Significant Bit
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::bit_twiddles::*;
+///
+/// assert_eq!(bit_scan_forward(0b100),2);
+/// ```
+///
 #[inline(always)]
 pub fn bit_scan_forward_rust_trailing(bits: u64) -> u8 {
     assert_ne!(bits, 0);
     bits.trailing_zeros() as u8
 }
 
+/// Returns index of the Most Significant Bit
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::bit_twiddles::*;
+///
+/// assert_eq!(bit_scan_reverse(0b101),2);
+/// ```
+///
 #[inline(always)]
 pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     assert_ne!(bb, 0);
@@ -80,23 +108,57 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 32;
     DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
 }
+
+/// Returns if there are more than one bits in a u64
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::bit_twiddles::*;
+///
+/// assert!(more_than_one(0b1111));
+///
+/// assert!(!more_than_one(0b0001))
+///
+/// ```
 #[inline(always)]
 pub fn more_than_one(x: u64) -> bool {
     (x & (x.wrapping_sub(1))) != 0
 }
 
-// Returns the LSB
+
+/// Returns the least significant bit
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::bit_twiddles::*;
+///
+/// assert_eq!(lsb(0b1001), 0b0001);
+/// ```
 #[inline(always)]
 pub fn lsb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
 
-// Returns the Most Significant Bit
+
+// Returns the most significant bit
+//
+// # Examples
+//
+// ```
+// use Pleco::bit_twiddles::*;
+//
+// assert_eq!(msb(0b1001), 0b1000);
+// ```
 #[inline(always)]
 pub fn msb(bits: u64) -> u64 {
+    // BAD CODE DO NOT USE
     (1 as u64).wrapping_shl(bits.leading_zeros())
 }
 
+
+/// Counts the number of bits
 #[inline(always)]
 fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
@@ -115,7 +177,7 @@ fn popcount_old(x: u64) -> u8 {
 
 
 
-pub const TRAILS: u64 = 17000;
+pub const TRAILS: u64 = 17_000;
 
 
 #[bench]

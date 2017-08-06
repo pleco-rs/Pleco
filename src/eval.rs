@@ -2,7 +2,7 @@ use board::Board;
 use std::i16;
 use templates::*;
 use bit_twiddles::*;
-use lazy_static;
+use magic_helper::*;
 
 
 lazy_static! {
@@ -69,8 +69,6 @@ pub struct Eval<'a> {
 }
 
 
-pub const MIN: i16 = 0b1000000000000000;
-pub const MAX: i16 = 0b0111111111111111;
 
 pub const INFINITY: i16 = 30_002;
 pub const NEG_INFINITY: i16 = -30_001;
@@ -86,10 +84,10 @@ pub const KING_VALUE: i16 = 350;
 pub const CASTLE_ABILITY: i16 = 7;
 pub const CASTLE_BONUS: i16 = 20;
 
-pub const KING_BOTTOM: i16 = 13;
+pub const KING_BOTTOM: i16 = 11;
 
 pub const MATE: i16 = -25000;
-pub const CHECK: i16 = 40;
+pub const CHECK: i16 = 20;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
 pub const PIECE_VALS: [i16; PIECE_CNT] = [PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE, ROOK_VALUE, QUEEN_VALUE, KING_VALUE];
@@ -98,13 +96,13 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [PAWN_VALUE, KNIGHT_VALUE, BISHOP_VALUE
 impl <'a> Eval<'a> {
     pub fn eval_low(board: &Board) -> i16 {
         let eval = Eval {
-            board: &board,
+            board: board,
             us: board.turn(),
             them: other_player(board.turn())
         };
         eval.eval_simple()
-
     }
+
 }
 
 
@@ -114,8 +112,16 @@ impl <'a> Eval<'a> {
             + self.eval_castling()
             + self.eval_king_pos()
             + self.eval_bishop_pos()
-            + self.eval_pawns()
             + self.eval_knight_pos()
+        + eval_pawns(self.board, self.us)
+            - eval_pawns(self.board, self.them)
+        + eval_king_blockers_pinners(self.board, self.us)
+            - eval_king_blockers_pinners(self.board, self.them)
+        + if self.board.rule_50() > 40 {
+            -33
+        } else {
+            0
+        }
     }
 
     fn eval_piece_counts(&self) -> i16 {
@@ -147,10 +153,18 @@ impl <'a> Eval<'a> {
 
     fn eval_king_pos(&self) -> i16 {
         let mut score: i16 = 0;
-//        if rank_of_sq(self.board.king_sq(self.us)) == Rank::R1 || rank_of_sq(self.board.king_sq(self.us)) == Rank::R8 {score += KING_BOTTOM}
-//        if rank_of_sq(self.board.king_sq(self.them)) == Rank::R1 || rank_of_sq(self.board.king_sq(self.them)) == Rank::R8 {score -= KING_BOTTOM}
+        let us_ksq = self.board.king_sq(self.us);
+        let them_ksq = self.board.king_sq(self.them);
+        if rank_of_sq(us_ksq) == Rank::R1 || rank_of_sq(us_ksq) == Rank::R8 {score += KING_BOTTOM}
+        if rank_of_sq(them_ksq) == Rank::R1 || rank_of_sq(them_ksq) == Rank::R8 {score -= KING_BOTTOM}
 
         if self.board.in_check() { score -= CHECK}
+
+        let bb_around_us = self.board.magic_helper.king_moves(us_ksq) & self.board.get_occupied_player(self.us);
+        let bb_around_them = self.board.magic_helper.king_moves(them_ksq) & self.board.get_occupied_player(self.them);
+
+        score += popcount64(bb_around_us) as i16 * 9;
+        score -= popcount64(bb_around_them) as i16 * 9;
 
         score
     }
@@ -170,6 +184,10 @@ impl <'a> Eval<'a> {
             score -=  BISHOP_POS[self.them as usize][bb_to_sq(lsb) as usize];
             them_pb &= !lsb;
         }
+
+        if self.board.count_piece(self.us, Piece::B) > 1 { score += 19}
+        if self.board.count_piece(self.them, Piece::B) > 1 { score -= 19}
+
         score
     }
 
@@ -191,86 +209,70 @@ impl <'a> Eval<'a> {
         score
     }
 
-    fn eval_pawns(&self) -> i16 {
-        let mut score: i16 = 0;
-        let us_p = self.board.piece_bb(self.us, Piece::P);
-        let them_p = self.board.piece_bb(self.them, Piece::P);
+}
 
-        let mut us_pos_m = us_p;
-        while us_pos_m != 0 {
-            let lsb = lsb(us_pos_m);
-            score +=  PAWN_POS[self.us as usize][bb_to_sq(lsb) as usize];
-            us_pos_m &= !lsb;
-        }
+fn eval_king_blockers_pinners(board: &Board, turn: Player) -> i16 {
+    let mut score: i16 = 0;
 
-        let mut them_pos_m = them_p;
-        while them_pos_m != 0 {
-            let lsb = lsb(them_pos_m);
-            score -=  PAWN_POS[self.them as usize][bb_to_sq(lsb) as usize];
-            them_pos_m &= !lsb;
-        }
+    let blockers: BitBoard = board.all_pinned_pieces(turn);
 
+    let them_blockers = blockers & board.get_occupied_player(other_player(turn));
 
-        let files_us: [u8; FILE_CNT] = [popcount64(FILE_A & us_p),
-                                        popcount64(FILE_B & us_p),
-                                        popcount64(FILE_C & us_p),
-                                        popcount64(FILE_D & us_p),
-                                        popcount64(FILE_E & us_p),
-                                        popcount64(FILE_F & us_p),
-                                        popcount64(FILE_G & us_p),
-                                        popcount64(FILE_H & us_p)];
+    // Our pieces blocking a check on their king
+    let us_blockers = blockers & board.get_occupied_player(turn);
 
-        let files_them: [u8; FILE_CNT] = [popcount64(FILE_A & them_p),
-            popcount64(FILE_B & them_p),
-            popcount64(FILE_C & them_p),
-            popcount64(FILE_D & them_p),
-            popcount64(FILE_E & them_p),
-            popcount64(FILE_F & them_p),
-            popcount64(FILE_G & them_p),
-            popcount64(FILE_H & them_p)];
+    score += 25 * popcount64(us_blockers) as i16;
 
-        for i in 0..FILE_CNT {
-            if files_us[i] > 1 {
-                score -= (files_us[i] * 3) as i16;
-            }
-            if files_them[i] > 1 {
-                score += (files_them[i] * 3) as i16;
-            }
+    score += 6 * popcount64(them_blockers) as i16;
 
-            if i > 0 && i < 7 {
-                if files_us[i] != 0 {
-                    if files_us[i - 1] != 0 {
-                        if files_us[i + 1] != 0 {
-                            score += 7;
-                        } else {
-                            score += 3;
-                        }
-                    } else if files_us[i + 1] != 0 {
-                        score += 3;
-                    } else {
-                        score -= 4;
-                    }
-                }
+    score
+}
 
-                if files_them[i] != 0 {
-                    if files_them[i - 1] != 0 {
-                        if files_them[i + 1] != 0 {
-                            score -= 7;
-                        } else {
-                            score -= 3;
-                        }
-                    } else if files_them[i + 1] != 0 {
-                        score -= 3;
-                    } else {
-                        score += 4;
-                    }
-                }
-            }
-        }
+fn eval_pawns(board: &Board, turn: Player) -> i16 {
+    let mut score: i16 = 0;
 
+    let pawns_bb = board.piece_bb(turn, Piece::P);
+    let mut bb = pawns_bb;
+    let mut file_counts: [u8; FILE_CNT] = [0; FILE_CNT];
 
-        score
+    let mut sqs_defended: BitBoard = 0;
+
+    while bb != 0 {
+        let lsb = lsb(bb);
+        let sq = bb_to_sq(lsb);
+        sqs_defended |= board.magic_helper.pawn_attacks_from(sq, turn);
+        file_counts[(sq % 8) as usize] += 1;
+        score +=  PAWN_POS[turn as usize][sq as usize];
+        bb &= !lsb;
     }
+
+    // Add score for squares attacked by pawns
+    score += popcount64(sqs_defended) as i16;
+
+    // Add score for pawns defending other pawns
+    sqs_defended &= pawns_bb;
+    score += 3 * popcount64(sqs_defended) as i16;
+
+    for i in 0..FILE_CNT {
+        if file_counts[i] > 1 {
+            score -= (file_counts[i] * 3) as i16;
+        }
+        if i > 0 && i < 7 && file_counts[i] > 0 {
+            if file_counts[i - 1] != 0 {
+                if file_counts[i + 1] != 0 {
+                    score += 7;
+                } else {
+                    score += 3;
+                }
+            } else if file_counts[i + 1] != 0 {
+                score += 3;
+            } else {
+                score -= 4;
+            }
+        }
+    }
+
+    score
 
 
 }

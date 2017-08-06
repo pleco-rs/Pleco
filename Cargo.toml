@@ -10,6 +10,12 @@ include = [
     ".gitignore"
 ]
 
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+debug = true
+
 [lib]
 name = "Pleco"
 
@@ -17,10 +23,13 @@ name = "Pleco"
 clippy = {version = "*", optional = true}
 lazy_static = "0.2"
 chashmap = {version = "*"}
-bitflags = {version = "*"}
+bitflags = "0.9"
 rand = "0.3"
 chrono = "0.4"
-rayon = {version = "*"}
+rayon = "0.8.2"
+futures = "0.1.14"
+parking_lot = {version = "*"}
+owning_ref = {version = "*"}
 
 [features]
 default = []

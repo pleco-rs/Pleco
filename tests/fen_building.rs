@@ -1,7 +1,7 @@
 extern crate Pleco;
 
 use Pleco::board::Board;
-use Pleco::templates::{Piece, Player};
+use Pleco::templates::{Piece, Player, TEST_FENS};
 use std::*;
 
 
@@ -39,7 +39,12 @@ fn multiple_fens() {
     assert_eq!(board.count_piece(Player::Black, Piece::R),  0);
     assert_eq!(board.count_piece(Player::Black, Piece::Q),  0);
     assert_eq!(board.count_piece(Player::Black, Piece::K),  1);
+}
 
-
+#[test]
+pub fn test_fens() {
+    for str in TEST_FENS.iter() {
+        Board::new_from_fen(str);
+    }
 }
 

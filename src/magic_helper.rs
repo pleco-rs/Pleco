@@ -7,13 +7,13 @@ use test::Bencher;
 use test;
 
 
-const ROOK_M_SIZE: usize = 102400;
+const ROOK_M_SIZE: usize = 102_400;
 const BISHOP_M_SIZE: usize = 5248;
 const B_DELTAS: [i8; 4] = [7,9,-9,-7];
 const R_DELTAS: [i8; 4] = [8,1,-8,-1];
 const DELTAS: [[i8; 4]; 2] = [B_DELTAS, R_DELTAS];
-const SEEDS: [[u64;8]; 2] = [[ 8977, 44560, 54343, 38998,  5731, 95205, 104912, 17020 ],
-                             [  728, 10316, 55013, 32803, 12281, 15100,  16645,   255 ]];
+const SEEDS: [[u64;8]; 2] = [[ 8977, 44_560, 54_343, 38_998,  5731, 95_205, 104_912, 17_020 ],
+                             [  728, 10_316, 55_013, 32_803, 12_281, 15_100,  16_645,   255 ]];
 
 
 
@@ -66,7 +66,7 @@ impl Zobrist {
             side: 0,
         };
 
-        let zobrist_seed: u64 = 23081;
+        let zobrist_seed: u64 = 23_081;
         let mut rng = PRNG::init(zobrist_seed);
 
         for i in 0..SQ_CNT {
@@ -698,7 +698,7 @@ impl PRNG {
         self.seed ^= self.seed >> 12;
         self.seed ^= self.seed << 25;
         self.seed ^= self.seed >> 27;
-        self.seed.wrapping_mul(2685821657736338717)
+        self.seed.wrapping_mul(2685_8216_5773_6338_717)
     }
 }
 

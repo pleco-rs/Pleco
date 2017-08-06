@@ -136,10 +136,10 @@ impl <'a> MoveGen<'a> {
             let checking_sq: SQ = bit_scan_forward(self.board.checkers());
 
             // Squares that allow a block or capture of the sliding piece
-            let target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq)) & target;
+            let new_target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq)) & target;
 
-            self.generate_pawn_moves(target,PriGenType::Evasions);
-            self.gen_non_pawn_king(target);
+            self.generate_pawn_moves(new_target,PriGenType::Evasions);
+            self.gen_non_pawn_king(new_target);
         }
     }
 
@@ -320,7 +320,7 @@ impl <'a> MoveGen<'a> {
         // Promotions
         if pawns_rank_7 != 0 && (gen_type != PriGenType::Evasions || (target & rank_8) != 0){
             if gen_type == PriGenType::Captures {
-                empty_squares = !self.them_occ;
+                empty_squares = !self.occ;
             } else if gen_type == PriGenType::Evasions {
                 empty_squares &= target;
             }

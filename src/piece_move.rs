@@ -39,12 +39,12 @@ use std::fmt;
 // Castles have the src as the king bit and the dst as the rook
 
 
-static SRC_MASK: u16 =  0b0000000000111111;
-static DST_MASK: u16 =  0b0000111111000000;
-static PR_MASK: u16 =   0b1000000000000000;
-static CP_MASK: u16 =   0b0100000000000000;
-static FLAG_MASK: u16 = 0b1111000000000000;
-static SP_MASK: u16 =   0b0011000000000000;
+static SRC_MASK: u16 =  0b0000_000000_111111;
+static DST_MASK: u16 =  0b0000_111111_000000;
+static PR_MASK: u16 =   0b1000_000000_000000;
+static CP_MASK: u16 =   0b0100_000000_000000;
+static FLAG_MASK: u16 = 0b1111_000000_000000;
+static SP_MASK: u16 =   0b0011_000000_000000;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct BitMove {
@@ -113,6 +113,14 @@ impl BitMove {
             MoveFlag::QuietMove => { 0 }
         };
         BitMove { data: (flag_bits << 12) | src | dst }
+    }
+
+    pub fn null() -> Self {
+        BitMove {data: 0}
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.data == 0
     }
 
     // Note: Encompasses two missing Spots
