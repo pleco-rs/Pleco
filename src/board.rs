@@ -1,4 +1,4 @@
-#![crate_name = "Pleco"]
+#![crate_name = "pleco"]
 
 use templates::*;
 use magic_helper::MagicHelper;
@@ -439,7 +439,7 @@ impl BoardState {
 /// # Examples
 ///
 /// ```
-/// use Pleco::board::*;
+/// use pleco::board::*;
 ///
 /// fn main() {
 ///     let mut chessboard = Board::default();
@@ -508,8 +508,8 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use Pleco::board::*;
-    /// use Pleco::templates::Player;
+    /// use pleco::board::*;
+    /// use pleco::templates::Player;
     ///
     /// let mut chessboard = Board::default();
     /// assert_eq!(chessboard.count_pieces_player(Player::White),16);
@@ -683,7 +683,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use Pleco::board::*;
+    /// use pleco::board::*;
     ///
     /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     /// assert_eq!(board.count_all_pieces(),32);
@@ -853,7 +853,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use Pleco::board::*;
+    /// use pleco::board::*;
     ///
     /// let board = Board::default();
     /// assert_eq!(board.get_fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -920,7 +920,7 @@ impl  Board  {
     ///
     /// # Example
     /// ```
-    /// use Pleco::board::*;
+    /// use pleco::board::*;
     ///
     /// fn main() {
     ///     let mut chessboard = Board::default();
@@ -1095,7 +1095,7 @@ impl  Board  {
     /// Cannot be done if after a [Board::shallow_clone()] or [Board::parallel_clone()] has been done
     /// and no subsequent moves have been played:
     /// ```rust,should_panic
-    /// use Pleco::board::*;
+    /// use pleco::board::*;
     ///
     ///
     /// let mut chessboard = Board::default();

@@ -1,6 +1,6 @@
 #![feature(test)]
 
-extern crate Pleco;
+extern crate pleco;
 extern crate test;
 
 mod bit_manipulations;

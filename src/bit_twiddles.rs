@@ -46,7 +46,7 @@ const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(popcount64(0b1001), 2);
 /// ```
@@ -60,7 +60,7 @@ pub fn popcount64(x: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_forward(0b10100),2)
 /// ```
@@ -76,7 +76,7 @@ pub fn bit_scan_forward(bits: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_forward(0b100),2);
 /// ```
@@ -92,7 +92,7 @@ pub fn bit_scan_forward_rust_trailing(bits: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_reverse(0b101),2);
 /// ```
@@ -114,7 +114,7 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert!(more_than_one(0b1111));
 ///
@@ -132,7 +132,7 @@ pub fn more_than_one(x: u64) -> bool {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(lsb(0b1001), 0b0001);
 /// ```
@@ -147,7 +147,7 @@ pub fn lsb(bits: u64) -> u64 {
 // # Examples
 //
 // ```
-// use Pleco::bit_twiddles::*;
+// use pleco::bit_twiddles::*;
 //
 // assert_eq!(msb(0b1001), 0b1000);
 // ```

@@ -1,5 +1,5 @@
 [package]
-name = "Pleco"
+name = "pleco"
 version = "0.1.0"
 authors = ["stephenf <stephenf@cs.washington.edu>"]
 
@@ -17,7 +17,7 @@ opt-level = 3
 debug = true
 
 [lib]
-name = "Pleco"
+name = "pleco"
 
 [dependencies]
 clippy = {version = "*", optional = true}

@@ -24,10 +24,8 @@ pub enum NodeType {
 
 use owning_ref::{OwningHandle, OwningRef};
 use parking_lot::{RwLock, RwLockWriteGuard, RwLockReadGuard};
-use std::collections::hash_map;
-use std::hash::{Hash, Hasher, BuildHasher};
 use std::sync::atomic::{self, AtomicUsize};
-use std::{mem, ops, cmp, fmt, iter};
+use std::{mem, ops, cmp, fmt};
 
 /// The atomic ordering used throughout the code.
 const ORDERING: atomic::Ordering = atomic::Ordering::Relaxed;

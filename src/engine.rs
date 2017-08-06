@@ -4,16 +4,11 @@ use piece_move::BitMove;
 use timer::Timer;
 use board::Board;
 use templates::Player;
-use std::sync::mpsc::{Sender, Receiver};
-use std::sync::mpsc;
 use std::{thread,time};
-use futures::future::Future;
-use futures::{Poll,Async};
 use rayon;
 use std::io;
-use std::result::Result;
 use std::error::Error;
-use std::sync::{Arc,Mutex,RwLock};
+use std::sync::{Arc,Mutex};
 
 
 // Trait that defines an object that can play chess

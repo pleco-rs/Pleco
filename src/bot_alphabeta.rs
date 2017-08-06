@@ -4,11 +4,9 @@ use timer::*;
 use piece_move::*;
 use engine::Searcher;
 use eval::*;
-use rayon;
-use rayon::prelude::*;
 use test::Bencher;
 use test;
-use timer;
+
 
 const MAX_PLY: u16 = 5;
 
