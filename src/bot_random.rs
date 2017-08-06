@@ -4,6 +4,7 @@ use piece_move::{BitMove};
 extern crate rand;
 use engine::Searcher;
 
+
 pub struct RandomBot {
     board: Board,
     timer: Timer,

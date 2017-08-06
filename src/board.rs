@@ -1,3 +1,5 @@
+#![crate_name = "Pleco"]
+
 use templates::*;
 use magic_helper::MagicHelper;
 use movegen::MoveGen;
@@ -18,27 +20,36 @@ lazy_static! {
 }
 
 
-// ***** CASTLING STRUCTURE ***** //
-
-// Structure to help with recognizing the various possibilities of castling
-
 bitflags! {
+    /// Structure to help with recognizing the various possibilities of castling
+    ///
+    /// For internal use by the Board only
+    ///
+    /// Keeps track two things for each player
+    /// 1) What sides are possible to castle from
+    /// 2) Has this player castled
+    ///
+    /// Does not garauntee that the player containing a castling bit can castle at that
+    /// time. Rather marks that castling is a possibility, e.g. a Castling struct
+    /// containing a bit marking WHITE_Q means that neither the White King or Queen-side
+    /// rook has moved since the game started.
     pub struct Castling: u8 {
-        const WHITE_K      = 0b0000_1000;
-        const WHITE_Q      = 0b0000_0100;
-        const BLACK_K      = 0b0000_0010;
-        const BLACK_Q      = 0b0000_0001;
-        const WHITE_CASTLE = 0b0100_0000;
-        const BLACK_CASTLE = 0b0001_0000;
-        const WHITE_ALL    = WHITE_K.bits
+        const WHITE_K      = 0b0000_1000; // White has King-side Castling ability
+        const WHITE_Q      = 0b0000_0100; // White has Queen-side Castling ability
+        const BLACK_K      = 0b0000_0010; // Black has King-side Castling ability
+        const BLACK_Q      = 0b0000_0001; // White has Queen-side Castling ability
+        const WHITE_CASTLE = 0b0100_0000; // White has castled
+        const BLACK_CASTLE = 0b0001_0000; // Black has castled
+        const WHITE_ALL    = WHITE_K.bits // White can castle for both sides
                            | WHITE_Q.bits;
-        const BLACK_ALL    = BLACK_K.bits
+        const BLACK_ALL    = BLACK_K.bits // Black can castle for both sides
                            | BLACK_Q.bits;
 
     }
 }
 
 impl Castling {
+    /// Removes all castling possibility for a single player
     pub fn remove_player_castling(&mut self, player: Player) {
         match player {
             Player::White => self.bits &= BLACK_ALL.bits,
@@ -46,6 +57,7 @@ impl Castling {
         }
     }
 
+    /// Removes King-Side castling possibility for a single player
     pub fn remove_king_side_castling(&mut self, player: Player) {
         match player {
             Player::White => self.bits &= !WHITE_K.bits,
@@ -53,6 +65,7 @@ impl Castling {
         }
     }
 
+    /// Removes Queen-Side castling possibility for a single player
     pub fn remove_queen_side_castling(&mut self, player: Player) {
         match player {
             Player::White => self.bits &= !WHITE_Q.bits,
@@ -60,6 +73,7 @@ impl Castling {
         }
     }
 
+    /// Returns if a player can castle for a given side
     pub fn castle_rights(&self, player: Player, side: CastleType) -> bool {
         match player {
             Player::White => match side {
@@ -73,6 +87,7 @@ impl Castling {
         }
     }
 
+    /// Sets the bits to represent a given player has castled
     pub fn set_castling(&mut self, player: Player) {
         match player {
             Player::White => self.bits |= WHITE_CASTLE.bits,
@@ -80,6 +95,7 @@ impl Castling {
         }
     }
 
+    /// Returns if a given player has castled
     pub fn has_castled(&self, player: Player) -> bool {
         match player {
             Player::White => self.contains(WHITE_CASTLE),
@@ -87,6 +103,7 @@ impl Castling {
         }
     }
 
+    /// Returns if both players have lost their ability to castle
     pub fn no_castling(&self) -> bool {
         !self.contains(WHITE_K) &&
         !self.contains(WHITE_Q) &&
@@ -94,6 +111,11 @@ impl Castling {
         !self.contains(BLACK_Q)
     }
 
+    /// Returns a pretty String representing the castling state
+    ///
+    /// Used for FEN Strings, with ('K' | 'Q') representing white castling abilities,
+    /// and ('k' | 'q') representing black castling abilities. If there are no bits set,
+    /// returns a String containing "-".
     pub fn pretty_string(&self) -> String {
         if self.no_castling() {
             "-".to_owned()
@@ -126,26 +148,191 @@ impl fmt::Display for Castling {
     }
 }
 
-// ***** BOARD STATE ***** //
 
-// 'BoardState' is a structure to hold useful information concerning the current state of the board
-// This is information that is computed upon making a move, and requires expensive computation at that.
-// It is stored in the Heap by 'Board' as an Arc<BoardState>, as cloning the board can lead to multiple
-// references to the same BoardState.
-//
-// Contains a 'prev' field to point to the BoardState Before the current one. Used as a 'Option<Arc<BoardState>>'
-// in order to account for the possibility of their being no previous move.
-//
 
+/// Struct to allow fast lookups for any square.
+///
+/// Provides the Stores if there is any piece at a square, and if so provides its color and piece type.
+///
+/// Piece Locations is a BLIND structure, Providing a function of  |sq| -> |Piece AND/OR Player|
+/// The reverse cannot be done Looking up squares from a piece / player.
+struct PieceLocations {
+    // Pieces are represented by the following bit_patterns:
+    // x000 -> Pawn (P)
+    // x001 -> Knight(N)
+    // x010 -> Bishop (B)
+    // x011 -> Rook(R)
+    // x100 -> Queen(Q)
+    // x101 -> King (K)
+    // x110 -> ??? Undefined??
+    // x111 -> None
+    // 0xxx -> White Piece
+    // 1xxx -> Black Piece
+
+    // array of u8's, with standard ordering mapping index to square
+    data: [u8; 64]
+}
+
+impl Clone for PieceLocations {
+    // Need to use transmute copy as [_;64] does not automatically implement Clone
+    fn clone(&self) -> PieceLocations {
+        unsafe { mem::transmute_copy(&*&self.data) }
+    }
+}
+
+
+impl PieceLocations {
+    /// Constructs a new Piece Locations with a defaulty of no pieces on the board
+    pub fn blank() -> PieceLocations { PieceLocations {data: [0b0111; 64]}}
+
+    /// Constructs a new Piece Locations with the memory at a default of Zeros
+    ///
+    /// This function is unsafe as Zeros represent Pawns, and therefore care mus be taken
+    /// to iterate through every square and ensure the correct piece or lack of piece
+    /// is placed
+    pub unsafe fn default() -> PieceLocations { PieceLocations {data: [0; 64]}}
+
+    /// Places a given piece for a given player at a certain square
+    ///
+    /// # Panics
+    /// Panics if Square is of index higher than 63
+    pub fn place(&mut self, square: SQ, player: Player, piece: Piece, ) {
+        assert!(sq_is_okay(square));
+        self.data[square as usize] = self.create_sq(player,piece);
+    }
+
+    /// Removes a Square
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63
+    pub fn remove(&mut self, square: SQ) {
+        assert!(sq_is_okay(square));
+        self.data[square as usize] = 0b0111
+    }
+
+    /// Returns the Piece at a square, Or None if the square is empty.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63.
+    pub fn piece_at(&self, square: SQ) -> Option<Piece> {
+        assert!(sq_is_okay(square));
+        let byte: u8 = self.data[square as usize] & 0b0111;
+        match byte {
+            0b0000 => Some(Piece::P),
+            0b0001 => Some(Piece::N),
+            0b0010 => Some(Piece::B),
+            0b0011 => Some(Piece::R),
+            0b0100 => Some(Piece::Q),
+            0b0101 => Some(Piece::K),
+            0b0110 => unreachable!(), // Undefined
+            0b0111 => None,
+            _ => unreachable!()
+        }
+    }
+
+    /// Returns the Piece at a square for a given player.
+    ///
+    /// If there is no piece at that square, or there is a piece of another player at that square,
+    /// returns None.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63
+    pub fn piece_at_for_player(&self, square: SQ, player: Player) -> Option<Piece>{
+        let op = self.player_piece_at(square);
+        if op.is_some() {
+            let p = op.unwrap();
+            if p.0 == player {
+                Some(p.1)
+            } else { None }
+        } else { None }
+    }
+
+    /// Returns the player (if any) is occupying a square
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63
+    pub fn player_at(&self, square: SQ) -> Option<Player> {
+        let byte: u8 = self.data[square as usize];
+        if byte == 0b0111 || byte == 0b1111 {
+            return None;
+        }
+        if byte < 8 {
+            Some(Player::White)
+        } else {
+            Some(Player::Black)
+        }
+    }
+
+    /// Returns a Tuple of (Player,Piece) of the player and associated piece at a
+    /// given square. Returns None if the square is unoccupied.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63
+    pub fn player_piece_at(&self, square: SQ) -> Option<(Player,Piece)> {
+        let byte: u8 = self.data[square as usize];
+        match byte {
+            0b0000 => Some((Player::White, Piece::P)),
+            0b0001 => Some((Player::White, Piece::N)),
+            0b0010 => Some((Player::White, Piece::B)),
+            0b0011 => Some((Player::White, Piece::R)),
+            0b0100 => Some((Player::White, Piece::Q)),
+            0b0101 => Some((Player::White, Piece::K)),
+            0b0110 => unreachable!(), // Undefined
+            0b0111 |  0b1111 => None,
+            0b1000 => Some((Player::Black, Piece::P)),
+            0b1001 => Some((Player::Black, Piece::N)),
+            0b1010 => Some((Player::Black, Piece::B)),
+            0b1011 => Some((Player::Black, Piece::R)),
+            0b1100 => Some((Player::Black, Piece::Q)),
+            0b1101 => Some((Player::Black, Piece::K)),
+            0b1110 => unreachable!(), // Undefined
+            _ => unreachable!()
+        }
+    }
+
+
+
+    /// Returns the bits representation of a given piece and player
+    fn create_sq(&self, player: Player, piece: Piece) -> u8 {
+        let mut loc: u8 = match piece {
+            Piece::P => 0b0000,
+            Piece::N => 0b0001,
+            Piece::B => 0b0010,
+            Piece::R => 0b0011,
+            Piece::Q => 0b0100,
+            Piece::K => 0b0101,
+        };
+        if player == Player::Black {
+            loc |= 0b1000;
+        }
+        loc
+    }
+}
+
+
+
+/// Holds useful information concerning the current state of the board.
+///
+/// This is information that is computed upon making a move, and requires expensive computation to do so as well.
+/// It is stored in the Heap by 'Board' as an Arc<BoardState>, as cloning the board can lead to multiple
+/// references to the same BoardState.
+///
+/// Allows for easy undo-ing of moves as these keep track of their previous board state, forming a
+/// Tree-like persistent Stack
 #[derive(Clone)]
 struct BoardState {
-    // Automatically Created
-    pub castling: Castling, // special castling bits
+    // The Following Fields are easily copied from the previous version and possbily modified
+    pub castling: Castling,
     pub rule_50: i16,
-    pub ply: u16, // How deep are we?
+    pub ply: u16,
     pub ep_square: SQ,
 
-    // Recomputed after a move
+    // These fields MUST be Recomputed after a move
     pub zobrast: u64,
     pub captured_piece: Option<Piece>,
     pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
@@ -153,23 +340,32 @@ struct BoardState {
     pub pinners_king: [BitBoard; PLAYER_CNT],
     pub check_sqs: [BitBoard; PIECE_CNT],
 
-    // Previous state
+    // Previous State of the board ( one move ago)
     pub prev: Option<Arc<BoardState>>,
 
-    //  castling      ->  0000WWBB, left = 1 -> king side castle possible, right = 1 -> queen side castle possible
-    //  rule50        -> 50 moves without capture, for draws
-    //  ply           -> How many moves deep this current thread is
-    //  ep_square     -> square of en-passant, if any
-    //  zobrast       -> zobrist key
-    //  capture_piece -> If a piece was recently captured
-    //  checkers_bb   -> Bitboard of all pieces where the king is in check
-    //  blockers_king -> per each player, bitboard of pieces blocking an attack on a king. Of BOTH Sides
-    //  pinners_king  -> Per each player, bitboard of pieces currently pinning the opponent's king
-    //  check_sqs     -> Array of pieces where check is there
+    //  castling      ->  Castling Bit Structure, keeping track of if either player can castle.
+    //                    as well as if they have castled.
+    //  rule50        ->  Moves since last capture, pawn move or castle. Used for Draws.
+    //  ply           ->  How many moves deep this current thread is.
+    //                    ** NOTE: CURRENTLY UNUSED **
+    //  ep_square     ->  If the last move was a double pawn push, this will be equal to the square behind.
+    //                    the push. ep_square =  abs(sq_to - sq_from) / 2
+    //                    If last move was not a double push, this will equal NO_SQ (which is 64).
+    //  zobrast       ->  Zobrist Key of the current board.
+    //  capture_piece ->  The Piece (if any) that was last captured
+    //  checkers_bb   ->  Bitboard of all pieces who currently check the king
+
+    //  blockers_king ->  Per each player, bitboard of pieces blocking an attack on a that player's king.
+    //                    NOTE: Can contain opponents pieces. E.g. a Black Pawn can block an attack of a white king
+    //                    if there is a queen (or some other sliding piece) on the same line.
+    //  pinners_king  ->  Per each player, bitboard of pieces currently pinning the opponent's king.
+    //                    e.g:, a Black Queen pinning a piece (of either side) to White's King
+    //  check_sqs     ->  Array of BitBoards where for Each Piece, gives a spot the piece can move to where
+    //                    the opposing player's king would be in check.
 }
 
 impl BoardState {
-    // Beginning Moves only
+    /// Constructs a board state for the starting position.
     pub fn default() -> BoardState {
         BoardState {
             castling: Castling::all(),
@@ -186,6 +382,27 @@ impl BoardState {
         }
     }
 
+    /// Constructs a blank board state.
+    pub fn blank() -> BoardState {
+        BoardState {
+            castling: Castling::empty(),
+            rule_50: 0,
+            ply: 0,
+            ep_square: NO_SQ,
+            zobrast: 0,
+            captured_piece: None,
+            checkers_bb: 0,
+            blockers_king: [0; PLAYER_CNT],
+            pinners_king: [0; PLAYER_CNT],
+            check_sqs: [0; PIECE_CNT],
+            prev: None,
+        }
+    }
+
+    /// Constructs a partial clone of a BoardState.
+    ///
+    /// Castling, rule_50, ply, and ep_square are copied. The copied fields need to be
+    /// modified accordingly, and the remaining fields need to be generated.
     pub fn partial_clone(&self) -> BoardState {
         BoardState {
             castling: self.castling ,
@@ -202,8 +419,7 @@ impl BoardState {
         }
     }
 
-    // Get the Previous BoardState
-
+    /// Return the previous BoardState from one move ago.
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
         (&self).prev.as_ref().cloned()
     }
@@ -211,49 +427,71 @@ impl BoardState {
 
 
 
-// ***** BOARD ***** //
 
-// 'Board' is the big daddy of information. Contains everything that needs to be known about the current
-// state of the Game. It is used by both Engines and Players alike, with the Engines (obviously) containing
-// the original copy of the Board. (Shallow) Copying the Board creates a copy with all the neccesary information
-// about the current state, but doesn't include information about the previous states.
-//
-// BitBoards are stored in the following format (as in bit 0 is Square A1, bit 1 is B1, etc
-//
-//  8 | 56 57 58 59 60 61 62 63
-//  7 | 48 49 50 51 52 53 54 55
-//  6 | 40 41 42 43 44 45 46 47
-//  5 | 32 33 34 35 36 37 38 39
-//  4 | 24 25 26 27 28 29 30 31
-//  3 | 16 17 18 19 20 21 22 23
-//  2 | 8  9  10 11 12 13 14 15
-//  1 | 0  1  2  3  4  5  6  7
-//    -------------------------
-//      a  b  c  d  e  f  g  h
-
-
+/// Represents a ChessBoard.
+///
+/// Board contains everything that needs to be known about the current state of the Game. It is used
+/// by both Engines and Players / Bots alike.
+///
+/// Ideally, the Engine contains the original Representation of a board (owns the board), and utilizes
+/// [Board::shallow_clone()] to share this representaion with Players.
+///
+/// # Examples
+///
+/// ```
+/// use Pleco::board::*;
+///
+/// fn main() {
+///     let mut chessboard = Board::default();
+///
+///     let moves = chessboard.generate_moves();
+///     chessboard.apply_move(moves[0]);
+///
+///     let b2 = chessboard.shallow_clone(); // boards allow for easy cloning
+///     assert_eq!(chessboard.moves_played(), b2.moves_played());
+/// }
+/// ```
+///
+/// # BitBoard Representation
+///
+/// For the majority of the struct, the board utilizes [BitBoard]s, which is a u64 where each bit
+/// represents an occupied location, and each bit index represents a certain square (as in bit 0 is
+/// Square A1, bit 1 is B1, etc.). Indexes increase first horizontally by File, and then by Rank. See
+/// [BitBoards article ChessWiki](https://chessprogramming.wikispaces.com/Bitboards) for more information.
+///
+/// The exact mapping from each square to bits is below,
+/// ```
+/// // 8 | 56 57 58 59 60 61 62 63
+/// // 7 | 48 49 50 51 52 53 54 55
+/// // 6 | 40 41 42 43 44 45 46 47
+/// // 5 | 32 33 34 35 36 37 38 39
+/// // 4 | 24 25 26 27 28 29 30 31
+/// // 3 | 16 17 18 19 20 21 22 23
+/// // 2 | 8  9  10 11 12 13 14 15
+/// // 1 | 0  1  2  3  4  5  6  7
+/// //   -------------------------
+/// //     a  b  c  d  e  f  g  h
+/// ```
 pub struct Board {
-    // Basic information
     turn: Player, // Current turn
     bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
-    occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
-    occ_all: BitBoard, // Total Occupancy BB
-    half_moves: u16, // Total moves
-    depth: u16, // current depth from actual position that has been travelled
-    piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT],
-    piece_locations: PieceLocations,
+    occ: [BitBoard; PLAYER_CNT],    // Occupancy per Player
+    occ_all: BitBoard,              // BitBoard of all pieces
+    half_moves: u16,                // Total moves played
+    depth: u16,                     // Current depth since last shallow_copy
+    piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT], // Count of each Piece
+    piece_locations: PieceLocations, // Mapping Squares to Pieces and Plauers
     
     // State of the Board, Un modifiable.
     // Arc to allow easy and quick copying of boards without copying memory
     // or recomputing BoardStates.
     state: Arc<BoardState>,
 
-    // List of Moves that have been played so far
-    // undo_moves.len() == depth, as undo_moves is not copied upon
-    // shallow clone
+    // List of Moves that have been played so far.
+    // Only gaurunteed to have the moves since last copy.
     undo_moves: Vec<BitMove>,
 
-    // Special Case
+    // Reference to the pre-computed information
     pub magic_helper: &'static MAGIC_HELPER,
 }
 
@@ -263,11 +501,19 @@ impl fmt::Display for Board {
     }
 }
 
-
-// Initializers!
 impl Board {
 
-    // Default, starting position of the board
+    /// Constructs a board from the starting position
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use Pleco::board::*;
+    /// use Pleco::templates::Player;
+    ///
+    /// let mut chessboard = Board::default();
+    /// assert_eq!(chessboard.count_pieces_player(Player::White),16);
+    /// ```
     pub fn default() -> Board {
         let mut b = Board {
             turn: Player::White,
@@ -277,19 +523,28 @@ impl Board {
             half_moves: 0,
             depth: 0,
             piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
-            piece_locations: PieceLocations::default(),
+            piece_locations: unsafe {PieceLocations::default() },
             state: Arc::new(BoardState::default()),
             undo_moves: Vec::with_capacity(100), // As this is the main board, might as well reserve space
             magic_helper: &MAGIC_HELPER
         };
+        // Create the Zobrist hash & set the Piece Locations structure
         b.set_zob_hash();
         b.set_piece_states();
         b
     }
 
-
-
-    // Returns Shallow clone of current board with no Past Move List
+    /// Constructs a shallow clone of the Board.
+    ///
+    /// Contains only the information necessary to apply future moves, more specifically
+    /// does not clone the moves list, and sets depth to zero. Intended for an Engine or
+    /// main thread to share the board to users wanting to search.
+    ///
+    /// # Safety
+    ///
+    /// After this method has called, [Board::undo_move()] cannot be called immediately after.
+    /// Undoing moves can only be done once a move has been played, and cannot be called more
+    /// times than moves have been played since calling [Board::shallow_clone()].
     pub fn shallow_clone(&self) -> Board {
         Board {
             turn: self.turn,
@@ -306,7 +561,17 @@ impl Board {
         }
     }
 
-    // Returns Shallow clone of current board with no Past Move List
+    /// Constructs a parallel clone of the Board.
+    ///
+    /// Similar to [Board::shallow_clone()], but keeps the current search depth the same.
+    /// Should be used when implementing a searcher, and want to search a list of moves
+    /// in parallel with different threads.
+    ///
+    /// # Safety
+    ///
+    /// After this method has called, [Board::undo_move()] cannot be called immediately after.
+    /// Undoing moves can only be done once a move has been played, and cannot be called more
+    /// times than moves have been played since calling [Board::parallel_clone()].
     pub fn parallel_clone(&self) -> Board {
         Board {
             turn: self.turn,
@@ -323,8 +588,12 @@ impl Board {
         }
     }
 
-    // Returns an EXACT memory representation of that Board.
-    // unsafe as this is to only be used by engines, and is more computationally expensive
+    /// Returns an exact clone of the current board.
+    ///
+    /// # Safety
+    ///
+    /// This method is unsafe as it can give the impression of owning and operating a board
+    /// structure, rather than just being provided shallow clones.
     pub unsafe fn deep_clone(&self) -> Board {
         Board {
             turn: self.turn,
@@ -336,20 +605,29 @@ impl Board {
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
-            undo_moves: self.undo_moves.clone(), // 32 Bytes taken up
+            undo_moves: self.undo_moves.clone(),
             magic_helper: &MAGIC_HELPER,
         }
     }
 
-    // Helper method for setting the piece states on initilization.
-    // Really only used when creating the Board from scratch, rather than copying
+    /// Helper method for setting the piece states on initialization.
+    ///
+    /// Only used when creating the Board from scratch (e.g. default position).
+    ///
+    /// # Safety
+    ///
+    /// Assumes that the Board has all of its BitBoards completely set, including the BitBoards
+    /// for the individual pieces as well as occupancy per player BitBoards.
     fn set_piece_states(&mut self) {
+        // Loop each piece and player and count all the pieces per player
         for player in &ALL_PLAYERS {
             for piece in &ALL_PIECES {
                 self.piece_counts[*player as usize][*piece as usize] = popcount64(self.piece_bb(*player,*piece));
             }
         }
 
+        // Loop through each square and see if any bitboard contains something at that location, and set
+        // the Boards' PieceLocations accordingly.
         for square in 0..SQ_CNT as u8 {
             let bb = sq_to_bb(square);
             if bb & self.get_occupied() != 0 {
@@ -363,12 +641,21 @@ impl Board {
                                         else { panic!() };
             self.piece_locations.place(square,player,piece);
             } else {
+                // Remove the square just in case nothing eas found. Can't assume that the PieceLocations
+                // represents that square as blank
                 self.piece_locations.remove(square);
             }
         }
     }
 
-    // Used if the piece state is working
+
+    /// Helper method for setting the BitBoards from a fully created PieceLocations.
+    ///
+    /// Only used when creating the Board from a fen String.
+    ///
+    /// # Safety
+    ///
+    /// Assumes that the Board has its PieceLocations completely set.
     fn set_bitboards(&mut self) {
         for sq in 0..SQ_CNT as SQ {
             let player_piece = self.piece_locations.player_piece_at(sq);
@@ -388,22 +675,60 @@ impl Board {
         }
     }
 
-    // Creates a new Board from a fen string
+    /// Constructs a board from a FEN String.
+    ///
+    /// FEN stands for Forsyth-Edwards Notation, and is a way of representing a board through a
+    /// string of characters. More information can be found on the [ChessWiki](https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use Pleco::board::*;
+    ///
+    /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    /// assert_eq!(board.count_all_pieces(),32);
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// The FEN string must be valid, or else the method will panic.
+    ///
+    /// There is a possibility of the FEN string representing an unvalid position, with no panics resulting.
+    /// The Constructed Board may have some Undefined Behavior as a result. It is up to the user to give a
+    /// valid FEN string.
     pub fn new_from_fen(fen: &str) -> Board {
+        // Create blank PieceLocations and PieceCount array
         let mut piece_loc: PieceLocations = PieceLocations::blank();
         let mut piece_cnt: [[u8; PIECE_CNT]; PLAYER_CNT] = [[0;PIECE_CNT];PLAYER_CNT];
+
+        // split the string by white space
         let det_split: Vec<&str> = fen.split_whitespace().collect();
+
+        // must have 6 parts :
+        // [ Piece Placement, Side to Move, Castling Ability, En Passant square, Half moves, full moves]
         assert_eq!(det_split.len(), 6);
+
+        // Split the first part by '/' for locations
         let b_rep: Vec<&str> = det_split[0].split("/").collect();
+
+        // 8 ranks, so 8 parts
         assert_eq!(b_rep.len(), 8);
+
+        // Start with Piece Placement
         for (i, file) in b_rep.iter().enumerate() {
+            // Index starts from A8, goes to H8, then A7, etc
+            // A8 is 56 in our BitBoards so we start there
             let mut idx = (7 - i) * 8;
+
             for char in file.chars() {
+                // must be a valid square
                 assert!(idx < 64);
+                // Count spaces
                 let dig = char.to_digit(10);
                 if dig.is_some() {
                     idx += dig.unwrap() as usize;
                 } else {
+                    // if no space, then there is a piece here
                     let piece = match char {
                         'p' | 'P' => Piece::P,
                         'n' | 'N' => Piece::N,
@@ -421,12 +746,15 @@ impl Board {
                 }
             }
         }
+
+        // Side to Move
         let turn: Player = match det_split[1].chars().next().unwrap() {
             'b' => Player::Black,
             'w' => Player::White,
             _ => panic!()
         };
 
+        // Castle Bytes
         let mut castle_bytes = Castling::empty();
         for char in det_split[2].chars() {
             match char {
@@ -439,33 +767,43 @@ impl Board {
             }
         }
 
-        // EP squaare
+        // EP square
         let mut ep_sq: SQ = NO_SQ;
         for (i, char) in det_split[3].chars().enumerate() {
             assert!(i < 2);
             if i == 0 {
                 match char {
                     'a' => ep_sq += 0,
-                    'b' => ep_sq += 8,
-                    'c' => ep_sq += 16,
-                    'd' => ep_sq += 24,
-                    'e' => ep_sq += 32,
-                    'f' => ep_sq += 40,
-                    'g' => ep_sq += 48,
-                    'h' => ep_sq += 56,
+                    'b' => ep_sq += 1,
+                    'c' => ep_sq += 2,
+                    'd' => ep_sq += 3,
+                    'e' => ep_sq += 4,
+                    'f' => ep_sq += 5,
+                    'g' => ep_sq += 6,
+                    'h' => ep_sq += 7,
                     '-' => {},
                      _  => panic!()
                 }
             } else {
-                ep_sq += char.to_digit(10).unwrap() as u8;
+                let digit = char.to_digit(10).unwrap() as u8;
+                // must be 3 or 6
+                assert!(digit == 3 || digit == 6);
+                ep_sq += 8 * digit;
             }
         }
 
-        let total_moves = (det_split[5].parse::<u16>().unwrap() - 1) * 2;
+        // rule 50 counts
+        let rule_50 = det_split[4].parse::<i16>().unwrap();
 
+        // Total Moves Played
+        // Moves is defined as everyime White moves, so gotta translate to total moves
+        let mut total_moves = (det_split[5].parse::<u16>().unwrap() - 1) * 2;
+        if turn == Player::Black {total_moves += 1};
+
+        // Create the Board States
         let mut board_s = Arc::new(BoardState {
             castling: castle_bytes,
-            rule_50: det_split[4].parse::<i16>().unwrap(),
+            rule_50: rule_50,
             ply: 0,
             ep_square: ep_sq,
             zobrast: 0,
@@ -477,6 +815,7 @@ impl Board {
             prev: None,
         });
 
+        // Create the Board
         let mut b = Board {
             turn: turn,
             bit_boards: [[0; PIECE_CNT];PLAYER_CNT],
@@ -490,23 +829,44 @@ impl Board {
             undo_moves: Vec::with_capacity(20),
             magic_helper: &MAGIC_HELPER
         };
+
+        // Set the BitBoards
         b.set_bitboards();
         {
+            // Set Check info
             let mut state: &mut BoardState = Arc::get_mut(&mut board_s).unwrap();
             b.set_check_info(state);
         }
         b.state = board_s;
+        // Set Zobrist Hash
         b.set_zob_hash();
+
+        // TODO: Check for a valid FEN String and /or resulting board
         b
     }
 
+    /// Creates a FEN String of the Given Board.
+    ///
+    /// FEN stands for Forsyth-Edwards Notation, and is a way of representing a board through a
+    /// string of characters. More information can be found on the [ChessWiki](https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use Pleco::board::*;
+    ///
+    /// let board = Board::default();
+    /// assert_eq!(board.get_fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    /// ```
     pub fn get_fen(&self) -> String {
         let mut s = String::default();
         let mut blanks = 0;
         for idx in 0..SQ_CNT as u8 {
+            // Cause of weird fen ordering, gotta do it this way
             let sq = (idx % 8) + (8 * (7 - (idx / 8)));
             if file_of_sq(sq) == File::A && rank_of_sq(sq) != Rank::R8 {
                 if blanks != 0 {
+                    // Only add a number if there is a space between pieces
                     s.push(char::from_digit(blanks, 10).unwrap());
                     blanks = 0;
                     }
@@ -525,13 +885,18 @@ impl Board {
             }
         }
         s.push(' ');
+        // current turn
         s.push( match self.turn {
             Player::White => 'w',
             Player::Black => 'b',
         });
         s.push(' ');
+
+        // Castling State
         s.push_str(&(self.state.castling.pretty_string()));
         s.push(' ');
+
+        // EP Square
         if self.ep_square() == NO_SQ {
             s.push('-');
         } else {
@@ -548,16 +913,28 @@ impl Board {
     }
 }
 
-impl Hash for Board {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.zobrist().hash(state);
-    }
-}
-
 // Public Move Gen & Mutation Functions
 impl  Board  {
 
-    // Applies the BitMove to the Board
+    /// Applies a move to the Board.
+    ///
+    /// # Example
+    /// ```
+    /// use Pleco::board::*;
+    ///
+    /// fn main() {
+    ///     let mut chessboard = Board::default();
+    ///
+    ///     let moves = chessboard.generate_moves();
+    ///     chessboard.apply_move(moves[0]);
+    /// }
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// The supplied BitMove must be both a valid move for that position, as well as a
+    /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
+    /// [Board::generate_moves()], which garuntees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
 
         // Check for stupidity
@@ -566,13 +943,14 @@ impl  Board  {
         // Does this move give check?
         let gives_check: bool = self.gives_check(bit_move);
 
+        // Zobrist Hash
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
 
         // New Arc for the board to have by making a partial clone of the current state
         let mut next_arc_state = Arc::new(self.state.partial_clone());
 
         {
-            // Seperate Block to allow derefencing the state
+            // Seperate Block to allow derefencing the BoardState
             // As there is garunteed only one owner of the Arc, this is allowed
             let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
 
@@ -710,8 +1088,27 @@ impl  Board  {
         assert!(self.is_okay());
     }
 
-    // Un-do's the last move played
-    // Cannot do directly after a non-deep clone, fen init, or in the beginning of a game
+    /// Un-does the previously applied move, allowing the Board to return to it's most recently held state.
+    ///
+    /// # Panics
+    ///
+    /// Cannot be done if after a [Board::shallow_clone()] or [Board::parallel_clone()] has been done
+    /// and no subsequent moves have been played:
+    /// ```rust,should_panic
+    /// use Pleco::board::*;
+    ///
+    ///
+    /// let mut chessboard = Board::default();
+    ///
+    /// let moves = chessboard.generate_moves();
+    /// chessboard.apply_move(moves[0]);
+    ///
+    /// let board_clone = chessboard.shallow_clone();
+    ///
+    /// chessboard.undo_move(); // works, chessboard existed before the move was played
+    /// board_clone.undo_move(); // error: board_clone was created after the move was applied
+    ///
+    /// ```
     pub fn undo_move(&mut self) {
         assert!(!self.undo_moves.is_empty());
         assert!(self.state.prev.is_some());
@@ -724,13 +1121,13 @@ impl  Board  {
         let to: SQ = undo_move.get_dest();
         let mut piece_on: Option<Piece> = self.piece_at_sq(to);
 
-
+        // Make sure the piece moved from is not there, or there is a castle
         assert!(self.piece_at_sq(from).is_none() || undo_move.is_castle());
 
         if undo_move.is_promo() {
-            // assert relative rank is 8
             assert_eq!(piece_on.unwrap(),undo_move.promo_piece());
 
+            // Remove Promo piece and place Pawn in same square
             self.remove_piece_c(piece_on.unwrap(),to,us);
             self.put_piece_c(Piece::P,to,us);
             piece_on = Some(Piece::P);
@@ -760,8 +1157,17 @@ impl  Board  {
         assert!(self.is_okay());
     }
 
-    // Apply a null move. For evaluation purposes only
-    pub fn apply_null_move(&mut self) {
+    /// Apply a "Null Move" to the board, essentially swapping the current turn of
+    /// the board without moving any pieces.
+    ///
+    /// # Safety
+    ///
+    /// This method should only be used for special evaluation purposes, as it does not give an
+    /// accurate or legal state of the chess board.
+    ///
+    /// Unsafe as it allows for Null Moves to be applied in states of check, which is never a valid
+    /// state of a chess game.
+    pub unsafe fn apply_null_move(&mut self) {
         assert!(self.checkers() != 0);
 
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
@@ -792,8 +1198,13 @@ impl  Board  {
         assert!(self.is_okay());
     }
 
-    // Undoing a null move
-    pub fn undo_null_move(&mut self) {
+    /// Undo a "Null Move" to the Board, returning to the previous state.
+    ///
+    /// # Safety
+    ///
+    /// This method should only be used if it can be guaranteed that the last played move from
+    /// the current state is a Null-Move. Otherwise, a panic will occur.
+    pub unsafe fn undo_null_move(&mut self) {
         assert!(!self.undo_moves.is_empty());
         let null_move = self.undo_moves.pop().unwrap();
         assert!(null_move.is_null());
@@ -801,12 +1212,22 @@ impl  Board  {
         self.state = self.state.get_prev().unwrap();
     }
 
-    // generate mall possible moves for the current player to move
+    /// Get a List of legal [BitMove]s for the player whose turn it is to move.
+    ///
+    /// This method already takes into account if the Board is currently in check, and will return
+    /// legal moves only.
     pub fn generate_moves(&self) -> Vec<BitMove> {
         MoveGen::generate(&self,GenTypes::All)
     }
 
-    // generate moves of a certain type
+    /// Get a List of legal [BitMove]s for the player whose turn it is to move or a certain type.
+    ///
+    /// This method already takes into account if the Board is currently in check, and will return
+    /// legal moves only. If a non-ALL GenType is supplied, only a subset of the total moves will be given.
+    ///
+    /// # Panics
+    ///
+    /// Panics if given [GenTypes::QuietChecks] while the current board is in check
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
         MoveGen::generate(&self, gen_type)
     }
@@ -815,8 +1236,13 @@ impl  Board  {
 // Private Mutating Functions
 impl  Board  {
 
-    // After a move is made, Information about the checking situation is created
+    /// Helper method, used after a move is made, creates information concerning checking and
+    /// possible checks.
+    ///
+    /// Specifically, sets Blockers, Pinners, and Check Squares for each piece.
     fn set_check_info(&self, board_state: &mut BoardState) {
+
+        // Set the Pinners and Blockers
         let mut white_pinners = 0;
         {
             board_state.blockers_king[Player::White as usize]  =
@@ -847,19 +1273,33 @@ impl  Board  {
 
 
 
-    // Remove a piece, color is unknown
+    /// Removes a Piece from the Board, if the color is unknown.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is not piece at the given square.
     fn remove_piece(&mut self, piece: Piece, square: SQ) {
         let player = self.color_of_sq(square).unwrap();
         self.remove_piece_c(piece,square,player);
     }
 
-    // move a piece, color is unknown
+    /// Moves a Piece on the Board (if the color is unknown) from square 'from'
+    /// to square 'to'.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is not piece at the given square.
     fn move_piece(&mut self, piece: Piece, from: SQ, to: SQ) {
         let player = self.color_of_sq(from).unwrap();
         self.move_piece_c(piece,from,to,player);
     }
 
-    // put a piece, color is known
+    /// Places a Piece on the board at a given square and player.
+    ///
+    /// # Safety
+    ///
+    /// Assumes there is not already a piece at that square. If there already is,
+    /// Undefined Behavior will result.
     fn put_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
         let bb = sq_to_bb(square);
         self.occ_all |= bb;
@@ -871,7 +1311,11 @@ impl  Board  {
         // Note: Should We set captured Piece?
     }
 
-    // remove a piece, color is known
+    /// Removes a Piece from the Board for a given player.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there is a piece at the given square.
     fn remove_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
         assert_eq!(self.piece_at_sq(square).unwrap(),piece);
         let bb = sq_to_bb(square);
@@ -883,7 +1327,12 @@ impl  Board  {
         self.piece_counts[player as usize][piece as usize] -= 1;
     }
 
-    // move a piece, color is known
+    /// Moves a Piece on the Board of a given player from square 'from'
+    /// to square 'to'.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the two and from square are equal
     fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ, player: Player) {
         assert_ne!(from, to);
         let comb_bb = sq_to_bb(from) | sq_to_bb(to);
@@ -896,7 +1345,15 @@ impl  Board  {
         self.piece_locations.place(to,player,piece);
     }
 
-    // helper function for handling castles of apply_move
+    /// Helper function to apply a Castling for a given player.
+    ///
+    /// Takes in the player to castle, alongside the original king square and the original rook square.
+    /// the k_dst and r_dst squares are pointers to values, modifying them to have the correct king and
+    /// rook destination squares.
+    ///
+    /// # Safety
+    ///
+    /// Assumes that k_src and r_src are legal squares, and the player can legally castle.
     fn apply_castling(&mut self, player: Player, k_src: SQ, r_src: SQ, k_dst: &mut SQ, r_dst: &mut SQ) {
         let king_side: bool = k_src < r_src;
 
@@ -912,7 +1369,13 @@ impl  Board  {
         self.move_piece_c(Piece::R,r_src,*r_dst,player);
     }
 
-    // helper function for undo-ing castles of undo_move()
+    /// Helper function to remove a Castling for a given player.
+    ///
+    /// Takes in the player to castle, alongside the post-castle king rook squares.
+    ///
+    /// # Safety
+    ///
+    /// Assumes the last move played was a castle for the given player.
     fn remove_castling(&mut self, player: Player, k_src: SQ, r_src: SQ) {
         let k_dst: SQ = self.king_sq(player);
         let king_side: bool = k_src < r_src;
@@ -926,6 +1389,7 @@ impl  Board  {
         self.move_piece_c(Piece::R,r_dst,r_src,player);
     }
 
+    /// Helper function to that outputs the Blockers of a given square
     fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
         let mut result: BitBoard = 0;
         *pinners = 0;
@@ -962,7 +1426,9 @@ impl  Board  {
     //      side: u64,
     //    }
 
-    // Used to create a hash of self when initialized
+    /// Sets the Zobrist hash when the board is initialized or created from a FEN string.
+    ///
+    /// Assumes the rest of the board is initialized.
     fn set_zob_hash(&mut self) {
         let mut zob: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
@@ -991,118 +1457,137 @@ impl  Board  {
 // General information
 
 impl Board {
+    /// Get the PLayer whose turn it is to move.
     pub fn turn(&self) -> Player {self.turn}
 
+    /// Return the Zobrist Hash.
     pub fn zobrist(&self) -> u64 {
         self.state.zobrast
     }
 
+    /// Get the total number of moves played.
     pub fn moves_played(&self) -> u16 {
         self.half_moves
     }
 
+    /// Get the current depth (half moves from a [Board::shallow_clone()].
     pub fn depth(&self) -> u16 {
         self.depth
     }
 
+    /// Get the number of half-moves since a Pawn Push, castle, or capture.
     pub fn rule_50(&self) -> i16 {
         self.state.rule_50
     }
 
-    // Piece, if any, that was last captured
+    /// Return the Piece, if any, that was last captured.
     pub fn piece_captured_last_turn(&self) -> Option<Piece> {
         self.state.captured_piece
     }
 
+    /// Get a reference to the MagicHelper pre-computed BitBoards.
     pub fn magic_helper(&self) -> &'static MagicHelper {&MAGIC_HELPER}
 
+    /// Get the current ply of the board.
     pub fn ply(&self) -> u16 {self.state.ply}
 
+    /// Get the current square of en_passant.
+    ///
+    /// If the current en-passant square is none, it should return 64.
     pub fn ep_square(&self) -> SQ {self.state.ep_square}
 
 }
 
 // Position Representation
 impl  Board  {
-    // Gets all occupied Squares
+    /// Gets the BitBoard of all pieces.
     pub fn get_occupied(&self) -> BitBoard {
         self.occ_all
     }
 
-    // Get the BitBoard of the squares occupied by player
+    /// Get the BitBoard of the squares occupied by the given player.
     pub fn get_occupied_player(&self, player: Player) -> BitBoard {
         self.occ[player as usize]
     }
 
-    // Returns a Bitboard consisting of only the squares occupied by the White Player
+    /// Returns a Bitboard consisting of only the squares occupied by the White Player.
     pub fn occupied_white(&self) -> BitBoard {
         self.occ[Player::White as usize]
     }
 
-    // Returns a BitBoard consisting of only the squares occupied by the Black Player
+    /// Returns a BitBoard consisting of only the squares occupied by the Black Player.
     pub fn occupied_black(&self) -> BitBoard {
         self.occ[Player::Black as usize]
     }
 
-    // Returns Bitboard for one Piece and One Player
+    /// Returns BitBoard of a single player and that one type of piece.
     pub fn piece_bb(&self, player: Player, piece: Piece) -> BitBoard {
         self.bit_boards[player as usize][piece as usize]
     }
 
-    // Horizontally moving and Vertically moving pieces of player (Queens and Rooks)
+    /// Returns the BitBoard of the Queens and Rooks of a given player.
     pub fn sliding_piece_bb(&self, player: Player) -> BitBoard {
         self.bit_boards[player as usize][Piece::R as usize] ^ self.bit_boards[player as usize][Piece::Q as usize]
     }
-    // reutns BitBoard of Diagonal moving pieces (Queens and Bishops)
+    /// Returns the BitBoard of the Queens and Bishops of a given player.
     pub fn diagonal_piece_bb(&self, player: Player) -> BitBoard {
         self.bit_boards[player as usize][Piece::B as usize] ^ self.bit_boards[player as usize][Piece::Q as usize]
     }
 
-    // Bitboard of the pieces of both sides
+    /// Returns the combined BitBoard of both players for a given piece.
     pub fn piece_bb_both_players(&self, piece: Piece) -> BitBoard {
         self.bit_boards[Player::White as usize][piece as usize] ^ self.bit_boards[Player::Black as usize][piece as usize]
     }
 
-    // BitBoard of both players for both pieces
+    /// Returns the combined BitBoard of both players for two pieces.
     pub fn piece_two_bb_both_players(&self, piece: Piece, piece2: Piece) -> BitBoard {
         self.piece_bb_both_players(piece) | self.piece_bb_both_players(piece2)
     }
 
-    // Total number of pieces of type Piece and of player P
+    /// Get the total number of pieces of the given piece and player.
     pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
         self.piece_counts[player as usize][piece as usize]
     }
 
-    // Total number of pieces of Player
+    /// Get the total number of piees a given player has.
     pub fn count_pieces_player(&self, player: Player) -> u8 {
         self.piece_counts[player as usize].iter().sum()
     }
 
+    /// Get the total number of pieces on the board.
     pub fn count_all_pieces(&self) -> u8 {
         self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
     }
 
-    // Returns the piece at the given place. Number of bits must be equal to 1, or else won't work
+    /// Returns the piece (if any) at the given BitBoard for a given player.
+    ///
+    /// # Safety
+    ///
+    /// Number of bits must be equal to 1, or else a panic will occur.
     pub fn piece_at_bb(&self, src_bit: BitBoard, player: Player) -> Option<Piece> {
         let sq: SQ = bb_to_sq(src_bit);
         assert!(sq_is_okay(sq));
         self.piece_locations.piece_at_for_player(sq,player)
     }
 
-    // Returns the piece at the given place. Number of bits must be equal to 1, or else won't work
+    /// Returns the piece (if any) at the given BitBoard for either player.
+    ///
+    /// # Safety
+    ///
+    /// Number of bits must be equal to 1, or else a panic will occur.
     pub fn piece_at_bb_all(&self, src_bit: BitBoard)-> Option<Piece> {
         let square: SQ = bb_to_sq(src_bit);
         assert!(sq_is_okay(square));
         self.piece_locations.piece_at(square)
     }
 
-    // Returns the Piece, if any, at the square
+    /// Returns the Piece, if any, at the square.
     pub fn piece_at_sq(&self, sq: SQ)-> Option<Piece> {
         assert!(sq < 64);
         self.piece_locations.piece_at(sq)
     }
 
-    // Returns the Player, if any, occupying the square
+    /// Returns the Player, if any, occupying the square.
     pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
         assert!(sq < 64);
         let bb: BitBoard = sq_to_bb(sq);
@@ -1111,57 +1596,63 @@ impl  Board  {
         None
     }
 
-    // Returns the player, if any, at the square
+    /// Returns the player, if any, at the square.
     pub fn player_at_sq(&self, s: SQ) -> Option<Player> {
+        // TODO: Roll into color_of_square
         self.piece_locations.player_at(s)
     }
 
-    // Returns the square of the King for a given player
+    /// Returns the square of the King for a given player
     pub fn king_sq(&self, player: Player) -> SQ {
         bb_to_sq(self.bit_boards[player as usize][Piece::K as usize])
     }
 
-    // Returns the pinned pieces of player
-    // Pinned being defined as pinned to the king
+    /// Returns the pinned pieces of the given player.
+    ///
+    /// Pinned is defined as pinned to the same players king
     pub fn pinned_pieces(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
 
+    /// Returns the pinned pieces for a given players king. Can contain piece of from both players,
+    /// but all are garunteed to be pinned to the given player's king.
     pub fn all_pinned_pieces(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize]
     }
 
+    /// Returns the pinning pieces of a given player.
+    /// e.g, pieces that are pinning a piece to the opponent's king.
     pub fn pinning_pieces(&self, player: Player) -> BitBoard {
         self.state.pinners_king[player as usize]
     }
 
-    // Return if a player has the possibility of castling.
-    // Doesn't check for can castle at that very moment
+    /// Return if a player has the possibility of castling for a given CastleType.
     pub fn can_castle(&self, player: Player, castle_type: CastleType) -> bool {
         self.state.castling.castle_rights(player,castle_type)
     }
 
-    // Check if the castle path is impeded for the current player
+    /// Check if the castle path is impeded for the current player.
     pub fn castle_impeded(&self, castle_type: CastleType) -> bool {
         let path: BitBoard = CASTLING_PATH[self.turn as usize][castle_type as usize];
         path & self.occ_all != 0
     }
 
-    // Square of the Rook that is involved with the current player's castle
+    /// Square of the Rook that is involved with the current player's castle.
     pub fn castling_rook_square(&self, castle_type: CastleType) -> SQ {
         CASTLING_ROOK_START[self.turn as usize][castle_type as usize]
     }
 
-    // Return the last move played, if any
+    /// Return the last move played, if any.
     pub fn last_move(&self) -> Option<BitMove> {
         self.undo_moves.first().map(|b| b.clone())
     }
 
-    // Returns if the current player has castled ever
+    /// Returns if the current player has castled ever.
     pub fn has_castled(&self, player: Player) -> bool {
         self.state.castling.has_castled(player)
     }
 
+    /// Return if the piece (if any) that was captured last move.
     pub fn piece_last_captured(&self) -> Option<Piece> {
         self.state.captured_piece
     }
@@ -1170,34 +1661,41 @@ impl  Board  {
 // Checking
 impl  Board  {
 
-    // If current side to move is in check
+    /// Return if current side to move is in check
     pub fn in_check(&self) -> bool {
         self.state.checkers_bb != 0
     }
 
+    /// Return if the current side to move is in check_mate.
+    ///
+    /// This method can be computationally expensive, do not use outside of Engines.
     pub fn checkmate(&self) -> bool {
         self.in_check() && self.generate_moves().is_empty()
     }
 
+    /// Return if the current side to move is in stalemate.
+    ///
+    /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
         !self.in_check() && self.generate_moves().is_empty()
     }
 
-    // Checks on the current player's king
+    /// Return the BitBoard of Checks on the current player's king.
     pub fn checkers(&self) -> BitBoard {
         self.state.checkers_bb
     }
 
-    // Pieces the current side can move to discover check
+    /// Returns the BitBoard of pieces the current side can move to discover check.
     pub fn discovered_check_candidates(&self) -> BitBoard {
         self.state.blockers_king[other_player(self.turn) as usize] & self.get_occupied_player(self.turn)
     }
 
-    // Gets the Pinned pieces for the given player
+    /// Gets the Pinned pieces for the given player.
     pub fn pieces_pinned(&self, player: Player) -> BitBoard {
+        // TODO: combine with Board::piece_pinned
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
-    // Attacks to / From a given square
+    /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
         (self.magic_helper.pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, Piece::P))
             | (self.magic_helper.pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, Piece::P))
@@ -1212,7 +1710,7 @@ impl  Board  {
 // Move Testing
 impl  Board  {
 
-    // Tests if a given move is legal
+    /// Tests if a given move is legal.
     pub fn legal_move(&self, m: BitMove) -> bool {
 
         let them: Player = other_player(self.turn);
@@ -1242,14 +1740,15 @@ impl  Board  {
     }
 
     // Used to check for Hashing errors from TT Tables
-    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
-        // TODO: need to implemented
-        m.get_dest() != m.get_src()
-    }
+//    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
+//        let us = self.turn;
+//        let them = other_player(us);
+//
+//    }
 
-    // Checks if a move will give check to the opposing player's King
-    // I am too drunk to be making this right now
+    /// Returns if a move will give check to the opposing player's King.
     pub fn gives_check(&self, m: BitMove) -> bool {
+        // I am too drunk to be making this right now
         let src: SQ = m.get_src();
         let dst: SQ = m.get_dest();
         let src_bb: BitBoard = sq_to_bb(src);
@@ -1314,13 +1813,13 @@ impl  Board  {
         }
     }
 
-    // Returns the piece that was moved
+    /// Returns the piece that was moved from a given BitMove.
     pub fn moved_piece(&self, m: BitMove) -> Piece {
         let src = m.get_src();
         self.piece_at_sq(src).unwrap() // panics if no piece here :)
     }
 
-    // Returns the piece that was captured, if any
+    /// Returns the piece that was captured, if any from a given BitMove.
     pub fn captured_piece(&self, m: BitMove) -> Option<Piece> {
         if m.is_en_passant() {
             return Some(Piece::P);
@@ -1334,8 +1833,9 @@ impl  Board  {
 // Printing and Debugging Functions
 impl  Board  {
 
-    // Returns a prettified String of the current board
-    // Capital Letters are WHITE, lowe case are BLACK
+    /// Returns a prettified String of the current board, for Quick Display.
+    ///
+    /// Capital Letters represent White pieces, while lower case represents Black pieces.
     pub fn pretty_string(&self) -> String {
         let mut s = String::with_capacity(SQ_CNT * 2 + 8);
         for sq in SQ_DISPLAY_ORDER.iter() {
@@ -1356,10 +1856,12 @@ impl  Board  {
         s
     }
 
+    /// Return the current ARC count of the board's BoardState
     pub fn get_arc_strong_count(&self) -> usize {
         Arc::strong_count(&self.state)
     }
 
+    /// Get Debug Information.
     pub fn print_debug_info(&self) {
         println!("White Pinners ");
         print_bitboard(self.state.pinners_king[0]);
@@ -1384,12 +1886,14 @@ impl  Board  {
         print_bitboard(self.state.check_sqs[Piece::Q as usize]);
     }
 
-    // prints a prettified representation of the board
+    /// Prints a prettified representation of the board.
     pub fn pretty_print(&self) {
         println!("{}",self.pretty_string());
     }
 
-    // Print the board alongside useful information
+    /// Print the board alongside useful information.
+    ///
+    /// Mostly for Debugging useage.
     pub fn fancy_print(&self) {
         self.pretty_print();
         println!("Castling bits: {:b}, Rule 50: {}, ep_sq: {}", self.state.castling, self.state.rule_50, self.state.ep_square);
@@ -1456,134 +1960,7 @@ impl  Board  {
 }
 
 
-// 000 -> P
-// 001 -> N
-// 010 -> B
-// 011 -> R
-// 100 -> Q
-// 101 -> K
-// 110 -> ?
-// 111 -> None
-//
-// 0xxx -> White
-// 1xxx -> Black
 
-// 1 byte per square
-// 1 byte * 64 squares = 64 bytes
-// 64 bytes / 2 bytes a u8 = 32 u8s
-
-// TODO: Consider replacing with an array 64 long of bytes, rather thsn compressing each byte into two moves
-//      Space vs. Lookup speed difference
-
-// Struct to allow fast lookups for any square. Answers questions such as
-// What Color if any is at the square? What Piece of any is at the square? etc
-// Piece Locationsis a BLIND structure, Providing a function of  |sq| -> |Piece AND/OR Player|
-// You cannot do the reverse, Looking up squares from a piece / player
-
-struct PieceLocations {
-    data: [u8; 64]
-}
-
-impl Clone for PieceLocations {
-    fn clone(&self) -> PieceLocations {
-        unsafe { mem::transmute_copy(&*&self.data) }
-    }
-}
-
-// [0] = 00001111 --- (1,0)
-// [1] = 00001111 --- (3,2)
-
-
-impl PieceLocations {
-    pub fn default() -> PieceLocations { PieceLocations {data: [0; 64]}}
-    pub fn blank() -> PieceLocations { PieceLocations {data: [0b0111; 64]}}
-    pub fn place(&mut self, square: SQ, player: Player, piece: Piece, ) {
-        assert!(sq_is_okay(square));
-        self.data[square as usize] = self.create_sq(player,piece);
-    }
-
-    pub fn remove(&mut self, square: SQ) {
-        assert!(sq_is_okay(square));
-        self.data[square as usize] = 0b0111
-    }
-
-    pub fn piece_at(&self, square: SQ) -> Option<Piece> {
-        let byte: u8 = self.data[square as usize] & 0b0111;
-        match byte {
-            0b0000 => Some(Piece::P),
-            0b0001 => Some(Piece::N),
-            0b0010 => Some(Piece::B),
-            0b0011 => Some(Piece::R),
-            0b0100 => Some(Piece::Q),
-            0b0101 => Some(Piece::K),
-            0b0110 => unreachable!(), // Undefined
-            0b0111 => None,
-            _ => unreachable!()
-        }
-    }
-
-    pub fn piece_at_for_player(&self, square: SQ, player: Player) -> Option<Piece>{
-        let op = self.player_piece_at(square);
-        if op.is_some() {
-            let p = op.unwrap();
-            if p.0 == player {
-                Some(p.1)
-            } else { None }
-        } else { None }
-    }
-
-    pub fn player_at(&self, square: SQ) -> Option<Player> {
-        let byte: u8 = self.data[square as usize];
-        if byte == 0b0111 || byte == 0b1111 {
-            return None;
-        }
-        if byte < 8 {
-            Some(Player::White)
-        } else {
-            Some(Player::Black)
-        }
-    }
-
-    pub fn player_piece_at(&self, square: SQ) -> Option<(Player,Piece)> {
-        let byte: u8 = self.data[square as usize];
-        match byte {
-            0b0000 => Some((Player::White, Piece::P)),
-            0b0001 => Some((Player::White, Piece::N)),
-            0b0010 => Some((Player::White, Piece::B)),
-            0b0011 => Some((Player::White, Piece::R)),
-            0b0100 => Some((Player::White, Piece::Q)),
-            0b0101 => Some((Player::White, Piece::K)),
-            0b0110 => unreachable!(), // Undefined
-            0b0111 |  0b1111 => None,
-            0b1000 => Some((Player::Black, Piece::P)),
-            0b1001 => Some((Player::Black, Piece::N)),
-            0b1010 => Some((Player::Black, Piece::B)),
-            0b1011 => Some((Player::Black, Piece::R)),
-            0b1100 => Some((Player::Black, Piece::Q)),
-            0b1101 => Some((Player::Black, Piece::K)),
-            0b1110 => unreachable!(), // Undefined
-            _ => unreachable!()
-        }
-    }
-
-
-
-    // Creates the 4 bits representing a piece and player
-    fn create_sq(&self, player: Player, piece: Piece) -> u8 {
-        let mut loc: u8 = match piece {
-            Piece::P => 0b0000,
-            Piece::N => 0b0001,
-            Piece::B => 0b0010,
-            Piece::R => 0b0011,
-            Piece::Q => 0b0100,
-            Piece::K => 0b0101,
-        };
-        if player == Player::Black {
-            loc |= 0b1000;
-        }
-        loc
-    }
-}
 
 
 // Testing

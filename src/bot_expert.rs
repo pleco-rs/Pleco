@@ -22,10 +22,11 @@ const DIVISOR_SEQ: usize = 5;
 static PLYS_SEQ: [u16; 10] = [0 , 1,  2,  2,  2,  2,  2,  3,  3,  3];
 
 
-pub struct ExpertBot {
-    board: Board,
-    timer: Timer,
-}
+pub struct ExpertBot {}
+
+//lazy_static!(
+//    static ref tt: TranspositionTable = TranspositionTable::with_capacity(40000);
+//);
 
 impl Searcher for ExpertBot {
     fn name() -> &'static str {
@@ -51,6 +52,9 @@ fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
     //          if fail high, redo with beta = inf
     //       now if re-search fails, do a full ply search with alpha = -inf and beta = inf
     //
+//
+//    tt.clear();
+//    tt.reserve(100000);
 
     let mut i = 2;
     let mut alpha: i16 = NEG_INFINITY;
@@ -68,17 +72,21 @@ fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
         let mut b = board.shallow_clone();
 
         let returned_b_move = jamboree(&mut b, alpha, beta, i, PLYS_SEQ[i as usize], false);
-        if i >= 1 {
+        if i >= 2 {
             if returned_b_move.score > beta {
                 beta = INFINITY;
-                alpha = returned_b_move.score;
+//                if alpha != NEG_INFINITY {
+//                    alpha = returned_b_move.score;
+//                }
             } else if returned_b_move.score < alpha {
                 alpha = NEG_INFINITY;
-                beta = returned_b_move.score
+//                if beta != INFINITY {
+//                    beta = returned_b_move.score;
+//                }
             } else {
                 if returned_b_move.best_move.is_some() {
-                    alpha = returned_b_move.score - 20;
-                    beta = returned_b_move.score + 20;
+                    alpha = returned_b_move.score - 34;
+                    beta = returned_b_move.score + 34;
                     best_move = returned_b_move;
                 }
                 i += 1;
@@ -96,12 +104,10 @@ fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
 fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16, mut is_seq: bool) -> BestMove {
     assert!(alpha <= beta);
 
-    if board.depth() >= max_depth { return eval_board(board); }
-
     is_seq = board.depth() >= max_depth - plys_seq;
 
     // Determine if we should do Quiscience search or just return
-    if board.depth() == max_depth {
+    if board.depth() >= max_depth {
         if board.in_check() || board.piece_last_captured().is_some() {
             return quiescence_search(board, alpha, beta, max_depth + 2)
         }
@@ -109,12 +115,12 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
     }
 
     // Futility Pruning
-    if max_depth > 2 && board.depth() == max_depth - 1 && board.piece_last_captured().is_none() && !board.in_check() {
-        let eval = eval_board(board);
-        if eval.score + 100 < alpha {
-            return quiescence_search(board, alpha, beta, max_depth + 3);
-        }
-    }
+//    if max_depth > 2 && board.depth() == max_depth - 1 && board.piece_last_captured().is_none() && !board.in_check() {
+//        let eval = eval_board(board);
+//        if eval.score + 100 < alpha {
+//            return quiescence_search(board, alpha, beta, max_depth + 1);
+//        }
+//    }
 
     // Generate moves
     let mut moves: Vec<BitMove> = board.generate_moves();
@@ -127,8 +133,18 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
         }
     }
 
-    let amount_seq: usize =  if !is_seq { 1 + (moves.len() / DIVIDE_CUTOFF) as usize }
-                                     else { moves.len() };
+//    let zob = board.zobrist();
+//
+//    if tt.contains_key(zob) {
+//        let val = tt.get(zob).unwrap();
+//        if val.ply >=  max_depth - board.depth() && moves.contains(&val.best_move) {
+//            return BestMove { best_move: Some(val.best_move), score: val.score}
+//        }
+//    }
+
+
+    let amount_seq: usize = if is_seq { moves.len() }
+                                     else {  1 + (moves.len() / DIVIDE_CUTOFF) as usize  };
 
     if board.depth() < 5 {
         mvv_lva_sort(&mut moves, &board);
@@ -149,16 +165,22 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
         }
 
         if alpha >= beta {
+//            tt.insert(zob, Value {best_move: *mov, score: alpha, ply: max_depth - board.depth(), node_type: NodeType::Exact });
             return BestMove{best_move: Some(*mov), score: alpha};
         }
     }
 
-     if !is_seq {
+
+     if !non_seq.is_empty() {
          let returned_move = parallel_task(non_seq, board, alpha, beta, max_depth, plys_seq);
          if returned_move.score > alpha {
+//             tt.insert(zob, Value {best_move: returned_move.best_move.unwrap(), score: returned_move.score, ply: max_depth - board.depth(), node_type: NodeType::Exact });
              return returned_move;
          }
      }
+//    if best_move.is_some() {
+//        tt.insert(zob, Value {best_move: best_move.unwrap(), score: alpha, ply: max_depth - board.depth(), node_type: NodeType::Exact });
+//    }
     BestMove{best_move: best_move, score: alpha}
 }
 
@@ -198,12 +220,13 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16
             best_move = right_move.best_move;
         }
     }
+
     BestMove{best_move: best_move, score: alpha}
 }
 
 
 fn quiescence_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
-    if board.depth() == max_depth {
+    if board.depth() >= max_depth {
         return eval_board(board);
     }
 
@@ -302,6 +325,8 @@ impl BestMove {
 #[bench]
 fn bench_bot_ply_3__expert_bot(b: &mut Bencher) {
     use templates::TEST_FENS;
+//    tt.clear();
+//    tt.reserve(100000);
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
         let iter = TEST_FENS.len();
@@ -320,6 +345,8 @@ fn bench_bot_ply_3__expert_bot(b: &mut Bencher) {
 #[bench]
 fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
     use templates::TEST_FENS;
+//    tt.clear();
+//    tt.reserve(100000);
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
         let iter = TEST_FENS.len();
@@ -339,6 +366,8 @@ fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
 #[bench]
 fn bench_bot_ply_5__expert_bot(b: &mut Bencher) {
     use templates::TEST_FENS;
+//    tt.clear();
+//    tt.reserve(100000);
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());
         let iter = TEST_FENS.len();
@@ -353,3 +382,23 @@ fn bench_bot_ply_5__expert_bot(b: &mut Bencher) {
         )
     })
 }
+//
+//#[bench]
+//fn bench_bot_ply_6__expert_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+////    tt.clear();
+////    tt.reserve(100000);
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 6);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}

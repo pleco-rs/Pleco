@@ -136,10 +136,10 @@ impl <'a> MoveGen<'a> {
             let checking_sq: SQ = bit_scan_forward(self.board.checkers());
 
             // Squares that allow a block or capture of the sliding piece
-            let target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq)) & target;
+            let new_target: BitBoard = (self.magic.between_bb(checking_sq,ksq) | sq_to_bb(checking_sq)) & target;
 
-            self.generate_pawn_moves(target,PriGenType::Evasions);
-            self.gen_non_pawn_king(target);
+            self.generate_pawn_moves(new_target,PriGenType::Evasions);
+            self.gen_non_pawn_king(new_target);
         }
     }
 

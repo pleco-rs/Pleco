@@ -7,8 +7,10 @@ use Pleco::bot_parallel_minimax::ParallelSearcher;
 use Pleco::bot_advanced::AdvancedBot;
 use Pleco::bot_alphabeta::AlphaBetaBot;
 use Pleco::bot_jamboree::JamboreeSearcher;
+use Pleco::bot_expert::ExpertBot;
 use Pleco::engine::Searcher;
 use Pleco::templates::print_bitboard;
+use Pleco::engine::compete_multiple;
 
 
 
@@ -21,6 +23,8 @@ use Pleco::templates::print_bitboard;
 fn main() {
 //    gen_random_fens();
     sample_run();
+//    compete_multiple(AdvancedBot{}, ExpertBot{}, 60, 10, 5, true);
+
 }
 
 fn test_between() {
@@ -41,20 +45,19 @@ fn sample_run() {
             println!("Checkmate");
             i = max;
         } else {
-//            if i % 11 == 0 {
-//                let mov = RandomBot::best_move(b.shallow_clone(),timer::Timer::new(20));
-//                println!("{}'s move: {}",RandomBot::name(),mov);
-//                b.apply_move(mov);
-//            } else
-            if i % 2 == 0 {
+            if i % 57 == 2 {
+                let mov = RandomBot::best_move(b.shallow_clone(),&timer::Timer::new(20));
+                println!("{}'s move: {}",RandomBot::name(),mov);
+                b.apply_move(mov);
+            } else if i % 2 == 0 {
                 println!("------------------------------------------------");
                 println!();
-                let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),6);
-                println!("{}'s move: {}",JamboreeSearcher::name(),mov);
+                let mov = AdvancedBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                println!("{}'s move: {}",AdvancedBot::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 6);
-                println!("{}'s move: {}", AdvancedBot::name(), mov);
+                let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                println!("{}'s move: {}", ExpertBot::name(), mov);
                 b.apply_move(mov);
             }
             println!();

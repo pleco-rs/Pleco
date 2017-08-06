@@ -1,3 +1,4 @@
+extern crate rand;
 
 use piece_move::BitMove;
 use timer::Timer;
@@ -38,7 +39,7 @@ pub enum Winner {
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHOR: &str = "Stephen Fleischman";
 
-pub fn compete<S: Searcher, T: Searcher>(player_one: S, player_two: T, minutes_each: i64, display: bool) -> Winner {
+pub fn compete<S: Searcher, T: Searcher>(player_one: &S, player_two: &T, minutes_each: i64, display: bool, randomize: bool, ply: u16) -> Winner {
     assert!(minutes_each > 0);
     let mut b: Board = Board::default();
     let mut timer = Timer::new(minutes_each);
@@ -46,10 +47,22 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: S, player_two: T, minutes_e
         println!("Match Begin  - \n");
         println!("White: {}",<S as Searcher>::name());
         println!("Black: {}",<T as Searcher>::name());
+        b.pretty_print();
     }
-    b.pretty_print();
 
     while !b.checkmate() {
+        if randomize && b.moves_played() < 4 {
+            let moves = b.generate_moves();
+            b.apply_move(moves[rand::random::<usize>() % moves.len()]);
+            let moves = b.generate_moves();
+            b.apply_move(moves[rand::random::<usize>() % moves.len()]);
+            if rand::random::<usize>() % 5 == 0 {
+                let moves = b.generate_moves();
+                b.apply_move(moves[rand::random::<usize>() % moves.len()]);
+                let moves = b.generate_moves();
+                b.apply_move(moves[rand::random::<usize>() % moves.len()]);
+            }
+        }
         if b.rule_50() >= 50 || b.stalemate() {
             if display {
                 if b.rule_50() >= 50 { println!("50 move rule");
@@ -62,8 +75,8 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: S, player_two: T, minutes_e
 
         timer.start_time();
         let ret_move = match b.turn() {
-            Player::White => <S as Searcher>::best_move(b.shallow_clone(), &timer),
-            Player::Black => <T as Searcher>::best_move(b.shallow_clone(), &timer)
+            Player::White => <S as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
+            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply)
         };
         timer.stop_time();
 
@@ -92,6 +105,43 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: S, player_two: T, minutes_e
     match b.turn() {
         Player::White => Winner::PlayerTwo,
         Player::Black => Winner::PlayerOne,
+    }
+}
+
+pub fn compete_multiple<S: Searcher, T: Searcher>(player_one: S, player_two: T, minutes_each: i64, times_match: u32, plys: u16, display: bool) -> Winner {
+    let mut p_one_wins: u32 = 0;
+    let mut p_two_wins: u32 = 0;
+    let mut draws: u32 = 0;
+
+    for i in 0..times_match {
+        if display {
+            println!{"{}... ", i + 1};
+        }
+        let result = if i % 2 == 0 {
+            compete(&player_one, &player_two, minutes_each, false, true, plys)
+        } else {
+            compete(&player_two, &player_one, minutes_each, false, true, plys)
+        };
+        match result {
+            Winner::PlayerOne => p_one_wins += 1,
+            Winner::PlayerTwo => p_two_wins += 1,
+            Winner::Draw => draws += 1,
+        };
+    }
+
+    if display {
+        println!();
+        println!("Player One as {} has {} wins", <S as Searcher>::name(), p_one_wins);
+        println!("Player Two as {} has {} wins", <T as Searcher>::name(), p_two_wins);
+        println!("Draws: {}",  draws);
+    }
+
+    if p_one_wins > p_two_wins {
+        Winner::PlayerOne
+    } else if p_two_wins > p_one_wins {
+        Winner::PlayerTwo
+    } else {
+        Winner::Draw
     }
 }
 

@@ -22,14 +22,11 @@ static PLYS_SEQ: [u16; 10] = [0 , 1,  2,  2,  2,  2,  2,  3,  3,  3];
 
 
 
-pub struct AdvancedBot {
-    board: Board,
-    timer: Timer,
-}
+pub struct AdvancedBot {}
 
 impl Searcher for AdvancedBot {
     fn name() -> &'static str {
-        "Pleco Searcher"
+        "Advanced Searcher"
     }
 
     fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
@@ -185,7 +182,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16
 
 fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
 
-    if board.depth() == max_depth {
+    if board.depth() >= max_depth {
         if board.in_check() || board.piece_last_captured().is_some() {
             return quiescence_search(board, alpha, beta, max_depth + 2)
         }
@@ -365,20 +362,20 @@ fn bench_bot_ply_4__main_bot(b: &mut Bencher) {
 }
 
 
-#[bench]
-fn bench_bot_ply_5__main_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
+//#[bench]
+//fn bench_bot_ply_5__main_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}

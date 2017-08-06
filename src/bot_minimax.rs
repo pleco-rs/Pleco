@@ -10,6 +10,7 @@ use timer;
 
 const MAX_PLY: u16 = 3;
 
+
 pub struct SimpleBot {
     board: Board,
 }
