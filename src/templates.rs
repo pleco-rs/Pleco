@@ -2,6 +2,7 @@ use bit_twiddles;
 use std::mem;
 use std::fmt;
 
+/// Enum to represent the Players White & Black.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Player {
     White = 0,
@@ -14,6 +15,7 @@ impl fmt::Display for Player {
     }
 }
 
+
 pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
 
 pub const PLAYER_CNT: usize = 2;
@@ -24,6 +26,7 @@ pub const RANK_CNT: usize = 8;
 pub const TOTAL_CASTLING_CNT: usize = 4;
 pub const CASTLING_SIDES: usize = 2;
 
+/// Publically available move-generation types.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GenTypes {
     All,
@@ -32,11 +35,7 @@ pub enum GenTypes {
     QuietChecks,
 }
 
-pub enum GameState {
-
-}
-
-
+/// Enum for all the possible Pieces.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {
@@ -60,6 +59,7 @@ impl fmt::Display for Piece {
     }
 }
 
+/// Enum for the Files of a Chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum File {
@@ -73,6 +73,7 @@ pub enum File {
     H = 7,
 }
 
+/// Enum for the Ranks of a Chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Rank {
@@ -86,12 +87,16 @@ pub enum Rank {
     R8 = 7,
 }
 
+
 pub const ALL_FILES: [File; FILE_CNT] = [File::A, File::B, File::C, File::D, File::E, File::F, File::G, File::H];
 pub const ALL_RANKS: [Rank; RANK_CNT] = [Rank::R1, Rank::R2, Rank::R3, Rank::R4, Rank::R5, Rank::R6, Rank::R7, Rank::R8];
 
 pub const ALL_PIECES: [Piece; PIECE_CNT] = [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 
+/// BitBoard is a u64, where the bits of each index represent a square.
 pub type BitBoard = u64;
+
+/// Alias for a certain square number.
 pub type SQ = u8;
 
 pub const NO_SQ: SQ = 64;
@@ -150,6 +155,7 @@ pub const START_WHITE_OCC: BitBoard = 0b00000000_00000000_00000000_00000000_0000
 pub const START_BLACK_OCC: BitBoard = 0b11111111_11111111_00000000_00000000_00000000_00000000_00000000_00000000;
 pub const START_OCC_ALL: BitBoard = START_BLACK_OCC | START_WHITE_OCC;
 
+/// Types of Castling available
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum CastleType {
     KingSide = 0,
@@ -157,6 +163,7 @@ pub enum CastleType {
 }
 
 #[repr(u8)]
+/// Squares available to play
 pub enum Square {
     A1 = 0,  B1, C1, D1, E1, F1, G1, H1,
     A2 = 8,  B2, C2, D2, E2, F2, G2, H2,
@@ -212,6 +219,7 @@ pub const FILE_DISPLAYS: [char; FILE_CNT] = ['a','b','c','d','e','f','g','h'];
 pub const RANK_DISPLAYS: [char; FILE_CNT] = ['1','2','3','4','5','6','7','8'];
 
 
+// Standard FEN strings for benchmarking and testing performance
 pub const TEST_FENS: [&str; 5] = [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     "rnr5/pN1kppb1/5n1p/2p5/8/1P2PP2/3B2PP/5KNR w - - 6 27",
@@ -220,7 +228,7 @@ pub const TEST_FENS: [&str; 5] = [
     "rnb1k1nr/ppp4p/1b1pppp1/8/4P2P/1Q3N2/PPPP1PP1/RNB1KB1R b KQkq - 1 10",
 ];
 
-// Yes
+
 #[inline]
 pub fn copy_piece_bbs(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT]) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
     let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
@@ -241,14 +249,19 @@ pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
 
 
 
+/// Returns the other player.
 #[inline]
 pub fn other_player(p: Player) -> Player {
+    // TODO: turn into impl Player
     match p {
         Player::White => Player::Black,
         Player::Black => Player::White,
     }
 }
 
+/// Returns the relative value of a piece.
+///
+/// Used for sorting moves.
 #[inline]
 pub fn value_of_piece(p: Piece) -> i8 {
     match p {
@@ -260,6 +273,8 @@ pub fn value_of_piece(p: Piece) -> i8 {
         Piece::K => 0
     }
 }
+
+/// Returns the relative square from a given square.
 #[inline]
 pub fn relative_square(p: Player, sq: SQ) -> SQ {
     assert!(sq_is_okay(sq));

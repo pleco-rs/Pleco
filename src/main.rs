@@ -1,16 +1,17 @@
-extern crate Pleco;
+extern crate pleco;
 extern crate rand;
-use Pleco::{board,piece_move,templates,timer};
-use Pleco::bot_minimax::SimpleBot;
-use Pleco::bot_random::RandomBot;
-use Pleco::bot_parallel_minimax::ParallelSearcher;
-use Pleco::bot_advanced::AdvancedBot;
-use Pleco::bot_alphabeta::AlphaBetaBot;
-use Pleco::bot_jamboree::JamboreeSearcher;
-use Pleco::bot_expert::ExpertBot;
-use Pleco::engine::Searcher;
-use Pleco::templates::print_bitboard;
-use Pleco::engine::compete_multiple;
+
+use pleco::templates::print_bitboard;
+use pleco::engine::*;
+
+use pleco::{board,piece_move,templates,timer};
+use pleco::bots::bot_minimax::SimpleBot;
+use pleco::bots::bot_random::RandomBot;
+use pleco::bots::bot_parallel_minimax::ParallelSearcher;
+use pleco::bots::bot_advanced::AdvancedBot;
+use pleco::bots::bot_alphabeta::AlphaBetaBot;
+use pleco::bots::bot_jamboree::JamboreeSearcher;
+use pleco::bots::bot_expert::ExpertBot;
 
 
 

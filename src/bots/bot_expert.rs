@@ -2,16 +2,14 @@ use board::*;
 use std::cmp::Ordering;
 use timer::*;
 use templates::*;
-use std::thread;
 use piece_move::BitMove;
 use engine::*;
 use eval::*;
 use rayon;
-use rayon::prelude::*;
-use test::Bencher;
 use transposition_table::*;
-use test;
 use timer;
+
+use super::BestMove;
 
 const MAX_PLY: u16 = 5;
 
@@ -37,7 +35,7 @@ impl Searcher for ExpertBot {
         iterative_deepening(board, timer, max_depth)
     }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
         ExpertBot::best_move_depth(board, timer, MAX_PLY)
     }
 }
@@ -59,9 +57,6 @@ fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
     let mut i = 2;
     let mut alpha: i16 = NEG_INFINITY;
     let mut beta:  i16 = INFINITY;
-
-//    tt.clear();
-//    tt.reserve(10000);
 
     // Create a dummy best_move
     let mut best_move = BestMove::new(NEG_INFINITY);
@@ -290,8 +285,6 @@ fn mvv_lva_sort(moves: &mut[BitMove], board: &Board) {
 
 
 
-
-
 fn eval_board(board: &mut Board) -> BestMove {
     BestMove::new(Eval::eval_low(&board))
 }
@@ -300,88 +293,67 @@ fn eval_board(board: &mut Board) -> BestMove {
 
 
 
-pub struct BestMove {
-    pub best_move: Option<BitMove>,
-    pub score: i16,
-}
+//#[bench]
+//fn bench_bot_ply_3__expert_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+////    tt.clear();
+////    tt.reserve(100000);
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 3);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
+//
+//#[bench]
+//fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    use test;
+////    tt.clear();
+////    tt.reserve(100000);
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
 
-impl BestMove {
-    pub fn new(score: i16) -> Self {
-        BestMove{
-            best_move: None,
-            score: score
-        }
-    }
-
-    pub fn negate(mut self) -> Self {
-        self.score *= -1;
-        self
-    }
-}
-
-
-
-
-#[bench]
-fn bench_bot_ply_3__expert_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-//    tt.clear();
-//    tt.reserve(100000);
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 3);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
-
-#[bench]
-fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-//    tt.clear();
-//    tt.reserve(100000);
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
-
-
-#[bench]
-fn bench_bot_ply_5__expert_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-//    tt.clear();
-//    tt.reserve(100000);
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
+//
+//#[bench]
+//fn bench_bot_ply_5__expert_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+////    tt.clear();
+////    tt.reserve(100000);
+//    b.iter(|| {
+//        let mut b: Board = test::black_box(Board::default());
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
 //
 //#[bench]
 //fn bench_bot_ply_6__expert_bot(b: &mut Bencher) {

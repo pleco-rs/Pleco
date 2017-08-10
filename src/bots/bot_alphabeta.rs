@@ -4,32 +4,13 @@ use timer::*;
 use piece_move::*;
 use engine::Searcher;
 use eval::*;
-use rayon;
-use rayon::prelude::*;
 use test::Bencher;
 use test;
-use timer;
+
+use super::BestMove;
+
 
 const MAX_PLY: u16 = 5;
-
-pub struct BestMove {
-    pub best_move: Option<BitMove>,
-    pub score: i16,
-}
-
-impl BestMove {
-    pub fn new(score: i16) -> Self {
-        BestMove{
-            best_move: None,
-            score: score
-        }
-    }
-
-    pub fn negate(mut self) -> Self {
-        self.score *= -1;
-        self
-    }
-}
 
 
 pub struct  AlphaBetaBot {

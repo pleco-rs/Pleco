@@ -1,8 +1,8 @@
-extern crate Pleco;
+extern crate pleco;
 
-use Pleco::board::*;
-use Pleco::templates::*;
-use Pleco::piece_move::*;
+use pleco::board::*;
+use pleco::templates::*;
+use pleco::piece_move::*;
 
 
 

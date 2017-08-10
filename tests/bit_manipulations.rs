@@ -1,6 +1,6 @@
-extern crate Pleco;
+extern crate pleco;
 
-use Pleco::bit_twiddles as bit_twiddles;
+use pleco::bit_twiddles as bit_twiddles;
 
 
 #[test]

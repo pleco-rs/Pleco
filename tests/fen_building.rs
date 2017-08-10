@@ -1,7 +1,7 @@
-extern crate Pleco;
+extern crate pleco;
 
-use Pleco::board::Board;
-use Pleco::templates::{Piece, Player, TEST_FENS};
+use pleco::board::Board;
+use pleco::templates::{Piece, Player, TEST_FENS};
 use std::*;
 
 

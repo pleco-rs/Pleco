@@ -32,7 +32,7 @@ The AI Bot aims to have the following features:
 - [x] Iterative Deepening
 - [x] Aspiration Windows
 - [x] Futility Pruning
-- [ ] Transposition Tables
+- [x] Transposition Tables
 - [ ] Null Move Heuristic
 - [ ] Killer Moves
 
