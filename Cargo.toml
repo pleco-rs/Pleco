@@ -1,23 +1,46 @@
 [package]
 name = "pleco"
 version = "0.1.0"
-authors = ["stephenf <stephenf@cs.washington.edu>"]
+authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 
 include = [
     "src/*.rs",
     "tests/*.rs",
     "Cargo.toml",
-    ".gitignore"
+    ".gitignore",
+    "benches/*.rs"
 ]
 
 [profile.dev]
 opt-level = 3
+debug = true
 
 [profile.release]
+opt-level = 3
 debug = true
+
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+
+[profile.doc]
+opt-level = 0
+debug = 2
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+panic = 'unwind'
 
 [lib]
 name = "pleco"
+bench = true
+path = "src/lib.rs"
+doctest = true
 
 [dependencies]
 clippy = {version = "*", optional = true}
@@ -28,8 +51,8 @@ rand = "0.3"
 chrono = "0.4"
 rayon = "0.8.2"
 futures = "0.1.14"
-parking_lot = {version = "*"}
-owning_ref = {version = "*"}
+parking_lot = "0.3"
+owning_ref = "0.2"
 
 [features]
 default = []
@@ -37,3 +60,7 @@ default = []
 [[test]]
 path = "tests/test.rs"
 name = "default"
+
+[[bench]]
+path = "benches/bench.rs"
+name = "integration_benches"

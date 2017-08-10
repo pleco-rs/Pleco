@@ -28,17 +28,10 @@ pub mod templates;
 pub mod magic_helper;
 pub mod timer;
 pub mod engine;
-
-
-
-pub mod bot_random;
-pub mod bot_minimax;
-pub mod bot_parallel_minimax;
 pub mod transposition_table;
-pub mod bot_alphabeta;
-pub mod bot_jamboree;
-pub mod bot_advanced;
-pub mod bot_expert;
+
+
+pub mod bots;
 
 pub mod eval;
 

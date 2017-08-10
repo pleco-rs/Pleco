@@ -7,30 +7,14 @@ use test;
 use test::Bencher;
 use timer;
 
+use super::BestMove;
+
 
 const MAX_PLY: u16 = 3;
 
 
 pub struct SimpleBot {
     board: Board,
-}
-
-pub struct BestMove {
-    best_move: Option<BitMove>,
-    score: i16,
-}
-
-impl BestMove {
-    pub fn new(score: i16) -> Self {
-        BestMove{
-            best_move: None,
-            score: score
-        }
-    }
-
-    pub fn negate(&mut self) {
-        self.score = self.score.wrapping_neg();
-    }
 }
 
 
@@ -73,8 +57,7 @@ fn minimax(bot: &mut SimpleBot, max_depth: u16) -> BestMove {
     let mut best_move: Option<BitMove> = None;
     for mov in moves {
         bot.board.apply_move(mov);
-        let mut returned_move: BestMove = minimax(bot, max_depth);
-        returned_move.negate();
+        let mut returned_move: BestMove = minimax(bot, max_depth).negate();
         bot.board.undo_move();
         if returned_move.score > best_value {
             best_value = returned_move.score;

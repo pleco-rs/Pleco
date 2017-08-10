@@ -1,5 +1,3 @@
-#![crate_name = "pleco"]
-
 use templates::*;
 use magic_helper::MagicHelper;
 use movegen::MoveGen;
@@ -8,10 +6,6 @@ use piece_move::{BitMove,MoveType};
 use std::option::*;
 use std::sync::Arc;
 use std::{mem,fmt,char};
-use std::hash::{Hash,Hasher};
-use test;
-
-
 
 // Initialize MAGIC_HELPER as a static structure for everyone to use
 
@@ -164,7 +158,7 @@ struct PieceLocations {
     // x011 -> Rook(R)
     // x100 -> Queen(Q)
     // x101 -> King (K)
-    // x110 -> ??? Undefined??
+    // x110 -> ??? Undefined ??
     // x111 -> None
     // 0xxx -> White Piece
     // 1xxx -> Black Piece
@@ -174,7 +168,7 @@ struct PieceLocations {
 }
 
 impl Clone for PieceLocations {
-    // Need to use transmute copy as [_;64] does not automatically implement Clone
+    // Need to use transmute copy as [_;64] does not automatically implement Clone.
     fn clone(&self) -> PieceLocations {
         unsafe { mem::transmute_copy(&*&self.data) }
     }
@@ -297,7 +291,7 @@ impl PieceLocations {
 
 
 
-    /// Returns the bits representation of a given piece and player
+    /// Helper method to return the bit representation of a given piece and player
     fn create_sq(&self, player: Player, piece: Piece) -> u8 {
         let mut loc: u8 = match piece {
             Piece::P => 0b0000,
@@ -709,7 +703,7 @@ impl Board {
         assert_eq!(det_split.len(), 6);
 
         // Split the first part by '/' for locations
-        let b_rep: Vec<&str> = det_split[0].split("/").collect();
+        let b_rep: Vec<&str> = det_split[0].split('/').collect();
 
         // 8 ranks, so 8 parts
         assert_eq!(b_rep.len(), 8);
@@ -934,7 +928,7 @@ impl  Board  {
     ///
     /// The supplied BitMove must be both a valid move for that position, as well as a
     /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
-    /// [Board::generate_moves()], which garuntees that only Legal moves will be created.
+    /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
 
         // Check for stupidity
@@ -1093,7 +1087,7 @@ impl  Board  {
     /// # Panics
     ///
     /// Cannot be done if after a [Board::shallow_clone()] or [Board::parallel_clone()] has been done
-    /// and no subsequent moves have been played:
+    /// and no subsequent moves have been played.
     /// ```rust,should_panic
     /// use pleco::board::*;
     ///
@@ -1167,6 +1161,10 @@ impl  Board  {
     ///
     /// Unsafe as it allows for Null Moves to be applied in states of check, which is never a valid
     /// state of a chess game.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Board is currently in check.
     pub unsafe fn apply_null_move(&mut self) {
         assert!(self.checkers() != 0);
 

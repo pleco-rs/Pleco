@@ -1,9 +1,11 @@
 use piece_move::*;
 
+/// Transposition Table used to track information concerning the best move of a board.
+///
+/// This is simply a copy-paste of [chashmap 2.2](https://crates.io/crates/chashmap) by ticki. All credit
+/// for creation goes to him.
 
 pub type Key = u64;
-
-
 
 // 2 bytes + 2 bytes + 1 Byte + 1 byte = ?6 Bytes
 #[derive(Clone)]

@@ -8,6 +8,8 @@ use test::Bencher;
 use test;
 use timer;
 
+use super::BestMove;
+
 
 
 
@@ -15,30 +17,6 @@ pub struct ParallelSearcher {
     board: Board,
     timer: Timer,
 }
-
-pub struct BestMove {
-    best_move: Option<BitMove>,
-    score: i16,
-}
-
-impl BestMove {
-    pub fn new(score: i16) -> Self {
-        BestMove{
-            best_move: None,
-            score: score
-        }
-    }
-
-    pub fn negate(mut self) -> Self {
-        self.score *= -1;
-        self
-    }
-
-    pub fn score(&self) -> i16 {self.score}
-}
-
-
-
 
 const MAX_PLY: u16 = 5;
 const DIVIDE_CUTOFF: usize = 8;
