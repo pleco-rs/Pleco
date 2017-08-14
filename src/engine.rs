@@ -46,7 +46,9 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: &S, player_two: &T, minutes
     }
 
     while !b.checkmate() {
-        if randomize && b.moves_played() < 4 {
+        if randomize && b.moves_played() < 2 {
+            let moves = b.generate_moves();
+            b.apply_move(moves[rand::random::<usize>() % moves.len()]);
             let moves = b.generate_moves();
             b.apply_move(moves[rand::random::<usize>() % moves.len()]);
             let moves = b.generate_moves();
@@ -145,7 +147,6 @@ pub enum GuiToEngine {
     Stop,
 }
 
-//
 pub fn uci<S: UCISearcher>(player_one: S) {
     println!("id name {}", ID_NAME);
     println!("id author {}", ID_AUTHOR);
@@ -201,24 +202,3 @@ fn parse_uci_interrupt(str: &str) -> Option<GuiToEngine> {
     None
 }
 
-
-
-
-
-//pub struct StdinFuture {}
-//
-//impl Future for StdinFuture {
-//    type Item = GuiToEngine;
-//    type Error = String;
-//
-//    fn poll(&mut self) -> Poll<Self::Item,Self::Error> {
-//        let stdin = io::stdin();
-//        let mut input = &mut String::new();
-//        let res = stdin.read_line(input);
-//        return if res.is_ok() {
-//            Ok(parse_uci_interrupt(input))
-//        } else {
-//            Err(res.unwrap_err().description().to_owned())
-//        }
-//    }
-//}

@@ -8,7 +8,7 @@ use test::Bencher;
 use test;
 use timer;
 
-use super::BestMove;
+use super::super::BestMove;
 
 
 

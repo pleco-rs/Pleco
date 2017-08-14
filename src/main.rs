@@ -3,15 +3,19 @@ extern crate rand;
 
 use pleco::templates::print_bitboard;
 use pleco::engine::*;
+use pleco::timer::Timer;
 
 use pleco::{board,piece_move,templates,timer};
-use pleco::bots::bot_minimax::SimpleBot;
-use pleco::bots::bot_random::RandomBot;
-use pleco::bots::bot_parallel_minimax::ParallelSearcher;
-use pleco::bots::bot_advanced::AdvancedBot;
-use pleco::bots::bot_alphabeta::AlphaBetaBot;
-use pleco::bots::bot_jamboree::JamboreeSearcher;
+
+use pleco::bots::basic::bot_minimax::SimpleBot;
+use pleco::bots::basic::bot_random::RandomBot;
+use pleco::bots::basic::bot_parallel_minimax::ParallelSearcher;
+use pleco::bots::basic::bot_alphabeta::AlphaBetaBot;
+use pleco::bots::basic::bot_jamboree::JamboreeSearcher;
+
+use pleco::bots::threaded_searcher::ThreadSearcher;
 use pleco::bots::bot_expert::ExpertBot;
+use pleco::bots::bot_iterative_parallel_mvv_lva::IterativeSearcher;
 
 
 
@@ -22,9 +26,10 @@ use pleco::bots::bot_expert::ExpertBot;
 // 1r1qkbn1/p2B2pr/b4QP1/1ppp4/P2n1P1p/2P5/1P2P2P/RNB1K1NR b KQ - 2 16
 
 fn main() {
+    let timer = Timer::new(60);
 //    gen_random_fens();
-    sample_run();
-//    compete_multiple(AdvancedBot{}, ExpertBot{}, 60, 10, 5, true);
+//    sample_run();
+    compete_multiple(IterativeSearcher{}, ThreadSearcher{timer: &timer},60, 11, 5, true);
 
 }
 
@@ -53,8 +58,8 @@ fn sample_run() {
             } else if i % 2 == 0 {
                 println!("------------------------------------------------");
                 println!();
-                let mov = AdvancedBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
-                println!("{}'s move: {}",AdvancedBot::name(),mov);
+                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                println!("{}'s move: {}", IterativeSearcher::name(), mov);
                 b.apply_move(mov);
             } else {
                 let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
@@ -109,7 +114,7 @@ fn gen_random_fens() {
                 let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
                 b.apply_move(mov);
             } else {
-                let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
                 b.apply_move(mov);
             }
             i += 1;
@@ -130,122 +135,4 @@ fn gen_random_fens() {
     }
 
     println!("]");
-}
-
-fn test_moving() {
-    let mut b = board::Board::default();
-    let p = piece_move::PreMoveInfo {
-        src: 12,
-        dst: 28,
-        flags: piece_move::MoveFlag::DoublePawnPush
-    };
-    let m = piece_move::BitMove::init(p);
-    b.fancy_print();
-    b.apply_move(m);
-    b.fancy_print();
-    let p = piece_move::PreMoveInfo {
-        src: 51,
-        dst: 35,
-        flags: piece_move::MoveFlag::DoublePawnPush
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-    let p = piece_move::PreMoveInfo {
-        src: 28,
-        dst: 35,
-        flags: piece_move::MoveFlag::Capture {ep_capture: false}
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-    //
-    //    templates::print_bitboard(b.get_occupied_player(templates::Player::White));
-    //    println!("");
-    //    templates::print_bitboard(b.get_occupied_player(templates::Player::Black));
-    //    templates::print_bitboard(b.get_occupied());
-    let p = piece_move::PreMoveInfo {
-        src: 59,
-        dst: 35,
-        flags: piece_move::MoveFlag::Capture {ep_capture: false}
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: 5,
-        dst: 12,
-        flags: piece_move::MoveFlag::QuietMove,
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: 35,
-        dst: 8,
-        flags: piece_move::MoveFlag::Capture {ep_capture: false}
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: 6,
-        dst: 21,
-        flags: piece_move::MoveFlag::QuietMove
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: 60,
-        dst: 59,
-        flags: piece_move::MoveFlag::QuietMove
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: 4,
-        dst: 7,
-        flags: piece_move::MoveFlag::Castle{king_side: true}
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: templates::Square::A2 as u8,
-        dst: templates::Square::B1 as u8,
-        flags: piece_move::MoveFlag::Capture {ep_capture: false}
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-    let p = piece_move::PreMoveInfo {
-        src: templates::Square::A2 as u8,
-        dst: templates::Square::B1 as u8,
-        flags: piece_move::MoveFlag::Capture {ep_capture: false}
-    };
-    let m = piece_move::BitMove::init(p);
-    b.apply_move(m);
-    b.fancy_print();
-
-
-
-
-
-    let moves = b.generate_moves();
-
-    for x in moves.iter() {
-        println!("{}",x)
-    }
-
-    println!("{}",moves.len());
-
 }

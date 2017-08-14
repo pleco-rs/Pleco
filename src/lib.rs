@@ -4,6 +4,8 @@
 
 #![feature(test)]
 #![allow(dead_code)]
+#![feature(integer_atomics)]
+#![feature(future_atomic_orderings)]
 
 #[macro_use]
 extern crate bitflags;

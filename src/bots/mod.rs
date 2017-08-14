@@ -1,10 +1,9 @@
-pub mod bot_random;
-pub mod bot_minimax;
-pub mod bot_parallel_minimax;
-pub mod bot_alphabeta;
-pub mod bot_jamboree;
-pub mod bot_advanced;
+pub mod bot_iterative_parallel_mvv_lva;
 pub mod bot_expert;
+pub mod threaded_searcher;
+pub mod threaded_searcher_param;
+pub mod basic;
+
 
 use piece_move::BitMove;
 
@@ -26,3 +25,4 @@ impl BestMove {
         self
     }
 }
+
