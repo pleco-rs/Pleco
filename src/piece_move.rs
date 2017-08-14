@@ -39,12 +39,12 @@ use std::fmt;
 // Castles have the src as the king bit and the dst as the rook
 
 
-static SRC_MASK: u16 =  0b0000_000000_111111;
-static DST_MASK: u16 =  0b0000_111111_000000;
-static PR_MASK: u16 =   0b1000_000000_000000;
-static CP_MASK: u16 =   0b0100_000000_000000;
+static SRC_MASK: u16 = 0b0000_000000_111111;
+static DST_MASK: u16 = 0b0000_111111_000000;
+static PR_MASK: u16 = 0b1000_000000_000000;
+static CP_MASK: u16 = 0b0100_000000_000000;
 static FLAG_MASK: u16 = 0b1111_000000_000000;
-static SP_MASK: u16 =   0b0011_000000_000000;
+static SP_MASK: u16 = 0b0011_000000_000000;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct BitMove {
@@ -65,10 +65,10 @@ pub enum MoveType {
     Promotion,
     Castle,
     EnPassant,
-    Normal
+    Normal,
 }
 
-#[derive(Copy, Clone,PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct PreMoveInfo {
     pub src: SQ,
     pub dst: SQ,
@@ -95,28 +95,36 @@ impl BitMove {
         let flag_bits: u16 = match flags {
             MoveFlag::Promotion { capture, prom } => {
                 let p_bit: u16 = match prom {
-                    Piece::R => { 2 }
-                    Piece::B => { 1 }
-                    Piece::N => { 0 }
-                    Piece::Q | _ => { 3 }
+                    Piece::R => 2,
+                    Piece::B => 1,
+                    Piece::N => 0,
+                    Piece::Q | _ => 3,
                 };
                 let cp_bit = if capture { 4 } else { 0 };
                 p_bit + cp_bit + 8
             }
             MoveFlag::Capture { ep_capture } => {
-                if ep_capture { 5 } else { 4 }
+                if ep_capture {
+                    5
+                } else {
+                    4
+                }
             }
             MoveFlag::Castle { king_side } => {
-                if king_side { 2 } else { 3 }
+                if king_side {
+                    2
+                } else {
+                    3
+                }
             }
-            MoveFlag::DoublePawnPush => { 1 }
-            MoveFlag::QuietMove => { 0 }
+            MoveFlag::DoublePawnPush => 1,
+            MoveFlag::QuietMove => 0,
         };
         BitMove { data: (flag_bits << 12) | src | dst }
     }
 
     pub fn null() -> Self {
-        BitMove {data: 0}
+        BitMove { data: 0 }
     }
 
     pub fn is_null(&self) -> bool {
@@ -125,38 +133,56 @@ impl BitMove {
 
     // Note: Encompasses two missing Spots
     #[inline(always)]
-    pub fn is_capture(&self) -> bool { ((self.data & CP_MASK) >> 14) == 1 }
+    pub fn is_capture(&self) -> bool {
+        ((self.data & CP_MASK) >> 14) == 1
+    }
 
     #[inline(always)]
-    pub fn is_quiet_move(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 0 }
+    pub fn is_quiet_move(&self) -> bool {
+        ((self.data & FLAG_MASK) >> 12) == 0
+    }
 
     #[inline(always)]
-    pub fn is_promo(&self) -> bool { (self.data & PR_MASK) != 0 }
+    pub fn is_promo(&self) -> bool {
+        (self.data & PR_MASK) != 0
+    }
 
     #[inline(always)]
-    pub fn get_dest(&self) -> SQ { ((self.data & DST_MASK) >> 6) as u8 }
+    pub fn get_dest(&self) -> SQ {
+        ((self.data & DST_MASK) >> 6) as u8
+    }
 
     #[inline(always)]
-    pub fn get_src(&self) -> SQ { (self.data & SRC_MASK) as u8 }
+    pub fn get_src(&self) -> SQ {
+        (self.data & SRC_MASK) as u8
+    }
 
     #[inline(always)]
-    pub fn is_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 13) == 1 }
+    pub fn is_castle(&self) -> bool {
+        ((self.data & FLAG_MASK) >> 13) == 1
+    }
 
     #[inline(always)]
-    pub fn is_king_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 2 }
+    pub fn is_king_castle(&self) -> bool {
+        ((self.data & FLAG_MASK) >> 12) == 2
+    }
 
     #[inline(always)]
-    pub fn is_queen_castle(&self) -> bool { ((self.data & FLAG_MASK) >> 12) == 3 }
+    pub fn is_queen_castle(&self) -> bool {
+        ((self.data & FLAG_MASK) >> 12) == 3
+    }
 
     #[inline(always)]
-    pub fn is_en_passant(&self) -> bool { (self.data & FLAG_MASK) >> 12 == 5 }
+    pub fn is_en_passant(&self) -> bool {
+        (self.data & FLAG_MASK) >> 12 == 5
+    }
 
     #[inline(always)]
     pub fn is_double_push(&self) -> (bool, u8) {
         let is_double_push: u8 = ((self.data & FLAG_MASK) >> 12) as u8;
         match is_double_push {
             1 => (true, self.get_dest() as u8),
-            _ => (false, 64)
+            _ => (false, 64),
         }
     }
 
@@ -191,23 +217,29 @@ impl BitMove {
 
     #[inline(always)]
     pub fn move_type(&self) -> MoveType {
-        if self.is_castle() {return MoveType::Castle}
-        if self.is_promo() {return MoveType::Promotion}
-        if self.is_en_passant() { return MoveType::EnPassant}
+        if self.is_castle() {
+            return MoveType::Castle;
+        }
+        if self.is_promo() {
+            return MoveType::Promotion;
+        }
+        if self.is_en_passant() {
+            return MoveType::EnPassant;
+        }
         MoveType::Normal
     }
 
     pub fn stringify(&self) -> String {
         let src = parse_sq(self.get_src());
         let dst = parse_sq(self.get_dest());
-        let mut s = format!("{}{}",src,dst);
+        let mut s = format!("{}{}", src, dst);
         if self.is_promo() {
             let char = match self.promo_piece() {
                 Piece::B => 'b',
                 Piece::N => 'n',
                 Piece::R => 'r',
                 Piece::Q => 'q',
-                _ => unreachable!()
+                _ => unreachable!(),
             };
             s.push(char);
         }
@@ -218,4 +250,3 @@ impl BitMove {
         self.data
     }
 }
-

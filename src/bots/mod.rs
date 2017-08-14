@@ -15,9 +15,9 @@ pub struct BestMove {
 
 impl BestMove {
     pub fn new(score: i16) -> Self {
-        BestMove{
+        BestMove {
             best_move: None,
-            score: score
+            score: score,
         }
     }
 
