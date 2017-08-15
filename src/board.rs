@@ -329,7 +329,7 @@ impl PieceLocations {
 /// Allows for easy undo-ing of moves as these keep track of their previous board state, forming a
 /// Tree-like persistent Stack
 #[derive(Clone)]
-struct BoardState {
+pub struct BoardState {
     // The Following Fields are easily copied from the previous version and possbily modified
     pub castling: Castling,
     pub rule_50: i16,
@@ -343,6 +343,8 @@ struct BoardState {
     pub blockers_king: [BitBoard; PLAYER_CNT],
     pub pinners_king: [BitBoard; PLAYER_CNT],
     pub check_sqs: [BitBoard; PIECE_CNT],
+
+    pub prev_move: BitMove,
 
     // Previous State of the board ( one move ago)
     pub prev: Option<Arc<BoardState>>,
@@ -382,6 +384,7 @@ impl BoardState {
             blockers_king: [0; PLAYER_CNT],
             pinners_king: [0; PLAYER_CNT],
             check_sqs: [0; PIECE_CNT],
+            prev_move: BitMove::null(),
             prev: None,
         }
     }
@@ -399,6 +402,7 @@ impl BoardState {
             blockers_king: [0; PLAYER_CNT],
             pinners_king: [0; PLAYER_CNT],
             check_sqs: [0; PIECE_CNT],
+            prev_move: BitMove::null(),
             prev: None,
         }
     }
@@ -419,6 +423,7 @@ impl BoardState {
             blockers_king: [0; PLAYER_CNT],
             pinners_king: [0; PLAYER_CNT],
             check_sqs: [0; PIECE_CNT],
+            prev_move: BitMove::null(),
             prev: self.get_prev(),
         }
     }
@@ -426,6 +431,17 @@ impl BoardState {
     /// Return the previous BoardState from one move ago.
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
         (&self).prev.as_ref().cloned()
+    }
+
+    pub fn backtrace(&self) {
+        self.print_info();
+        if self.prev.is_some() {
+            self.get_prev().unwrap().print_info();
+        }
+    }
+
+    pub fn print_info(&self) {
+        println!("ply: {}, move played: {}",self.ply, self.prev_move);
     }
 }
 
@@ -493,7 +509,7 @@ pub struct Board {
 
     // List of Moves that have been played so far.
     // Only gaurunteed to have the moves since last copy.
-    undo_moves: Vec<BitMove>,
+//    undo_moves: Vec<BitMove>,
 
     // Reference to the pre-computed information
     pub magic_helper: &'static MAGIC_HELPER,
@@ -528,7 +544,6 @@ impl Board {
             piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
             piece_locations: unsafe { PieceLocations::default() },
             state: Arc::new(BoardState::default()),
-            undo_moves: Vec::with_capacity(100), // As this is the main board, might as well reserve space
             magic_helper: &MAGIC_HELPER,
         };
         // Create the Zobrist hash & set the Piece Locations structure
@@ -559,7 +574,6 @@ impl Board {
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
-            undo_moves: Vec::with_capacity(16), // 32 Bytes taken up
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -586,7 +600,6 @@ impl Board {
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
-            undo_moves: Vec::with_capacity(10), // 32 Bytes taken up
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -608,7 +621,6 @@ impl Board {
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
-            undo_moves: self.undo_moves.clone(),
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -834,6 +846,7 @@ impl Board {
             blockers_king: [0; PLAYER_CNT],
             pinners_king: [0; PLAYER_CNT],
             check_sqs: [0; PIECE_CNT],
+            prev_move: BitMove::null(),
             prev: None,
         });
 
@@ -848,7 +861,6 @@ impl Board {
             piece_counts: piece_cnt,
             piece_locations: piece_loc,
             state: Arc::new(BoardState::default()),
-            undo_moves: Vec::with_capacity(20),
             magic_helper: &MAGIC_HELPER,
         };
 
@@ -985,6 +997,7 @@ impl Board {
             self.depth += 1;
             new_state.rule_50 += 1;
             new_state.ply += 1;
+            new_state.prev_move = bit_move;
 
 
             let us = self.turn;
@@ -1109,7 +1122,6 @@ impl Board {
             }
 
             self.turn = them;
-            self.undo_moves.push(bit_move);
             self.set_check_info(new_state); // Set the checking information
         }
         self.state = next_arc_state;
@@ -1138,10 +1150,10 @@ impl Board {
     ///
     /// ```
     pub fn undo_move(&mut self) {
-        assert!(!self.undo_moves.is_empty());
         assert!(self.state.prev.is_some());
+        assert!(!self.state.prev_move.is_null());
 
-        let undo_move: BitMove = self.undo_moves.pop().unwrap();
+        let undo_move: BitMove = self.state.prev_move;
 
         self.turn = other_player(self.turn);
         let us: Player = self.turn;
@@ -1211,6 +1223,7 @@ impl Board {
         {
             let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
 
+            new_state.prev_move = BitMove::null();
             new_state.rule_50 += 1;
             new_state.ply += 1;
 
@@ -1223,7 +1236,6 @@ impl Board {
 
             new_state.zobrast = zob;
             self.turn = other_player(self.turn);
-            self.undo_moves.push(BitMove::null());
             self.set_check_info(new_state);
         }
         self.state = next_arc_state;
@@ -1237,9 +1249,7 @@ impl Board {
     /// This method should only be used if it can be guaranteed that the last played move from
     /// the current state is a Null-Move. Otherwise, a panic will occur.
     pub unsafe fn undo_null_move(&mut self) {
-        assert!(!self.undo_moves.is_empty());
-        let null_move = self.undo_moves.pop().unwrap();
-        assert!(null_move.is_null());
+        assert!(self.state.prev_move.is_null());
         self.turn = other_player(self.turn);
         self.state = self.state.get_prev().unwrap();
     }
@@ -1704,7 +1714,11 @@ impl Board {
 
     /// Return the last move played, if any.
     pub fn last_move(&self) -> Option<BitMove> {
-        self.undo_moves.first().map(|b| b.clone())
+        if self.state.prev_move.is_null() {
+            None
+        } else {
+            Some(self.state.prev_move)
+        }
     }
 
     /// Returns if the current player has castled ever.

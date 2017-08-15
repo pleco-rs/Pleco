@@ -1,5 +1,4 @@
 use board::*;
-use std::cmp::Ordering;
 use timer::*;
 use templates::*;
 use piece_move::BitMove;
@@ -8,6 +7,8 @@ use eval::*;
 use rayon;
 use transposition_table::*;
 use timer;
+use test::Bencher;
+use test;
 
 use super::BestMove;
 
@@ -348,26 +349,27 @@ fn eval_board(board: &mut Board) -> BestMove {
 //    })
 //}
 //
-//#[bench]
-//fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    use test;
-////    tt.clear();
-////    tt.reserve(100000);
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}
+
+#[bench]
+fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
+    use templates::TEST_FENS;
+    use test;
+//    tt.clear();
+//    tt.reserve(100000);
+    b.iter(|| {
+        let mut b: Board = test::black_box(Board::default());
+        let iter = TEST_FENS.len();
+        let mut i = 0;
+        (0..iter).fold(0, |a: u64, c| {
+            //            println!("{}",TEST_FENS[i]);
+            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
+            b.apply_move(mov);
+            i += 1;
+            a ^ (b.zobrist()) }
+        )
+    })
+}
 
 //
 //#[bench]

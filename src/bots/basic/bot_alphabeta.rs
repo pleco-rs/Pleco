@@ -7,7 +7,7 @@ use eval::*;
 use test::Bencher;
 use test;
 
-use super::BestMove;
+use super::super::BestMove;
 
 
 const MAX_PLY: u16 = 5;

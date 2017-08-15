@@ -7,7 +7,7 @@ use test;
 use test::Bencher;
 use timer;
 
-use super::BestMove;
+use super::super::BestMove;
 
 
 const MAX_PLY: u16 = 3;
@@ -75,7 +75,7 @@ fn eval_board(bot: &mut SimpleBot) -> BestMove {
 
 
 #[bench]
-fn bench_bot_ply_3__simple_bot(b: &mut Bencher) {
+fn bench_bot_ply_3_minimax_bot(b: &mut Bencher) {
     use templates::TEST_FENS;
     b.iter(|| {
         let mut b: Board = test::black_box(Board::default());

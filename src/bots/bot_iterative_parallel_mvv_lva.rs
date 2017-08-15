@@ -1,5 +1,4 @@
 use board::*;
-use std::cmp::Ordering;
 use timer::*;
 use templates::*;
 use piece_move::BitMove;
@@ -20,9 +19,9 @@ static PLYS_SEQ: [u16; 10] = [0, 1, 2, 2, 2, 2, 2, 3, 3, 3];
 
 
 
-pub struct AdvancedBot {}
+pub struct IterativeSearcher {}
 
-impl Searcher for AdvancedBot {
+impl Searcher for IterativeSearcher {
     fn name() -> &'static str {
         "Advanced Searcher"
     }
@@ -34,8 +33,8 @@ impl Searcher for AdvancedBot {
         //        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2).best_move.unwrap()
     }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
-        AdvancedBot::best_move_depth(board, timer, MAX_PLY)
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
+        IterativeSearcher::best_move_depth(board, timer, MAX_PLY)
     }
 }
 
@@ -222,7 +221,7 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         }
     }
 
-    let mut moves = board.generate_moves();
+    let moves = board.generate_moves();
 
 
     if moves.is_empty() {
@@ -361,27 +360,9 @@ impl BestMove {
 
 
 
-
-#[bench]
-fn bench_bot_ply_3__main_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 3);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist())
-        })
-    })
-}
-
+//
 //#[bench]
-//fn bench_bot_ply_4__main_bot(b: &mut Bencher) {
+//fn bench_bot_ply_3__main_bot(b: &mut Bencher) {
 //    use templates::TEST_FENS;
 //    b.iter(|| {
 //        let mut b: Board = test::black_box(Board::default());
@@ -390,13 +371,31 @@ fn bench_bot_ply_3__main_bot(b: &mut Bencher) {
 //        (0..iter).fold(0, |a: u64, c| {
 //            //            println!("{}",TEST_FENS[i]);
 //            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = AdvancedBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
+//            let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 3);
 //            b.apply_move(mov);
 //            i += 1;
 //            a ^ (b.zobrist()) }
 //        )
 //    })
 //}
+
+#[bench]
+fn bench_bot_ply_4__main_bot(b: &mut Bencher) {
+    use templates::TEST_FENS;
+    b.iter(|| {
+        let mut b: Board = test::black_box(Board::default());
+        let iter = TEST_FENS.len();
+        let mut i = 0;
+        (0..iter).fold(0, |a: u64, c| {
+            //            println!("{}",TEST_FENS[i]);
+            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+            let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
+            b.apply_move(mov);
+            i += 1;
+            a ^ (b.zobrist())
+        })
+    })
+}
 
 
 //#[bench]

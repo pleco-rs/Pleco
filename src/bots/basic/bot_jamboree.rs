@@ -7,7 +7,7 @@ use rayon;
 use test::Bencher;
 use test;
 
-use super::BestMove;
+use super::super::BestMove;
 
 
 
