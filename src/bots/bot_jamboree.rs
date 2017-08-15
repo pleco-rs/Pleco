@@ -26,7 +26,6 @@ const DIVISOR_SEQ: usize = 4;
 // half_moves: total moves
 
 impl Searcher for JamboreeSearcher {
-
     fn name() -> &'static str {
         "Jamboree Searcher"
     }
@@ -38,11 +37,19 @@ impl Searcher for JamboreeSearcher {
     fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
         let alpha = NEG_INFINITY;
         let beta = INFINITY;
-        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2).best_move.unwrap()
+        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)
+            .best_move
+            .unwrap()
     }
 }
 
-fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16) -> BestMove {
+fn jamboree(
+    board: &mut Board,
+    mut alpha: i16,
+    beta: i16,
+    max_depth: u16,
+    plys_seq: u16,
+) -> BestMove {
     assert!(alpha <= beta);
     if board.depth() >= max_depth {
         return eval_board(board);
@@ -70,13 +77,16 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
         let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
         board.undo_move();
 
-        if return_move.score > alpha  {
+        if return_move.score > alpha {
             alpha = return_move.score;
             best_move = Some(*mov);
         }
 
         if alpha >= beta {
-            return BestMove{best_move: Some(*mov), score: alpha};
+            return BestMove {
+                best_move: Some(*mov),
+                score: alpha,
+            };
         }
     }
 
@@ -85,11 +95,21 @@ fn jamboree(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_s
     if returned_move.score > alpha {
         returned_move
     } else {
-        BestMove{best_move: best_move, score: alpha}
+        BestMove {
+            best_move: best_move,
+            score: alpha,
+        }
     }
 }
 
-fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16, plys_seq: u16) -> BestMove {
+fn parallel_task(
+    slice: &[BitMove],
+    board: &mut Board,
+    mut alpha: i16,
+    beta: i16,
+    max_depth: u16,
+    plys_seq: u16,
+) -> BestMove {
     let mut best_move: Option<BitMove> = None;
     if slice.len() <= DIVIDE_CUTOFF {
         for mov in slice {
@@ -97,13 +117,16 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16
             let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
             board.undo_move();
 
-            if return_move.score > alpha  {
+            if return_move.score > alpha {
                 alpha = return_move.score;
                 best_move = Some(*mov);
             }
 
             if alpha >= beta {
-                return BestMove{best_move: Some(*mov), score: alpha};
+                return BestMove {
+                    best_move: Some(*mov),
+                    score: alpha,
+                };
             }
         }
 
@@ -116,7 +139,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16
             || parallel_task(left, &mut left_clone, alpha, beta, max_depth, plys_seq),
             || parallel_task(right, board, alpha, beta, max_depth, plys_seq));
 
-        if left_move.score > alpha{
+        if left_move.score > alpha {
             alpha = left_move.score;
             best_move = left_move.best_move;
         }
@@ -125,7 +148,10 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, mut alpha: i16, beta: i16
             best_move = right_move.best_move;
         }
     }
-    BestMove{best_move: best_move, score: alpha}
+    BestMove {
+        best_move: best_move,
+        score: alpha,
+    }
 
 }
 
@@ -151,17 +177,23 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         let return_move = alpha_beta_search(board, -beta, -alpha, max_depth).negate();
         board.undo_move();
 
-        if return_move.score > alpha  {
+        if return_move.score > alpha {
             alpha = return_move.score;
             best_move = Some(mov);
         }
 
         if alpha >= beta {
-            return BestMove{best_move: Some(mov), score: alpha};
+            return BestMove {
+                best_move: Some(mov),
+                score: alpha,
+            };
         }
     }
 
-    BestMove{best_move: best_move, score: alpha}
+    BestMove {
+        best_move: best_move,
+        score: alpha,
+    }
 }
 
 fn eval_board(board: &mut Board) -> BestMove {

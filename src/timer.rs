@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 
+
 // Structure to keep track of time for two players
 
 
@@ -11,7 +12,7 @@ pub struct Timer {
     turn: Turn, // turn of the current clock
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 enum Turn {
     One = 0,
     Two = 1,
@@ -24,7 +25,7 @@ impl Timer {
             start: Instant::now(),
             total_duration: secs,
             seconds_remaining: [secs, secs],
-            turn: Turn::One
+            turn: Turn::One,
         }
     }
 
@@ -58,6 +59,6 @@ impl Timer {
 fn other_turn(turn: Turn) -> Turn {
     match turn {
         Turn::One => Turn::Two,
-        Turn::Two => Turn::One
+        Turn::Two => Turn::One,
     }
 }
