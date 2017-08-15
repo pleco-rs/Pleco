@@ -48,7 +48,6 @@ lazy_static = "0.2"
 chashmap = {version = "*"}
 bitflags = "0.9"
 rand = "0.3"
-chrono = "0.4"
 rayon = "0.8.2"
 futures = "0.1.14"
 parking_lot = "0.3"

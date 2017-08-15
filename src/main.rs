@@ -34,9 +34,9 @@ fn main() {
 }
 
 fn test_between() {
-    let mut b = board::Board::default();
+    let b = board::Board::default();
     let m = b.magic_helper;
-    print_bitboard(m.between_bb(24,60));
+    print_bitboard(m.between_bb(24, 60));
 }
 
 fn sample_run() {
@@ -52,14 +52,14 @@ fn sample_run() {
             i = max;
         } else {
             if i % 57 == 2 {
-                let mov = RandomBot::best_move(b.shallow_clone(),&timer::Timer::new(20));
-                println!("{}'s move: {}",RandomBot::name(),mov);
+                let mov = RandomBot::best_move(b.shallow_clone(), &timer::Timer::new(20));
+                println!("{}'s move: {}", RandomBot::name(), mov);
                 b.apply_move(mov);
             } else if i % 2 == 0 {
                 println!("------------------------------------------------");
                 println!();
-                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
-                println!("{}'s move: {}", IterativeSearcher::name(), mov);
+                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                println!("{}'s move: {}",IterativeSearcher::name(),mov);
                 b.apply_move(mov);
             } else {
                 let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
@@ -80,23 +80,22 @@ fn sample_run() {
 fn gen_random_fens() {
     let mut b = board::Board::default();
     println!("[");
-    println!("\"{}\",",b.get_fen());
+    println!("\"{}\",", b.get_fen());
 
     let quota = 4;
-    let moves = 0;
 
     let max = 200;
     let mut i = 0;
 
-    let mut beginning_count = 0;
+    let beginning_count = 0;
     let mut middle_count = 0;
     let mut end_count = 0;
 
     while beginning_count + middle_count + end_count <= (quota * 3) - 1 {
         if i == 0 {
-            let mov = RandomBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),1);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 1);
             b.apply_move(mov);
-            let mov = RandomBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),1);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 1);
             b.apply_move(mov);
         }
         if b.checkmate() || i > max {
@@ -108,10 +107,11 @@ fn gen_random_fens() {
             }
         } else {
             if i % 11 == 9 {
-                let mov = RandomBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),1);
+                let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 1);
                 b.apply_move(mov);
             } else if i % 2 == 0 {
-                let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                let mov =
+                    JamboreeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
                 b.apply_move(mov);
             } else {
                 let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
@@ -122,13 +122,13 @@ fn gen_random_fens() {
 
         if b.zobrist() % 23 == 11 && b.moves_played() > 7 {
             if b.count_all_pieces() < 13 && end_count < quota {
-                println!("\"{}\",",b.get_fen());
+                println!("\"{}\",", b.get_fen());
                 end_count += 1;
             } else if b.count_all_pieces() < 24 && middle_count < quota {
-                println!("\"{}\",",b.get_fen());
+                println!("\"{}\",", b.get_fen());
                 middle_count += 1;
             } else if beginning_count < quota {
-                println!("\"{}\",",b.get_fen());
+                println!("\"{}\",", b.get_fen());
                 middle_count += 1;
             }
         }

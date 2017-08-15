@@ -1,6 +1,6 @@
 use board::Board;
 use timer::Timer;
-use piece_move::{BitMove};
+use piece_move::BitMove;
 extern crate rand;
 use engine::Searcher;
 

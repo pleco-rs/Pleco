@@ -13,7 +13,7 @@ use super::super::BestMove;
 const MAX_PLY: u16 = 5;
 
 
-pub struct  AlphaBetaBot {
+pub struct AlphaBetaBot {
     board: Board,
     timer: Timer,
 }
@@ -25,8 +25,10 @@ impl Searcher for AlphaBetaBot {
 
     fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
         let alpha: i16 = NEG_INFINITY;
-        let beta:  i16 = INFINITY;
-        alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth).best_move.unwrap()
+        let beta: i16 = INFINITY;
+        alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
+            .best_move
+            .unwrap()
     }
 
     fn best_move(mut board: Board, timer: &Timer) -> BitMove {
@@ -54,16 +56,22 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         board.apply_move(mov);
         let return_move = alpha_beta_search(board, -beta, -alpha, max_depth).negate();
         board.undo_move();
-        if return_move.score > alpha  {
+        if return_move.score > alpha {
             alpha = return_move.score;
             best_move = Some(mov);
         }
         if alpha >= beta {
-            return BestMove{best_move: Some(mov), score: alpha};
+            return BestMove {
+                best_move: Some(mov),
+                score: alpha,
+            };
         }
     }
 
-    BestMove{best_move: best_move, score: alpha}
+    BestMove {
+        best_move: best_move,
+        score: alpha,
+    }
 }
 
 fn eval_board(board: &mut Board) -> BestMove {

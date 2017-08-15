@@ -25,7 +25,6 @@ const DIVIDE_CUTOFF: usize = 8;
 // half_moves: total moves
 
 impl Searcher for ParallelSearcher {
-
     fn name() -> &'static str {
         "Parallel Searcher"
     }
@@ -35,10 +34,10 @@ impl Searcher for ParallelSearcher {
     }
 
     fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
-        parallel_minimax(&mut board.shallow_clone(), max_depth).best_move.unwrap()
+        parallel_minimax(&mut board.shallow_clone(), max_depth)
+            .best_move
+            .unwrap()
     }
-
-
 }
 
 fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
@@ -59,7 +58,7 @@ fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
 }
 
 fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMove {
-    if board.depth() == max_depth - 2 ||  slice.len() <= DIVIDE_CUTOFF {
+    if board.depth() == max_depth - 2 || slice.len() <= DIVIDE_CUTOFF {
         let mut best_value: i16 = NEG_INFINITY;
         let mut best_move: Option<BitMove> = None;
         for mov in slice {
@@ -71,7 +70,10 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
                 best_move = Some(*mov);
             }
         }
-        BestMove{best_move: best_move, score: best_value}
+        BestMove {
+            best_move: best_move,
+            score: best_value,
+        }
     } else {
         let mid_point = slice.len() / 2;
         let (left, right) = slice.split_at(mid_point);
@@ -79,7 +81,8 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
 
         let (left_move, right_move) = rayon::join(
             || parallel_task(left, &mut left_clone, max_depth),
-            || parallel_task(right, board, max_depth));
+            || parallel_task(right, board, max_depth),
+        );
 
         if left_move.score > right_move.score {
             left_move
