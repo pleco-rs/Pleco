@@ -1,11 +1,12 @@
-use chrono::{DateTime, Utc};
+use std::time::Instant;
+
 
 
 // Structure to keep track of time for two players
 
 
 pub struct Timer {
-    start: i64, // when the current timer was created
+    start: Instant,   // when the current timer was created
     total_duration: i64, // unchanging, seconds each
     seconds_remaining: [i64; 2],
     turn: Turn, // turn of the current clock
@@ -21,7 +22,7 @@ impl Timer {
     pub fn new(minutes: i64) -> Self {
         let secs = minutes * 60;
         Timer {
-            start: 0,
+            start: Instant::now(),
             total_duration: secs,
             seconds_remaining: [secs, secs],
             turn: Turn::One,
@@ -29,10 +30,8 @@ impl Timer {
     }
 
     pub fn time_remaining(&self) -> i64 {
-        let utc: DateTime<Utc> = Utc::now();
-        let end = utc.timestamp();
-        let diff = end - self.start;
-        self.seconds_remaining[self.turn as usize] - diff
+        let diff = self.start.elapsed();
+        self.seconds_remaining[self.turn as usize] - diff.as_secs() as i64
     }
 
     pub fn opp_time_remaining(&self) -> i64 {
@@ -40,15 +39,12 @@ impl Timer {
     }
 
     pub fn start_time(&mut self) {
-        let utc: DateTime<Utc> = Utc::now();
-        self.start = utc.timestamp();
+        self.start = Instant::now();
     }
 
     pub fn stop_time(&mut self) {
-        let utc: DateTime<Utc> = Utc::now();
-        let end = utc.timestamp();
-        let diff = end - self.start;
-        self.seconds_remaining[self.turn as usize] -= diff;
+        let diff = self.start.elapsed();
+        self.seconds_remaining[self.turn as usize] -= diff.as_secs() as i64;
     }
 
     pub fn switch_turn(&mut self) {
