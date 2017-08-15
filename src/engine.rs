@@ -4,44 +4,58 @@ use piece_move::BitMove;
 use timer::Timer;
 use board::Board;
 use templates::Player;
-use std::{thread,time};
+use std::{thread, time};
 use rayon;
 use std::io;
 use std::error::Error;
-use std::sync::{Arc,Mutex};
+use std::sync::{Arc, Mutex};
 
 
 // Trait that defines an object that can play chess
 pub trait Searcher {
-    fn best_move(board: Board, timer: &Timer) -> BitMove where Self: Sized;
-    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove where Self: Sized;
-    fn name() -> &'static str where Self: Sized;
+    fn best_move(board: Board, timer: &Timer) -> BitMove
+    where
+        Self: Sized;
+    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove
+    where
+        Self: Sized;
+    fn name() -> &'static str
+    where
+        Self: Sized;
 }
 
 pub trait UCISearcher: Searcher {
-    fn uci_move(board: Board, timer: &Timer, rx: Arc<Mutex<Option<GuiToEngine>>>) -> BitMove where Self: Sized;
-
+    fn uci_move(board: Board, timer: &Timer, rx: Arc<Mutex<Option<GuiToEngine>>>) -> BitMove
+    where
+        Self: Sized;
 }
 
 //  Winner allows representation of the winner of a chess match
 pub enum Winner {
     PlayerOne,
     PlayerTwo,
-    Draw
+    Draw,
 }
 
 
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHOR: &str = "Stephen Fleischman";
 
-pub fn compete<S: Searcher, T: Searcher>(player_one: &S, player_two: &T, minutes_each: i64, display: bool, randomize: bool, ply: u16) -> Winner {
+pub fn compete<S: Searcher, T: Searcher>(
+    player_one: &S,
+    player_two: &T,
+    minutes_each: i64,
+    display: bool,
+    randomize: bool,
+    ply: u16,
+) -> Winner {
     assert!(minutes_each > 0);
     let mut b: Board = Board::default();
     let mut timer = Timer::new(minutes_each);
     if display {
         println!("Match Begin  - \n");
-        println!("White: {}",<S as Searcher>::name());
-        println!("Black: {}",<T as Searcher>::name());
+        println!("White: {}", <S as Searcher>::name());
+        println!("Black: {}", <T as Searcher>::name());
         b.pretty_print();
     }
 
@@ -60,8 +74,11 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: &S, player_two: &T, minutes
         }
         if b.rule_50() >= 50 || b.stalemate() {
             if display {
-                if b.rule_50() >= 50 { println!("50 move rule");
-                } else { println!("Stalemate"); }
+                if b.rule_50() >= 50 {
+                    println!("50 move rule");
+                } else {
+                    println!("Stalemate");
+                }
 
                 println!("Draw")
             }
@@ -71,29 +88,33 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: &S, player_two: &T, minutes
         timer.start_time();
         let ret_move = match b.turn() {
             Player::White => <S as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
-            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply)
+            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
         };
         timer.stop_time();
 
-        if timer.out_of_time() || !b.legal_move(ret_move)  {
+        if timer.out_of_time() || !b.legal_move(ret_move) {
             return match b.turn() {
                 Player::White => Winner::PlayerTwo,
                 Player::Black => Winner::PlayerOne,
-            }
+            };
         }
         timer.switch_turn();
 
         b.apply_move(ret_move);
         if display {
-            println!("Move Chosen: {}\n",ret_move);
+            println!("Move Chosen: {}\n", ret_move);
             b.pretty_print();
         }
     }
 
     if display {
         match b.turn() {
-            Player::White => {println!("White, played by {} wins",<S as Searcher>::name());},
-            Player::Black => {println!("Black, played by {} wins",<T as Searcher>::name());}
+            Player::White => {
+                println!("White, played by {} wins", <S as Searcher>::name());
+            }
+            Player::Black => {
+                println!("Black, played by {} wins", <T as Searcher>::name());
+            }
         };
     }
 
@@ -103,7 +124,14 @@ pub fn compete<S: Searcher, T: Searcher>(player_one: &S, player_two: &T, minutes
     }
 }
 
-pub fn compete_multiple<S: Searcher, T: Searcher>(player_one: S, player_two: T, minutes_each: i64, times_match: u32, plys: u16, display: bool) -> Winner {
+pub fn compete_multiple<S: Searcher, T: Searcher>(
+    player_one: S,
+    player_two: T,
+    minutes_each: i64,
+    times_match: u32,
+    plys: u16,
+    display: bool,
+) -> Winner {
     let mut p_one_wins: u32 = 0;
     let mut p_two_wins: u32 = 0;
     let mut draws: u32 = 0;
@@ -126,9 +154,17 @@ pub fn compete_multiple<S: Searcher, T: Searcher>(player_one: S, player_two: T, 
 
     if display {
         println!();
-        println!("Player One as {} has {} wins", <S as Searcher>::name(), p_one_wins);
-        println!("Player Two as {} has {} wins", <T as Searcher>::name(), p_two_wins);
-        println!("Draws: {}",  draws);
+        println!(
+            "Player One as {} has {} wins",
+            <S as Searcher>::name(),
+            p_one_wins
+        );
+        println!(
+            "Player Two as {} has {} wins",
+            <T as Searcher>::name(),
+            p_two_wins
+        );
+        println!("Draws: {}", draws);
     }
 
     if p_one_wins > p_two_wins {
@@ -140,7 +176,7 @@ pub fn compete_multiple<S: Searcher, T: Searcher>(player_one: S, player_two: T, 
     }
 }
 
-#[derive(Copy,Clone)]
+#[derive(Copy, Clone)]
 pub enum GuiToEngine {
     Stop,
 }
@@ -157,9 +193,7 @@ pub fn uci<S: UCISearcher>(player_one: S) {
 
     loop {
         let this_arc = arc.clone();
-        thread::spawn( move || {
-            poll_stdin(this_arc.clone());
-        });
+        thread::spawn(move || { poll_stdin(this_arc.clone()); });
 
         let x = <S as UCISearcher>::uci_move(b.shallow_clone(), &timer, arc.clone());
 
@@ -183,7 +217,7 @@ fn poll_stdin(state: Arc<Mutex<Option<GuiToEngine>>>) {
             stdin_input = parse_uci_interrupt(input);
         } else {
             panic!()
-        }
+        };
     }
 
     let mut msg = state.lock().unwrap();

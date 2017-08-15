@@ -1,17 +1,17 @@
-use chrono::{DateTime,Utc};
+use chrono::{DateTime, Utc};
 
 
 // Structure to keep track of time for two players
 
 
 pub struct Timer {
-    start: i64,   // when the current timer was created
+    start: i64, // when the current timer was created
     total_duration: i64, // unchanging, seconds each
     seconds_remaining: [i64; 2],
     turn: Turn, // turn of the current clock
 }
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 enum Turn {
     One = 0,
     Two = 1,
@@ -24,7 +24,7 @@ impl Timer {
             start: 0,
             total_duration: secs,
             seconds_remaining: [secs, secs],
-            turn: Turn::One
+            turn: Turn::One,
         }
     }
 
@@ -63,6 +63,6 @@ impl Timer {
 fn other_turn(turn: Turn) -> Turn {
     match turn {
         Turn::One => Turn::Two,
-        Turn::Two => Turn::One
+        Turn::Two => Turn::One,
     }
 }
