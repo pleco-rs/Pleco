@@ -65,7 +65,7 @@ impl fmt::Display for Piece {
             Piece::Q => "Queen",
             Piece::K => "King"
         };
-        write!(f, s)
+        write!(f, "{}", s)
     }
 }
 
