@@ -57,23 +57,15 @@ pub enum Piece {
 
 impl fmt::Display for Piece {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            if self == &Piece::P {
-                "Pawn"
-            } else if self == &Piece::N {
-                "Knight"
-            } else if self == &Piece::B {
-                "Bishop"
-            } else if self == &Piece::R {
-                "Rook"
-            } else if self == &Piece::Q {
-                "Queen"
-            } else {
-                "King"
-            }
-        )
+        let s = match *self {
+            Piece::P => "Pawn",
+            Piece::N => "Knight",
+            Piece::B => "Bishop",
+            Piece::R => "Rook",
+            Piece::Q => "Queen",
+            Piece::K => "King"
+        };
+        f.pad(s)
     }
 }
 
