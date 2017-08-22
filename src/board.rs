@@ -2066,24 +2066,3 @@ impl Board {
         true
     }
 }
-
-
-
-
-
-// Testing
-//
-//#[test]
-//fn piece_locations_cloning() {
-//    let mut p = PieceLocations::default();
-//    p.place(23,Player::White, Piece::Q);
-//    let mut q = p.clone();
-//    assert_eq!(q.piece_at(23).unwrap(),Piece::Q);
-//    q.remove(23);
-//    assert!(q.piece_at(23).is_none());
-//    assert_eq!(p.piece_at(23).unwrap(),Piece::Q);
-//}
-//
-//
-//
-//
