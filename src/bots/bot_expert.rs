@@ -363,7 +363,7 @@ fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
         (0..iter).fold(0, |a: u64, c| {
             //            println!("{}",TEST_FENS[i]);
             let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 4);
+            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 4);
             b.apply_move(mov);
             i += 1;
             a ^ (b.zobrist()) }

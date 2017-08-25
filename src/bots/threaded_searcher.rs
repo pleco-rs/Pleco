@@ -430,7 +430,7 @@ fn bench_bot_ply_3__threaded_bot(b: &mut Bencher) {
         (0..iter).fold(0, |a: u64, c| {
             //            println!("{}",TEST_FENS[i]);
             let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new(20), 3);
+            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 3);
             b.apply_move(mov);
             i += 1;
             a ^ (b.zobrist()) }
@@ -449,7 +449,7 @@ fn bench_bot_ply_4__threaded_bot(b: &mut Bencher) {
         (0..iter).fold(0, |a: u64, c| {
             //            println!("{}",TEST_FENS[i]);
             let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new(20), 4);
+            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 4);
             b.apply_move(mov);
             i += 1;
             a ^ (b.zobrist()) }

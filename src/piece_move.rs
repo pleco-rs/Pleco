@@ -52,7 +52,7 @@ static SP_MASK: u16 = 0b0011_000000_000000;
 ///
 /// A BitMove should never be created directly, but rather insigated with a [PreMoveInfo]. This is because 
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct BitMove {
     data: u16,
 }

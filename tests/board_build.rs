@@ -130,6 +130,4 @@ fn move_seq_1() {
     };
     let m = BitMove::init(p);
     b.apply_move(m);
-
-
 }
