@@ -184,10 +184,10 @@ impl<'a> MoveGen<'a> {
             );
 
             let enemies: BitBoard = self.them_occ;
-            let direction: Box<Fn(SQ) -> SQ> = if king_side {
-                Box::new(|x: SQ| x.wrapping_sub(1))
+            let direction: fn(SQ) -> SQ = if king_side {
+                |x: SQ| x.wrapping_sub(1)
             } else {
-                Box::new(|x: SQ| x.wrapping_add(1))
+                |x: SQ| x.wrapping_add(1)
             };
 
             let mut s: SQ = k_to;
@@ -259,32 +259,32 @@ impl<'a> MoveGen<'a> {
         };
 
         let (down, up, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
-            Box<Fn(SQ) -> SQ>,
-            Box<Fn(SQ) -> SQ>,
-            Box<Fn(SQ) -> SQ>,
-            Box<Fn(SQ) -> SQ>,
-            Box<Fn(u64) -> u64>,
-            Box<Fn(u64) -> u64>,
-            Box<Fn(u64) -> u64>,
+            fn(SQ) -> SQ,
+            fn(SQ) -> SQ,
+            fn(SQ) -> SQ,
+            fn(SQ) -> SQ,
+            fn(u64) -> u64,
+            fn(u64) -> u64,
+            fn(u64) -> u64,
         ) = if self.turn == Player::White {
             (
-                Box::new(|x: SQ| x.wrapping_sub(8)), // Down
-                Box::new(|x: SQ| x.wrapping_add(8)), // Up
-                Box::new(|x: SQ| x.wrapping_sub(9)), // left_down
-                Box::new(|x: SQ| x.wrapping_sub(7)), // right_down
-                Box::new(|x: u64| x.wrapping_shl(8)), // Shift_up
-                Box::new(|x: u64| (x & !FILE_A).wrapping_shl(7)), // Shift_left_up
-                Box::new(|x: u64| (x & !FILE_H).wrapping_shl(9)),
+                |x: SQ| x.wrapping_sub(8), // Down
+                |x: SQ| x.wrapping_add(8), // Up
+                |x: SQ| x.wrapping_sub(9), // left_down
+                |x: SQ| x.wrapping_sub(7), // right_down
+                |x: u64| x.wrapping_shl(8), // Shift_up
+                |x: u64| (x & !FILE_A).wrapping_shl(7), // Shift_left_up
+                |x: u64| (x & !FILE_H).wrapping_shl(9),
             ) // Shift_Right_up
         } else {
             (
-                Box::new(|x: SQ| x.wrapping_add(8)),
-                Box::new(|x: SQ| x.wrapping_sub(8)),
-                Box::new(|x: SQ| x.wrapping_add(9)),
-                Box::new(|x: SQ| x.wrapping_add(7)),
-                Box::new(|x: u64| x.wrapping_shr(8)),
-                Box::new(|x: u64| (x & !FILE_H).wrapping_shr(7)),
-                Box::new(|x: u64| (x & !FILE_A).wrapping_shr(9)),
+                |x: SQ| x.wrapping_add(8),
+                |x: SQ| x.wrapping_sub(8),
+                |x: SQ| x.wrapping_add(9),
+                |x: SQ| x.wrapping_add(7),
+                |x: u64| x.wrapping_shr(8),
+                |x: u64| (x & !FILE_H).wrapping_shr(7),
+                |x: u64| (x & !FILE_A).wrapping_shr(9),
             )
         };
 
