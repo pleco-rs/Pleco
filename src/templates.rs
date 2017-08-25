@@ -517,5 +517,5 @@ pub fn print_u64(input: u64) {
 }
 
 fn format_u64(input: u64) -> String {
-    format!("{:064b}", x)
+    format!("{:064b}", input)
 }
