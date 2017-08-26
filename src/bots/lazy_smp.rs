@@ -170,14 +170,17 @@ impl Thread {
                 // DO SOMETHING
             }
 
-
-
             depth += skip_size;
         }
 
     }
 
     fn search(&mut self, alpha: i16, beta: i16, max_depth: u16) -> i16 {
+        let at_root: bool = self.board.ply() == 0;
+        unimplemented!()
+    }
+
+    fn qsearch(&mut self, alpha: i16, beta: i16, max_depth: u16) -> i16 {
         unimplemented!()
     }
 
@@ -223,7 +226,6 @@ pub struct LazySMPSearcher {
     board: Board,
     gui_stop: Arc<AtomicBool>,
     cond_var: Arc<(Mutex<bool>,Condvar)>,
-    timer: Timer,
     all_moves: Vec<Arc<RwLock<Vec<RootMove>>>>,
     threads: Vec<JoinHandle<()>>,
     main_thread: Thread,
@@ -291,7 +293,6 @@ impl LazySMPSearcher {
             board: board,
             gui_stop: stop,
             cond_var: cond_var,
-            timer: Timer::new_no_inc(0),
             all_moves: all_moves,
             threads: threads,
             main_thread: main_thread,
@@ -326,7 +327,7 @@ impl LazySMPSearcher {
 
         // Make sure the remaining threads have finished.
         while !self.threads.is_empty() {
-            self.threads.pop().unwrap().join();
+            self.threads.pop().unwrap().join().unwrap();
         }
 
         let mut best_root_move: RootMove = {
@@ -349,6 +350,15 @@ impl LazySMPSearcher {
     }
 }
 
+impl Drop for LazySMPSearcher {
+    fn drop(&mut self) {
+        while !self.threads.is_empty() {
+            let thread_handle = self.threads.pop().unwrap();
+            thread_handle.join().unwrap();
+        }
+    }
+}
+
 
 
 impl Searcher for LazySMPSearcher {
@@ -357,11 +367,13 @@ impl Searcher for LazySMPSearcher {
     }
 
     fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
-        unimplemented!();
+        let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
+        searcher.start_searching(UCILimit::Depth(max_depth))
     }
 
     fn best_move(board: Board, timer: &Timer) -> BitMove {
-        unimplemented!();
+        let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
+        searcher.start_searching(UCILimit::Time(timer.clone()))
     }
 }
 
@@ -371,6 +383,6 @@ impl UCISearcher for LazySMPSearcher {
     }
 
     fn uci_go(&mut self, limits: UCILimit) -> BitMove {
-        unimplemented!()
+        self.start_searching(limits)
     }
 }

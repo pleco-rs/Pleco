@@ -41,4 +41,6 @@ Specifically, this searcher is at `bot_iterative_parallel_mvv_lva.rs`, and impro
 
  More experiments to determine if global variables could be used to determine some parameters, rather than passing them in through directly as parameters. Mostly a worked in progress, but using globals seems significantly slower than passing parameters inside the function. I highly suspect it is due to cache-misses.
 
+##### LazySMP Searcher
 
+Current Work-in-Progress, using a [Lazy SMP](https://chessprogramming.wikispaces.com/Lazy+SMP) algorithm rather than a fork-join model. 
