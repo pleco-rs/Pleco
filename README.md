@@ -41,11 +41,10 @@ The AI Bot aims to have the following features:
 Contributing
 -------
 
-Any and all contributions are welcome! Open up a PR to contribute some improvements.
-
+Any and all contributions are welcome! Open up a PR to contribute some improvements. Look at the Issues tab to see what needs some help. 
 
 
   
 License
 -------
-None yet.
+Pleco is distributed under the terms of the MIT license. See LICENSE-MIT for details. Opening a pull requests is assumed to signal agreement with these licensing terms.

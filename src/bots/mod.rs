@@ -3,6 +3,7 @@ pub mod bot_expert;
 pub mod threaded_searcher;
 pub mod threaded_searcher_param;
 pub mod basic;
+pub mod lazy_smp;
 
 
 use piece_move::BitMove;

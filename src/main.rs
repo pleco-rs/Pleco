@@ -26,10 +26,30 @@ use pleco::bots::bot_iterative_parallel_mvv_lva::IterativeSearcher;
 // 1r1qkbn1/p2B2pr/b4QP1/1ppp4/P2n1P1p/2P5/1P2P2P/RNB1K1NR b KQ - 2 16
 
 fn main() {
-    let timer = Timer::new(60);
-//    gen_random_fens();
-//    sample_run();
-    compete_multiple(IterativeSearcher{}, ThreadSearcher{timer: &timer},60, 11, 5, true);
+//    let timer = Timer::new(60);
+
+//    compete_multiple(IterativeSearcher{}, ThreadSearcher{timer: &timer},60, 11, 5, true);
+
+    use std::sync::atomic::{AtomicBool,Ordering};
+    use std::sync::Arc;
+    use std::thread;
+
+    let mv = Arc::new(AtomicBool::new(false));
+
+    let new_mv = mv.clone();
+
+    thread::spawn( move || {
+        let b = new_mv.load(Ordering::Relaxed);
+        println!("child: {}",b);
+        new_mv.store(true,Ordering::Relaxed);
+        println!("child changed: {}",b);
+
+    });
+
+
+    println!("parent {}",mv.load(Ordering::Relaxed));
+
+
 
 }
 
@@ -52,17 +72,17 @@ fn sample_run() {
             i = max;
         } else {
             if i % 57 == 2 {
-                let mov = RandomBot::best_move(b.shallow_clone(), &timer::Timer::new(20));
+                let mov = RandomBot::best_move(b.shallow_clone(), &timer::Timer::new_no_inc(20));
                 println!("{}'s move: {}", RandomBot::name(), mov);
                 b.apply_move(mov);
             } else if i % 2 == 0 {
                 println!("------------------------------------------------");
                 println!();
-                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
+                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 5);
                 println!("{}'s move: {}",IterativeSearcher::name(),mov);
                 b.apply_move(mov);
             } else {
-                let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 5);
                 println!("{}'s move: {}", ExpertBot::name(), mov);
                 b.apply_move(mov);
             }
@@ -93,9 +113,9 @@ fn gen_random_fens() {
 
     while beginning_count + middle_count + end_count <= (quota * 3) - 1 {
         if i == 0 {
-            let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 1);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 1);
             b.apply_move(mov);
-            let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 1);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 1);
             b.apply_move(mov);
         }
         if b.checkmate() || i > max {
@@ -107,14 +127,14 @@ fn gen_random_fens() {
             }
         } else {
             if i % 11 == 9 {
-                let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 1);
+                let mov = RandomBot::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 1);
                 b.apply_move(mov);
             } else if i % 2 == 0 {
                 let mov =
-                    JamboreeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                    JamboreeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 5);
                 b.apply_move(mov);
             } else {
-                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new(20), 5);
+                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 5);
                 b.apply_move(mov);
             }
             i += 1;

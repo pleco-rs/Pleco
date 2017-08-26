@@ -19,7 +19,8 @@ extern crate rayon;
 extern crate futures;
 extern crate parking_lot;
 extern crate owning_ref;
-
+extern crate num_cpus;
+extern crate rand;
 
 pub mod board;
 pub mod bit_twiddles;

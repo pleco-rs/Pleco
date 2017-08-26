@@ -242,6 +242,8 @@ impl<'a> MoveGen<'a> {
 
     // Generate pawn moves
     fn generate_pawn_moves(&mut self, target: BitBoard, gen_type: PriGenType) {
+
+        
         let rank_8: BitBoard = if self.turn == Player::White {
             RANK_8
         } else {
@@ -258,6 +260,8 @@ impl<'a> MoveGen<'a> {
             RANK_6
         };
 
+        // some functions we need to shift bitboards around & move squares. We do this because it depends only on the players side,
+        // and we use these functions alot.
         let (down, up, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
             fn(SQ) -> SQ,
             fn(SQ) -> SQ,
@@ -502,6 +506,8 @@ impl<'a> MoveGen<'a> {
         }
     }
 
+    /// Checks if the move is legal, and if so adds to the move list.
+    #[inline]
     fn check_and_add(&mut self, b_move: BitMove) {
         if self.board.legal_move(b_move) {
             self.movelist.push(b_move);

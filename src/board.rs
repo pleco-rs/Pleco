@@ -1513,7 +1513,7 @@ impl Board {
 // General information
 
 impl Board {
-    /// Get the PLayer whose turn it is to move.
+    /// Get the Player whose turn it is to move.
     pub fn turn(&self) -> Player {
         self.turn
     }
@@ -2067,23 +2067,60 @@ impl Board {
     }
 }
 
+#[cfg(test)]
+mod tests {
 
+    extern crate rand;
+    use board::Board;
 
+    #[test]
+    fn random_move_apply() {
+        let mut board = Board::default();
+        let mut ply = 1000;
+        while ply > 0 && !board.checkmate() && !board.stalemate() {
+            let moves = board.generate_moves();
+            let picked_move = moves[rand::random::<usize>() % moves.len()];
+            board.apply_move(picked_move);
+            ply -= 1;
+        }
+    }
 
+    #[test]
+    fn fen_equality() {
+        let mut board = Board::default();
+        let mut ply = 1000;
+        let mut fen_stack = Vec::new();
+        while ply > 0 && !board.checkmate() && !board.stalemate() {
+            fen_stack.push(board.get_fen());
+            let moves = board.generate_moves();
+            let picked_move = moves[rand::random::<usize>() % moves.len()];
+            board.apply_move(picked_move);
+            ply -= 1;
+        }
 
-// Testing
-//
-//#[test]
-//fn piece_locations_cloning() {
-//    let mut p = PieceLocations::default();
-//    p.place(23,Player::White, Piece::Q);
-//    let mut q = p.clone();
-//    assert_eq!(q.piece_at(23).unwrap(),Piece::Q);
-//    q.remove(23);
-//    assert!(q.piece_at(23).is_none());
-//    assert_eq!(p.piece_at(23).unwrap(),Piece::Q);
-//}
-//
-//
-//
-//
+        while !fen_stack.is_empty() {
+            board.undo_move();
+            assert_eq!(board.get_fen(),fen_stack.pop().unwrap());
+        }
+    }
+
+    #[test]
+    fn zob_equality() {
+        let mut board = Board::default();
+        let mut ply = 1000;
+        let mut zobrist_stack = Vec::new();
+        while ply > 0 && !board.checkmate() && !board.stalemate() {
+            zobrist_stack.push(board.zobrist());
+            let moves = board.generate_moves();
+            let picked_move = moves[rand::random::<usize>() % moves.len()];
+            board.apply_move(picked_move);
+            ply -= 1;
+        }
+
+        while !zobrist_stack.is_empty() {
+            board.undo_move();
+            assert_eq!(board.zobrist(),zobrist_stack.pop().unwrap());
+        }
+    }
+
+}

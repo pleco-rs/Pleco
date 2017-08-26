@@ -17,24 +17,32 @@ const SEEDS: [[u64; 8]; 2] = [
 
 
 
-// Object for helping the Board with various functions. Pre-computes everything on initialization
-// Thread safe. Once initializes, IT SHOULD NOT BE MODIFIED
-// Currently does the following:
-//      - Generates King and Rook Move Bitboards
-//      - Generates Rook, Bishop, Queen Magic Bitboards for Move generation
-//      - Generates distance table for quick lookup of distance
-//
-//
-// Size (Bytes) of each field in the Stack / Heap
+
+// Size (Bytes) of each field in the Stack / Heap (Dispite this being statically allocated)
 //              |  STACK  |  HEAP   |  TOTAL  | KiloBytes   |
 // magic_rook   |   2563  |  819200 |  821763 | ~819.2 KB   |
 // magic_bishop |   2563  |   41984 |   44547 |  ~44.5 KB   |
 // knight_table |    512  |       0 |     512 |   ~0.5 KB   |
 // king_table   |    512  |       0 |     512 |   ~0.5 KB   |
 // dist_table   |   4096  |       0 |     512 |   ~4.0 KB   |
-// line_bb      |    512  |       0 |     512 |   ~0.5 KB   |
-//
-//
+// line_bb      |  32768  |       0 |   32768 |   ~0.5 KB   |
+// btw_sq_bb    |  32768  |       0 |   32768 |   ~0.5 KB   |
+// adj_files_bb |     64  |       0 |      64 |   ~0.5 KB   |
+// pawn_atks_f  |   1024  |       0 |    1024 |   ~0.5 KB   |
+// Zobrist      |    600  |       0 |     600 |   ~ ???     |
+
+/// Struct which provides various pre-computed lookup tables.
+///
+///
+/// Thread safe. Once initializes, IT SHOULD NOT BE MODIFIED
+/// Currently does the following:
+///      - Generates King and Rook Move Bitboards
+///      - Generates Rook, Bishop, Queen Magic Bitboards for Move generation
+///      - Generates distance table for quick lookup of distance
+///      - Line BitBoard and Vetween BitBoard given two squares
+///      - Adjacant Files BitBoard.
+///      - Pawn Attacks from a certain square
+///      - Zobrist Structure for Zobrist Hashing
 pub struct MagicHelper<'a, 'b> {
     magic_rook: MRookTable<'a>,
     magic_bishop: MBishopTable<'b>,
@@ -50,10 +58,10 @@ pub struct MagicHelper<'a, 'b> {
 
 // Structure for helping determine Zobrist hashes.
 pub struct Zobrist {
-    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
-    pub en_p: [u64; FILE_CNT],
-    pub castle: [u64; TOTAL_CASTLING_CNT],
-    pub side: u64,
+    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
+    pub en_p: [u64; FILE_CNT], // 8 * 8
+    pub castle: [u64; TOTAL_CASTLING_CNT], // 8 * 4
+    pub side: u64, // 8
 }
 
 // Creates zobrist hashes based on a Pseudo Random Number generator.
