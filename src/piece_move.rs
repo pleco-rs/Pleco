@@ -272,7 +272,11 @@ impl BitMove {
         MoveType::Normal
     }
 
-    // TODO: Put an example here.
+    /// Returns a String representation of a [BitMove]
+    ///
+    /// Format goes "Source Square, Destination Square, (Promo Piece)". Moving a Queen from A1 to B8
+    /// will stringify to "a1b8". If there is a pawn promotion involved, the piece promoted to will be
+    /// appended to the end of the string, alike "a7a8q" in the case of a queen promotion
     pub fn stringify(&self) -> String {
         let src = parse_sq(self.get_src());
         let dst = parse_sq(self.get_dest());
@@ -290,6 +294,7 @@ impl BitMove {
         s
     }
 
+    /// Returns the raw number represenation of the move.
     pub fn get_raw(&self) -> u16 {
         self.data
     }

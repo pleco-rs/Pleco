@@ -1,9 +1,7 @@
 use std::time::Instant;
 
 
-
 // Structure to keep track of time for two players
-
 #[derive(Clone, Copy)]
 pub struct Timer {
     start: Instant,   // when the current timer was created
