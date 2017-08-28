@@ -213,7 +213,7 @@ impl Thread {
             })
         } else {
             let mut moves = self.root_moves.write().unwrap();
-            let mut slice = moves.as_mut_slice();
+            let slice = moves.as_mut_slice();
             rand::thread_rng().shuffle(slice);
         }
     }

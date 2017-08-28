@@ -3,11 +3,20 @@ name = "pleco"
 version = "0.1.0"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 
+description = "A quick, yet simple chess engine."
+documentation = "https://github.com/sfleischman105/Pleco"
+homepage = "https://github.com/sfleischman105/Pleco"
+repository = "https://github.com/sfleischman105/Pleco"
+readme = "README.md"
+license = "MIT"
+
+
 include = [
-    "src/*.rs",
+    "src/*",
     "tests/*.rs",
     "Cargo.toml",
     ".gitignore",
+    "README.md",
     "benches/*.rs"
 ]
 
@@ -45,7 +54,6 @@ doctest = true
 [dependencies]
 clippy = {version = "*", optional = true}
 lazy_static = "0.2"
-chashmap = {version = "*"}
 bitflags = "0.9"
 rand = "0.3"
 rayon = "0.8.2"

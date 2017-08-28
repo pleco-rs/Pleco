@@ -13,7 +13,6 @@ extern crate bitflags;
 #[macro_use]
 extern crate lazy_static;
 
-extern crate chashmap;
 extern crate test;
 extern crate rayon;
 extern crate futures;
@@ -31,6 +30,7 @@ pub mod magic_helper;
 pub mod timer;
 pub mod engine;
 pub mod transposition_table;
+pub mod tools;
 
 
 pub mod bots;

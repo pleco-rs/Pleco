@@ -34,7 +34,7 @@ pub const RANK_CNT: usize = 8;
 pub const TOTAL_CASTLING_CNT: usize = 4;
 pub const CASTLING_SIDES: usize = 2;
 
-/// Publically available move-generation types.
+/// Publicly available move-generation types.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GenTypes {
     All,
@@ -108,6 +108,7 @@ pub const ALL_FILES: [File; FILE_CNT] = [
     File::G,
     File::H,
 ];
+
 pub const ALL_RANKS: [Rank; RANK_CNT] = [
     Rank::R1,
     Rank::R2,
