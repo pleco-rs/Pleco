@@ -1,14 +1,15 @@
 [package]
 name = "pleco"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
-
-description = "A quick, yet simple chess engine."
-documentation = "https://github.com/sfleischman105/Pleco"
+description = "A blazingly-fast chess engine and Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
-repository = "https://github.com/sfleischman105/Pleco"
+documentation = "https://docs.rs/pleco/"
 readme = "README.md"
+keywords = ["chess","engine","game","gaming"]
 license = "MIT"
+categories = ["Games"]
+repository = "https://github.com/sfleischman105/Pleco"
 
 
 include = [
@@ -52,7 +53,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-clippy = {version = "*", optional = true}
+clippy = {version = "0.0.21", optional = true}
 lazy_static = "0.2"
 bitflags = "0.9"
 rand = "0.3"
@@ -62,8 +63,10 @@ parking_lot = "0.3"
 owning_ref = "0.2"
 num_cpus = "1.0"
 
+
 [features]
 default = []
+dev = ["clippy"]
 
 [[test]]
 path = "tests/test.rs"
