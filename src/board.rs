@@ -1,3 +1,5 @@
+//! A Chessboard.
+
 use templates::*;
 use magic_helper::MagicHelper;
 use movegen::MoveGen;
@@ -7,15 +9,14 @@ use std::option::*;
 use std::sync::Arc;
 use std::{mem, fmt, char};
 
-// Initialize MAGIC_HELPER as a static structure for everyone to use
-
 lazy_static! {
+    /// Statically initialized lookup tables.
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
 
 bitflags! {
-    /// Structure to help with recognizing the various possibilities of castling
+    /// Structure to help with recognizing the various possibilities of castling/
     ///
     /// For internal use by the Board only
     ///
@@ -38,7 +39,6 @@ bitflags! {
                            | WHITE_Q.bits;
         const BLACK_ALL    = BLACK_K.bits // Black can castle for both sides
                            | BLACK_Q.bits;
-
     }
 }
 
@@ -868,7 +868,7 @@ impl Board {
         b.set_bitboards();
         {
             // Set Check info
-            let mut state: &mut BoardState = Arc::get_mut(&mut board_s).unwrap();
+            let state: &mut BoardState = Arc::get_mut(&mut board_s).unwrap();
             b.set_check_info(state);
         }
         b.state = board_s;
@@ -987,7 +987,7 @@ impl Board {
         {
             // Seperate Block to allow derefencing the BoardState
             // As there is garunteed only one owner of the Arc, this is allowed
-            let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+            let new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
 
             // Set the prev state
             new_state.prev = Some(self.state.clone());
@@ -1221,7 +1221,7 @@ impl Board {
         let mut next_arc_state = Arc::new(self.state.partial_clone());
 
         {
-            let mut new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+            let new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
 
             new_state.prev_move = BitMove::null();
             new_state.rule_50 += 1;

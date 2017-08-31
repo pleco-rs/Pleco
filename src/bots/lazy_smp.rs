@@ -1,8 +1,7 @@
 use num_cpus;
-use rayon;
 use rand::{Rng,self};
 
-use test::{self,Bencher};
+//use test::{self,Bencher};
 use std::sync::{Arc,Mutex,Condvar,RwLock};
 use std::sync::atomic::{AtomicBool,AtomicU64,Ordering};
 use std::thread::{JoinHandle,self};
@@ -11,11 +10,11 @@ use std::cmp::{min,max,Ordering as CmpOrder};
 use board::*;
 use timer::*;
 use templates::*;
+use eval::*;
 use piece_move::BitMove;
 use engine::*;
 use eval::*;
-use transposition_table::TranspositionTable;
-use timer;
+use transposition_table::{TranspositionTable,Value,NodeType};
 
 // let num = num_cpus::get();
 
@@ -108,21 +107,25 @@ struct Thread {
 
 impl Thread {
     pub fn idle_loop(&mut self) {
-        let &(ref lock, ref cvar) = &*(self.cond_var.clone());
-        let mut started = lock.lock().unwrap();
-        while !*started {
-            started = cvar.wait(started).unwrap();
+        {
+            let &(ref lock, ref cvar) = &*(self.cond_var.clone());
+            let mut started = lock.lock().unwrap();
+            while !*started {
+                started = cvar.wait(started).unwrap();
+            }
         }
         self.limit = unsafe {LIMIT.clone()};
-        self.start_search();
+        self.thread_search();
     }
 
     fn stop(&self) -> bool {
         self.local_stop.load(Ordering::Relaxed)
     }
 
-    pub fn start_search(&mut self) {
+    pub fn thread_search(&mut self) {
         self.shuffle_root_moves();
+
+        println!("info id {} start",self.id);
 
         let max_depth = if self.limit.is_depth() {
             self.limit.depth_limit()
@@ -166,26 +169,114 @@ impl Thread {
 
             self.sort_root_moves();
 
-            if self.limit.use_time() {
-                // DO SOMETHING
-            }
+//            if self.limit.use_time() {
+//                // DO SOMETHING
+//            }
+
+            println!("info id {} depth {} stop {}",self.id, depth, self.stop());
 
             depth += skip_size;
         }
 
+
     }
 
-    fn search(&mut self, alpha: i16, beta: i16, max_depth: u16) -> i16 {
+    fn search(&mut self, mut alpha: i16, beta: i16, max_depth: u16) -> i16 {
+
+        if self.board.depth() == max_depth {
+            return Eval::eval_low(&self.board);
+        }
         let at_root: bool = self.board.ply() == 0;
-        unimplemented!()
+
+        let zob = self.board.zobrist();
+        if !at_root {
+            let tt_op = self.tt.get(zob);
+            if tt_op.is_some() {
+                let tt_entry = tt_op.unwrap();
+                if tt_entry.ply > max_depth {
+                    return tt_entry.score;
+                }
+            }
+        }
+
+        let mut moves: Vec<BitMove> = if at_root {
+            self.root_moves.read().unwrap().iter().map(|m| m.bit_move).collect()
+        } else {
+            self.board.generate_moves()
+        };
+
+        if moves.len() == 0 {
+            if self.board.in_check() {
+                return MATE + (self.board.depth() as i16);
+            } else {
+                return -STALEMATE;
+            }
+        }
+
+        for (i, mov) in moves.iter().enumerate() {
+
+            self.board.apply_move(*mov);
+            let ret_mov = -self.search(-beta, -alpha,max_depth);
+            self.board.undo_move();
+            if at_root {
+                let mut moves = self.root_moves.write().unwrap();
+                moves.get_mut(i).unwrap().rollback_insert(ret_mov,max_depth);
+            }
+
+            if ret_mov > alpha {
+                alpha = ret_mov;
+            }
+
+            if alpha > beta {
+                self.tt_upsert(zob, alpha, max_depth, NodeType::LowerBound, *mov);
+                return alpha;
+            }
+
+            if self.stop() {
+                return 0;
+            }
+        }
+        self.tt_upsert(zob, alpha, max_depth, NodeType::UpperBound, BitMove::null());
+        alpha
     }
 
-    fn qsearch(&mut self, alpha: i16, beta: i16, max_depth: u16) -> i16 {
+    fn qsearch(&mut self, _alpha: i16, _beta: i16, _max_depth: u16) -> i16 {
         unimplemented!()
     }
 
     fn main_thread(&self) -> bool {
         self.id == 0
+    }
+
+    fn tt_upsert(&self, zobrist: u64, score: i16, depth: u16, node_type: NodeType, bitmove: BitMove) {
+        let tt_op = self.tt.get(zobrist);
+        if tt_op.is_some() {
+            let tt_entry = tt_op.unwrap();
+            if tt_entry.ply == depth {
+                if tt_entry.score < score {
+                    self.tt.insert(zobrist, Value {
+                        best_move: BitMove::null(),
+                        score: score,
+                        ply: depth,
+                        node_type: node_type
+                    });
+                }
+            } else if tt_entry.ply < depth {
+                self.tt.insert(zobrist, Value {
+                    best_move: BitMove::null(),
+                    score: score,
+                    ply: depth,
+                    node_type: node_type
+                });
+            }
+        } else {
+            self.tt.insert(zobrist, Value {
+                best_move: BitMove::null(),
+                score: score,
+                ply: depth,
+                node_type: node_type
+            });
+        }
     }
 
     fn sort_root_moves(&mut self) {
@@ -231,7 +322,7 @@ pub struct LazySMPSearcher {
     main_thread: Thread,
 }
 
-const DEFAULT_TT_CAP: usize = 10000;
+const DEFAULT_TT_CAP: usize = 100000000;
 
 impl LazySMPSearcher {
     pub fn setup(board: Board, stop: Arc<AtomicBool>) -> Self {
@@ -300,7 +391,7 @@ impl LazySMPSearcher {
         lazy_smp
     }
 
-    pub fn start_searching(&mut self, limit: UCILimit) -> BitMove {
+    pub fn start_searching(&mut self, limit: UCILimit, use_stdout: bool) -> BitMove {
         // Make sure there is no stop command
         assert!(!(self.gui_stop.load(Ordering::Relaxed)));
 
@@ -317,13 +408,17 @@ impl LazySMPSearcher {
         }
 
         // get cond_var and notify the threads to wake up
-        let &(ref lock, ref cvar) = &*(self.cond_var.clone());
-        let mut started = lock.lock().unwrap();
-        *started = true;
-        cvar.notify_all();
+        {
+            let &(ref lock, ref cvar) = &*(self.cond_var.clone());
+            let mut started = lock.lock().unwrap();
+            *started = true;
+            cvar.notify_all();
+
+        }
 
         // Main thread needs to start searching
-        self.main_thread.start_search();
+        self.main_thread.thread_search();
+
 
         // Make sure the remaining threads have finished.
         while !self.threads.is_empty() {
@@ -333,6 +428,8 @@ impl LazySMPSearcher {
         let mut best_root_move: RootMove = {
             self.main_thread.root_moves.read().unwrap().get(0).unwrap().clone()
         };
+
+
 
         // Find out if there is a better found move
         for thread_moves in self.all_moves.iter() {
@@ -344,6 +441,10 @@ impl LazySMPSearcher {
             if value_diff > 0 && depth_diff >= 0 {
                 best_root_move = root_move;
             }
+        }
+
+        if use_stdout {
+            println!("bestmove {}", best_root_move.bit_move);
         }
 
         best_root_move.bit_move
@@ -366,14 +467,14 @@ impl Searcher for LazySMPSearcher {
         "Lazy SMP Searcher"
     }
 
-    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
         let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
-        searcher.start_searching(UCILimit::Depth(max_depth))
+        searcher.start_searching(UCILimit::Depth(max_depth), false)
     }
 
     fn best_move(board: Board, timer: &Timer) -> BitMove {
         let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
-        searcher.start_searching(UCILimit::Time(timer.clone()))
+        searcher.start_searching(UCILimit::Time(timer.clone()), false)
     }
 }
 
@@ -382,7 +483,7 @@ impl UCISearcher for LazySMPSearcher {
         LazySMPSearcher::setup(board,stop)
     }
 
-    fn uci_go(&mut self, limits: UCILimit) -> BitMove {
-        self.start_searching(limits)
+    fn uci_go(&mut self, limits: UCILimit, _use_stdout: bool) -> BitMove {
+        self.start_searching(limits, true)
     }
 }

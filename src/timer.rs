@@ -5,8 +5,7 @@ use std::time::Instant;
 #[derive(Clone, Copy)]
 pub struct Timer {
     start: Instant,   // when the current timer was created
-    total_duration: i64, // unchanging, seconds each
-    seconds_remaining: [i64; 2],
+    milli_seconds_remaining: [i64; 2],
     turn: Turn, // turn of the current clock
     inc: [i64; 2], // Amount to incremeant per player if there is time left
 }
@@ -18,24 +17,22 @@ enum Turn {
 }
 
 impl Timer {
-    pub fn new_no_inc(minutes: i64) -> Self {
-        Timer::new(minutes, 0, 0)
+    pub fn new_no_inc(milliseconds: i64) -> Self {
+        Timer::new(milliseconds, milliseconds, 0, 0)
     }
 
-    pub fn new(minutes: i64, player_one_inc: i64, player_two_inc: i64) -> Self {
-        let secs = minutes * 60;
+    pub fn new(player_one_msec: i64, player_two_msec: i64, player_one_inc: i64, player_two_inc: i64) -> Self {
         Timer {
             start: Instant::now(),
-            total_duration: secs,
-            seconds_remaining: [secs, secs],
+            milli_seconds_remaining: [player_one_msec, player_two_msec],
             turn: Turn::One,
             inc: [player_one_inc, player_two_inc]
         }
     }
 
-    pub fn time_remaining(&self) -> i64 {
+    pub fn msec_remaining(&self) -> i64 {
         let diff = self.start.elapsed();
-        self.seconds_remaining[self.turn as usize] - diff.as_secs() as i64
+        self.milli_seconds_remaining[self.turn as usize] - diff.as_secs() as i64
     }
 
     pub fn current_time_inc(&self) -> i64 {
@@ -53,7 +50,7 @@ impl Timer {
     }
 
     pub fn opp_time_remaining(&self) -> i64 {
-        self.seconds_remaining[other_turn(self.turn) as usize]
+        self.milli_seconds_remaining[other_turn(self.turn) as usize]
     }
 
     pub fn start_time(&mut self) {
@@ -62,9 +59,9 @@ impl Timer {
 
     pub fn stop_time(&mut self) {
         let diff = self.start.elapsed();
-        self.seconds_remaining[self.turn as usize] -= diff.as_secs() as i64;
+        self.milli_seconds_remaining[self.turn as usize] -= diff.as_secs() as i64;
         if !self.out_of_time() {
-            self.seconds_remaining[self.turn as usize] += self.inc[self.turn as usize];
+            self.milli_seconds_remaining[self.turn as usize] += self.inc[self.turn as usize];
         }
     }
 
@@ -73,7 +70,7 @@ impl Timer {
     }
 
     pub fn out_of_time(&self) -> bool {
-        self.seconds_remaining[self.turn as usize] <= 0
+        self.milli_seconds_remaining[self.turn as usize] <= 0
     }
 }
 

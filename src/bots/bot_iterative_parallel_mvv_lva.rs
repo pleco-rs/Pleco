@@ -5,9 +5,11 @@ use piece_move::BitMove;
 use engine::*;
 use eval::*;
 use rayon;
+
+#[allow(unused_imports)]
 use test::Bencher;
+#[allow(unused_imports)]
 use test;
-use timer;
 
 const MAX_PLY: u16 = 5;
 
@@ -39,7 +41,7 @@ impl Searcher for IterativeSearcher {
 }
 
 
-fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+fn iterative_deepening(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
     // for each level from 1 to max depth, search the node and return the best move and score
     // Once we have reached ply 2, keep the score (say x), c
     //       continue onto previous ply with alpha = x - 33 and beta = x + 33
@@ -304,7 +306,7 @@ fn quiescence_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
     }
 }
 
-fn q_science_criteria(m: BitMove, board: &Board) -> bool {
+fn q_science_criteria(m: BitMove, _board: &Board) -> bool {
     m.is_capture()
 }
 
@@ -362,7 +364,7 @@ impl BestMove {
 
 //
 //#[bench]
-//fn bench_bot_ply_3__main_bot(b: &mut Bencher) {
+//fn bench_bot_ply_3_main_bot(b: &mut Bencher) {
 //    use templates::TEST_FENS;
 //    b.iter(|| {
 //        let mut b: Board = test::black_box(Board::default());
@@ -379,27 +381,26 @@ impl BestMove {
 //    })
 //}
 
-#[bench]
-fn bench_bot_ply_4__main_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 4);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist())
-        })
-    })
-}
+//#[bench]
+//fn bench_bot_ply_4_main_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    b.iter(|| {
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, _c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 4);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist())
+//        })
+//    })
+//}
 
 
 //#[bench]
-//fn bench_bot_ply_5__main_bot(b: &mut Bencher) {
+//fn bench_bot_ply_5_main_bot(b: &mut Bencher) {
 //    use templates::TEST_FENS;
 //    b.iter(|| {
 //        let mut b: Board = test::black_box(Board::default());

@@ -1,5 +1,3 @@
-
-
 use bit_twiddles::*;
 use templates::*;
 use std::{mem, slice, cmp};
@@ -56,7 +54,7 @@ pub struct MagicHelper<'a, 'b> {
     pub zobrist: Zobrist,
 }
 
-// Structure for helping determine Zobrist hashes.
+/// Structure for helping determine Zobrist hashes.
 pub struct Zobrist {
     pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
     pub en_p: [u64; FILE_CNT], // 8 * 8
@@ -66,6 +64,8 @@ pub struct Zobrist {
 
 // Creates zobrist hashes based on a Pseudo Random Number generator.
 impl Zobrist {
+
+
     fn default() -> Zobrist {
         let mut zob = Zobrist {
             sq_piece: [[0; PIECE_CNT]; SQ_CNT],
@@ -105,7 +105,7 @@ unsafe impl<'a, 'b> Sync for MagicHelper<'a, 'b> {}
 //      Between Squares BitBoard
 
 impl<'a, 'b> MagicHelper<'a, 'b> {
-    // Create a new Magic Helper
+    /// Create a new Magic Helper
     pub fn new() -> MagicHelper<'a, 'b> {
         let mut mhelper = MagicHelper {
             magic_rook: MRookTable::init(),
@@ -125,62 +125,64 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         mhelper
     }
 
-    // Returns the Zobrist Hash for a given piece as a given Square
+    /// Returns the Zobrist Hash for a given piece as a given Square
     #[inline(always)]
     pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
         assert!(sq_is_okay(square));
         self.zobrist.sq_piece[square as usize][piece as usize]
     }
 
-    // Returns the zobrist hash for the given Square of Enpassant
-    // Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
+    /// Returns the zobrist hash for the given Square of Enpassant
+    /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
     #[inline(always)]
     pub fn z_ep_file(&self, square: SQ) -> u64 {
         self.zobrist.en_p[file_of_sq(square) as usize]
     }
 
-    // Returns a zobrast hash of the castling rights, as defined by the Board
+    /// Returns a zobrast hash of the castling rights, as defined by the Board
     #[inline(always)]
     pub fn z_castle_rights(&self, castle: u8) -> u64 {
-        assert!((castle as usize) < TOTAL_CASTLING_CNT);
+        debug_assert!((castle as usize) < TOTAL_CASTLING_CNT);
         self.zobrist.castle[castle as usize]
     }
 
-    // Returns Zobrist Hash of flipping sides
+    /// Returns Zobrist Hash of flipping sides.
     #[inline(always)]
     pub fn z_side(&self) -> u64 {
         self.zobrist.side
     }
 
-    // Generate Knight Moves bitboard from a source square
+    /// Generate Knight Moves bitboard from a source square
     #[inline(always)]
     pub fn knight_moves(&self, square: SQ) -> BitBoard {
-        assert!(sq_is_okay(square));
-        self.knight_table[square as usize]
+        debug_assert!(sq_is_okay(square));
+//        self.knight_table[square as usize]
+        unsafe { *self.knight_table.get_unchecked(square as usize)}
     }
 
-    // Generate King moves bitboard from a source  square
+    /// Generate King moves bitboard from a source  square
     #[inline(always)]
     pub fn king_moves(&self, square: SQ) -> BitBoard {
-        assert!(sq_is_okay(square));
-        self.king_table[square as usize]
+        debug_assert!(sq_is_okay(square));
+//        self.king_table[square as usize]
+        unsafe { *self.king_table.get_unchecked(square as usize)}
     }
 
-    // Generate Bishop Moves from a bishop square and all occupied squares on the board
+    /// Generate Bishop Moves from a bishop square and all occupied squares on the board
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         self.magic_bishop.bishop_attacks(occupied, square)
     }
 
-    // Generate Rook Moves from a bishop square and all occupied squares on the board
+    /// Generate Rook Moves from a bishop square and all occupied squares on the board
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         self.magic_rook.rook_attacks(occupied, square)
     }
 
-    // Generate Queen Moves from a bishop square and all occupied squares on the board
+    /// Generate Queen Moves from a bishop square and all occupied squares on the board
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
@@ -188,7 +190,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             self.magic_bishop.bishop_attacks(occupied, square)
     }
 
-    // get the distance of two squares
+    /// get the distance of two squares
     #[inline(always)]
     pub fn distance_of_sqs(&self, square_one: SQ, square_two: SQ) -> u8 {
         assert!(sq_is_okay(square_one));
@@ -196,7 +198,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         self.dist_table[square_one as usize][square_two as usize]
     }
 
-    // Get the line (diagonal / file / rank) two squares, if it exists
+    /// Get the line (diagonal / file / rank) two squares, if it exists
     #[inline(always)]
     pub fn line_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
         assert!(sq_is_okay(square_one));
@@ -204,7 +206,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         self.line_bitboard[square_one as usize][square_two as usize]
     }
 
-    // Get the line between two squares, not including the squares, if it exists
+    /// Get the line between two squares, not including the squares, if it exists
     #[inline(always)]
     pub fn between_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
         assert!(sq_is_okay(square_one));
@@ -212,15 +214,15 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         self.between_sqs_bb[square_one as usize][square_two as usize]
     }
 
-    // Gets the adjacent files of the square
+    /// Gets the adjacent files of the square
     #[inline(always)]
     pub fn adjacent_file(&self, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         self.adjacent_files_bb[file_of_sq(square) as usize]
     }
 
-    // Pawn attacks from a given square, per player,
-    // Basically, given square x,returns the bitboard of squares a pawn on x attacks
+    /// Pawn attacks from a given square, per player,
+    /// Basically, given square x,returns the bitboard of squares a pawn on x attacks
     #[inline(always)]
     pub fn pawn_attacks_from(&self, square: SQ, player: Player) -> BitBoard {
         assert!(sq_is_okay(square));
@@ -231,7 +233,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     }
 
 
-    // Returns in three Squares are in the same diagonal, file, or rank
+    /// Returns if three Squares are in the same diagonal, file, or rank
     #[inline(always)]
     pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
         self.line_bb(s1, s2) & sq_to_bb(s3) != 0
@@ -248,6 +250,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     //            }
     //        }
     //    }
+
 
     fn gen_between_and_line_bbs(&mut self) {
         for i in 0..64 as SQ {
@@ -534,11 +537,11 @@ impl<'a> MRookTable<'a> {
     //NOTE: Result needs to be AND'd with player's occupied bitboard, so doesnt allow capturing self.
     #[inline(always)]
     pub fn rook_attacks(&self, mut occupied: BitBoard, square: SQ) -> BitBoard {
-        let magic_entry: &SMagic = &self.sq_magics[square as usize];
+        let magic_entry = unsafe { self.sq_magics.get_unchecked(square as usize)};
         occupied &= magic_entry.mask;
         occupied = occupied.wrapping_mul(magic_entry.magic);
         occupied = occupied.wrapping_shr(magic_entry.shift);
-        magic_entry.ptr[occupied as usize]
+        unsafe { *magic_entry.ptr.get_unchecked(occupied as usize) }
     }
 }
 
@@ -703,11 +706,11 @@ impl<'a> MBishopTable<'a> {
     //NOTE: Result needs to be AND'd with player's occupied bitboard, so doesnt allow capturing self.
     #[inline(always)]
     pub fn bishop_attacks(&self, mut occupied: BitBoard, square: SQ) -> BitBoard {
-        let magic_entry: &SMagic = &self.sq_magics[square as usize];
+        let magic_entry = unsafe { self.sq_magics.get_unchecked(square as usize)};
         occupied &= magic_entry.mask;
         occupied = occupied.wrapping_mul(magic_entry.magic);
         occupied = occupied.wrapping_shr(magic_entry.shift);
-        magic_entry.ptr[occupied as usize]
+        unsafe { *magic_entry.ptr.get_unchecked(occupied as usize) }
     }
 }
 
@@ -895,7 +898,9 @@ pub fn diff(x: u8, y: u8) -> u8 {
 mod tests {
 
     use magic_helper::*;
-    use test;
+
+//    #[allow(unused_imports)]
+//    use test;
 
     #[test]
     fn test_king_mask_gen() {

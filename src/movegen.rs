@@ -262,8 +262,7 @@ impl<'a> MoveGen<'a> {
 
         // some functions we need to shift bitboards around & move squares. We do this because it depends only on the players side,
         // and we use these functions alot.
-        let (down, up, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
-            Box<Fn(SQ) -> SQ>,
+        let (down, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
             Box<Fn(SQ) -> SQ>,
             Box<Fn(SQ) -> SQ>,
             Box<Fn(SQ) -> SQ>,
@@ -273,17 +272,15 @@ impl<'a> MoveGen<'a> {
         ) = if self.turn == Player::White {
             (
                 Box::new(|x: SQ| x.wrapping_sub(8)), // Down
-                Box::new(|x: SQ| x.wrapping_add(8)), // Up
                 Box::new(|x: SQ| x.wrapping_sub(9)), // left_down
                 Box::new(|x: SQ| x.wrapping_sub(7)), // right_down
                 Box::new(|x: u64| x.wrapping_shl(8)), // Shift_up
                 Box::new(|x: u64| (x & !FILE_A).wrapping_shl(7)), // Shift_left_up
-                Box::new(|x: u64| (x & !FILE_H).wrapping_shl(9)),
-            ) // Shift_Right_up
+                Box::new(|x: u64| (x & !FILE_H).wrapping_shl(9)), // Shift_Right_up
+            )
         } else {
             (
                 Box::new(|x: SQ| x.wrapping_add(8)),
-                Box::new(|x: SQ| x.wrapping_sub(8)),
                 Box::new(|x: SQ| x.wrapping_add(9)),
                 Box::new(|x: SQ| x.wrapping_add(7)),
                 Box::new(|x: u64| x.wrapping_shr(8)),

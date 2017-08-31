@@ -4,9 +4,11 @@ use piece_move::*;
 use engine::Searcher;
 use eval::*;
 use rayon;
+
+#[allow(unused_imports)]
 use test::Bencher;
+#[allow(unused_imports)]
 use test;
-use timer;
 
 use super::super::BestMove;
 
@@ -29,11 +31,11 @@ impl Searcher for ParallelSearcher {
         "Parallel Searcher"
     }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
         ParallelSearcher::best_move_depth(board, timer, MAX_PLY)
     }
 
-    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
         parallel_minimax(&mut board.shallow_clone(), max_depth)
             .best_move
             .unwrap()
@@ -63,7 +65,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
         let mut best_move: Option<BitMove> = None;
         for mov in slice {
             board.apply_move(*mov);
-            let mut returned_move: BestMove = parallel_minimax(board, max_depth).negate();
+            let returned_move: BestMove = parallel_minimax(board, max_depth).negate();
             board.undo_move();
             if returned_move.score > best_value {
                 best_value = returned_move.score;
@@ -98,7 +100,7 @@ fn eval_board(board: &mut Board) -> BestMove {
 
 //
 //#[bench]
-//fn bench_bot_ply_3__parallel_bot(b: &mut Bencher) {
+//fn bench_bot_ply_3_parallel_bot(b: &mut Bencher) {
 //    use templates::TEST_FENS;
 //    b.iter(|| {
 //        let mut b: Board = test::black_box(Board::default());

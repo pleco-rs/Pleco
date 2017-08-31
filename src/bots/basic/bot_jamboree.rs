@@ -4,8 +4,12 @@ use piece_move::*;
 use engine::Searcher;
 use eval::*;
 use rayon;
+
+#[allow(unused_imports)]
 use test::Bencher;
+#[allow(unused_imports)]
 use test;
+
 
 use super::super::BestMove;
 
@@ -30,11 +34,11 @@ impl Searcher for JamboreeSearcher {
         "Jamboree Searcher"
     }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
         JamboreeSearcher::best_move_depth(board, timer, MAX_PLY)
     }
 
-    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
         let alpha = NEG_INFINITY;
         let beta = INFINITY;
         jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)

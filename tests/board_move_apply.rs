@@ -2,9 +2,6 @@ extern crate pleco;
 extern crate rand;
 
 use pleco::board::Board;
-use pleco::templates::{Piece, Player};
-use pleco::piece_move::*;
-//use piece_move::BitMove;
 use std::*;
 
 #[test]

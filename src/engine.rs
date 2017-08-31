@@ -4,13 +4,9 @@ use piece_move::BitMove;
 use timer::Timer;
 use board::Board;
 use templates::Player;
-use eval::INFINITY;
-
-use rayon;
 
 use std::{thread, time};
 use std::io;
-use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::AtomicBool;
 
@@ -31,13 +27,14 @@ pub trait Searcher {
 pub trait UCISearcher: Searcher {
     fn uci_setup(board: Board, stop: Arc<AtomicBool>) -> Self where Self: Sized;
 
-    fn uci_go(&mut self, limits: UCILimit) -> BitMove;
+    fn uci_go(&mut self, limits: UCILimit, use_stdout: bool) -> BitMove;
 }
 
 #[derive(Clone)]
 pub enum UCILimit {
     Infinite,
     Depth(u16),
+    Nodes(u64),
     Time(Timer),
 }
 
@@ -82,18 +79,8 @@ pub enum Winner {
     Draw,
 }
 
-
-pub static ID_NAME: &str = "Pleco";
-pub static ID_AUTHOR: &str = "Stephen Fleischman";
-
-pub fn compete<S: Searcher, T: Searcher>(
-    player_one: &S,
-    player_two: &T,
-    minutes_each: i64,
-    display: bool,
-    randomize: bool,
-    ply: u16,
-) -> Winner {
+/// Pits
+pub fn compete<S: Searcher, T: Searcher>(_player_one: &S, _player_two: &T, minutes_each: i64, display: bool, randomize: bool, ply: u16, ) -> Winner {
     assert!(minutes_each > 0);
     let mut b: Board = Board::default();
     let mut timer = Timer::new_no_inc(minutes_each);
@@ -222,62 +209,3 @@ pub fn compete_multiple<S: Searcher, T: Searcher>(
         Winner::Draw
     }
 }
-
-#[derive(Copy, Clone)]
-pub enum GuiToEngine {
-    Stop,
-}
-
-pub fn uci<S: UCISearcher>(player_one: S) {
-    println!("id name {}", ID_NAME);
-    println!("id author {}", ID_AUTHOR);
-    let mut timer = Timer::new_no_inc(3);
-    let mut b = Board::default();
-
-    let rw: Mutex<Option<GuiToEngine>> = Mutex::new(None);
-    let arc = Arc::new(rw);
-
-    loop {
-        let this_arc = arc.clone();
-        thread::spawn(move || { poll_stdin(this_arc.clone()); });
-
-
-
-    }
-}
-
-
-// Regularily polls stdin for any commands sent in from UCI during movement
-//
-fn poll_stdin(state: Arc<Mutex<Option<GuiToEngine>>>) {
-
-    let mut stdin_input: Option<GuiToEngine> = None;
-
-    while stdin_input.is_none() {
-        thread::sleep(time::Duration::from_millis(100));
-
-        let stdin = io::stdin();
-        let mut input = &mut String::new();
-        let res = stdin.read_line(input);
-        return if res.is_ok() {
-            stdin_input = parse_uci_interrupt(input);
-        } else {
-            panic!()
-        };
-    }
-
-    let mut msg = state.lock().unwrap();
-    *msg = stdin_input;
-}
-
-
-fn parse_uci_interrupt(str: &str) -> Option<GuiToEngine> {
-    if str.len() <= 1 || str.eq("\n") {
-        return None;
-    }
-    if str.eq("stop\n") {
-        return Some(GuiToEngine::Stop);
-    }
-    None
-}
-

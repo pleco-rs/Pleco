@@ -1,21 +1,20 @@
-#![feature(integer_atomics)]
-
-#[macro_use]
-use lazy_static;
 use rayon;
 
 use board::Board;
-use std::sync::mpsc::Receiver;
 use std::sync::atomic::*;
-use std::sync::{RwLock,Arc};
-use engine::{Searcher,UCISearcher,GuiToEngine};
+
+use engine::Searcher;
 use transposition_table::*;
 use eval::*;
 use piece_move::BitMove;
 use timer::Timer;
-use test;
-use test::Bencher;
 use templates::*;
+
+
+#[allow(unused_imports)]
+use test::Bencher;
+#[allow(unused_imports)]
+use test;
 
 use super::BestMove;
 
@@ -121,7 +120,7 @@ impl <'a> Searcher for ThreadSearcher<'a> {
         searcher.iterative_deepening(&mut board)
     }
 
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
+    fn best_move(_board: Board, _timer: &Timer) -> BitMove {
         unimplemented!()
     }
 }
@@ -419,40 +418,38 @@ fn q_sci_depth() -> u16 {
     unsafe { CONF.q_sci_depth }
 }
 
-#[bench]
-fn bench_bot_ply_3__threaded_param_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-    use test;
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 3);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
-
-#[bench]
-fn bench_bot_ply_4__threaded_param_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-    use test;
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 4);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
+//#[bench]
+//fn bench_bot_ply_3_threaded_param_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    use test;
+//    b.iter(|| {
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, _c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 3);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
+//
+//#[bench]
+//fn bench_bot_ply_4_threaded_param_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    use test;
+//    b.iter(|| {
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, _c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ThreadSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 4);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}

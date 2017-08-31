@@ -1,10 +1,12 @@
 use board::*;
-use std::cmp::Ordering;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
 use eval::*;
+
+#[allow(unused_imports)]
 use test::Bencher;
+#[allow(unused_imports)]
 use test;
 
 use super::super::BestMove;
@@ -23,7 +25,7 @@ impl Searcher for AlphaBetaBot {
         "AlphaBeta Searcher"
     }
 
-    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
         let alpha: i16 = NEG_INFINITY;
         let beta: i16 = INFINITY;
         alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
@@ -31,7 +33,7 @@ impl Searcher for AlphaBetaBot {
             .unwrap()
     }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
         AlphaBetaBot::best_move_depth(board, timer, MAX_PLY)
     }
 }

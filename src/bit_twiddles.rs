@@ -1,4 +1,4 @@
-
+//! Contains useful features involving bits.
 static POPCNT8: &'static [u8] = &[
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -138,23 +138,6 @@ pub fn more_than_one(x: u64) -> bool {
 pub fn lsb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
-
-
-// Returns the most significant bit
-//
-// # Examples
-//
-// ```
-// use pleco::bit_twiddles::*;
-//
-// assert_eq!(msb(0b1001), 0b1000);
-// ```
-#[inline(always)]
-pub fn msb(bits: u64) -> u64 {
-    // BAD CODE DO NOT USE
-    (1 as u64).wrapping_shl(bits.leading_zeros())
-}
-
 
 /// Counts the number of bits
 #[inline(always)]

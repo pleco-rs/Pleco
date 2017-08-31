@@ -5,9 +5,10 @@ use piece_move::BitMove;
 use engine::*;
 use eval::*;
 use rayon;
-use transposition_table::*;
-use timer;
+
+#[allow(unused_imports)]
 use test::Bencher;
+#[allow(unused_imports)]
 use test;
 
 use super::BestMove;
@@ -42,7 +43,7 @@ impl Searcher for ExpertBot {
 }
 
 
-fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+fn iterative_deepening(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
     // for each level from 1 to max depth, search the node and return the best move and score
     // Once we have reached ply 2, keep the score (say x), c
     //       continue onto previous ply with alpha = x - 33 and beta = x + 33
@@ -67,7 +68,7 @@ fn iterative_deepening(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
         // clone the board
         let mut b = board.shallow_clone();
 
-        let returned_b_move = jamboree(&mut b, alpha, beta, i, PLYS_SEQ[i as usize], false);
+        let returned_b_move = jamboree(&mut b, alpha, beta, i, PLYS_SEQ[i as usize]);
         if i >= 2 {
             if returned_b_move.score > beta {
                 beta = INFINITY;
@@ -102,12 +103,11 @@ fn jamboree(
     mut alpha: i16,
     beta: i16,
     max_depth: u16,
-    plys_seq: u16,
-    mut is_seq: bool,
-) -> BestMove {
+    plys_seq: u16, ) -> BestMove {
+
     assert!(alpha <= beta);
 
-    is_seq = board.depth() >= max_depth - plys_seq;
+    let is_seq = board.depth() >= max_depth - plys_seq;
 
     // Determine if we should do Quiscience search or just return
     if board.depth() >= max_depth {
@@ -162,7 +162,7 @@ fn jamboree(
     let mut best_move: Option<BitMove> = None;
     for mov in seq {
         board.apply_move(*mov);
-        let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq, is_seq).negate();
+        let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
         board.undo_move();
 
         if return_move.score > alpha {
@@ -208,7 +208,7 @@ fn parallel_task(
     if slice.len() <= DIVIDE_CUTOFF {
         for mov in slice {
             board.apply_move(*mov);
-            let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq, false).negate();
+            let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
             board.undo_move();
 
             if return_move.score > alpha {
@@ -294,7 +294,7 @@ fn quiescence_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
     }
 }
 
-fn q_science_criteria(m: BitMove, board: &Board) -> bool {
+fn q_science_criteria(m: BitMove, _board: &Board) -> bool {
     m.is_capture()
 }
 
@@ -349,31 +349,30 @@ fn eval_board(board: &mut Board) -> BestMove {
 //    })
 //}
 //
-
-#[bench]
-fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
-    use templates::TEST_FENS;
-    use test;
-//    tt.clear();
-//    tt.reserve(100000);
-    b.iter(|| {
-        let mut b: Board = test::black_box(Board::default());
-        let iter = TEST_FENS.len();
-        let mut i = 0;
-        (0..iter).fold(0, |a: u64, c| {
-            //            println!("{}",TEST_FENS[i]);
-            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &timer::Timer::new_no_inc(20), 4);
-            b.apply_move(mov);
-            i += 1;
-            a ^ (b.zobrist()) }
-        )
-    })
-}
+//
+//#[bench]
+//fn bench_bot_ply_4_expert_bot(b: &mut Bencher) {
+//    use templates::TEST_FENS;
+//    use test;
+////    tt.clear();
+////    tt.reserve(100000);
+//    b.iter(|| {
+//        let iter = TEST_FENS.len();
+//        let mut i = 0;
+//        (0..iter).fold(0, |a: u64, _c| {
+//            //            println!("{}",TEST_FENS[i]);
+//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
+//            let mov = ExpertBot::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 4);
+//            b.apply_move(mov);
+//            i += 1;
+//            a ^ (b.zobrist()) }
+//        )
+//    })
+//}
 
 //
 //#[bench]
-//fn bench_bot_ply_5__expert_bot(b: &mut Bencher) {
+//fn bench_bot_ply_5_expert_bot(b: &mut Bencher) {
 //    use templates::TEST_FENS;
 ////    tt.clear();
 ////    tt.reserve(100000);
@@ -393,7 +392,7 @@ fn bench_bot_ply_4__expert_bot(b: &mut Bencher) {
 //}
 //
 //#[bench]
-//fn bench_bot_ply_6__expert_bot(b: &mut Bencher) {
+//fn bench_bot_ply_6_expert_bot(b: &mut Bencher) {
 //    use templates::TEST_FENS;
 ////    tt.clear();
 ////    tt.reserve(100000);
