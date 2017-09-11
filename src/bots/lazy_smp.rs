@@ -193,7 +193,7 @@ impl Thread {
             let tt_op = self.tt.get(zob);
             if tt_op.is_some() {
                 let tt_entry = tt_op.unwrap();
-                if tt_entry.ply > max_depth {
+                if tt_entry.ply >= max_depth {
                     return tt_entry.score;
                 }
             }

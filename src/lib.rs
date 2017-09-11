@@ -17,6 +17,8 @@
 #![feature(test)]
 #![allow(dead_code)]
 #![feature(integer_atomics)]
+#![feature(unique)]
+#![feature(allocator_api)]
 
 
 #[macro_use]
@@ -43,6 +45,7 @@ pub mod engine;
 pub mod transposition_table;
 pub mod tools;
 pub mod uci;
+pub mod tt;
 
 pub mod bots;
 
