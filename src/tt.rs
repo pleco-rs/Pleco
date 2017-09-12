@@ -90,7 +90,7 @@ impl TT {
             cap: size,
             time_age: 0,
         }
-        
+
     }
 
     pub fn resize_round_up(self, size: usize) {
