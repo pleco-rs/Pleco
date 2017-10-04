@@ -28,6 +28,14 @@ pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
 pub static VERSION: &str = "0.1.1";
 
+pub static HELP_MSG: &str =
+    "usage: arg_name
+  arg_name:
+    help    Prints this message
+    uci    Starts UCI (Universal Chess Interface) Mode
+    q, quit    Quits the program
+    ";
+
 
 pub fn console_loop(mut args: Vec<String>) {
     print_startup();
@@ -47,12 +55,17 @@ pub fn console_loop(mut args: Vec<String>) {
             break 'main;
         } else if command == "q" || command == "quit" {
             break 'main
+        } else if command == "h" || command == "help" {
+            println!("{}",HELP_MSG);
         } else {
             println!("command not recognized: {}",command);
+            println!("type help for a list of commands");
         }
         args.clear();
     }
 }
+
+
 
 fn uci() {
     println!("id name {}",ID_NAME);

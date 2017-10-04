@@ -293,6 +293,8 @@ impl<'a> MoveGen<'a> {
         };
 
         let all_pawns: BitBoard = self.board.piece_bb(self.turn, Piece::P);
+
+        // seperate these two for promotion moves and non promotions
         let pawns_rank_7: BitBoard = all_pawns & rank_7;
         let pawns_not_rank_7: BitBoard = all_pawns & !rank_7;
 
@@ -316,6 +318,7 @@ impl<'a> MoveGen<'a> {
                 };
 
             let mut push_one: BitBoard = empty_squares & shift_up(pawns_not_rank_7);
+            // double pushes are pawns that can be pushed one and remain on rank3
             let mut push_two: BitBoard = shift_up(push_one & rank_3) & empty_squares;
 
             if gen_type == PriGenType::Evasions {

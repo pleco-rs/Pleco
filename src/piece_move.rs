@@ -50,7 +50,7 @@ static SP_MASK: u16 = 0b0011_000000_000000;
 /// A [BitMove] consists of 16 bits, all of which to include a source square, destination square,
 /// and special move-flags to differentiate types of moves. 
 ///
-/// A BitMove should never be created directly, but rather insigated with a [PreMoveInfo]. This is because 
+/// A BitMove should never be created directly, but rather instigated with a [PreMoveInfo]. This is because
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct BitMove {
@@ -89,7 +89,6 @@ impl fmt::Display for BitMove {
         write!(f, "{}", self.stringify())
     }
 }
-
 
 
 // https://chessprogramming.wikispaces.com/Encoding+Moves

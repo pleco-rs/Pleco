@@ -142,7 +142,7 @@ impl Thread {
         let mut alpha = NEG_INFINITY;
         let mut beta = INFINITY;
 
-        while !self.stop() && depth <= MAX_PLY {
+        while !self.stop() && depth <= max_depth {
             if depth != start_ply {
                 self.sort_root_moves();
             }
