@@ -518,13 +518,5 @@ pub fn print_u64(input: u64) {
 }
 
 fn format_u64(input: u64) -> String {
-    let mut s = String::with_capacity(64);
-    let strin = format!("{:b}", input);
-    let mut i = strin.len();
-    while i < 64 {
-        s.push_str("0");
-        i += 1;
-    }
-    s.push_str(&strin);
-    s
+    format!("{:064b}", input)
 }
