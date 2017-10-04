@@ -1,10 +1,10 @@
-extern crate Pleco;
+extern crate pleco;
 
-use Pleco::board as board;
+use pleco::board as board;
 use self::board::{Board as Board};
-use Pleco::templates::*;
-use Pleco::piece_move::*;
-use Pleco::*;
+use pleco::templates::*;
+use pleco::piece_move::*;
+use pleco::*;
 use std::*;
 
 
@@ -130,6 +130,4 @@ fn move_seq_1() {
     };
     let m = BitMove::init(p);
     b.apply_move(m);
-
-
 }

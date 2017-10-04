@@ -1,63 +1,71 @@
-
-
 use bit_twiddles::*;
 use templates::*;
-use std::{mem,slice,cmp};
-use test::Bencher;
-use test;
+use std::{mem, slice, cmp};
 
 
 const ROOK_M_SIZE: usize = 102_400;
 const BISHOP_M_SIZE: usize = 5248;
-const B_DELTAS: [i8; 4] = [7,9,-9,-7];
-const R_DELTAS: [i8; 4] = [8,1,-8,-1];
+const B_DELTAS: [i8; 4] = [7, 9, -9, -7];
+const R_DELTAS: [i8; 4] = [8, 1, -8, -1];
 const DELTAS: [[i8; 4]; 2] = [B_DELTAS, R_DELTAS];
-const SEEDS: [[u64;8]; 2] = [[ 8977, 44_560, 54_343, 38_998,  5731, 95_205, 104_912, 17_020 ],
-                             [  728, 10_316, 55_013, 32_803, 12_281, 15_100,  16_645,   255 ]];
+const SEEDS: [[u64; 8]; 2] = [
+    [8977, 44_560, 54_343, 38_998, 5731, 95_205, 104_912, 17_020],
+    [728, 10_316, 55_013, 32_803, 12_281, 15_100, 16_645, 255],
+];
 
 
 
-// Object for helping the Board with various functions. Pre-computes everything on initialization
-// Thread safe. Once initializes, IT SHOULD NOT BE MODIFIED
-// Currently does the following:
-//      - Generates King and Rook Move Bitboards
-//      - Generates Rook, Bishop, Queen Magic Bitboards for Move generation
-//      - Generates distance table for quick lookup of distance
-//
-//
-// Size (Bytes) of each field in the Stack / Heap
+
+// Size (Bytes) of each field in the Stack / Heap (Dispite this being statically allocated)
 //              |  STACK  |  HEAP   |  TOTAL  | KiloBytes   |
 // magic_rook   |   2563  |  819200 |  821763 | ~819.2 KB   |
 // magic_bishop |   2563  |   41984 |   44547 |  ~44.5 KB   |
 // knight_table |    512  |       0 |     512 |   ~0.5 KB   |
 // king_table   |    512  |       0 |     512 |   ~0.5 KB   |
 // dist_table   |   4096  |       0 |     512 |   ~4.0 KB   |
-// line_bb      |    512  |       0 |     512 |   ~0.5 KB   |
-//
-//
+// line_bb      |  32768  |       0 |   32768 |   ~0.5 KB   |
+// btw_sq_bb    |  32768  |       0 |   32768 |   ~0.5 KB   |
+// adj_files_bb |     64  |       0 |      64 |   ~0.5 KB   |
+// pawn_atks_f  |   1024  |       0 |    1024 |   ~0.5 KB   |
+// Zobrist      |    600  |       0 |     600 |   ~ ???     |
+
+/// Struct which provides various pre-computed lookup tables.
+///
+///
+/// Thread safe. Once initializes, IT SHOULD NOT BE MODIFIED
+/// Currently does the following:
+///      - Generates King and Rook Move Bitboards
+///      - Generates Rook, Bishop, Queen Magic Bitboards for Move generation
+///      - Generates distance table for quick lookup of distance
+///      - Line BitBoard and Vetween BitBoard given two squares
+///      - Adjacant Files BitBoard.
+///      - Pawn Attacks from a certain square
+///      - Zobrist Structure for Zobrist Hashing
 pub struct MagicHelper<'a, 'b> {
     magic_rook: MRookTable<'a>,
     magic_bishop: MBishopTable<'b>,
     knight_table: [u64; 64],
     king_table: [u64; 64],
     dist_table: [[SQ; 64]; 64],
-    line_bitboard:[[u64; 64]; 64],
+    line_bitboard: [[u64; 64]; 64],
     between_sqs_bb: [[u64; 64]; 64],
-    adjacent_files_bb: [u64;8],
-    pawn_attacks_from: [[u64;64]; 2],
+    adjacent_files_bb: [u64; 8],
+    pawn_attacks_from: [[u64; 64]; 2],
     pub zobrist: Zobrist,
 }
 
-// Structure for helping determine Zobrist hashes.
+/// Structure for helping determine Zobrist hashes.
 pub struct Zobrist {
-    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
-    pub en_p: [u64; FILE_CNT],
-    pub castle: [u64; TOTAL_CASTLING_CNT],
-    pub side: u64,
+    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
+    pub en_p: [u64; FILE_CNT], // 8 * 8
+    pub castle: [u64; TOTAL_CASTLING_CNT], // 8 * 4
+    pub side: u64, // 8
 }
 
 // Creates zobrist hashes based on a Pseudo Random Number generator.
 impl Zobrist {
+
+
     fn default() -> Zobrist {
         let mut zob = Zobrist {
             sq_piece: [[0; PIECE_CNT]; SQ_CNT],
@@ -88,18 +96,17 @@ impl Zobrist {
     }
 }
 
-unsafe impl<'a,'b> Send for MagicHelper<'a,'b> {}
+unsafe impl<'a, 'b> Send for MagicHelper<'a, 'b> {}
 
-unsafe impl<'a,'b> Sync for MagicHelper<'a,'b> {}
+unsafe impl<'a, 'b> Sync for MagicHelper<'a, 'b> {}
 
 // TO IMPLEMENT:
 //      Adjacent Files BitBoard
 //      Between Squares BitBoard
 
-impl <'a,'b>MagicHelper<'a,'b> {
-
-    // Create a new Magic Helper
-    pub fn new() -> MagicHelper<'a,'b> {
+impl<'a, 'b> MagicHelper<'a, 'b> {
+    /// Create a new Magic Helper
+    pub fn new() -> MagicHelper<'a, 'b> {
         let mut mhelper = MagicHelper {
             magic_rook: MRookTable::init(),
             magic_bishop: MBishopTable::init(),
@@ -118,69 +125,72 @@ impl <'a,'b>MagicHelper<'a,'b> {
         mhelper
     }
 
-    // Returns the Zobrist Hash for a given piece as a given Square
+    /// Returns the Zobrist Hash for a given piece as a given Square
     #[inline(always)]
     pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
         assert!(sq_is_okay(square));
         self.zobrist.sq_piece[square as usize][piece as usize]
     }
 
-    // Returns the zobrist hash for the given Square of Enpassant
-    // Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
+    /// Returns the zobrist hash for the given Square of Enpassant
+    /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
     #[inline(always)]
     pub fn z_ep_file(&self, square: SQ) -> u64 {
         self.zobrist.en_p[file_of_sq(square) as usize]
     }
 
-    // Returns a zobrast hash of the castling rights, as defined by the Board
+    /// Returns a zobrast hash of the castling rights, as defined by the Board
     #[inline(always)]
     pub fn z_castle_rights(&self, castle: u8) -> u64 {
-        assert!((castle as usize) < TOTAL_CASTLING_CNT);
+        debug_assert!((castle as usize) < TOTAL_CASTLING_CNT);
         self.zobrist.castle[castle as usize]
     }
 
-    // Returns Zobrist Hash of flipping sides
+    /// Returns Zobrist Hash of flipping sides.
     #[inline(always)]
     pub fn z_side(&self) -> u64 {
         self.zobrist.side
     }
 
-    // Generate Knight Moves bitboard from a source square
+    /// Generate Knight Moves bitboard from a source square
     #[inline(always)]
     pub fn knight_moves(&self, square: SQ) -> BitBoard {
-        assert!(sq_is_okay(square));
-        self.knight_table[square as usize]
+        debug_assert!(sq_is_okay(square));
+//        self.knight_table[square as usize]
+        unsafe { *self.knight_table.get_unchecked(square as usize)}
     }
 
-    // Generate King moves bitboard from a source  square
+    /// Generate King moves bitboard from a source  square
     #[inline(always)]
     pub fn king_moves(&self, square: SQ) -> BitBoard {
-        assert!(sq_is_okay(square));
-        self.king_table[square as usize]
+        debug_assert!(sq_is_okay(square));
+//        self.king_table[square as usize]
+        unsafe { *self.king_table.get_unchecked(square as usize)}
     }
 
-    // Generate Bishop Moves from a bishop square and all occupied squares on the board
+    /// Generate Bishop Moves from a bishop square and all occupied squares on the board
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         self.magic_bishop.bishop_attacks(occupied, square)
     }
 
-    // Generate Rook Moves from a bishop square and all occupied squares on the board
+    /// Generate Rook Moves from a bishop square and all occupied squares on the board
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         self.magic_rook.rook_attacks(occupied, square)
     }
 
-    // Generate Queen Moves from a bishop square and all occupied squares on the board
+    /// Generate Queen Moves from a bishop square and all occupied squares on the board
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
-        self.magic_rook.rook_attacks(occupied, square) | self.magic_bishop.bishop_attacks(occupied, square)
+        self.magic_rook.rook_attacks(occupied, square) |
+            self.magic_bishop.bishop_attacks(occupied, square)
     }
 
-    // get the distance of two squares
+    /// get the distance of two squares
     #[inline(always)]
     pub fn distance_of_sqs(&self, square_one: SQ, square_two: SQ) -> u8 {
         assert!(sq_is_okay(square_one));
@@ -188,7 +198,7 @@ impl <'a,'b>MagicHelper<'a,'b> {
         self.dist_table[square_one as usize][square_two as usize]
     }
 
-    // Get the line (diagonal / file / rank) two squares, if it exists
+    /// Get the line (diagonal / file / rank) two squares, if it exists
     #[inline(always)]
     pub fn line_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
         assert!(sq_is_okay(square_one));
@@ -196,7 +206,7 @@ impl <'a,'b>MagicHelper<'a,'b> {
         self.line_bitboard[square_one as usize][square_two as usize]
     }
 
-    // Get the line between two squares, not including the squares, if it exists
+    /// Get the line between two squares, not including the squares, if it exists
     #[inline(always)]
     pub fn between_bb(&self, square_one: SQ, square_two: SQ) -> BitBoard {
         assert!(sq_is_okay(square_one));
@@ -204,15 +214,15 @@ impl <'a,'b>MagicHelper<'a,'b> {
         self.between_sqs_bb[square_one as usize][square_two as usize]
     }
 
-    // Gets the adjacent files of the square
+    /// Gets the adjacent files of the square
     #[inline(always)]
-    pub fn adjacent_file(&self, square: SQ,) -> BitBoard {
+    pub fn adjacent_file(&self, square: SQ) -> BitBoard {
         assert!(sq_is_okay(square));
         self.adjacent_files_bb[file_of_sq(square) as usize]
     }
 
-    // Pawn attacks from a given square, per player,
-    // Basically, given square x,returns the bitboard of squares a pawn on x attacks
+    /// Pawn attacks from a given square, per player,
+    /// Basically, given square x,returns the bitboard of squares a pawn on x attacks
     #[inline(always)]
     pub fn pawn_attacks_from(&self, square: SQ, player: Player) -> BitBoard {
         assert!(sq_is_okay(square));
@@ -223,35 +233,40 @@ impl <'a,'b>MagicHelper<'a,'b> {
     }
 
 
-    // Returns in three Squares are in the same diagonal, file, or rank
+    /// Returns if three Squares are in the same diagonal, file, or rank
     #[inline(always)]
     pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
         self.line_bb(s1, s2) & sq_to_bb(s3) != 0
     }
 
-//    fn gen_line_bbs(&mut self) {
-//        for d in 0..DELTAS.len() {
-//            for i in 0..64 as SQ {
-//                for j in 0..64 as SQ {
-//                    let mut line_board: BitBoard = sliding_attack(&DELTAS[d], i, 0) & sliding_attack(&DELTAS[d], j, 0);
-//                    line_board |= ((1 as u64) << i) | ((1 as u64) << j);
-//                    self.line_bitboard[i as usize][j as usize] |= line_board;
-//                }
-//            }
-//        }
-//    }
+    //    fn gen_line_bbs(&mut self) {
+    //        for d in 0..DELTAS.len() {
+    //            for i in 0..64 as SQ {
+    //                for j in 0..64 as SQ {
+    //                    let mut line_board: BitBoard = sliding_attack(&DELTAS[d], i, 0) & sliding_attack(&DELTAS[d], j, 0);
+    //                    line_board |= ((1 as u64) << i) | ((1 as u64) << j);
+    //                    self.line_bitboard[i as usize][j as usize] |= line_board;
+    //                }
+    //            }
+    //        }
+    //    }
+
 
     fn gen_between_and_line_bbs(&mut self) {
         for i in 0..64 as SQ {
             for j in 0..64 as SQ {
                 let i_bb: BitBoard = (1 as u64) << i;
                 let j_bb: BitBoard = (1 as u64) << j;
-                if self.rook_moves(0,i) & j_bb != 0 {
-                    self.line_bitboard[i as usize][j as usize] |= (self.rook_moves(0, j) & self.rook_moves(0, i)) | i_bb | j_bb;
-                    self.between_sqs_bb[i as usize][j as usize] = self.rook_moves(i_bb, j) & self.rook_moves(j_bb, i);
-                } else if self.bishop_moves(0,i) & j_bb != 0 {
-                    self.line_bitboard[i as usize][j as usize] |= (self.bishop_moves(0, j) & self.bishop_moves(0, i)) | i_bb | j_bb;
-                    self.between_sqs_bb[i as usize][j as usize] = self.bishop_moves(i_bb, j) & self.bishop_moves(j_bb, i);
+                if self.rook_moves(0, i) & j_bb != 0 {
+                    self.line_bitboard[i as usize][j as usize] |=
+                        (self.rook_moves(0, j) & self.rook_moves(0, i)) | i_bb | j_bb;
+                    self.between_sqs_bb[i as usize][j as usize] = self.rook_moves(i_bb, j) &
+                        self.rook_moves(j_bb, i);
+                } else if self.bishop_moves(0, i) & j_bb != 0 {
+                    self.line_bitboard[i as usize][j as usize] |=
+                        (self.bishop_moves(0, j) & self.bishop_moves(0, i)) | i_bb | j_bb;
+                    self.between_sqs_bb[i as usize][j as usize] = self.bishop_moves(i_bb, j) &
+                        self.bishop_moves(j_bb, i);
                 } else {
                     self.line_bitboard[i as usize][j as usize] = 0;
                     self.between_sqs_bb[i as usize][j as usize] = 0;
@@ -265,8 +280,12 @@ impl <'a,'b>MagicHelper<'a,'b> {
     // Files go from 0..7, representing files 1..8
     fn gen_adjacent_file_bbs(&mut self) {
         for file in 0..8 as SQ {
-            if file != 0 { self.adjacent_files_bb[file as usize] |= file_bb(file - 1)}
-            if file != 7 { self.adjacent_files_bb[file as usize] |= file_bb(file + 1)}
+            if file != 0 {
+                self.adjacent_files_bb[file as usize] |= file_bb(file - 1)
+            }
+            if file != 7 {
+                self.adjacent_files_bb[file as usize] |= file_bb(file + 1)
+            }
         }
     }
 
@@ -297,8 +316,6 @@ impl <'a,'b>MagicHelper<'a,'b> {
             self.pawn_attacks_from[1][i as usize] = bb;
         }
     }
-
-
 }
 
 
@@ -309,7 +326,7 @@ struct SMagic<'a> {
     ptr: &'a [u64],
     mask: u64,
     magic: u64,
-    shift: u32
+    shift: u32,
 }
 
 // Temporary struct used to Create an actual Magic BitBoard Object
@@ -319,12 +336,18 @@ struct PreSMagic {
     len: usize,
     mask: u64,
     magic: u64,
-    shift: u32
+    shift: u32,
 }
 
 impl PreSMagic {
     pub fn init() -> PreSMagic {
-        PreSMagic {start: 0, len: 0, mask: 0, magic: 0, shift: 0}
+        PreSMagic {
+            start: 0,
+            len: 0,
+            mask: 0,
+            magic: 0,
+            shift: 0,
+        }
     }
 
     // creates an array of PreSMagic
@@ -343,32 +366,36 @@ impl PreSMagic {
 #[allow(dead_code)]
 struct MRookTable<'a> {
     sq_magics: [SMagic<'a>; 64],
-    attacks: Vec<BitBoard> // 102400 long
+    attacks: Vec<BitBoard>, // 102400 long
 }
 
 // Struct containing Bishop Rook Magic BitBoards
 #[allow(dead_code)]
 struct MBishopTable<'a> {
     sq_magics: [SMagic<'a>; 64],
-    attacks: Vec<BitBoard> // 5248 long
+    attacks: Vec<BitBoard>, // 5248 long
 }
 
-impl <'a> MRookTable<'a>  {
-
+impl<'a> MRookTable<'a> {
     // simple version that creates the table with an empty array.
     // used for testing purposes where MagicStruct is not needed
     pub fn simple() -> MRookTable<'a> {
-        let sq_table: [SMagic<'a>; 64] =  unsafe{mem::uninitialized()};
-        MRookTable{sq_magics: sq_table, attacks: Vec::new()}
+        let sq_table: [SMagic<'a>; 64] = unsafe { mem::uninitialized() };
+        MRookTable {
+            sq_magics: sq_table,
+            attacks: Vec::new(),
+        }
     }
 
     // Creates the Magic Rook Table Struct
     pub fn init() -> MRookTable<'a> {
         // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
-        let mut pre_sq_table: [PreSMagic; 64] = unsafe {PreSMagic::init64() };
+        let mut pre_sq_table: [PreSMagic; 64] = unsafe { PreSMagic::init64() };
 
         // Initializes each PreSMagic
-        for i in 0..64 { pre_sq_table[i] = PreSMagic::init(); }
+        for i in 0..64 {
+            pre_sq_table[i] = PreSMagic::init();
+        }
 
         // Creates Vector to hold attacks. Has capacity as we know the exact size of this.
         let mut attacks: Vec<BitBoard> = vec![0; ROOK_M_SIZE];
@@ -378,7 +405,7 @@ impl <'a> MRookTable<'a>  {
         // Age tracks the best index for a current permutation
         let mut occupancy: [u64; 4096] = [0; 4096];
         let mut reference: [u64; 4096] = [0; 4096];
-        let mut age: [i32; 4096] =  [0; 4096];
+        let mut age: [i32; 4096] = [0; 4096];
 
         // Size tracks the size of permutations of the current block
         let mut size: usize;
@@ -401,7 +428,8 @@ impl <'a> MRookTable<'a>  {
             // edges is the bitboard represenation of the edges s is not on.
             // e.g. sq A1 is on FileA and Rank1, so edges = bitboard of FileH and Rank8
             // mask = occupancy mask of square s
-            let edges: BitBoard = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_H) & !file_bb(s));
+            let edges: BitBoard = ((RANK_1 | RANK_8) & !rank_bb(s)) |
+                ((FILE_A | FILE_H) & !file_bb(s));
             let mask: BitBoard = sliding_attack(&R_DELTAS, s, 0) & !edges;
 
             // Shift = number of bits in 64 - bits in mask = log2(size)
@@ -415,7 +443,9 @@ impl <'a> MRookTable<'a>  {
                 reference[size] = sliding_attack(&R_DELTAS, s, b);
                 size += 1;
                 b = ((b).wrapping_sub(mask)) as u64 & mask;
-                if b == 0 { break 'bit; }
+                if b == 0 {
+                    break 'bit;
+                }
             }
 
             // Set current PreSMagic length to be of size
@@ -444,7 +474,9 @@ impl <'a> MRookTable<'a>  {
                 // Filling the attacks Vector up to size digits
                 while i < size {
                     // Magic part! The index is = ((occupancy[s] & mask) * magic >> shift)
-                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic) as u64).wrapping_shr(shift) as usize;
+                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic) as
+                                            u64)
+                        .wrapping_shr(shift) as usize;
 
                     // Checking to see if we have visited this index already with a lower current number
                     if age[index] < current {
@@ -479,7 +511,7 @@ impl <'a> MRookTable<'a>  {
 
             // size = running total of total size
             let mut size = 0;
-            for i in 0.. 64 {
+            for i in 0..64 {
                 // begin ptr points to the beginning of the current slice in the vector
                 let beginptr = attacks.as_ptr().offset(size as isize);
                 let mut table_i: SMagic = SMagic {
@@ -489,43 +521,50 @@ impl <'a> MRookTable<'a>  {
                     shift: pre_sq_table[i].shift,
                 };
                 // Create the pointer to the slice with begin_ptr / length
-                table_i.ptr = slice::from_raw_parts(beginptr,pre_sq_table[i].len);
+                table_i.ptr = slice::from_raw_parts(beginptr, pre_sq_table[i].len);
                 size += pre_sq_table[i].len;
                 sq_table[i] = table_i;
             }
             // Sanity check
             assert_eq!(size, ROOK_M_SIZE);
-            MRookTable{sq_magics: sq_table, attacks: attacks}
+            MRookTable {
+                sq_magics: sq_table,
+                attacks: attacks,
+            }
         }
     }
 
     //NOTE: Result needs to be AND'd with player's occupied bitboard, so doesnt allow capturing self.
     #[inline(always)]
     pub fn rook_attacks(&self, mut occupied: BitBoard, square: SQ) -> BitBoard {
-        let magic_entry: &SMagic = &self.sq_magics[square as usize];
+        let magic_entry = unsafe { self.sq_magics.get_unchecked(square as usize)};
         occupied &= magic_entry.mask;
         occupied = occupied.wrapping_mul(magic_entry.magic);
         occupied = occupied.wrapping_shr(magic_entry.shift);
-        magic_entry.ptr[occupied as usize]
+        unsafe { *magic_entry.ptr.get_unchecked(occupied as usize) }
     }
 }
 
-impl <'a> MBishopTable<'a> {
-
+impl<'a> MBishopTable<'a> {
     // simple version that creates the table with an empty array.
     // used for testing purposes where MagicStruct is not needed
     pub fn simple() -> MBishopTable<'a> {
-        let sq_table: [SMagic<'a>; 64] =  unsafe{mem::uninitialized()};
-        MBishopTable{sq_magics: sq_table, attacks: Vec::new()}
+        let sq_table: [SMagic<'a>; 64] = unsafe { mem::uninitialized() };
+        MBishopTable {
+            sq_magics: sq_table,
+            attacks: Vec::new(),
+        }
     }
 
     // Create MagicBishopBitBoards
     pub fn init() -> MBishopTable<'a> {
         // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
-        let mut pre_sq_table: [PreSMagic; 64] = unsafe {PreSMagic::init64() };
+        let mut pre_sq_table: [PreSMagic; 64] = unsafe { PreSMagic::init64() };
 
         // Initializes each PreSMagic
-        for i in 0..64 { pre_sq_table[i] = PreSMagic::init(); }
+        for i in 0..64 {
+            pre_sq_table[i] = PreSMagic::init();
+        }
 
         // Creates Vector to hold attacks. Has capacity as we know the exact size of this.
         let mut attacks: Vec<BitBoard> = vec![0; BISHOP_M_SIZE];
@@ -535,7 +574,7 @@ impl <'a> MBishopTable<'a> {
         // Age tracks the best index for a current permutation
         let mut occupancy: [u64; 4096] = [0; 4096];
         let mut reference: [u64; 4096] = [0; 4096];
-        let mut age: [i32; 4096] =  [0; 4096];
+        let mut age: [i32; 4096] = [0; 4096];
 
         // Size tracks the size of permutations of the current block
         let mut size: usize;
@@ -558,7 +597,8 @@ impl <'a> MBishopTable<'a> {
             // edges is the bitboard represenation of the edges s is not on.
             // e.g. sq A1 is on FileA and Rank1, so edges = bitboard of FileH and Rank8
             // mask = occupancy mask of square s
-            let edges: BitBoard = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_H) & !file_bb(s));
+            let edges: BitBoard = ((RANK_1 | RANK_8) & !rank_bb(s)) |
+                ((FILE_A | FILE_H) & !file_bb(s));
             let mask: BitBoard = sliding_attack(&B_DELTAS, s, 0) & !edges;
 
             // Shift = number of bits in 64 - bits in mask = log2(size)
@@ -572,7 +612,9 @@ impl <'a> MBishopTable<'a> {
                 reference[size] = sliding_attack(&B_DELTAS, s, b);
                 size += 1;
                 b = ((b).wrapping_sub(mask)) as u64 & mask;
-                if b == 0 { break 'bit; }
+                if b == 0 {
+                    break 'bit;
+                }
             }
 
             // Set current PreSMagic length to be of size
@@ -601,7 +643,9 @@ impl <'a> MBishopTable<'a> {
                 // Filling the attacks Vector up to size digits
                 while i < size {
                     // Magic part! The index is = ((occupancy[s] & mask) * magic >> shift)
-                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic) as u64).wrapping_shr(shift) as usize;
+                    let index: usize = ((occupancy[i as usize] & mask).wrapping_mul(magic) as
+                                            u64)
+                        .wrapping_shr(shift) as usize;
 
                     // Checking to see if we have visited this index already with a lower current number
                     if age[index] < current {
@@ -636,7 +680,7 @@ impl <'a> MBishopTable<'a> {
 
             // size = running total of total size
             let mut size = 0;
-            for i in 0.. 64 {
+            for i in 0..64 {
                 // begin ptr points to the beginning of the current slice in the vector
                 let beginptr = attacks.as_ptr().offset(size as isize);
                 let mut table_i: SMagic = SMagic {
@@ -646,38 +690,40 @@ impl <'a> MBishopTable<'a> {
                     shift: pre_sq_table[i].shift,
                 };
                 // Create the pointer to the slice with begin_ptr / length
-                table_i.ptr = slice::from_raw_parts(beginptr,pre_sq_table[i].len);
+                table_i.ptr = slice::from_raw_parts(beginptr, pre_sq_table[i].len);
                 size += pre_sq_table[i].len;
                 sq_table[i] = table_i;
             }
             // Sanity check
             assert_eq!(size, BISHOP_M_SIZE);
-            MBishopTable{sq_magics: sq_table, attacks: attacks}
+            MBishopTable {
+                sq_magics: sq_table,
+                attacks: attacks,
+            }
         }
     }
 
     //NOTE: Result needs to be AND'd with player's occupied bitboard, so doesnt allow capturing self.
     #[inline(always)]
     pub fn bishop_attacks(&self, mut occupied: BitBoard, square: SQ) -> BitBoard {
-        let magic_entry: &SMagic = &self.sq_magics[square as usize];
+        let magic_entry = unsafe { self.sq_magics.get_unchecked(square as usize)};
         occupied &= magic_entry.mask;
         occupied = occupied.wrapping_mul(magic_entry.magic);
         occupied = occupied.wrapping_shr(magic_entry.shift);
-        magic_entry.ptr[occupied as usize]
+        unsafe { *magic_entry.ptr.get_unchecked(occupied as usize) }
     }
-
 }
 
 // Object to assist with Generating Random numbers for Magics
 struct PRNG {
-    seed: u64
+    seed: u64,
 }
 
 impl PRNG {
     // Creates PRNG from a seed, seed cannot be zero
     pub fn init(s: u64) -> PRNG {
-        assert_ne!(s,0);
-        PRNG {seed: s}
+        assert_ne!(s, 0);
+        PRNG { seed: s }
     }
 
     // Returns pseudo random number
@@ -705,7 +751,7 @@ impl PRNG {
 // Returns an array of king moves, seeing as kings can only move up to
 // 8 static places no matter the square
 fn gen_king_moves() -> [u64; 64] {
-    let mut moves: [u64;64] = [0; 64];
+    let mut moves: [u64; 64] = [0; 64];
 
     for index in 0..64 {
         let mut mask: u64 = 0;
@@ -719,11 +765,11 @@ fn gen_king_moves() -> [u64; 64] {
             mask |= 1 << (index + 1);
         }
         // UP
-        if index < 56  {
+        if index < 56 {
             mask |= 1 << (index + 8);
         }
         // DOWN
-        if index > 7  {
+        if index > 7 {
             mask |= 1 << (index - 8);
         }
         // LEFT UP
@@ -735,7 +781,7 @@ fn gen_king_moves() -> [u64; 64] {
             mask |= 1 << (index - 9);
         }
         // RIGHT DOWN
-        if file!= 7 && index > 7 {
+        if file != 7 && index > 7 {
             mask |= 1 << (index - 7);
         }
         // RIGHT UP
@@ -750,7 +796,7 @@ fn gen_king_moves() -> [u64; 64] {
 // Returns an array of knight moves, seeing as kings can only move up to
 // 8 static places no matter the square
 fn gen_knight_moves() -> [u64; 64] {
-    let mut moves: [u64;64] = [0; 64];
+    let mut moves: [u64; 64] = [0; 64];
     for index in 0..64 {
         let mut mask: u64 = 0;
         let file = index % 8;
@@ -777,15 +823,15 @@ fn gen_knight_moves() -> [u64; 64] {
         }
         // 2 DOWN   + 1 RIGHT
         if file != 7 && index > 15 {
-            mask |= 1 << (index - 15 );
+            mask |= 1 << (index - 15);
         }
         // 2 DOWN   + 1 LEFT
         if file != 0 && index > 15 {
-            mask |= 1 << (index - 17 );
+            mask |= 1 << (index - 17);
         }
         // 1 DOWN   + 2 LEFT
         if file > 1 && index > 7 {
-            mask |= 1 << (index - 10 );
+            mask |= 1 << (index - 10);
         }
         moves[index] = mask;
     }
@@ -801,9 +847,13 @@ fn sliding_attack(deltas: &[i8; 4], sq: SQ, occupied: BitBoard) -> BitBoard {
     let square: i16 = sq as i16;
     for delta in deltas.iter().take(4 as usize) {
         let mut s: SQ = ((square as i16) + (*delta as i16)) as u8;
-        'inner: while sq_is_okay(s as u8) && sq_distance(s as u8, ((s as i16) - (*delta as i16)) as u8) == 1 {
+        'inner: while sq_is_okay(s as u8) &&
+            sq_distance(s as u8, ((s as i16) - (*delta as i16)) as u8) == 1
+        {
             attack |= (1 as u64).wrapping_shl(s as u32);
-            if occupied & (1 as u64).wrapping_shl(s as u32) != 0 {break 'inner;}
+            if occupied & (1 as u64).wrapping_shl(s as u32) != 0 {
+                break 'inner;
+            }
             s = ((s as i16) + (*delta as i16)) as u8;
         }
     }
@@ -814,9 +864,9 @@ fn sliding_attack(deltas: &[i8; 4], sq: SQ, occupied: BitBoard) -> BitBoard {
 // distance is in terms of squares away, not algebraic distance
 fn init_distance_table() -> [[SQ; 64]; 64] {
     let mut arr: [[SQ; 64]; 64] = [[0; 64]; 64];
-    for i in 0..64 as u8{
+    for i in 0..64 as u8 {
         for j in 0..64 as u8 {
-            arr[i as usize][j as usize] = sq_distance(i,j);
+            arr[i as usize][j as usize] = sq_distance(i, j);
         }
     }
     arr
@@ -826,157 +876,66 @@ fn init_distance_table() -> [[SQ; 64]; 64] {
 
 // Returns distance of two squares
 pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
-    let x = diff(rank_idx_of_sq(sq1),rank_idx_of_sq(sq2));
-    let y = diff(file_idx_of_sq(sq1),file_idx_of_sq(sq2));
-    cmp::max(x,y)
+    let x = diff(rank_idx_of_sq(sq1), rank_idx_of_sq(sq2));
+    let y = diff(file_idx_of_sq(sq1), file_idx_of_sq(sq2));
+    cmp::max(x, y)
 }
 
 // returns the difference between two unsigned u8s
 pub fn diff(x: u8, y: u8) -> u8 {
-    if x < y { y - x } else { x - y }
+    if x < y {
+        y - x
+    } else {
+        x - y
+    }
 }
 
 
 
 
 
+#[cfg(test)]
+mod tests {
 
-#[test]
-fn test_king_mask_gen() {
-    let arr = gen_king_moves().to_vec();
-    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (popcount64(b) as u64));
-    assert_eq!(sum, (3*4) + (5 * 6 * 4) + (8 * 6 * 6));
-}
+    use magic_helper::*;
 
-#[test]
-fn test_knight_mask_gen() {
-    let arr = gen_knight_moves().to_vec();
-    let sum = arr.iter().fold(0 as  u64,|a, &b| a + (popcount64(b) as u64));
-    assert_eq!(sum, (2 * 4) + (4 * 4) + (3 * 2 * 4) + (4 * 4 * 4) + (6 * 4 * 4) + (8 * 4 * 4));
-}
+//    #[allow(unused_imports)]
+//    use test;
 
-#[test]
-fn occupancy_and_sliding() {
-    let rook_deltas: [i8; 4] = [8,1,-8,-1];
-    assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0)),14);
-    assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0xFF00)),8);
-    assert_eq!(popcount64(sliding_attack(&rook_deltas, 19, 0)),14);
-}
+    #[test]
+    fn test_king_mask_gen() {
+        let arr = gen_king_moves().to_vec();
+        let sum = arr.iter()
+            .fold(0 as u64, |a, &b| a + (popcount64(b) as u64));
+        assert_eq!(sum, (3 * 4) + (5 * 6 * 4) + (8 * 6 * 6));
+    }
 
-#[test]
-fn rmagics() {
-    let mstruct = MRookTable::init();
-    assert_eq!(mem::size_of_val(&mstruct), 2584);
-    let bstruct = MBishopTable::init();
-    assert_eq!(mem::size_of_val(&bstruct), 2584);
-}
+    #[test]
+    fn test_knight_mask_gen() {
+        let arr = gen_knight_moves().to_vec();
+        let sum = arr.iter()
+            .fold(0 as u64, |a, &b| a + (popcount64(b) as u64));
+        assert_eq!(
+            sum,
+            (2 * 4) + (4 * 4) + (3 * 2 * 4) + (4 * 4 * 4) + (6 * 4 * 4) + (8 * 4 * 4)
+        );
+    }
 
+    #[test]
+    fn occupancy_and_sliding() {
+        let rook_deltas: [i8; 4] = [8, 1, -8, -1];
+        assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0)), 14);
+        assert_eq!(popcount64(sliding_attack(&rook_deltas, 0, 0xFF00)), 8);
+        assert_eq!(popcount64(sliding_attack(&rook_deltas, 19, 0)), 14);
+    }
 
-#[bench]
-fn bench_rook_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.rook_moves(a,c);
-            a ^ (x) }
-        )
-    })
-}
-
-
-#[bench]
-fn bench_bishop_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.bishop_moves(a,c);
-            a ^ (x) }
-        )
-    })
-}
-
-#[bench]
-fn bench_queen_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.queen_moves(a,c);
-            a ^ (x) }
-        )
-    })
-}
-
-#[bench]
-fn bench_king_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.king_moves(c);
-            a ^ (x) }
-        )
-    })
-}
-
-#[bench]
-fn bench_knight_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.knight_moves(c);
-            a ^ (x) }
-        )
-    })
-}
-
-// Benefits from locality
-#[bench]
-fn bench_sequential_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let mut x: u64 = m.knight_moves(c);
-            x ^= m.king_moves(c);
-            x ^= m.bishop_moves(x,c);
-            x ^= m.rook_moves(x,c);
-            x ^= m.queen_moves(x,c);
-            a ^ (x) }
-        )
-    })
-}
+    #[test]
+    fn rmagics() {
+        let mstruct = MRookTable::init();
+        assert_eq!(mem::size_of_val(&mstruct), 2584);
+        let bstruct = MBishopTable::init();
+        assert_eq!(mem::size_of_val(&bstruct), 2584);
+    }
 
 
-// Stutters so Cache must be refreshed more often
-#[bench]
-fn bench_stutter_lookup(b: &mut Bencher) {
-    let m = MagicHelper::new();
-    b.iter(|| {
-        let n: u8 = test::black_box(64);
-        (0..n).fold(0, |a: u64, c| {
-            let mut x: u64 = m.queen_moves(a,c);
-            x ^= m.king_moves(c);
-            x ^= m.bishop_moves(x,c);
-            x ^= m.knight_moves(c);
-            x ^= m.rook_moves(x,c);
-            a ^ (x) }
-        )
-    })
-}
-
-#[bench]
-// NOTE: This takes a while :/
-fn bench_creation(b: &mut Bencher) {
-    b.iter(|| {
-        let n: u8 = test::black_box(1);
-        (0..n).fold(0, |a: u64, c| {
-            let m = MagicHelper::new();
-            let x: u64 = m.king_moves(c);
-            a ^ (x) }
-        )
-    })
 }

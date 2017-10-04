@@ -1,6 +1,4 @@
-use test::Bencher;
-use test;
-
+//! Contains useful features involving bits.
 static POPCNT8: &'static [u8] = &[
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
@@ -46,13 +44,13 @@ const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(popcount64(0b1001), 2);
 /// ```
 #[inline(always)]
 pub fn popcount64(x: u64) -> u8 {
-     x.count_ones() as u8
+    x.count_ones() as u8
 }
 
 /// Returns index of the Least Significant Bit
@@ -60,7 +58,7 @@ pub fn popcount64(x: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_forward(0b10100),2)
 /// ```
@@ -76,7 +74,7 @@ pub fn bit_scan_forward(bits: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_forward(0b100),2);
 /// ```
@@ -92,7 +90,7 @@ pub fn bit_scan_forward_rust_trailing(bits: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_reverse(0b101),2);
 /// ```
@@ -114,7 +112,7 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert!(more_than_one(0b1111));
 ///
@@ -132,7 +130,7 @@ pub fn more_than_one(x: u64) -> bool {
 /// # Examples
 ///
 /// ```
-/// use Pleco::bit_twiddles::*;
+/// use pleco::bit_twiddles::*;
 ///
 /// assert_eq!(lsb(0b1001), 0b0001);
 /// ```
@@ -141,159 +139,56 @@ pub fn lsb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
 
-
-// Returns the most significant bit
-//
-// # Examples
-//
-// ```
-// use Pleco::bit_twiddles::*;
-//
-// assert_eq!(msb(0b1001), 0b1000);
-// ```
-#[inline(always)]
-pub fn msb(bits: u64) -> u64 {
-    // BAD CODE DO NOT USE
-    (1 as u64).wrapping_shl(bits.leading_zeros())
-}
-
-
 /// Counts the number of bits
 #[inline(always)]
 fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
-    if x == 0 { return 0 }
-    if x & (x.wrapping_sub(1)) == 0 { return 1 }
-    POPCNT8[x >> 56] +
-        POPCNT8[(x >> 48) & 0xFF] +
-        POPCNT8[(x >> 40) & 0xFF] +
-        POPCNT8[(x >> 32) & 0xFF] +
-        POPCNT8[(x >> 24) & 0xFF] +
-        POPCNT8[(x >> 16) & 0xFF] +
-        POPCNT8[(x >> 8) & 0xFF] +
-        POPCNT8[x & 0xFF]
+    if x == 0 {
+        return 0;
+    }
+    if x & (x.wrapping_sub(1)) == 0 {
+        return 1;
+    }
+    POPCNT8[x >> 56] + POPCNT8[(x >> 48) & 0xFF] + POPCNT8[(x >> 40) & 0xFF] +
+        POPCNT8[(x >> 32) & 0xFF] + POPCNT8[(x >> 24) & 0xFF] + POPCNT8[(x >> 16) & 0xFF] +
+        POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]
 }
 
+#[cfg(test)]
+mod tests {
 
+    use bit_twiddles;
 
+    #[test]
+    fn test_bit_scan() {
+        assert_eq!(bit_twiddles::bit_scan_forward(2), 1);
+        assert_eq!(bit_twiddles::bit_scan_forward(4), 2);
+        assert_eq!(bit_twiddles::bit_scan_forward(8), 3);
+        assert_eq!(bit_twiddles::bit_scan_forward(16), 4);
+        assert_eq!(bit_twiddles::bit_scan_forward(32), 5);
+        assert_eq!(bit_twiddles::bit_scan_forward(31), 0);
+        assert_eq!(bit_twiddles::bit_scan_forward(0b000000000000001), 0);
+        assert_eq!(bit_twiddles::bit_scan_forward(0b000000000000010), 1);
+        assert_eq!(bit_twiddles::bit_scan_forward(0b110011100000010), 1);
+        assert_eq!(bit_twiddles::bit_scan_forward(0b110011100000010), 1);
+    }
 
-pub const TRAILS: u64 = 17_000;
+    #[test]
+    fn popcount() {
+        assert_eq!(bit_twiddles::popcount64(0b000000000000000), 0);
+        assert_eq!(bit_twiddles::popcount64(0b11111100000001), 7);
+        assert_eq!(bit_twiddles::popcount64(0b1000010000), 2);
+        assert_eq!(bit_twiddles::popcount64(0xFFFFFFFF), 32);
+        assert_eq!(bit_twiddles::popcount64(0x55555555), 16);
+    }
 
+    #[test]
+    fn lsb() {
+        assert_eq!(bit_twiddles::lsb(0b110011100000010), 0b10);
+        assert_eq!(bit_twiddles::lsb(0b1010000000000000), 0b10000000000000);
+        assert_eq!(bit_twiddles::lsb(0b11001110000), 0b10000);
+        assert_eq!(bit_twiddles::lsb(0b100001000000), 0b1000000);
+        assert_eq!(bit_twiddles::lsb(0b1), 0b1);
+    }
 
-#[bench]
-fn evs_bench_bitscan_djuie(b: &mut Bencher) {
-    b.iter(|| {
-        let n: u64 = test::black_box(TRAILS);
-        (0..n).fold(0, |a, c| {
-            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
-            if x == 0 { x = 1;} else { x = bit_scan_forward(x) as u64;}
-            a ^ (x) }
-        )
-    })
-}
-
-
-
-#[bench]
-fn evs_bench_popcount_rust(b: &mut Bencher) {
-    b.iter(|| {
-        let n: u64 = test::black_box(TRAILS);
-        (0..n).fold(0, |a, c| {
-            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
-            if x == 0 { x = 1;} else { x = popcount64(x) as u64;}
-            a ^ (x) }
-        )
-    })
-}
-
-#[bench]
-fn evs_bench_popcount_old(b: &mut Bencher) {
-    b.iter(|| {
-        let n: u64 = test::black_box(TRAILS);
-        (0..n).fold(0, |a, c| {
-            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
-            if x == 0 { x = 1;} else { x = popcount_old(x) as u64;}
-            a ^ (x) }
-        )
-    })
-}
-
-
-#[bench]
-fn evs_bench_lsb_pop_rust(b: &mut Bencher) {
-    b.iter(|| {
-        let n: u64 = test::black_box(TRAILS);
-        (0..n).fold(0, |a, c| {
-            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
-            if x == 0 { x = 1;} else { x = lsb(x) as u64;}
-            a ^ (x)
-        })
-    })
-}
-
-
-#[bench]
-fn evs_bench_randomize_super_sparse(b: &mut Bencher) {
-    b.iter(|| {
-        let n: u64 = test::black_box(TRAILS);
-        (0..n).fold(0, |a, c| {
-            let mut x: u64 = very_sparse_random(c.wrapping_mul(909090909090909091));
-            if x == 0 { x = 1;}
-            a ^ (x) }
-        )
-    })
-}
-
-
-
-#[inline]
-fn randomize(x: u64) -> u64{
-    (!random_2(random_1(x))  ^ random_4(!x)) & random_1(x)
-}
-
-// Densest
-#[inline]
-fn randomize2(x: u64) -> u64{
-    random_1(!random_2(x))  ^ !random_3(!x) ^ random_4(x)
-}
-
-#[inline]
-fn randomize_sparse (x: u64) -> u64{
-    (!random_3(random_2(!x))) & random_1(x) & random_4(x)
-}
-
-#[inline]
-fn very_sparse_random (x: u64) -> u64{
-    ((!8512677386048191063) ^ !(x + 6)).wrapping_mul(!x) & ((!1030501117050341) ^ x).wrapping_mul(!x) & (! 1030507050301 as u64).wrapping_mul(!x) & random_2(x) & (!x).wrapping_mul(2685821657736338717) & !random_4(x) & random_3(!x) & (x).wrapping_mul(268582165773633871)
-}
-
-
-
-
-fn random_3(x: u64) -> u64 {
-    let mut c: u64 = x.wrapping_shr(12);
-    c ^= x.wrapping_shl(25);
-    c ^= x.wrapping_shr(27);
-    x.wrapping_mul(1030507050301) ^ c
-}
-
-fn random_2(x: u64) -> u64 {
-    let mut c: u64 = x.wrapping_shr(12);
-    c ^= x.wrapping_shl(25);
-    c ^= x.wrapping_shr(27);
-    x.wrapping_mul(8512677386048191063) ^ c
-}
-
-fn random_1(x: u64) -> u64 {
-    let mut c: u64 = x.wrapping_shr(12);
-    c ^= x.wrapping_shl(25);
-    c ^= x.wrapping_shr(27);
-    x.wrapping_mul(2685821657736338717) ^ c
-}
-
-fn random_4(x: u64) -> u64 {
-    let mut c: u64 = x.wrapping_shr(12);
-    c ^= x.wrapping_shl(25);
-    c ^= x.wrapping_shr(27);
-    x.wrapping_mul(399899999999999 ) ^ c
 }

@@ -1,6 +1,6 @@
 use board::Board;
 use timer::Timer;
-use piece_move::{BitMove};
+use piece_move::BitMove;
 extern crate rand;
 use engine::Searcher;
 
@@ -15,12 +15,12 @@ impl Searcher for RandomBot {
         "Random Searcher"
     }
 
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
+    fn best_move(board: Board, _timer: &Timer) -> BitMove {
         let moves = board.generate_moves();
         moves[rand::random::<usize>() % moves.len()]
     }
 
-    fn best_move_depth(board: Board, timer: &Timer, depth: u16) -> BitMove {
+    fn best_move_depth(board: Board, _timer: &Timer, _depth: u16) -> BitMove {
         let moves = board.generate_moves();
         moves[rand::random::<usize>() % moves.len()]
     }

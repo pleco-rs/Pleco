@@ -1,38 +1,21 @@
 use board::*;
-use std::cmp::Ordering;
 use timer::*;
 use piece_move::*;
 use engine::Searcher;
 use eval::*;
-use rayon;
-use rayon::prelude::*;
+
+#[allow(unused_imports)]
 use test::Bencher;
+#[allow(unused_imports)]
 use test;
-use timer;
+
+use super::super::BestMove;
+
 
 const MAX_PLY: u16 = 5;
 
-pub struct BestMove {
-    pub best_move: Option<BitMove>,
-    pub score: i16,
-}
 
-impl BestMove {
-    pub fn new(score: i16) -> Self {
-        BestMove{
-            best_move: None,
-            score: score
-        }
-    }
-
-    pub fn negate(mut self) -> Self {
-        self.score *= -1;
-        self
-    }
-}
-
-
-pub struct  AlphaBetaBot {
+pub struct AlphaBetaBot {
     board: Board,
     timer: Timer,
 }
@@ -42,13 +25,15 @@ impl Searcher for AlphaBetaBot {
         "AlphaBeta Searcher"
     }
 
-    fn best_move_depth(mut board: Board, timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
         let alpha: i16 = NEG_INFINITY;
-        let beta:  i16 = INFINITY;
-        alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth).best_move.unwrap()
+        let beta: i16 = INFINITY;
+        alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
+            .best_move
+            .unwrap()
     }
 
-    fn best_move(mut board: Board, timer: &Timer) -> BitMove {
+    fn best_move(board: Board, timer: &Timer) -> BitMove {
         AlphaBetaBot::best_move_depth(board, timer, MAX_PLY)
     }
 }
@@ -73,16 +58,22 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         board.apply_move(mov);
         let return_move = alpha_beta_search(board, -beta, -alpha, max_depth).negate();
         board.undo_move();
-        if return_move.score > alpha  {
+        if return_move.score > alpha {
             alpha = return_move.score;
             best_move = Some(mov);
         }
         if alpha >= beta {
-            return BestMove{best_move: Some(mov), score: alpha};
+            return BestMove {
+                best_move: Some(mov),
+                score: alpha,
+            };
         }
     }
 
-    BestMove{best_move: best_move, score: alpha}
+    BestMove {
+        best_move: best_move,
+        score: alpha,
+    }
 }
 
 fn eval_board(board: &mut Board) -> BestMove {

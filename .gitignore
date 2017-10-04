@@ -3,3 +3,6 @@ target/
 .idea/
 .vscode/launch.json
 .vscode/
+rusty_chess.iml
+Pleco.iml
+pleco.iml

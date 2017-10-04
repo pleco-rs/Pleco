@@ -1,9 +1,11 @@
 use piece_move::*;
 
+/// Transposition Table used to track information concerning the best move of a board.
+///
+/// This is simply a copy-paste of [chashmap 2.2](https://crates.io/crates/chashmap) by ticki. All credit
+/// for creation goes to him.
 
 pub type Key = u64;
-
-
 
 // 2 bytes + 2 bytes + 1 Byte + 1 byte = ?6 Bytes
 #[derive(Clone)]
@@ -19,15 +21,13 @@ pub struct Value {
 pub enum NodeType {
     UpperBound,
     LowerBound,
-    Exact
+    Exact,
 }
 
 use owning_ref::{OwningHandle, OwningRef};
 use parking_lot::{RwLock, RwLockWriteGuard, RwLockReadGuard};
-use std::collections::hash_map;
-use std::hash::{Hash, Hasher, BuildHasher};
 use std::sync::atomic::{self, AtomicUsize};
-use std::{mem, ops, cmp, fmt, iter};
+use std::{mem, ops, cmp, fmt};
 
 /// The atomic ordering used throughout the code.
 const ORDERING: atomic::Ordering = atomic::Ordering::Relaxed;
@@ -56,12 +56,20 @@ enum Bucket {
 impl Bucket {
     /// Is this bucket 'empty'?
     fn is_empty(&self) -> bool {
-        if let Bucket::Empty = *self { true } else { false }
+        if let Bucket::Empty = *self {
+            true
+        } else {
+            false
+        }
     }
 
 
     fn is_removed(&self) -> bool {
-        if let Bucket::Removed = *self { true } else { false }
+        if let Bucket::Removed = *self {
+            true
+        } else {
+            false
+        }
     }
 
     fn is_free(&self) -> bool {
@@ -76,7 +84,9 @@ impl Bucket {
     fn value(self) -> Option<Value> {
         if let Bucket::Contains(_, val) = self {
             Some(val)
-        } else { None }
+        } else {
+            None
+        }
     }
 
 
@@ -101,7 +111,7 @@ impl Bucket {
 }
 
 struct Table {
-    buckets: Vec<RwLock<Bucket>>
+    buckets: Vec<RwLock<Bucket>>,
 }
 
 
@@ -111,7 +121,7 @@ impl Table {
         for _ in 0..buckets {
             vec.push(RwLock::new(Bucket::Empty));
         }
-        Table { buckets: vec}
+        Table { buckets: vec }
     }
 
     fn with_capacity(cap: usize) -> Table {
@@ -119,11 +129,13 @@ impl Table {
     }
 
     fn hash(&self, key: u64) -> usize {
-       key as usize
+        key as usize
     }
 
     fn scan<F>(&self, key: u64, matches: F) -> RwLockReadGuard<Bucket>
-        where F: Fn(&Bucket) -> bool {
+    where
+        F: Fn(&Bucket) -> bool,
+    {
         // Hash the key.
         let hash = self.hash(key);
 
@@ -145,7 +157,9 @@ impl Table {
     }
 
     fn scan_mut<F>(&self, key: u64, matches: F) -> RwLockWriteGuard<Bucket>
-        where F: Fn(&Bucket) -> bool {
+    where
+        F: Fn(&Bucket) -> bool,
+    {
         // Hash the key.
         let hash = self.hash(key);
 
@@ -167,7 +181,9 @@ impl Table {
     }
 
     fn scan_mut_no_lock<F>(&mut self, key: u64, matches: F) -> &mut Bucket
-        where F: Fn(&Bucket) -> bool {
+    where
+        F: Fn(&Bucket) -> bool,
+    {
         // Hash the key.
         let hash = self.hash(key);
         // TODO: To tame the borrowchecker, we fetch this in advance.
@@ -278,7 +294,6 @@ impl Table {
     fn find_free_no_lock(&mut self, key: u64) -> &mut Bucket {
         self.scan_mut_no_lock(key, |x| x.is_free())
     }
-
 }
 
 pub struct IntoIter {
@@ -286,7 +301,7 @@ pub struct IntoIter {
 }
 
 impl Iterator for IntoIter {
-    type Item = (Key,Value);
+    type Item = (Key, Value);
 
     fn next(&mut self) -> Option<(Key, Value)> {
 
@@ -297,7 +312,6 @@ impl Iterator for IntoIter {
         }
         None
     }
-
 }
 
 impl IntoIterator for Table {
@@ -305,15 +319,14 @@ impl IntoIterator for Table {
     type IntoIter = IntoIter;
 
     fn into_iter(self) -> IntoIter {
-        IntoIter {
-            table: self
-        }
+        IntoIter { table: self }
     }
 }
 
 pub struct ReadGuard<'a> {
     /// The inner hecking long type.
-    inner: OwningRef<OwningHandle<RwLockReadGuard<'a, Table>, RwLockReadGuard<'a, Bucket>>, Value>,
+    inner:
+        OwningRef<OwningHandle<RwLockReadGuard<'a, Table>, RwLockReadGuard<'a, Bucket>>, Value>,
 }
 
 impl<'a> ops::Deref for ReadGuard<'a> {
@@ -343,7 +356,10 @@ impl<'a> fmt::Debug for ReadGuard<'a> {
 /// on drop.
 pub struct WriteGuard<'a> {
     /// The inner hecking long type.
-    inner: OwningHandle<OwningHandle<RwLockReadGuard<'a, Table>, RwLockWriteGuard<'a, Bucket>>, &'a mut Value>,
+    inner: OwningHandle<
+        OwningHandle<RwLockReadGuard<'a, Table>, RwLockWriteGuard<'a, Bucket>>,
+        &'a mut Value,
+    >,
 }
 
 impl<'a> ops::Deref for WriteGuard<'a> {
@@ -375,14 +391,14 @@ impl<'a> fmt::Debug for WriteGuard<'a> {
 
 pub struct TranspositionTable {
     table: RwLock<Table>,
-    len: AtomicUsize
+    len: AtomicUsize,
 }
 
 impl TranspositionTable {
     pub fn with_capacity(cap: usize) -> Self {
         TranspositionTable {
-            table:  RwLock::new(Table::with_capacity(cap)),
-            len: AtomicUsize::new(0)
+            table: RwLock::new(Table::with_capacity(cap)),
+            len: AtomicUsize::new(0),
         }
     }
 
@@ -396,12 +412,13 @@ impl TranspositionTable {
 
     pub fn get(&self, key: u64) -> Option<ReadGuard> {
         // Acquire the read lock and lookup in the table.
-        if let Ok(inner) = OwningRef::new(OwningHandle::new(self.table.read(), |x| unsafe { &*x }.lookup(key)))
-            .try_map(|x| x.value_ref()) {
+        if let Ok(inner) = OwningRef::new(OwningHandle::new(
+            self.table.read(),
+            |x| unsafe { &*x }.lookup(key),
+        )).try_map(|x| x.value_ref())
+        {
             // The bucket contains data.
-            Some(ReadGuard {
-                inner: inner,
-            })
+            Some(ReadGuard { inner: inner })
         } else {
             // The bucket is empty/removed.
             None
@@ -428,7 +445,10 @@ impl TranspositionTable {
         let mut lock = self.table.write();
 
         TranspositionTable {
-            table: RwLock::new(mem::replace(&mut *lock, Table::new(DEFAULT_INITIAL_CAPACITY))),
+            table: RwLock::new(mem::replace(
+                &mut *lock,
+                Table::new(DEFAULT_INITIAL_CAPACITY),
+            )),
             // Replace the length with 0 and use the old length.
             len: AtomicUsize::new(self.len.swap(0, ORDERING)),
         }
@@ -496,5 +516,4 @@ impl TranspositionTable {
             lock.fill(table);
         }
     }
-
 }

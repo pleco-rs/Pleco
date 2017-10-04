@@ -1,39 +1,75 @@
 [package]
-name = "Pleco"
-version = "0.1.0"
-authors = ["stephenf <stephenf@cs.washington.edu>"]
+name = "pleco"
+version = "0.1.1"
+authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
+description = "A blazingly-fast chess engine and Chess AI."
+homepage = "https://github.com/sfleischman105/Pleco"
+documentation = "https://docs.rs/pleco/"
+readme = "README.md"
+keywords = ["chess","engine","game","gaming"]
+license = "MIT"
+categories = ["games","game-engines"]
+repository = "https://github.com/sfleischman105/Pleco"
+
 
 include = [
-    "src/*.rs",
+    "src/*",
     "tests/*.rs",
     "Cargo.toml",
-    ".gitignore"
+    ".gitignore",
+    "README.md",
+    "benches/*.rs"
 ]
 
 [profile.dev]
 opt-level = 3
-
-[profile.release]
 debug = true
 
+[profile.release]
+opt-level = 3
+debug = true
+
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = false
+debug-assertions = false
+codegen-units = 1
+
+[profile.doc]
+opt-level = 0
+debug = 2
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+panic = 'unwind'
+
 [lib]
-name = "Pleco"
+name = "pleco"
+bench = true
+path = "src/lib.rs"
+doctest = true
 
 [dependencies]
-clippy = {version = "*", optional = true}
+clippy = {version = "0.0.21", optional = true}
 lazy_static = "0.2"
-chashmap = {version = "*"}
 bitflags = "0.9"
 rand = "0.3"
-chrono = "0.4"
 rayon = "0.8.2"
-futures = "0.1.14"
-parking_lot = {version = "*"}
-owning_ref = {version = "*"}
+parking_lot = "0.3"
+owning_ref = "0.2"
+num_cpus = "1.0"
 
 [features]
 default = []
+dev = ["clippy"]
 
 [[test]]
 path = "tests/test.rs"
 name = "default"
+
+[[bench]]
+path = "benches/bench.rs"
+name = "integration_benches"
