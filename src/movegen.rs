@@ -1,3 +1,5 @@
+//! Module for generating moves from a [Board].
+
 use templates::*;
 use board::*;
 use piece_move::{MoveFlag, BitMove, PreMoveInfo};

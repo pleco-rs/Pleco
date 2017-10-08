@@ -1,3 +1,5 @@
+//! Module for evaluating the strength of a current position.
+
 use board::Board;
 use std::i16;
 use templates::*;

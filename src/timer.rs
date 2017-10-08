@@ -1,3 +1,4 @@
+//! Timer for keeping track of the time for both sides of the a chess game.
 use std::time::Instant;
 
 

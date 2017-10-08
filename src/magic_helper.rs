@@ -1,3 +1,4 @@
+//! This module contains useful pre-computed lookup tables involving [BitBoard]s.
 use bit_twiddles::*;
 use templates::*;
 use std::{mem, slice, cmp};

@@ -1,4 +1,4 @@
-
+//! Module for the implementation and definition of a move to be played.
 use templates::*;
 use std::fmt;
 

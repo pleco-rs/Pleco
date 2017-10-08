@@ -36,6 +36,39 @@ The AI Bot aims to have the following features:
 - [ ] Null Move Heuristic
 - [ ] Killer Moves
 
+#### Installation and Use
+
+Currently, Pleco's use as a standalone program is limited in functionality. A UCI client is needed to properly interact with the program. As a recommendation, check out [Arena](http://www.playwitharena.com/).
+
+Firstly, clone the repo and navigate into the created folder with the following commands:
+
+```
+$ git clone https://github.com/sfleischman105/Pleco --branch master
+$ cd Pleco/
+```
+Once inside the pleco directory, build the binaries using `cargo`:
+```
+$ cargo build --release
+```
+
+The compiled program will appear in `./target/release/`.
+
+Pleco can now be run with a `./Pleco` on Linux or a `./Pleco.exe` on Windows.
+
+
+#### Using Pleco as a Library
+
+To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco) Simply include the following in your Cargo.toml:
+
+```rust
+[dependencies]
+pleco = "0.1.1"
+```
+
+and add the following to a `main.rs` or `lib.rs`:
+```rust
+extern crate pleco;
+```
 
   
 Contributing

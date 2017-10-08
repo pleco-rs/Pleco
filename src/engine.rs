@@ -1,3 +1,5 @@
+//! This module contains an engine for actually playing chess.
+
 extern crate rand;
 
 use piece_move::BitMove;

@@ -1,4 +1,6 @@
-//! Contains useful features involving bits.
+//! [bit_twiddles] is the a collection of useful functions oreinted around modifying
+//! singular bits of integer types.
+
 static POPCNT8: &'static [u8] = &[
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,

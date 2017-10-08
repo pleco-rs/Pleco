@@ -1,4 +1,5 @@
-use std::ptr::{Unique, self};
+//! Module for the TranspositionTable, a type of hashmap where Zobrist Keys map to information about a position.
+use std::ptr::Unique;
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::marker::PhantomData;
@@ -153,7 +154,7 @@ impl TT {
 
     // Called each time a new position is searched
     pub fn new_search(&mut self) {
-        self.time_age = (self.time_age).wrapping_add(8);
+        self.time_age = (self.time_age).wrapping_add(4);
     }
 
     // the current time age
@@ -242,6 +243,7 @@ unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
     mem::transmute::<*mut Cluster,*mut Entry>(cluster)
 }
 
+#[inline]
 fn alloc_room(size: usize) -> Unique<Cluster> {
     unsafe {
         let ptr = Heap.alloc_zeroed(Layout::array::<Cluster>(size).unwrap());
@@ -276,14 +278,14 @@ mod tests {
         assert_eq!(tt.num_clusters(), size);
 
         let key = create_key(32, 44);
-
         let (found,entry) = tt.probe(key);
     }
+
+
 
     #[test]
     fn tt_null_ptr() {
         let size: usize = 2 << 20;
-        println!("hello");
         let mut tt = TT::new_round_up(size);
 
         for x  in 0..1_000_000 as u64 {
@@ -296,6 +298,50 @@ mod tests {
             }
             tt.new_search();
         }
+    }
+
+    #[test]
+    fn tt_basic_insert() {
+        let mut tt = TT::new_round_up(THIRTY_MB);
+        let partial_key_1: u16 = 17773;
+        let key_index: u64 = 0x5556;
+
+        let key_1 = create_key(partial_key_1, 0x5556);
+        let (found, entry) = tt.probe(key_1);
+        assert!(found);
+        entry.partial_key = partial_key_1;
+        entry.depth = 2;
+
+        let (found, entry) = tt.probe(key_1);
+        assert!(found);
+        assert_eq!(entry.partial_key,partial_key_1);
+        assert_eq!(entry.depth,2);
+
+        let partial_key_2: u16 = 8091;
+        let partial_key_3: u16 = 12;
+        let key_2: u64 = create_key(partial_key_2, key_index);
+        let key_3: u64 = create_key(partial_key_3, key_index);
+
+        let (found, entry) = tt.probe(key_2);
+        assert!(found);
+        entry.partial_key = partial_key_2;
+        entry.depth = 3;
+
+        let (found, entry) = tt.probe(key_3);
+        assert!(found);
+        entry.partial_key = partial_key_3;
+        entry.depth = 6;
+
+        // key that should find a good replacement
+        let partial_key_4: u16 = 18;
+        let key_4: u64 = create_key(partial_key_4, key_index);
+
+        let (found, entry) = tt.probe(key_4);
+        assert!(!found);
+
+        // most vulnerable should be key_1
+        assert_eq!(entry.partial_key, partial_key_1);
+        assert_eq!(entry.depth, 2);
 
     }
 

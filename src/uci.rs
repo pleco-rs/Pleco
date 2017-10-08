@@ -1,3 +1,5 @@
+//! Module for defining and implenting the UCI (Universal Chess Interface) protocol.
+
 use engine::{UCILimit,UCISearcher};
 use board::Board;
 use bots::lazy_smp::LazySMPSearcher;
@@ -8,7 +10,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
 use std::env;
-use std::process;
 use std::io::prelude::*;
 use std::thread;
 
