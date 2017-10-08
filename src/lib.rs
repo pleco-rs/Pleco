@@ -42,7 +42,6 @@ pub mod templates;
 pub mod magic_helper;
 pub mod timer;
 pub mod engine;
-pub mod transposition_table;
 pub mod tools;
 pub mod uci;
 pub mod tt;

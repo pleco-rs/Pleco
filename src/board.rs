@@ -1,5 +1,7 @@
-//! A Chessboard.
-
+//! This module contains [Board], the Object representing the current state of a chessboard.
+//! All modifications to the current state of the board is done through this object, as well as
+//! gathering information about the current state of the board.
+//!
 use templates::*;
 use magic_helper::MagicHelper;
 use movegen::MoveGen;

@@ -14,7 +14,6 @@ use eval::*;
 use piece_move::BitMove;
 use engine::*;
 use eval::*;
-use transposition_table::{TranspositionTable,Value,NodeType};
 
 // let num = num_cpus::get();
 
@@ -97,7 +96,7 @@ struct Thread {
     board: Board,
     root_moves: Arc<RwLock<Vec<RootMove>>>,
     id: usize,
-    tt: Arc<TranspositionTable>,
+//    tt: Arc<TranspositionTable>,
     nodes: Arc<AtomicU64>,
     local_stop: Arc<AtomicBool>,
     cond_var: Arc<(Mutex<bool>,Condvar)>,
@@ -142,7 +141,7 @@ impl Thread {
         let mut alpha = NEG_INFINITY;
         let mut beta = INFINITY;
 
-        while !self.stop() && depth <= MAX_PLY {
+        while !self.stop() && depth <= max_depth {
             if depth != start_ply {
                 self.sort_root_moves();
             }
@@ -190,13 +189,7 @@ impl Thread {
 
         let zob = self.board.zobrist();
         if !at_root {
-            let tt_op = self.tt.get(zob);
-            if tt_op.is_some() {
-                let tt_entry = tt_op.unwrap();
-                if tt_entry.ply >= max_depth {
-                    return tt_entry.score;
-                }
-            }
+
         }
 
         let mut moves: Vec<BitMove> = if at_root {
@@ -228,7 +221,6 @@ impl Thread {
             }
 
             if alpha > beta {
-                self.tt_upsert(zob, alpha, max_depth, NodeType::LowerBound, *mov);
                 return alpha;
             }
 
@@ -236,7 +228,6 @@ impl Thread {
                 return 0;
             }
         }
-        self.tt_upsert(zob, alpha, max_depth, NodeType::UpperBound, BitMove::null());
         alpha
     }
 
@@ -246,37 +237,6 @@ impl Thread {
 
     fn main_thread(&self) -> bool {
         self.id == 0
-    }
-
-    fn tt_upsert(&self, zobrist: u64, score: i16, depth: u16, node_type: NodeType, bitmove: BitMove) {
-        let tt_op = self.tt.get(zobrist);
-        if tt_op.is_some() {
-            let tt_entry = tt_op.unwrap();
-            if tt_entry.ply == depth {
-                if tt_entry.score < score {
-                    self.tt.insert(zobrist, Value {
-                        best_move: BitMove::null(),
-                        score: score,
-                        ply: depth,
-                        node_type: node_type
-                    });
-                }
-            } else if tt_entry.ply < depth {
-                self.tt.insert(zobrist, Value {
-                    best_move: BitMove::null(),
-                    score: score,
-                    ply: depth,
-                    node_type: node_type
-                });
-            }
-        } else {
-            self.tt.insert(zobrist, Value {
-                best_move: BitMove::null(),
-                score: score,
-                ply: depth,
-                node_type: node_type
-            });
-        }
     }
 
     fn sort_root_moves(&mut self) {
@@ -328,7 +288,6 @@ impl LazySMPSearcher {
     pub fn setup(board: Board, stop: Arc<AtomicBool>) -> Self {
         let num_threads = max(num_cpus::get(),1);
 
-        let tt = Arc::new(TranspositionTable::with_capacity(DEFAULT_TT_CAP));
         let nodes = Arc::new(AtomicU64::new(0));
         let cond_var = Arc::new((Mutex::new(false), Condvar::new()));
 
@@ -351,7 +310,7 @@ impl LazySMPSearcher {
                 board: board.parallel_clone(),
                 root_moves: shared_moves,
                 id: x,
-                tt: tt.clone(),
+//                tt: tt.clone(),
                 nodes: nodes.clone(),
                 local_stop: stop.clone(),
                 cond_var: cond_var.clone(),
@@ -372,7 +331,7 @@ impl LazySMPSearcher {
             board: board.parallel_clone(),
             root_moves: main_thread_moves,
             id: 0,
-            tt: tt.clone(),
+//            tt: tt.clone(),
             nodes: nodes.clone(),
             local_stop: stop.clone(),
             cond_var: cond_var.clone(),

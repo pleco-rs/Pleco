@@ -1,3 +1,4 @@
+//! Miscellaneos functions, traits, and constants to be used by other modules.
 use bit_twiddles;
 use std::mem;
 use std::fmt;
