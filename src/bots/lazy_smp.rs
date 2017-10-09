@@ -13,7 +13,6 @@ use templates::*;
 use eval::*;
 use piece_move::BitMove;
 use engine::*;
-use eval::*;
 
 // let num = num_cpus::get();
 
@@ -137,6 +136,7 @@ impl Thread {
         let mut depth: u16 = start_ply;
         let mut delta = 31;
 
+        #[allow(unused_assignments)]
         let mut best_value: i16 = NEG_INFINITY;
         let mut alpha = NEG_INFINITY;
         let mut beta = INFINITY;
@@ -187,11 +187,12 @@ impl Thread {
         }
         let at_root: bool = self.board.ply() == 0;
 
-        let zob = self.board.zobrist();
-        if !at_root {
+//        let zob = self.board.zobrist();
+//        if !at_root {
+//
+//        }
 
-        }
-
+        #[allow(unused_mut)]
         let mut moves: Vec<BitMove> = if at_root {
             self.root_moves.read().unwrap().iter().map(|m| m.bit_move).collect()
         } else {

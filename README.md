@@ -20,7 +20,7 @@ The internal Board Implementation aims to have the following features upon compl
 - [x] Statically computed information (including Magic-Bitboards)
 - [x] Zobrist Hashing
 - [ ] UCI protocol implementation
-- [ ] Allowing matches against Human Player
+- [ ] Allowing matches against Human Players
 
 
 
@@ -62,7 +62,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```rust
 [dependencies]
-pleco = "0.1.1"
+pleco = "0.1.2"
 ```
 
 and add the following to a `main.rs` or `lib.rs`:

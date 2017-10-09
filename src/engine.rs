@@ -7,9 +7,7 @@ use timer::Timer;
 use board::Board;
 use templates::Player;
 
-use std::{thread, time};
-use std::io;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 

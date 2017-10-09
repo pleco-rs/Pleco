@@ -29,8 +29,6 @@ extern crate lazy_static;
 
 extern crate test;
 extern crate rayon;
-extern crate parking_lot;
-extern crate owning_ref;
 extern crate num_cpus;
 extern crate rand;
 

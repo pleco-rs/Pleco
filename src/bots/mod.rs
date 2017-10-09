@@ -1,3 +1,5 @@
+//! Contains all of the currently completed and experimental bots.
+
 pub mod bot_iterative_parallel_mvv_lva;
 pub mod basic;
 pub mod lazy_smp;

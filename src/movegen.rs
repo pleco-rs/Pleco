@@ -264,7 +264,7 @@ impl<'a> MoveGen<'a> {
 
         // some functions we need to shift bitboards around & move squares. We do this because it depends only on the players side,
         // and we use these functions alot.
-        let (down, up, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
+        let (down, _up, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
             fn(SQ) -> SQ,
             fn(SQ) -> SQ,
             fn(SQ) -> SQ,
