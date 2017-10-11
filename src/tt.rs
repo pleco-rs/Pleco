@@ -1,8 +1,20 @@
 //! Module for the TranspositionTable, a type of hashmap where Zobrist Keys map to information about a position.
+
+
+// https://chessprogramming.wikispaces.com/Transposition+Table for info
+
+///
+///
+///
+///
+///
+///
+///
+///
+
 use std::ptr::Unique;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
-
 use piece_move::BitMove;
 
 
