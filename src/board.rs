@@ -1135,10 +1135,12 @@ impl Board {
     /// changed.
     pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
         let all_moves: Vec<BitMove> = self.generate_moves();
-        let bit_move: Option<BitMove> = all_moves.iter().find(|&&m| &m.stringify() == uci_move);
+        let bit_move: Option<BitMove> = all_moves.iter()
+            .find(|m| &m.stringify() == uci_move)
+            .map(|m| m.clone());
         if bit_move.is_some() {
             self.apply_move(bit_move.unwrap());
-            true
+            return true;
         }
         false
     }
