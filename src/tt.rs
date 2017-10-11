@@ -1,19 +1,87 @@
 //! Module for the TranspositionTable, a type of hashmap where Zobrist Keys map to information about a position.
+
+
+// https://chessprogramming.wikispaces.com/Transposition+Table for info
+
+///
+///
+///
+///
+///
+///
+///
+///
+
 use std::ptr::Unique;
 use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::marker::PhantomData;
 use std::heap::{Alloc, Layout, Heap};
-use std::sync::atomic::{AtomicUsize,AtomicU16};
-
 use piece_move::BitMove;
 
+
+/// Value used to retrieve and store Entries.
 pub type Key = u64;
 
-//
-//
+/// BitMask for the [NodeTypeTimeBound]'s time data.
+pub const TIME_MASK: u8 = 0b1111_1100;
+
+/// BitMask for the retrieving a [NodeTypeTimeBound]'s [NodeType].
+pub const NODE_TYPE_MASK: u8 = 0b0000_0011;
+
+/// Number of Entries per Cluster.
+pub const CLUSTER_SIZE: usize = 3;
+
+const BYTES_PER_KB: usize = 1000;
+const BYTES_PER_MB: usize = BYTES_PER_KB * 1000;
+const BYTES_PER_GB: usize = BYTES_PER_MB * 1000;
+
+/// Designates the type of Node in the Chess Search tree.
+/// See the [ChessWiki](https://chessprogramming.wikispaces.com/Node+Types) for more information
+/// about PV Node types and their use.
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(u8)]
+pub enum NodeType {
+    NoBound = 0,
+    LowerBound = 1,
+    UpperBound = 2,
+    Exact = 3,
+}
+
+/// Abstraction for combining the 'time' a node was found alongside the [NodeType].
+#[derive(Copy, Clone, Eq, PartialEq)]
+pub struct NodeTypeTimeBound {
+    data: u8
+}
+
+impl NodeTypeTimeBound {
+    /// Creates a NodeTypeTimeBound with the designated node_type and time.
+    ///
+    /// # Usage
+    ///
+    /// time_bound must be divisible by 8 or else Undefined behavior will follow.
+    pub fn create(node_type: NodeType, time_bound: u8) -> Self {
+        NodeTypeTimeBound {
+            data: time_bound + (node_type as u8)
+        }
+    }
+
+    /// Updates the [NodeType] of an entry.
+    pub fn update_bound(&mut self, node_type: NodeType) {
+        self.data = (self.data & TIME_MASK) | node_type as u8;
+    }
+
+    /// Updates the time field of an entry.
+    pub fn update_time(&mut self, time_bound: u8) {
+        self.data = (self.data & NODE_TYPE_MASK) | time_bound;
+    }
+}
+
+
 
 // 2 bytes + 2 bytes + 2 Byte + 2 byte + 1 + 1 = 10 Bytes
+
+/// Structure defining a singular Entry in a table, containing the BestMove found,
+/// the score of that node, the type of Node, depth found, as well as a key uniquely defining
+/// the node.
 #[derive(Clone,PartialEq)]
 pub struct Entry {
     pub partial_key: u16,
@@ -25,7 +93,13 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: u8, node_type: NodeType, time_bound: u8) {
+
+    pub fn is_empty(&self) -> bool {
+        self.node_type() == NodeType::NoBound
+    }
+
+    /// Rewrites over an Entry.
+    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: u8, node_type: NodeType) {
         let partial_key = key.wrapping_shr(48) as u16;
 
         if partial_key != self.partial_key {
@@ -37,15 +111,16 @@ impl Entry {
             self.score = score;
             self.eval = eval;
             self.depth = depth;
-            self.time_node_bound = NodeTypeTimeBound::create(node_type, time_bound);
+            self.time_node_bound.update_bound(node_type);
         }
     }
 
+    /// Returns the current search time of the node.
     pub fn time(&self) -> u8 {
         self.time_node_bound.data & TIME_MASK
     }
 
-
+    /// Returns the [NodeType] of an Entry.
     pub fn node_type(&self) -> NodeType {
         match self.time_node_bound.data & NODE_TYPE_MASK {
             0 => NodeType::NoBound,
@@ -55,43 +130,12 @@ impl Entry {
         }
     }
 
-    pub fn time_value(&self, curr_time: u8) -> u8 {
-        let inner: u8 = (259 as u8).wrapping_add((curr_time).wrapping_sub(self.time_node_bound.data)) & 0b1111_1100;
-        (self.depth).wrapping_sub((inner).wrapping_mul(2 as u8))
+    /// Returns the value of the node in respect to the depth searched && when it was placed into the TranspositionTable.
+    pub fn time_value(&self, curr_time: u8) -> u16 {
+        let inner: u16 = ((259u16).wrapping_add(curr_time as u16)).wrapping_sub(self.time_node_bound.data as u16) & 0b1111_1100;
+        (self.depth as u16).wrapping_sub((inner).wrapping_mul(2 as u16))
     }
 }
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct NodeTypeTimeBound {
-    data: u8
-}
-
-pub const TIME_MASK: u8 = 0b1111_1100;
-pub const NODE_TYPE_MASK: u8 = 0b0000_0011;
-
-impl NodeTypeTimeBound {
-    pub fn create(node_type: NodeType, time_bound: u8) -> Self {
-        NodeTypeTimeBound {
-            data: time_bound + (node_type as u8)
-        }
-    }
-
-    pub fn update_time(&mut self, time_bound: u8) {
-        self.data = (self.data & NODE_TYPE_MASK) | time_bound;
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-#[repr(u8)]
-pub enum NodeType {
-    NoBound = 0,
-    LowerBound = 1,
-    UpperBound = 2,
-    Exact = 3,
-}
-
-
-pub const CLUSTER_SIZE: usize = 3;
 
 // 30 bytes + 2 = 32 Bytes
 pub struct Cluster {
@@ -108,17 +152,38 @@ pub struct TT {
     time_age: u8,
 }
 
-
-
 impl TT {
 
-    // Creates new TT rounded up in size
-    pub fn new_round_up(size: usize) -> Self {
-        TT::new(size.next_power_of_two())
+    /// Creates new with a size of around 'mb_size'. Actual size is the nearest power
+    /// of 2 times the size of a Cluster.
+    ///
+    /// # Panics
+    ///
+    /// mb_size should be > 0, or else a panic will occur
+    pub fn new(mb_size: usize) -> Self {
+        TT::new_num_clusters((mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>())
     }
 
-    // Creates new TT
-    fn new(size: usize) -> Self {
+    /// Creates new TT rounded up to the nearest power of two number of entries.
+    ///
+    /// # Panics
+    ///
+    /// num_entries should be > 0, or else a panic will occur
+    pub fn new_num_entries(num_entries: usize) -> Self {
+        TT::new_num_clusters(num_entries * CLUSTER_SIZE)
+    }
+
+    /// Creates new TT rounded up to the nearest power of two number of Clusters.
+    ///
+    /// # Panics
+    ///
+    /// Size should be > 0, or else a panic will occur
+    pub fn new_num_clusters(num_clusters: usize) -> Self {
+        TT::create(num_clusters.next_power_of_two())
+    }
+
+    // Creates new TT with the number of Clusters being size. size must be a power of two.
+    fn create(size: usize) -> Self {
         assert_eq!(size.count_ones(), 1);
         assert!(size > 0);
         TT {
@@ -126,19 +191,54 @@ impl TT {
             cap: size,
             time_age: 0,
         }
-
     }
 
+    /// Returns the size of the heap allocated portion of the TT in KiloBytes.
+    pub fn size_kilobytes(&self) -> usize {
+        (mem::size_of::<Cluster>() * self.cap) / BYTES_PER_KB
+    }
+
+    /// Returns the size of the heap allocated portion of the TT in MegaBytes.
+    pub fn size_megabytes(&self) -> usize {
+        (mem::size_of::<Cluster>() * self.cap) / BYTES_PER_MB
+    }
+
+    /// Returns the size of the heap allocated portion of the TT in GigaBytes.
+    pub fn size_gigabytes(&self) -> usize {
+        (mem::size_of::<Cluster>() * self.cap) / BYTES_PER_GB
+    }
+
+    /// Returns the number of clusters the Transposition Table holds.
     pub fn num_clusters(&self) -> usize {
         self.cap
     }
 
-    // Resizes and deletes all data
-    pub fn resize_round_up(mut self, size: usize) {
+    /// Returns the number of Entries the Transposition Table holds.
+    pub fn num_entries(&self) -> usize {self.cap * CLUSTER_SIZE}
+
+    /// Re-sizes to 'size' number of Clusters and deletes all data
+    ///
+    /// # Panic
+    ///
+    /// size must be greater then 0
+    pub fn resize_round_up(&mut self, size: usize) {
         self.resize(size.next_power_of_two());
     }
 
-    //
+    /// Re-sizes to the the mb_size number of megabytes, rounded up for power of 2
+    /// number of clusters. Returns the actual size.
+    ///
+    /// # Panic
+    ///
+    /// mb_size must be greater then 0
+    pub fn resize_to_megabytes(&mut self, mb_size: usize) -> usize {
+        let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
+        num_clusters = num_clusters.next_power_of_two();
+        self.resize(num_clusters);
+        self.size_megabytes()
+    }
+
+    // resizes the tt to a certain type
     fn resize(&mut self, size: usize) {
         assert_eq!(size.count_ones(), 1);
         assert!(size > 0);
@@ -146,7 +246,7 @@ impl TT {
         self.re_alloc(size);
     }
 
-    // clears the entire tt
+    /// Clears the entire TranspositionTable
     pub fn clear(&mut self) {
         let size = self.cap;
         self.resize(size);
@@ -157,13 +257,24 @@ impl TT {
         self.time_age = (self.time_age).wrapping_add(4);
     }
 
-    // the current time age
+    /// Returns the current time age of a TT.
     pub fn time_age(&self) -> u8 {
         self.time_age
     }
 
-    // returns (true, entry) is the key is found
-    // if not, returns (false, entry) where the entry is the least valuable entry;
+    /// Returns the current number of cycles a TT has gone through. Cycles is simply the
+    /// number of times refresh has been called.
+    pub fn time_age_cylces(&self) -> u8 {
+        (self.time_age).wrapping_shr(2)
+    }
+
+    /// Probes the Transposition Table for a specified Key. Returns (true, entry) if either (1) an
+    /// Entry corresponding to the current key is found, or an Open Entry slot is found for the key.
+    /// In the case of an open Entry, the entry can be tested for its contents by using [entry.is_empty()].
+    /// If no entry is found && there are no open entries, returns the entry that is is most irrelevent to
+    /// the current search, e.g. has the shallowest depth or was found in a previous search.
+    ///
+    /// If 'true' is returned, the Entry is guaranteed to have the correct time.
     pub fn probe(&self, key: Key) -> (bool, &mut Entry) {
         let partial_key: u16 = (key).wrapping_shr(48) as u16;
 
@@ -192,11 +303,12 @@ impl TT {
             }
 
             let mut replacement: *mut Entry = init_entry;
-            let mut replacement_score: u8 = (&*replacement).time_value(self.time_age);
-            // gotta find a replacement
+            let mut replacement_score: u16 = (&*replacement).time_value(self.time_age);
+
+            // Table is full, find the best replacement based on depth and time placed there
             for i in 1..CLUSTER_SIZE {
                 let entry_ptr: *mut Entry = init_entry.offset(i as isize);
-                let entry_score: u8 = (&*entry_ptr).time_value(self.time_age);
+                let entry_score: u16 = (&*entry_ptr).time_value(self.time_age);
                 if entry_score < replacement_score {
                     replacement = entry_ptr;
                     replacement_score = replacement_score;
@@ -207,22 +319,20 @@ impl TT {
         }
     }
 
-    // returns the cluster for a given key
-    pub fn cluster(&self, key: Key) -> *mut Cluster {
+    /// Returns the cluster of a given key.
+    fn cluster(&self, key: Key) -> *mut Cluster {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
         unsafe {
             self.clusters.as_ptr().offset(index as isize)
         }
     }
 
+    // Re-Allocates the current TT to a specified size.
     fn re_alloc(&mut self, size: usize) {
-        unsafe {
-            // let clust_ptr: *mut Unique<Cluster> = mem::transmute::<&Unique<Cluster>,*mut Unique<Cluster>>(&self.clusters.);
-//            *clust_ptr = alloc_room(size);
-            self.clusters = alloc_room(size);
-        }
+        self.clusters = alloc_room(size);
     }
 
+    /// de-allocates the current heap.
     fn de_alloc(&self) {
         unsafe {
             Heap.dealloc(self.clusters.as_ptr() as *mut _,
@@ -243,6 +353,7 @@ unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
     mem::transmute::<*mut Cluster,*mut Entry>(cluster)
 }
 
+// Return a Heap Allocation of Size number of Clusters.
 #[inline]
 fn alloc_room(size: usize) -> Unique<Cluster> {
     unsafe {
@@ -274,24 +385,29 @@ mod tests {
     #[test]
     fn tt_alloc_realloc() {
         let size: usize = 8;
-        let tt = TT::new(size);
+        let tt = TT::create(size);
         assert_eq!(tt.num_clusters(), size);
 
         let key = create_key(32, 44);
-        let (found,entry) = tt.probe(key);
+        let (_found,_entry) = tt.probe(key);
     }
 
-
+    #[test]
+    fn tt_test_sizes() {
+        let tt = TT::new_num_clusters(100);
+        assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
+        assert_eq!(tt.num_entries(), (100 as usize).next_power_of_two() * CLUSTER_SIZE);
+    }
 
     #[test]
     fn tt_null_ptr() {
         let size: usize = 2 << 20;
-        let mut tt = TT::new_round_up(size);
+        let mut tt = TT::new_num_clusters(size);
 
         for x  in 0..1_000_000 as u64 {
             let key: u64 = rand::random::<u64>();
             {
-                let (found, entry) = tt.probe(key);
+                let (_found, entry) = tt.probe(key);
                 entry.depth = (x % 0b1111_1111) as u8;
                 entry.partial_key = key.wrapping_shr(48) as u16;
                 assert_ne!((entry as * const _), null());
@@ -302,7 +418,7 @@ mod tests {
 
     #[test]
     fn tt_basic_insert() {
-        let mut tt = TT::new_round_up(THIRTY_MB);
+        let tt = TT::new_num_clusters(THIRTY_MB);
         let partial_key_1: u16 = 17773;
         let key_index: u64 = 0x5556;
 
@@ -314,6 +430,7 @@ mod tests {
 
         let (found, entry) = tt.probe(key_1);
         assert!(found);
+        assert!(entry.is_empty());
         assert_eq!(entry.partial_key,partial_key_1);
         assert_eq!(entry.depth,2);
 
@@ -324,11 +441,13 @@ mod tests {
 
         let (found, entry) = tt.probe(key_2);
         assert!(found);
+        assert!(entry.is_empty());
         entry.partial_key = partial_key_2;
         entry.depth = 3;
 
         let (found, entry) = tt.probe(key_3);
         assert!(found);
+        assert!(entry.is_empty());
         entry.partial_key = partial_key_3;
         entry.depth = 6;
 
@@ -342,12 +461,11 @@ mod tests {
         // most vulnerable should be key_1
         assert_eq!(entry.partial_key, partial_key_1);
         assert_eq!(entry.depth, 2);
-
     }
 
+    /// Helper function to create a key of specified index / partial_key
     fn create_key(partial_key: u16, full_key: u64) -> u64 {
         (partial_key as u64).wrapping_shl(48) | (full_key & 0x0000_FFFF_FFFF_FFFF)
     }
-
 }
 

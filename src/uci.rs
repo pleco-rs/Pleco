@@ -9,11 +9,9 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
-use std::env;
-use std::io::prelude::*;
 use std::thread;
 
-use std::io::{self, Read, Error};
+use std::io::{self};
 
 /// commands
 ///
@@ -45,7 +43,7 @@ pub fn console_loop(mut args: Vec<String>) {
     'main: loop {
         while args.is_empty() {
             let mut input = String::new();
-            let result = io::stdin().read_line(&mut input);
+            let _result = io::stdin().read_line(&mut input);
             args = input.split_whitespace().map(|str| str.to_owned()).collect();
         }
         let args_clone = args.clone();
@@ -73,7 +71,8 @@ fn uci() {
     println!("id author {}",ID_AUTHORS);
     println!("uciok");
 
-    let mut is_debug: bool = false;
+    #[allow(unused_mut)]
+    let mut _is_debug: bool = false;
     let mut board = Board::default();
 
     let stop_searching = Arc::new(AtomicBool::new(false));
@@ -82,7 +81,7 @@ fn uci() {
     'uci: loop {
         while args.is_empty() {
             let mut input = String::new();
-            let result = io::stdin().read_line(&mut input);
+            let _result = io::stdin().read_line(&mut input);
             args = input.split_whitespace().map(|str| str.to_owned()).collect();
         }
         let args_clone = args.clone();
@@ -109,7 +108,7 @@ fn uci() {
 fn mid_search_loop(board: &mut Board, limit: UCILimit, stop: Arc<AtomicBool>) {
     stop.store(false, Ordering::Relaxed);
     let mut searcher = LazySMPSearcher::setup(board.shallow_clone(), stop.clone());
-    let child = thread::spawn(move || {
+    thread::spawn(move || {
         searcher.uci_go(limit, true)
     });
 }

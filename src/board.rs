@@ -1130,6 +1130,21 @@ impl Board {
         assert!(self.is_okay());
     }
 
+    /// Applies a UCI move to the board. If the move is a valid string representing a UCI move, then
+    /// true will be returned & the move will be applied. Otherwise, false is returned and the board isn't
+    /// changed.
+    pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
+        let all_moves: Vec<BitMove> = self.generate_moves();
+        let bit_move: Option<BitMove> = all_moves.iter()
+            .find(|m| &m.stringify() == uci_move)
+            .map(|m| m.clone());
+        if bit_move.is_some() {
+            self.apply_move(bit_move.unwrap());
+            return true;
+        }
+        false
+    }
+
     /// Un-does the previously applied move, allowing the Board to return to it's most recently held state.
     ///
     /// # Panics
@@ -1791,7 +1806,6 @@ impl Board {
 impl Board {
     /// Tests if a given move is legal.
     pub fn legal_move(&self, m: BitMove) -> bool {
-
         let them: Player = other_player(self.turn);
         let src: SQ = m.get_src();
         let src_bb: BitBoard = sq_to_bb(src);

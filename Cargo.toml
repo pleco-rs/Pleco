@@ -1,6 +1,6 @@
 [package]
 name = "pleco"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast chess engine and Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -58,8 +58,6 @@ lazy_static = "0.2"
 bitflags = "0.9"
 rand = "0.3"
 rayon = "0.8.2"
-parking_lot = "0.3"
-owning_ref = "0.2"
 num_cpus = "1.0"
 
 [features]
