@@ -1,4 +1,6 @@
-//! Collection of useful functions oreinted around modifying singular bits of integer types.
+//! Collection of useful functions oriented around modifying singular bits of integer types.
+//! You will rarely need to interact with this module directly unless you need functions
+//! involving the manipulation of bits.
 
 static POPCNT8: &'static [u8] = &[
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,

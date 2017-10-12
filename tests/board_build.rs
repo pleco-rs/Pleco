@@ -5,7 +5,6 @@ use self::board::{Board as Board};
 use pleco::templates::*;
 use pleco::piece_move::*;
 use pleco::*;
-use std::*;
 
 
 #[test]

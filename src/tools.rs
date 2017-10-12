@@ -1,3 +1,4 @@
+//! Miscellaneous tools for debugging and generating output.
 use board::Board;
 use engine::Searcher;
 use timer::Timer;

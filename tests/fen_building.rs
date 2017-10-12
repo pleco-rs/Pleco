@@ -2,7 +2,6 @@ extern crate pleco;
 
 use pleco::board::Board;
 use pleco::templates::{Piece, Player, TEST_FENS};
-use std::*;
 
 
 // https://chessprogramming.wikispaces.com/Forsyth-Edwards+Notation
