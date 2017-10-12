@@ -1,6 +1,7 @@
-//! This module contains [Board], the Object representing the current state of a chessboard.
+//! This module contains `Board`, the Object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
+//!
 //!
 use templates::*;
 use magic_helper::MagicHelper;
@@ -12,7 +13,9 @@ use std::sync::Arc;
 use std::{mem, fmt, char};
 
 lazy_static! {
-    /// Statically initialized lookup tables.
+    /// Statically initialized lookup tables created when first ran.
+    /// Nothing will ever be mutated in here, so it is safe to pass around.
+    /// See `pleco::MagicHelper` for more information.
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
@@ -30,7 +33,7 @@ bitflags! {
     /// time. Rather marks that castling is a possibility, e.g. a Castling struct
     /// containing a bit marking WHITE_Q means that neither the White King or Queen-side
     /// rook has moved since the game started.
-    pub struct Castling: u8 {
+    struct Castling: u8 {
         const WHITE_K      = 0b0000_1000; // White has King-side Castling ability
         const WHITE_Q      = 0b0000_0100; // White has Queen-side Castling ability
         const BLACK_K      = 0b0000_0010; // Black has King-side Castling ability
@@ -148,9 +151,8 @@ impl fmt::Display for Castling {
 
 
 
-/// Struct to allow fast lookups for any square.
-///
-/// Provides the Stores if there is any piece at a square, and if so provides its color and piece type.
+/// Struct to allow fast lookups for any square. Given a square, allows for determining if there
+/// is a piece currently there, and if so, allows for determining it's color and type of piece.
 ///
 /// Piece Locations is a BLIND structure, Providing a function of  |sq| -> |Piece AND/OR Player|
 /// The reverse cannot be done Looking up squares from a piece / player.
@@ -333,7 +335,7 @@ impl PieceLocations {
 #[derive(Clone)]
 pub struct BoardState {
     // The Following Fields are easily copied from the previous version and possbily modified
-    pub castling: Castling,
+    castling: Castling,
     pub rule_50: i16,
     pub ply: u16,
     pub ep_square: SQ,
@@ -373,7 +375,7 @@ pub struct BoardState {
 }
 
 impl BoardState {
-    /// Constructs a board state for the starting position.
+    /// Constructs a `BoardState` from the starting position
     pub fn default() -> BoardState {
         BoardState {
             castling: Castling::all(),
@@ -391,7 +393,7 @@ impl BoardState {
         }
     }
 
-    /// Constructs a blank board state.
+    /// Constructs a blank `BoardState`.
     pub fn blank() -> BoardState {
         BoardState {
             castling: Castling::empty(),
@@ -409,7 +411,7 @@ impl BoardState {
         }
     }
 
-    /// Constructs a partial clone of a BoardState.
+    /// Constructs a partial clone of a `BoardState`.
     ///
     /// Castling, rule_50, ply, and ep_square are copied. The copied fields need to be
     /// modified accordingly, and the remaining fields need to be generated.
@@ -434,6 +436,7 @@ impl BoardState {
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
         (&self).prev.as_ref().cloned()
     }
+
 
     pub fn backtrace(&self) {
         self.print_info();
@@ -482,17 +485,18 @@ impl BoardState {
 /// [BitBoards article ChessWiki](https://chessprogramming.wikispaces.com/Bitboards) for more information.
 ///
 /// The exact mapping from each square to bits is below,
-/// ```
-/// // 8 | 56 57 58 59 60 61 62 63
-/// // 7 | 48 49 50 51 52 53 54 55
-/// // 6 | 40 41 42 43 44 45 46 47
-/// // 5 | 32 33 34 35 36 37 38 39
-/// // 4 | 24 25 26 27 28 29 30 31
-/// // 3 | 16 17 18 19 20 21 22 23
-/// // 2 | 8  9  10 11 12 13 14 15
-/// // 1 | 0  1  2  3  4  5  6  7
-/// //   -------------------------
-/// //     a  b  c  d  e  f  g  h
+///
+/// ```md,ignore
+/// 8 | 56 57 58 59 60 61 62 63
+/// 7 | 48 49 50 51 52 53 54 55
+/// 6 | 40 41 42 43 44 45 46 47
+/// 5 | 32 33 34 35 36 37 38 39
+/// 4 | 24 25 26 27 28 29 30 31
+/// 3 | 16 17 18 19 20 21 22 23
+/// 2 | 8  9  10 11 12 13 14 15
+/// 1 | 0  1  2  3  4  5  6  7
+///   -------------------------
+///      a  b  c  d  e  f  g  h
 /// ```
 pub struct Board {
     turn: Player, // Current turn
@@ -509,11 +513,7 @@ pub struct Board {
     // or recomputing BoardStates.
     state: Arc<BoardState>,
 
-    // List of Moves that have been played so far.
-    // Only gaurunteed to have the moves since last copy.
-//    undo_moves: Vec<BitMove>,
-
-    // Reference to the pre-computed information
+    /// Reference to the pre-computed lookup tables.
     pub magic_helper: &'static MAGIC_HELPER,
 }
 
@@ -532,7 +532,7 @@ impl Board {
     /// use pleco::board::*;
     /// use pleco::templates::Player;
     ///
-    /// let mut chessboard = Board::default();
+    /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_pieces_player(Player::White),16);
     /// ```
     pub fn default() -> Board {
@@ -565,6 +565,23 @@ impl Board {
     /// After this method has called, [Board::undo_move()] cannot be called immediately after.
     /// Undoing moves can only be done once a move has been played, and cannot be called more
     /// times than moves have been played since calling [Board::shallow_clone()].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    ///
+    /// let mut chessboard = Board::default();
+    /// let moves = chessboard.generate_moves(); // generate all possible legal moves
+    /// chessboard.apply_move(moves[0]); // apply first move
+    ///
+    /// assert_eq!(chessboard.moves_played(), 1);
+    ///
+    /// let board_clone = chessboard.shallow_clone();
+    /// assert_eq!(chessboard.moves_played(), board_clone.moves_played());
+    ///
+    /// assert_ne!(chessboard.depth(),board_clone.depth()); // different depths
+    /// ```
     pub fn shallow_clone(&self) -> Board {
         Board {
             turn: self.turn,
@@ -591,6 +608,22 @@ impl Board {
     /// After this method has called, [Board::undo_move()] cannot be called immediately after.
     /// Undoing moves can only be done once a move has been played, and cannot be called more
     /// times than moves have been played since calling [Board::parallel_clone()].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    ///
+    /// let mut chessboard = Board::default();
+    /// let moves = chessboard.generate_moves(); // generate all possible legal moves
+    /// chessboard.apply_move(moves[0]);
+    /// assert_eq!(chessboard.moves_played(), 1);
+    ///
+    /// let board_clone = chessboard.parallel_clone();
+    /// assert_eq!(chessboard.moves_played(), board_clone.moves_played());
+    ///
+    /// assert_eq!(chessboard.depth(),board_clone.depth()); // different depths
+    /// ```
     pub fn parallel_clone(&self) -> Board {
         Board {
             turn: self.turn,
@@ -955,17 +988,9 @@ impl Board {
 impl Board {
     /// Applies a move to the Board.
     ///
-    /// # Example
-    /// ```
-    /// use pleco::board::*;
+    /// # Safety
     ///
-    /// fn main() {
-    ///     let mut chessboard = Board::default();
-    ///
-    ///     let moves = chessboard.generate_moves();
-    ///     chessboard.apply_move(moves[0]);
-    /// }
-    /// ```
+    /// The passed in [BitMove] must be
     ///
     /// # Panics
     ///
@@ -1133,6 +1158,17 @@ impl Board {
     /// Applies a UCI move to the board. If the move is a valid string representing a UCI move, then
     /// true will be returned & the move will be applied. Otherwise, false is returned and the board isn't
     /// changed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    ///
+    /// let mut board = Board::default();
+    /// let success = board.apply_uci_move("e2e4");
+    ///
+    /// assert!(success);
+    /// ```
     pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
         let all_moves: Vec<BitMove> = self.generate_moves();
         let bit_move: Option<BitMove> = all_moves.iter()
@@ -1151,6 +1187,9 @@ impl Board {
     ///
     /// Cannot be done if after a [Board::shallow_clone()] or [Board::parallel_clone()] has been done
     /// and no subsequent moves have been played.
+    ///
+    /// # Examples
+    ///
     /// ```rust,should_panic
     /// use pleco::board::*;
     ///
@@ -1160,7 +1199,7 @@ impl Board {
     /// let moves = chessboard.generate_moves();
     /// chessboard.apply_move(moves[0]);
     ///
-    /// let board_clone = chessboard.shallow_clone();
+    /// let mut board_clone = chessboard.shallow_clone();
     ///
     /// chessboard.undo_move(); // works, chessboard existed before the move was played
     /// board_clone.undo_move(); // error: board_clone was created after the move was applied
@@ -1228,8 +1267,21 @@ impl Board {
     /// # Panics
     ///
     /// Panics if the Board is currently in check.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::board::*;
+    ///
+    /// let mut chessboard = Board::default();
+    /// let board_clone = chessboard.shallow_clone();
+    ///
+    /// unsafe { chessboard.apply_null_move(); }
+    ///
+    /// assert_ne!(chessboard.depth(), board_clone.depth());
+    /// ```
     pub unsafe fn apply_null_move(&mut self) {
-        assert!(self.checkers() != 0);
+        assert_eq!(self.checkers(), 0);
 
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
 
@@ -1265,6 +1317,24 @@ impl Board {
     ///
     /// This method should only be used if it can be guaranteed that the last played move from
     /// the current state is a Null-Move. Otherwise, a panic will occur.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::board::*;
+    ///
+    /// let mut chessboard = Board::default();
+    /// let board_clone = chessboard.shallow_clone();
+    ///
+    /// unsafe { chessboard.apply_null_move(); }
+    ///
+    /// assert_ne!(chessboard.ply(), board_clone.ply());
+    ///
+    /// unsafe { chessboard.undo_null_move(); }
+    ///
+    /// assert_eq!(chessboard.moves_played(), board_clone.moves_played());
+    /// assert_eq!(chessboard.get_fen(), board_clone.get_fen());
+    /// ```
     pub unsafe fn undo_null_move(&mut self) {
         assert!(self.state.prev_move.is_null());
         self.turn = other_player(self.turn);
@@ -1275,6 +1345,17 @@ impl Board {
     ///
     /// This method already takes into account if the Board is currently in check, and will return
     /// legal moves only.
+    ///
+    ///  # Examples
+    ///
+    /// ```rust
+    /// use pleco::board::*;
+    ///
+    /// let chessboard = Board::default();
+    /// let moves = chessboard.generate_moves();
+    ///
+    /// println!("There are {} possible legal moves.", moves.len());
+    /// ```
     pub fn generate_moves(&self) -> Vec<BitMove> {
         MoveGen::generate(&self, GenTypes::All)
     }
@@ -1287,6 +1368,18 @@ impl Board {
     /// # Panics
     ///
     /// Panics if given [GenTypes::QuietChecks] while the current board is in check
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::board::*;
+    /// use pleco::templates::GenTypes;
+    ///
+    /// let chessboard = Board::default();
+    /// let capturing_moves = chessboard.generate_moves_of_type(GenTypes::Captures);
+    ///
+    /// assert_eq!(capturing_moves.len(), 0); // no possible captures for the starting position
+    /// ```
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
         MoveGen::generate(&self, gen_type)
     }
@@ -1531,6 +1624,16 @@ impl Board {
 
 impl Board {
     /// Get the Player whose turn it is to move.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::Player;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.turn(), Player::White);
+    /// ```
     pub fn turn(&self) -> Player {
         self.turn
     }
@@ -1541,6 +1644,19 @@ impl Board {
     }
 
     /// Get the total number of moves played.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    ///
+    /// let mut chessboard = Board::default();
+    /// assert_eq!(chessboard.moves_played(), 0);
+    ///
+    /// let moves = chessboard.generate_moves();
+    /// chessboard.apply_move(moves[0]);
+    /// assert_eq!(chessboard.moves_played(), 1);
+    /// ```
     pub fn moves_played(&self) -> u16 {
         self.half_moves
     }
@@ -1581,11 +1697,30 @@ impl Board {
 // Position Representation
 impl Board {
     /// Gets the BitBoard of all pieces.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.get_occupied(), 0xFFFF00000000FFFF);
+    /// ```
     pub fn get_occupied(&self) -> BitBoard {
         self.occ_all
     }
 
     /// Get the BitBoard of the squares occupied by the given player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::Player;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.get_occupied_player(Player::White), 0x000000000000FFFF);
+    /// ```
     pub fn get_occupied_player(&self, player: Player) -> BitBoard {
         self.occ[player as usize]
     }
@@ -1601,43 +1736,128 @@ impl Board {
     }
 
     /// Returns BitBoard of a single player and that one type of piece.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::{Player,Piece};
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.piece_bb(Player::White,Piece::P), 0x000000000000FF00);
+    /// ```
     pub fn piece_bb(&self, player: Player, piece: Piece) -> BitBoard {
         self.bit_boards[player as usize][piece as usize]
     }
 
     /// Returns the BitBoard of the Queens and Rooks of a given player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::Player;
+    /// use pleco::bit_twiddles::*;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(popcount64(chessboard.sliding_piece_bb(Player::White)), 3);
+    /// ```
     pub fn sliding_piece_bb(&self, player: Player) -> BitBoard {
         self.bit_boards[player as usize][Piece::R as usize] ^
             self.bit_boards[player as usize][Piece::Q as usize]
     }
     /// Returns the BitBoard of the Queens and Bishops of a given player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::Player;
+    /// use pleco::bit_twiddles::*;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(popcount64(chessboard.diagonal_piece_bb(Player::White)), 3);
+    /// ```
     pub fn diagonal_piece_bb(&self, player: Player) -> BitBoard {
         self.bit_boards[player as usize][Piece::B as usize] ^
             self.bit_boards[player as usize][Piece::Q as usize]
     }
 
     /// Returns the combined BitBoard of both players for a given piece.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::Piece;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.piece_bb_both_players(Piece::P), 0x00FF00000000FF00);
+    /// ```
     pub fn piece_bb_both_players(&self, piece: Piece) -> BitBoard {
         self.bit_boards[Player::White as usize][piece as usize] ^
             self.bit_boards[Player::Black as usize][piece as usize]
     }
 
     /// Returns the combined BitBoard of both players for two pieces.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::Piece;
+    /// use pleco::bit_twiddles::*;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(popcount64(chessboard.piece_two_bb_both_players(Piece::Q,Piece::K)), 4);
+    /// ```
     pub fn piece_two_bb_both_players(&self, piece: Piece, piece2: Piece) -> BitBoard {
         self.piece_bb_both_players(piece) | self.piece_bb_both_players(piece2)
     }
 
     /// Get the total number of pieces of the given piece and player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::{Player,Piece};
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.count_piece(Player::White, Piece::P), 8);
+    /// ```
     pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
         self.piece_counts[player as usize][piece as usize]
     }
 
-    /// Get the total number of piees a given player has.
+    /// Get the total number of pieces a given player has.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::{Player,Piece};
+    /// use pleco::bit_twiddles::*;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.count_pieces_player(Player::White), 16);
+    /// ```
     pub fn count_pieces_player(&self, player: Player) -> u8 {
         self.piece_counts[player as usize].iter().sum()
     }
 
     /// Get the total number of pieces on the board.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::board::*;
+    /// use pleco::templates::{Player,Piece};
+    /// use pleco::bit_twiddles::*;
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.count_all_pieces(), 32);
+    /// ```
     pub fn count_all_pieces(&self) -> u8 {
         self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
     }
