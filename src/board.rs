@@ -5,7 +5,7 @@
 //!
 use templates::*;
 use magic_helper::MagicHelper;
-use movegen::MoveGen;
+use movegen::{MoveGen,Legal,PseudoLegal};
 use bit_twiddles::*;
 use piece_move::{BitMove, MoveType};
 use std::option::*;
@@ -34,10 +34,10 @@ bitflags! {
     /// containing a bit marking WHITE_Q means that neither the White King or Queen-side
     /// rook has moved since the game started.
     struct Castling: u8 {
-        const WHITE_K      = 0b0000_1000; // White has King-side Castling ability
-        const WHITE_Q      = 0b0000_0100; // White has Queen-side Castling ability
-        const BLACK_K      = 0b0000_0010; // Black has King-side Castling ability
-        const BLACK_Q      = 0b0000_0001; // White has Queen-side Castling ability
+        const WHITE_K      = C_WHITE_K_MASK; // White has King-side Castling ability
+        const WHITE_Q      = C_WHITE_Q_MASK; // White has Queen-side Castling ability
+        const BLACK_K      = C_BLACK_K_MASK; // Black has King-side Castling ability
+        const BLACK_Q      = C_BLACK_Q_MASK; // White has Queen-side Castling ability
         const WHITE_CASTLE = 0b0100_0000; // White has castled
         const BLACK_CASTLE = 0b0001_0000; // Black has castled
         const WHITE_ALL    = WHITE_K.bits // White can castle for both sides
@@ -112,6 +112,13 @@ impl Castling {
             !self.contains(BLACK_Q)
     }
 
+    pub fn update_castling(&mut self, to: SQ, from: SQ) -> u8 {
+        let mask_change: u8 = castle_rights_mask(to) | castle_rights_mask(from);
+        let to_return: u8 = self.bits & mask_change;
+        self.bits &= !mask_change;
+        to_return
+    }
+
     /// Returns a pretty String representing the castling state
     ///
     /// Used for FEN Strings, with ('K' | 'Q') representing white castling abilities,
@@ -148,6 +155,8 @@ impl fmt::Display for Castling {
         write!(f, "{}", self.pretty_string())
     }
 }
+
+
 
 
 
@@ -982,6 +991,7 @@ impl Board {
 
         s
     }
+
 }
 
 // Public Move Gen & Mutation Functions
@@ -1028,9 +1038,9 @@ impl Board {
 
 
             let us = self.turn;
-            let them = other_player(self.turn);
+            let them = us.other_player();
             let from: SQ = bit_move.get_src();
-            let to: SQ = bit_move.get_dest();
+            let mut to: SQ = bit_move.get_dest();
             let piece: Piece = self.piece_at_sq(from).unwrap();
 
             let captured: Option<Piece> = if bit_move.is_en_passant() {
@@ -1049,15 +1059,15 @@ impl Board {
                 assert_eq!(captured.unwrap(), Piece::R);
                 assert_eq!(piece, Piece::K);
 
-                let mut k_to: SQ = 0;
-                let mut r_to: SQ = 0;
+                let mut r_src: SQ = 0;
+                let mut r_dst: SQ = 0;
+
                 // yay helper methods
-                self.apply_castling(us, from, to, &mut k_to, &mut r_to);
-                zob ^= self.magic_helper.z_piece_at_sq(Piece::R, k_to) ^
-                    self.magic_helper.z_piece_at_sq(Piece::R, r_to);
+                self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
+
+                zob ^= self.magic_helper.z_piece_at_sq(Piece::R, r_src) ^
+                    self.magic_helper.z_piece_at_sq(Piece::R, r_dst);
                 new_state.captured_piece = None;
-                // TODO: Set castling rights Zobrist
-                new_state.castling.remove_player_castling(us);
                 new_state.castling.set_castling(us);
             } else if captured.is_some() {
                 let mut cap_sq: SQ = to;
@@ -1094,31 +1104,13 @@ impl Board {
             }
 
             // Update castling rights
-            if !new_state.castling.is_empty() && !bit_move.is_castle() {
-                if piece == Piece::K {
-                    new_state.castling.remove_player_castling(us);
-                } else if piece == Piece::R {
-                    match us {
-                        Player::White => {
-                            if from == ROOK_WHITE_KSIDE_START {
-                                new_state.castling.remove_king_side_castling(Player::White);
-                            } else if from == ROOK_WHITE_QSIDE_START {
-                                new_state.castling.remove_queen_side_castling(Player::White);
-                            }
-                        }
-                        Player::Black => {
-                            if from == ROOK_BLACK_KSIDE_START {
-                                new_state.castling.remove_king_side_castling(Player::Black);
-                            } else if from == ROOK_BLACK_QSIDE_START {
-                                new_state.castling.remove_queen_side_castling(Player::Black);
-                            }
-                        }
-                    }
-                }
+            if !new_state.castling.is_empty() && (castle_rights_mask(to) | castle_rights_mask(from)) != 0 {
+                let castle_zob_index = new_state.castling.update_castling(to,from);
+                zob ^= self.magic_helper.z_castle_rights(castle_zob_index);
             }
 
             // Actually move the piece
-            if !bit_move.is_castle() && !bit_move.is_promo() {
+            if !bit_move.is_castle()  {
                 self.move_piece_c(piece, from, to, us);
             }
 
@@ -1131,10 +1123,10 @@ impl Board {
                 } else if bit_move.is_promo() {
                     let promo_piece: Piece = bit_move.promo_piece();
 
-                    self.remove_piece_c(Piece::P, from, us);
+                    self.remove_piece_c(piece, to, us);
                     self.put_piece_c(promo_piece, to, us);
                     zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to) ^
-                        self.magic_helper.z_piece_at_sq(piece, from);
+                        self.magic_helper.z_piece_at_sq(Piece::P, from);
                 }
                 new_state.rule_50 = 0;
             }
@@ -1211,7 +1203,7 @@ impl Board {
 
         let undo_move: BitMove = self.state.prev_move;
 
-        self.turn = other_player(self.turn);
+        self.turn = self.turn.other_player();
         let us: Player = self.turn;
         let from: SQ = undo_move.get_src();
         let to: SQ = undo_move.get_dest();
@@ -1244,7 +1236,7 @@ impl Board {
                         Player::Black => cap_sq += 8,
                     };
                 }
-                self.put_piece_c(cap_piece.unwrap(), cap_sq, other_player(us));
+                self.put_piece_c(cap_piece.unwrap(), cap_sq, us.other_player());
             }
         }
         self.state = self.state.get_prev().unwrap();
@@ -1304,7 +1296,7 @@ impl Board {
             }
 
             new_state.zobrast = zob;
-            self.turn = other_player(self.turn);
+            self.turn = self.turn.other_player();
             self.set_check_info(new_state);
         }
         self.state = next_arc_state;
@@ -1337,7 +1329,7 @@ impl Board {
     /// ```
     pub unsafe fn undo_null_move(&mut self) {
         assert!(self.state.prev_move.is_null());
-        self.turn = other_player(self.turn);
+        self.turn = self.turn.other_player();
         self.state = self.state.get_prev().unwrap();
     }
 
@@ -1357,7 +1349,15 @@ impl Board {
     /// println!("There are {} possible legal moves.", moves.len());
     /// ```
     pub fn generate_moves(&self) -> Vec<BitMove> {
-        MoveGen::generate(&self, GenTypes::All)
+        MoveGen::generate::<Legal, AllGenType>(&self)
+    }
+
+    /// Get a List of all PseudoLegal [BitMove]s for the player whose turn it is to move.
+    /// Works exactly the same as [Board::generate_moves()], but doesn't guarantee that all
+    /// the moves are legal for the current position. Moves need to be checked with a
+    /// [Board::legal_move(move)] in order to be certain of a legal move.
+    pub fn generate_pseudolegal_moves(&self) -> Vec<BitMove> {
+        MoveGen::generate::<PseudoLegal, AllGenType>(&self)
     }
 
     /// Get a List of legal [BitMove]s for the player whose turn it is to move or a certain type.
@@ -1381,7 +1381,36 @@ impl Board {
     /// assert_eq!(capturing_moves.len(), 0); // no possible captures for the starting position
     /// ```
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
-        MoveGen::generate(&self, gen_type)
+        match gen_type {
+            GenTypes::All => MoveGen::generate::<Legal,AllGenType>(&self),
+            GenTypes::Captures => MoveGen::generate::<Legal,CapturesGenType>(&self),
+            GenTypes::Quiets => MoveGen::generate::<Legal,QuietsGenType>(&self),
+            GenTypes::QuietChecks => MoveGen::generate::<Legal,QuietChecksGenType>(&self),
+            GenTypes::Evasions => MoveGen::generate::<Legal,EvasionsGenType>(&self),
+            GenTypes::NonEvasions => MoveGen::generate::<Legal,NonEvasionsGenType>(&self)
+        }
+    }
+
+    /// Get a List of all PseudoLegal [BitMove]s for the player whose turn it is to move.
+    /// Works exactly the same as [Board::generate_moves()], but doesn't guarantee that all
+    /// the moves are legal for the current position. Moves need to be checked with a
+    /// [Board::legal_move(move)] in order to be certain of a legal move.
+    ///
+    /// This method already takes into account if the Board is currently in check.
+    /// If a non-ALL GenType is supplied, only a subset of the total moves will be given.
+    ///
+    /// # Panics
+    ///
+    /// Panics if given [GenTypes::QuietChecks] while the current board is in check
+    pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
+        match gen_type {
+            GenTypes::All => MoveGen::generate::<PseudoLegal,AllGenType>(&self),
+            GenTypes::Captures => MoveGen::generate::<PseudoLegal,CapturesGenType>(&self),
+            GenTypes::Quiets => MoveGen::generate::<PseudoLegal,QuietsGenType>(&self),
+            GenTypes::QuietChecks => MoveGen::generate::<PseudoLegal,QuietChecksGenType>(&self),
+            GenTypes::Evasions => MoveGen::generate::<PseudoLegal,EvasionsGenType>(&self),
+            GenTypes::NonEvasions => MoveGen::generate::<PseudoLegal,NonEvasionsGenType>(&self)
+        }
     }
 }
 
@@ -1416,11 +1445,11 @@ impl Board {
 
         board_state.pinners_king[Player::Black as usize] = black_pinners;
 
-        let ksq: SQ = self.king_sq(other_player(self.turn));
+        let ksq: SQ = self.king_sq(self.turn.other_player());
         let occupied = self.get_occupied();
 
         board_state.check_sqs[Piece::P as usize] = self.magic_helper
-            .pawn_attacks_from(ksq, other_player(self.turn));
+            .pawn_attacks_from(ksq, self.turn.other_player());
         board_state.check_sqs[Piece::N as usize] = self.magic_helper.knight_moves(ksq);
         board_state.check_sqs[Piece::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
         board_state.check_sqs[Piece::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
@@ -1515,23 +1544,23 @@ impl Board {
     fn apply_castling(
         &mut self,
         player: Player,
-        k_src: SQ,
-        r_src: SQ,
-        k_dst: &mut SQ,
+        k_src: SQ,    // from, king startng spot
+        to_r_orig: &mut SQ, // originally
+        r_src: &mut SQ,
         r_dst: &mut SQ,
     ) {
-        let king_side: bool = k_src < r_src;
+        let king_side: bool = k_src < *to_r_orig;
 
+        *r_src = *to_r_orig;
         if king_side {
-            *k_dst = relative_square(player, 6);
-
+            *to_r_orig = relative_square(player, 6);
             *r_dst = relative_square(player, 5);
         } else {
-            *k_dst = relative_square(player, 2);
+            *to_r_orig = relative_square(player, 2);
             *r_dst = relative_square(player, 3);
         }
-        self.move_piece_c(Piece::K, k_src, *k_dst, player);
-        self.move_piece_c(Piece::R, r_src, *r_dst, player);
+        self.move_piece_c(Piece::K, k_src, *to_r_orig, player);
+        self.move_piece_c(Piece::R, *r_src, *r_dst, player);
     }
 
     /// Helper function to remove a Castling for a given player.
@@ -1815,6 +1844,12 @@ impl Board {
         self.piece_bb_both_players(piece) | self.piece_bb_both_players(piece2)
     }
 
+
+
+    pub fn piece_two_bb(&self, piece: Piece, piece2: Piece, player: Player) -> BitBoard {
+        self.bit_boards[player as usize][piece as usize] | self.bit_boards[player as usize][piece2 as usize]
+    }
+
     /// Get the total number of pieces of the given piece and player.
     ///
     /// # Examples
@@ -1905,7 +1940,6 @@ impl Board {
 
     /// Returns the player, if any, at the square.
     pub fn player_at_sq(&self, s: SQ) -> Option<Player> {
-        // TODO: Roll into color_of_square
         self.piece_locations.player_at(s)
     }
 
@@ -1997,7 +2031,7 @@ impl Board {
 
     /// Returns the BitBoard of pieces the current side can move to discover check.
     pub fn discovered_check_candidates(&self) -> BitBoard {
-        self.state.blockers_king[other_player(self.turn) as usize] &
+        self.state.blockers_king[self.turn.other_player() as usize] &
             self.get_occupied_player(self.turn)
     }
 
@@ -2026,7 +2060,7 @@ impl Board {
 impl Board {
     /// Tests if a given move is legal.
     pub fn legal_move(&self, m: BitMove) -> bool {
-        let them: Player = other_player(self.turn);
+        let them: Player = self.turn.other_player();
         let src: SQ = m.get_src();
         let src_bb: BitBoard = sq_to_bb(src);
         let dst: SQ = m.get_dest();
@@ -2070,7 +2104,7 @@ impl Board {
         let dst: SQ = m.get_dest();
         let src_bb: BitBoard = sq_to_bb(src);
         let dst_bb: BitBoard = sq_to_bb(dst);
-        let opp_king_sq: SQ = self.king_sq(other_player(self.turn));
+        let opp_king_sq: SQ = self.king_sq(self.turn.other_player());
 
         // Stupidity Checks
         assert_ne!(src, dst);
@@ -2153,7 +2187,7 @@ impl Board {
             return Some(Piece::P);
         }
         let dst = m.get_dest();
-        self.piece_at_bb(sq_to_bb(dst), other_player(self.turn))
+        self.piece_at_bb(sq_to_bb(dst), self.turn.other_player())
     }
 }
 
@@ -2285,7 +2319,13 @@ impl Board {
             self.get_occupied()
         );
 
-        // TODO: Loop through all pieces and make sure no two pieces are on the same square
+        let all: BitBoard = self.piece_bb(Player::White, Piece::P) ^ self.piece_bb(Player::Black, Piece::P)
+            ^ self.piece_bb(Player::White, Piece::N) ^ self.piece_bb(Player::Black, Piece::N)
+            ^ self.piece_bb(Player::White, Piece::B) ^ self.piece_bb(Player::Black, Piece::B)
+            ^ self.piece_bb(Player::White, Piece::R) ^ self.piece_bb(Player::Black, Piece::R)
+            ^ self.piece_bb(Player::White, Piece::Q) ^ self.piece_bb(Player::Black, Piece::Q)
+            ^ self.piece_bb(Player::White, Piece::K) ^ self.piece_bb(Player::Black, Piece::K);
+        assert_eq!(all, self.get_occupied());
 
         true
     }

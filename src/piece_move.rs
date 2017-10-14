@@ -221,24 +221,22 @@ impl BitMove {
         }
     }
 
-    // TODO: Return as Row / Coloumn Enums.
-
     #[inline(always)]
-    pub fn dest_row(&self) -> u8 {
-        ((self.data & DST_MASK) >> 6) as u8 / 8
+    pub fn dest_row(&self) -> Rank {
+        ALL_RANKS[(((self.data & DST_MASK) >> 6) as u8 / 8) as usize]
     }
 
     #[inline(always)]
-    pub fn dest_col(&self) -> u8 {
-        ((self.data & DST_MASK) >> 6) as u8 % 8
+    pub fn dest_col(&self) -> File {
+        ALL_FILES[(((self.data & DST_MASK) >> 6) as u8 % 8) as usize]
     }
     #[inline(always)]
-    pub fn src_row(&self) -> u8 {
-        (self.data & SRC_MASK) as u8 / 8
+    pub fn src_row(&self) -> Rank {
+        ALL_RANKS[((self.data & SRC_MASK) as u8 / 8) as usize]
     }
     #[inline(always)]
-    pub fn src_col(&self) -> u8 {
-        (self.data & SRC_MASK) as u8 % 8
+    pub fn src_col(&self) -> File {
+        ALL_FILES[((self.data & SRC_MASK) as u8 % 8) as usize]
     }
 
     /// Returns the Promotion Piece of a [BitMove].

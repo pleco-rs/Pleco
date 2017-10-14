@@ -105,7 +105,7 @@ impl<'a> Eval<'a> {
         let eval = Eval {
             board: board,
             us: board.turn(),
-            them: other_player(board.turn()),
+            them: board.turn().other_player(),
         };
         eval.eval_simple()
     }
@@ -238,7 +238,7 @@ fn eval_king_blockers_pinners(board: &Board, turn: Player) -> i16 {
 
     let blockers: BitBoard = board.all_pinned_pieces(turn);
 
-    let them_blockers = blockers & board.get_occupied_player(other_player(turn));
+    let them_blockers = blockers & board.get_occupied_player(turn.other_player());
 
     // Our pieces blocking a check on their king
     let us_blockers = blockers & board.get_occupied_player(turn);

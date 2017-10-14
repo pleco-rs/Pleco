@@ -61,7 +61,7 @@ pub struct MagicHelper<'a, 'b> {
 pub struct Zobrist {
     pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
     pub en_p: [u64; FILE_CNT], // 8 * 8
-    pub castle: [u64; TOTAL_CASTLING_CNT], // 8 * 4
+    pub castle: [u64; ALL_CASTLING_RIGHTS], // 8 * 4
     pub side: u64, // 8
 }
 
@@ -72,7 +72,7 @@ impl Zobrist {
         let mut zob = Zobrist {
             sq_piece: [[0; PIECE_CNT]; SQ_CNT],
             en_p: [0; FILE_CNT],
-            castle: [0; TOTAL_CASTLING_CNT],
+            castle: [0; ALL_CASTLING_RIGHTS],
             side: 0,
         };
 
@@ -89,7 +89,9 @@ impl Zobrist {
             zob.en_p[i] = rng.rand_change()
         }
 
-        for i in 0..TOTAL_CASTLING_CNT {
+        zob.castle[0] = 0;
+
+        for i in 1..ALL_CASTLING_RIGHTS {
             zob.castle[i] = rng.rand_change()
         }
 
@@ -124,32 +126,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         mhelper
     }
 
-    /// Returns the Zobrist Hash for a given piece as a given Square
-    #[inline(always)]
-    pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
-        assert!(sq_is_okay(square));
-        self.zobrist.sq_piece[square as usize][piece as usize]
-    }
 
-    /// Returns the zobrist hash for the given Square of Enpassant
-    /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
-    #[inline(always)]
-    pub fn z_ep_file(&self, square: SQ) -> u64 {
-        self.zobrist.en_p[file_of_sq(square) as usize]
-    }
-
-    /// Returns a zobrast hash of the castling rights, as defined by the Board
-    #[inline(always)]
-    pub fn z_castle_rights(&self, castle: u8) -> u64 {
-        debug_assert!((castle as usize) < TOTAL_CASTLING_CNT);
-        self.zobrist.castle[castle as usize]
-    }
-
-    /// Returns Zobrist Hash of flipping sides.
-    #[inline(always)]
-    pub fn z_side(&self) -> u64 {
-        self.zobrist.side
-    }
 
     /// Generate Knight Moves bitboard from a source square
     #[inline(always)]
@@ -236,6 +213,33 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
         self.line_bb(s1, s2) & sq_to_bb(s3) != 0
+    }
+
+    /// Returns the Zobrist Hash for a given piece as a given Square
+    #[inline(always)]
+    pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
+        assert!(sq_is_okay(square));
+        self.zobrist.sq_piece[square as usize][piece as usize]
+    }
+
+    /// Returns the zobrist hash for the given Square of Enpassant
+    /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
+    #[inline(always)]
+    pub fn z_ep_file(&self, square: SQ) -> u64 {
+        self.zobrist.en_p[file_of_sq(square) as usize]
+    }
+
+    /// Returns a zobrast hash of the castling rights, as defined by the Board
+    #[inline(always)]
+    pub fn z_castle_rights(&self, castle: u8) -> u64 {
+        debug_assert!((castle as usize) < ALL_CASTLING_RIGHTS);
+        self.zobrist.castle[castle as usize]
+    }
+
+    /// Returns Zobrist Hash of flipping sides.
+    #[inline(always)]
+    pub fn z_side(&self) -> u64 {
+        self.zobrist.side
     }
 
 
