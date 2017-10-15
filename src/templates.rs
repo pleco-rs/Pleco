@@ -25,15 +25,33 @@ impl fmt::Display for Player {
 }
 
 
-pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
+pub trait PlayerTrait {
+    fn player() -> Player;
+    fn opp_player() -> Player;
+}
 
-pub const PLAYER_CNT: usize = 2;
-pub const PIECE_CNT: usize = 6;
-pub const SQ_CNT: usize = 64;
-pub const FILE_CNT: usize = 8;
-pub const RANK_CNT: usize = 8;
-pub const TOTAL_CASTLING_CNT: usize = 4;
-pub const CASTLING_SIDES: usize = 2;
+pub struct WhiteType {}
+pub struct BlackType {}
+
+impl PlayerTrait for WhiteType {
+    fn player() -> Player {
+        Player::White
+    }
+
+    fn opp_player() -> Player {
+        Player::Black
+    }
+}
+
+impl PlayerTrait for BlackType {
+    fn player() -> Player {
+        Player::Black
+    }
+
+    fn opp_player() -> Player {
+        Player::White
+    }
+}
 
 /// Publicly available move-generation types.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -42,6 +60,55 @@ pub enum GenTypes {
     Captures,
     Quiets,
     QuietChecks,
+    Evasions,
+    NonEvasions
+}
+
+pub trait GenTypeTrait {
+    fn gen_type() -> GenTypes;
+}
+
+pub struct AllGenType {}
+pub struct CapturesGenType {}
+pub struct QuietsGenType {}
+pub struct QuietChecksGenType {}
+pub struct EvasionsGenType {}
+pub struct NonEvasionsGenType {}
+
+impl GenTypeTrait for AllGenType {
+    fn gen_type() -> GenTypes {
+        GenTypes::All
+    }
+}
+
+impl GenTypeTrait for CapturesGenType {
+    fn gen_type() -> GenTypes {
+        GenTypes::Captures
+    }
+}
+
+impl GenTypeTrait for QuietsGenType {
+    fn gen_type() -> GenTypes {
+        GenTypes::Quiets
+    }
+}
+
+impl GenTypeTrait for QuietChecksGenType {
+    fn gen_type() -> GenTypes {
+        GenTypes::QuietChecks
+    }
+}
+
+impl GenTypeTrait for EvasionsGenType {
+    fn gen_type() -> GenTypes {
+        GenTypes::Evasions
+    }
+}
+
+impl GenTypeTrait for NonEvasionsGenType {
+    fn gen_type() -> GenTypes {
+        GenTypes::NonEvasions
+    }
 }
 
 /// Enum for all the possible Pieces.
@@ -70,11 +137,72 @@ impl fmt::Display for Piece {
     }
 }
 
+pub trait PieceTrait {
+    fn piece_type() -> Piece;
+}
+
+pub struct PawnType {}
+pub struct KnightType {}
+pub struct BishopType {}
+pub struct RookType {}
+pub struct QueenType {}
+pub struct KingType {}
+
+impl PieceTrait for PawnType {
+    fn piece_type() -> Piece {
+        Piece::P
+    }
+}
+
+impl PieceTrait for KnightType {
+    fn piece_type() -> Piece {
+        Piece::N
+    }
+}
+
+impl PieceTrait for BishopType {
+    fn piece_type() -> Piece {
+        Piece::B
+    }
+}
+
+impl PieceTrait for RookType {
+    fn piece_type() -> Piece {
+        Piece::R
+    }
+}
+
+impl PieceTrait for QueenType {
+    fn piece_type() -> Piece {
+        Piece::Q
+    }
+}
+
+impl PieceTrait for KingType {
+    fn piece_type() -> Piece {
+        Piece::K
+    }
+}
+
+
+pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
+
+pub const PLAYER_CNT: usize = 2;
+pub const PIECE_CNT: usize = 6;
+pub const SQ_CNT: usize = 64;
+pub const FILE_CNT: usize = 8;
+pub const RANK_CNT: usize = 8;
+pub const TOTAL_CASTLING_CNT: usize = 4;
+pub const ALL_CASTLING_RIGHTS: usize = TOTAL_CASTLING_CNT * TOTAL_CASTLING_CNT;
+pub const CASTLING_SIDES: usize = 2;
+
+
+
 /// Enum for the Files of a Chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum File {
-    A = 0,
+    A = 0, // eg a specific coloumn
     B = 1,
     C = 2,
     D = 3,
@@ -87,7 +215,7 @@ pub enum File {
 /// Enum for the Ranks of a Chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub enum Rank {
+pub enum Rank { // eg a specific row
     R1 = 0,
     R2 = 1,
     R3 = 2,
@@ -240,10 +368,32 @@ pub enum Square {
     A8 = 56, B8, C8, D8, E8, F8, G8, H8,
 }
 
+
+pub const WHITE_KING_START: SQ = 4;
+pub const BLACK_KING_START: SQ = 60;
+
 pub const ROOK_BLACK_KSIDE_START: SQ = 63;
 pub const ROOK_BLACK_QSIDE_START: SQ = 56;
 pub const ROOK_WHITE_KSIDE_START: SQ = 7;
 pub const ROOK_WHITE_QSIDE_START: SQ = 0;
+
+pub const C_WHITE_K_MASK: u8 = 0b0000_1000;
+pub const C_WHITE_Q_MASK: u8 = 0b0000_0100;
+pub const C_BLACK_K_MASK: u8 = 0b0000_0010;
+pub const C_BLACK_Q_MASK: u8 = 0b0000_0001;
+
+pub fn castle_rights_mask(s: SQ) -> u8 {
+    match s {
+        ROOK_WHITE_KSIDE_START => C_WHITE_K_MASK,
+        ROOK_WHITE_QSIDE_START => C_WHITE_Q_MASK,
+        ROOK_BLACK_KSIDE_START => C_BLACK_K_MASK,
+        ROOK_BLACK_QSIDE_START => C_BLACK_Q_MASK,
+        WHITE_KING_START => C_WHITE_K_MASK | C_WHITE_Q_MASK,
+        BLACK_KING_START => C_BLACK_K_MASK | C_BLACK_Q_MASK,
+        _ => 0
+    }
+}
+
 
 pub const CASTLING_ROOK_START: [[SQ; CASTLING_SIDES]; PLAYER_CNT] =
     [
@@ -364,14 +514,14 @@ pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
 }
 
 
-
-/// Returns the other player.
-#[inline]
-pub fn other_player(p: Player) -> Player {
-    // TODO: turn into impl Player
-    match p {
-        Player::White => Player::Black,
-        Player::Black => Player::White,
+impl Player {
+    /// Returns the other player.
+    #[inline]
+    pub fn other_player(&self) -> Player {
+        match *self {
+            Player::White => Player::Black,
+            Player::Black => Player::White,
+        }
     }
 }
 
@@ -482,7 +632,6 @@ pub fn parse_sq(s: SQ) -> String {
 pub fn sq_is_okay(s: SQ) -> bool {
     s < 64
 }
-
 
 pub fn reverse_bytes(b: BitBoard) -> u64 {
     let mut m: u64 = 0;

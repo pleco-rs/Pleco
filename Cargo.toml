@@ -54,7 +54,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-clippy = {version = "0.0.21", optional = true}
+clippy = {version = "0.0.165", optional = true}
 lazy_static = "0.2"
 bitflags = "0.9"
 rand = "0.3"
@@ -64,6 +64,12 @@ num_cpus = "1.0"
 [features]
 default = []
 dev = ["clippy"]
+
+[[bin]]
+name = "pleco_b"
+path = "src/main.rs"
+test = false
+doc = false
 
 [[test]]
 path = "tests/test.rs"

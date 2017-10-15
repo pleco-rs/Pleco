@@ -50,7 +50,7 @@ static SP_MASK: u16 = 0b0011_000000_000000;
 /// A [BitMove] consists of 16 bits, all of which to include a source square, destination square,
 /// and special move-flags to differentiate types of moves. 
 ///
-/// A BitMove should never be created directly, but rather instigated with a [PreMoveInfo]. This is because
+/// A [BitMove] should never be created directly, but rather instigated with a [PreMoveInfo]. This is because
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct BitMove {
@@ -67,7 +67,7 @@ pub enum MoveFlag {
     QuietMove,
 }
 
-/// A Subset of MoveGlag, used to determine the overall classfication of a move.
+/// A Subset of MoveFlag, used to determine the overall classfication of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum MoveType {
     Promotion,
@@ -221,24 +221,22 @@ impl BitMove {
         }
     }
 
-    // TODO: Return as Row / Coloumn Enums.
-
     #[inline(always)]
-    pub fn dest_row(&self) -> u8 {
-        ((self.data & DST_MASK) >> 6) as u8 / 8
+    pub fn dest_row(&self) -> Rank {
+        ALL_RANKS[(((self.data & DST_MASK) >> 6) as u8 / 8) as usize]
     }
 
     #[inline(always)]
-    pub fn dest_col(&self) -> u8 {
-        ((self.data & DST_MASK) >> 6) as u8 % 8
+    pub fn dest_col(&self) -> File {
+        ALL_FILES[(((self.data & DST_MASK) >> 6) as u8 % 8) as usize]
     }
     #[inline(always)]
-    pub fn src_row(&self) -> u8 {
-        (self.data & SRC_MASK) as u8 / 8
+    pub fn src_row(&self) -> Rank {
+        ALL_RANKS[((self.data & SRC_MASK) as u8 / 8) as usize]
     }
     #[inline(always)]
-    pub fn src_col(&self) -> u8 {
-        (self.data & SRC_MASK) as u8 % 8
+    pub fn src_col(&self) -> File {
+        ALL_FILES[((self.data & SRC_MASK) as u8 % 8) as usize]
     }
 
     /// Returns the Promotion Piece of a [BitMove].

@@ -6,19 +6,18 @@ use std::sync::{Arc,Mutex,Condvar,RwLock};
 use std::sync::atomic::{AtomicBool,AtomicU64,Ordering};
 use std::thread::{JoinHandle,self};
 use std::cmp::{min,max,Ordering as CmpOrder};
+use std::mem;
 
 use board::*;
 use timer::*;
 use templates::*;
 use eval::*;
 use piece_move::BitMove;
+use tt::*;
 use engine::*;
 
-// let num = num_cpus::get();
-
-
-
 const MAX_PLY: u16 = 126;
+const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 const THREAD_DIST: usize = 20;
 
 //                                      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
@@ -26,6 +25,30 @@ static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
 
 static mut LIMIT: UCILimit = UCILimit::Infinite;
+
+lazy_static! {
+    pub static ref TT_TABLE: TT = TT::new(1000);
+}
+
+trait PVNode {
+    fn is_pv() -> bool;
+}
+
+struct PV {}
+struct NonPV {}
+
+impl PVNode for PV {
+    fn is_pv() -> bool {
+        true
+    }
+}
+
+impl PVNode for NonPV {
+    fn is_pv() -> bool {
+        false
+    }
+}
+
 
 #[derive(Copy, Clone, Eq)]
 struct RootMove {
@@ -83,11 +106,16 @@ impl RootMove {
     }
 }
 
-struct ThreadStack {}
+
+struct ThreadStack {
+    pub pos_eval: i16,
+}
 
 impl ThreadStack {
     pub fn new() -> Self {
-        ThreadStack {}
+        ThreadStack {
+            pos_eval: 0
+        }
     }
 }
 
@@ -95,11 +123,11 @@ struct Thread {
     board: Board,
     root_moves: Arc<RwLock<Vec<RootMove>>>,
     id: usize,
-//    tt: Arc<TranspositionTable>,
+    tt: &'static TT,
     nodes: Arc<AtomicU64>,
     local_stop: Arc<AtomicBool>,
     cond_var: Arc<(Mutex<bool>,Condvar)>,
-    thread_stack: ThreadStack,
+    thread_stack: [ThreadStack; THREAD_STACK_SIZE],
     limit: UCILimit,
 }
 
@@ -147,7 +175,7 @@ impl Thread {
             }
 
             'aspiration_window: loop {
-                best_value = self.search(alpha, beta, depth);
+                best_value = self.search::<PV>(alpha, beta, depth);
                 self.sort_root_moves();
 
                 if self.stop() {
@@ -176,21 +204,47 @@ impl Thread {
 
             depth += skip_size;
         }
-
-
     }
 
-    fn search(&mut self, mut alpha: i16, beta: i16, max_depth: u16) -> i16 {
+    fn search<N: PVNode>(&mut self, mut alpha: i16, beta: i16, max_depth: u16) -> i16 {
+
+        let is_pv: bool = N::is_pv();
+        let at_root: bool = self.board.ply() == 0;
+        let zob = self.board.zobrist();
+        let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
+        let tt_value = if tt_hit {tt_entry.score} else {0};
+        let in_check: bool = self.board.in_check();
+        let ply = self.board.ply();
+
+        let mut pos_eval = 0;
 
         if self.board.depth() == max_depth {
             return Eval::eval_low(&self.board);
         }
-        let at_root: bool = self.board.ply() == 0;
 
-//        let zob = self.board.zobrist();
-//        if !at_root {
-//
-//        }
+        if !is_pv
+            && tt_hit
+            && tt_entry.depth >= self.board.depth() as u8 // TODO: Fix this hack
+            && tt_value != 0
+            && correct_bound(tt_value, beta, tt_entry.node_type()) {
+            return tt_value;
+        }
+
+        if in_check {
+            pos_eval = 0;
+            self.thread_stack[ply as usize].pos_eval = pos_eval;
+        } else if tt_hit {
+
+            // update Evaluation
+            if tt_entry.eval == 0 {
+                pos_eval = Eval::eval_low(&self.board);
+                self.thread_stack[ply as usize].pos_eval = pos_eval;
+            } else {
+                pos_eval = tt_entry.eval;
+                self.thread_stack[ply as usize].pos_eval = pos_eval;
+            }
+
+        }
 
         #[allow(unused_mut)]
         let mut moves: Vec<BitMove> = if at_root {
@@ -210,7 +264,7 @@ impl Thread {
         for (i, mov) in moves.iter().enumerate() {
 
             self.board.apply_move(*mov);
-            let ret_mov = -self.search(-beta, -alpha,max_depth);
+            let ret_mov = -self.search::<PV>(-beta, -alpha,max_depth);
             self.board.undo_move();
             if at_root {
                 let mut moves = self.root_moves.write().unwrap();
@@ -273,6 +327,14 @@ impl Thread {
 
 }
 
+fn correct_bound(tt_value: i16, beta: i16, bound: NodeBound) -> bool {
+    if tt_value >= beta {
+        bound as u8 & NodeBound::LowerBound as u8 != 0
+    } else {
+        bound as u8 & NodeBound::UpperBound as u8 != 0
+    }
+}
+
 
 pub struct LazySMPSearcher {
     board: Board,
@@ -311,11 +373,11 @@ impl LazySMPSearcher {
                 board: board.parallel_clone(),
                 root_moves: shared_moves,
                 id: x,
-//                tt: tt.clone(),
+                tt: &TT_TABLE,
                 nodes: nodes.clone(),
                 local_stop: stop.clone(),
                 cond_var: cond_var.clone(),
-                thread_stack: ThreadStack::new(),
+                thread_stack: init_thread_stack(),
                 limit: UCILimit::Infinite,
             };
 
@@ -332,11 +394,11 @@ impl LazySMPSearcher {
             board: board.parallel_clone(),
             root_moves: main_thread_moves,
             id: 0,
-//            tt: tt.clone(),
+            tt: &TT_TABLE,
             nodes: nodes.clone(),
             local_stop: stop.clone(),
             cond_var: cond_var.clone(),
-            thread_stack: ThreadStack::new(),
+            thread_stack: init_thread_stack(),
             limit: UCILimit::Infinite,
         };
 
@@ -422,6 +484,7 @@ impl Drop for LazySMPSearcher {
 
 
 
+
 impl Searcher for LazySMPSearcher {
     fn name() -> &'static str {
         "Lazy SMP Searcher"
@@ -436,6 +499,11 @@ impl Searcher for LazySMPSearcher {
         let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
         searcher.start_searching(UCILimit::Time(timer.clone()), false)
     }
+}
+
+fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
+    let s: [ThreadStack; THREAD_STACK_SIZE] = unsafe { mem::zeroed() };
+    s
 }
 
 impl UCISearcher for LazySMPSearcher {

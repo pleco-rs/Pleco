@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 
-// Trait that defines an object that can play chess
+/// Trait that defines an object that can play chess
 pub trait Searcher {
     fn best_move(board: Board, timer: &Timer) -> BitMove
     where
@@ -24,6 +24,8 @@ pub trait Searcher {
         Self: Sized;
 }
 
+/// Trait that defines an Object that can play chess and respond to the
+/// uci (Universal Chess Interface) protocol.
 pub trait UCISearcher: Searcher {
     fn uci_setup(board: Board, stop: Arc<AtomicBool>) -> Self where Self: Sized;
 

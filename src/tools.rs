@@ -67,3 +67,26 @@ fn gen_random_fens() {
 
     println!("]");
 }
+// "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+// https://chess.stackexchange.com/questions/1482/how-to-know-when-a-fen-position-is-legal
+// TODO: Finish
+pub fn is_valid_fen(fen: &str) -> bool {
+    // split the string by white space
+    let det_split: Vec<&str> = fen.split_whitespace().collect();
+
+    // must have 6 parts :
+    // [ Piece Placement, Side to Move, Castling Ability, En Passant square, Half moves, full moves]
+    if det_split.len() != 6 { return false; }
+
+    // Split the first part by '/' for locations
+    let b_rep: Vec<&str> = det_split[0].split('/').collect();
+
+    // 8 ranks, so 8 parts
+    if b_rep.len() != 8 { return false; }
+
+
+
+
+
+    unimplemented!();
+}

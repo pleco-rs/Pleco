@@ -1,3 +1,43 @@
+sudo: required
 language: rust
+
 rust:
   - nightly
+
+
+before_script:
+  - |
+      pip install 'travis-cargo<0.2' --user &&
+      export PATH=$HOME/.local/bin:$PATH
+
+script:
+  - |
+      travis-cargo build &&
+      travis-cargo clean &&
+      travis-cargo --only nightly test -- --verbose &&
+      travis-cargo --only nightly bench &&
+      travis-cargo --only stable doc
+
+cache:
+    apt: true
+    directories:
+        - target/debug/deps
+        - target/debug/build
+
+addons:
+  apt:
+    packages:
+    - libcurl4-openssl-dev
+    - libelf-dev
+    - libdw-dev
+    - cmake
+    - gcc
+    - binutils-dev
+
+after_success:
+  - |
+      travis-cargo coveralls --verify
+
+env:
+  global:
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
