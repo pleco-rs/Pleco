@@ -39,7 +39,7 @@ const BYTES_PER_GB: usize = BYTES_PER_MB * 1000;
 /// about PV Node types and their use.
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(u8)]
-pub enum NodeBound {
+pub enum NodeType {
     NoBound = 0,
     LowerBound = 1,
     UpperBound = 2,
@@ -58,14 +58,14 @@ impl NodeTypeTimeBound {
     /// # Usage
     ///
     /// time_bound must be divisible by 8 or else Undefined behavior will follow.
-    pub fn create(node_type: NodeBound, time_bound: u8) -> Self {
+    pub fn create(node_type: NodeType, time_bound: u8) -> Self {
         NodeTypeTimeBound {
             data: time_bound + (node_type as u8)
         }
     }
 
     /// Updates the [NodeType] of an entry.
-    pub fn update_bound(&mut self, node_type: NodeBound) {
+    pub fn update_bound(&mut self, node_type: NodeType) {
         self.data = (self.data & TIME_MASK) | node_type as u8;
     }
 
@@ -95,18 +95,18 @@ pub struct Entry {
 impl Entry {
 
     pub fn is_empty(&self) -> bool {
-        self.node_type() == NodeBound::NoBound
+        self.node_type() == NodeType::NoBound
     }
 
     /// Rewrites over an Entry.
-    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: u8, node_type: NodeBound) {
+    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: u8, node_type: NodeType) {
         let partial_key = key.wrapping_shr(48) as u16;
 
         if partial_key != self.partial_key {
             self.best_move = best_move;
         }
 
-        if partial_key != self.partial_key || node_type == NodeBound::Exact {
+        if partial_key != self.partial_key || node_type == NodeType::Exact {
             self.partial_key = partial_key;
             self.score = score;
             self.eval = eval;
@@ -121,12 +121,12 @@ impl Entry {
     }
 
     /// Returns the [NodeType] of an Entry.
-    pub fn node_type(&self) -> NodeBound {
+    pub fn node_type(&self) -> NodeType {
         match self.time_node_bound.data & NODE_TYPE_MASK {
-            0 => NodeBound::NoBound,
-            1 => NodeBound::LowerBound,
-            2 => NodeBound::UpperBound,
-            _ => NodeBound::Exact,
+            0 => NodeType::NoBound,
+            1 => NodeType::LowerBound,
+            2 => NodeType::UpperBound,
+            _ => NodeType::Exact,
         }
     }
 
@@ -138,7 +138,6 @@ impl Entry {
 }
 
 // 30 bytes + 2 = 32 Bytes
-/// Structure containing multiple Entries all mapped to by the same zobrist key.
 pub struct Cluster {
     pub entry: [Entry; CLUSTER_SIZE],
     pub padding: [u8; 2],
@@ -147,13 +146,10 @@ pub struct Cluster {
 // clusters -> Pointer to the clusters
 // cap -> n number of clusters (So n * CLUSTER_SIZE) number of entries
 // time age -> documenting when an entry was placed
-/// Structure for representating a TranspositionTable. A Transposition Table is a type
-/// of HashTable that maps Zobrist Keys to information about that position, including the best move
-/// found, score, depth the move was found at, and other information.
 pub struct TT {
-    clusters: Unique<Cluster>, // pointer to the heap
-    cap: usize, // number of clusters
-    time_age: u8, // documenting at whichh root position an entry was placed
+    clusters: Unique<Cluster>,
+    cap: usize,
+    time_age: u8,
 }
 
 impl TT {

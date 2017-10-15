@@ -86,7 +86,7 @@ pub const CASTLE_BONUS: i16 = 20;
 
 pub const KING_BOTTOM: i16 = 11;
 
-pub const MATE: i16 = -25_000;
+pub const MATE: i16 = -25000;
 pub const CHECK: i16 = 20;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
@@ -105,7 +105,7 @@ impl<'a> Eval<'a> {
         let eval = Eval {
             board: board,
             us: board.turn(),
-            them: board.turn().other_player(),
+            them: other_player(board.turn()),
         };
         eval.eval_simple()
     }
@@ -238,7 +238,7 @@ fn eval_king_blockers_pinners(board: &Board, turn: Player) -> i16 {
 
     let blockers: BitBoard = board.all_pinned_pieces(turn);
 
-    let them_blockers = blockers & board.get_occupied_player(turn.other_player());
+    let them_blockers = blockers & board.get_occupied_player(other_player(turn));
 
     // Our pieces blocking a check on their king
     let us_blockers = blockers & board.get_occupied_player(turn);
