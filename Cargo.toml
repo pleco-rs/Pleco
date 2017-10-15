@@ -38,6 +38,14 @@ lto = false
 debug-assertions = false
 codegen-units = 1
 
+[profile.test]
+opt-level = 1
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 4
+
 [profile.doc]
 opt-level = 0
 debug = 2
@@ -71,10 +79,7 @@ path = "src/main.rs"
 test = false
 doc = false
 
-[[test]]
-path = "tests/test.rs"
-name = "default"
-
-[[bench]]
-path = "benches/bench.rs"
-name = "integration_benches"
+#
+#[[bench]]
+#path = "benches/bench.rs"
+#name = "integration_benches"

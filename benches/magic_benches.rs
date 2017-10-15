@@ -1,3 +1,5 @@
+#![feature(test)]
+
 extern crate pleco;
 extern crate test;
 
