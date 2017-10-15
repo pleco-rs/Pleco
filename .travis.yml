@@ -1,21 +1,28 @@
 sudo: required
 language: rust
-cache: cargo
+
 rust:
   - nightly
 
 
 before_script:
   - |
-    pip install git+git://github.com/kbknapp/travis-cargo.git --user &&
-    export PATH=$HOME/.local/bin:$PATH
+      pip install 'travis-cargo<0.2' --user &&
+      export PATH=$HOME/.local/bin:$PATH
 
 script:
   - |
       travis-cargo build &&
+      travis-cargo clean &&
       travis-cargo --only nightly test -- --verbose &&
       travis-cargo --only nightly bench &&
       travis-cargo --only stable doc
+
+cache:
+    apt: true
+    directories:
+        - target/debug/deps
+        - target/debug/build
 
 addons:
   apt:
@@ -29,21 +36,7 @@ addons:
 
 after_success:
   - |
-    wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-    tar xzf master.tar.gz &&
-    cd kcov-master &&
-    mkdir build &&
-    cd build &&
-    cmake .. &&
-    make &&
-    sudo make install &&
-    cd ../.. &&
-    rm -rf kcov-master &&
-    cargo clean &&
-    cargo test --no-run &&
-    for file in target/debug/*-*; do mkdir -p "target/cov/$(basename $file)"; kcov --exclude-pattern=/.cargo --verify "target/cov/$(basename $file)" "$file"; done &&
-    kcov --coveralls-id=$TRAVIS_JOB_ID --merge target/cov target/cov/* &&
-    echo "Uploaded code coverage"
+      travis-cargo coveralls --verify
 
 env:
   global:
