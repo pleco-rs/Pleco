@@ -31,7 +31,4 @@ after_success:
   # cost of some speed <https://github.com/huonw/travis-cargo/issues/12>)
   - travis-cargo coveralls --verify
 
-env:
-  global:
-    # override the default `--features unstable` used for the nightly branch (optional)
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=nightly
+
