@@ -30,7 +30,7 @@ addons:
     - binutils-dev
 
 after_success:
-    - travis-cargo coveralls --no-sode --verify
+    - travis-cargo coveralls --no-sudo --verify
 
 env:
   global:
