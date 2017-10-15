@@ -2,24 +2,40 @@ language: rust
 rust:
   - nightly
 
-before_script: |
-  PKGNAME="pleco" #
-  LOCAL="~/.local" # install here to avoid `sudo`
-  export PATH=$LOCAL/bin:$PATH
 addons:
   apt:
     packages:
-    - libcurl4-openssl-dev
-    - libelf-dev
-    - libdw-dev
-    - libbfd-dev # required for `--verify`
-after_success: |
-  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-  tar xzf master.tar.gz && mkdir kcov-master/build && cd kcov-master/build &&
-  cmake -DCMAKE_INSTALL_PREFIX:PATH=$LOCAL .. && make &&
-  make install && cd ../.. &&
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev # optional: only required for the --verify flag of coveralls
 
-  kcov --verify \
-       --coveralls-id=$TRAVIS_JOB_ID \
-       --exclude-pattern=/.cargo \
-       target/kcov target/debug/$PKGNAME-*
+# run builds for all the trains (and more)
+rust:
+  - nightly
+  # check it compiles on the latest stable compiler
+  # and the first stable one (this should be bumped as the minimum
+  # Rust version required changes)
+
+# load travis-cargo
+before_script:
+  - |
+      pip install 'travis-cargo<0.2' --user &&
+      export PATH=$HOME/.local/bin:$PATH
+
+# the main build
+script:
+  - |
+      travis-cargo build &&
+      travis-cargo test &&
+      travis-cargo bench &&
+      travis-cargo doc
+after_success:
+  # upload the documentation from the build with stable (automatically only actually
+  # runs on the master branch, not individual PRs)
+
+  # measure code coverage and upload to coveralls.io (the verify
+  # argument mitigates kcov crashes due to malformed debuginfo, at the
+  # cost of some speed <https://github.com/huonw/travis-cargo/issues/12>)
+  - travis-cargo coveralls --no-sudo --verify
+
