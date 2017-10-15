@@ -8,8 +8,6 @@ cache:
   - cargo
   - apt
 
-os:
-  - linux
 
 sudo: required
 
@@ -23,12 +21,15 @@ addons:
       - libcurl4-openssl-dev
       - libelf-dev
       - libdw-dev
-      - zlib1g-dev
-      - cmake
-      - gcc
       - binutils-dev
+      - cmake
     sources:
       - kalakris-cmake
+
+
+os:
+  - linux
+
 
 script:
   - cargo build --verbose
@@ -48,9 +49,9 @@ script:
 
 after_success:
   - |
-    if [[ "$TRAVIS_RUST_VERSION" == nighly ]]
+    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]
     then
-      cargo install --force cargo-travis || echo "cargo-travis has been already installed"
+      cargo install cargo-travis || echo "cargo-travis has been already installed"
       export PATH=$HOME/.cargo/bin:$PATH
       cargo coveralls
     fi
