@@ -1,4 +1,4 @@
-sudo: required
+sudo: false
 language: rust
 
 rust:
@@ -30,7 +30,7 @@ addons:
     - binutils-dev
 
 after_success:
-    - travis-cargo coveralls --verify
+    - travis-cargo coveralls --no-sode --verify
 
 env:
   global:
