@@ -18,11 +18,6 @@ script:
       travis-cargo --only nightly bench &&
       travis-cargo --only stable doc
 
-cache:
-    apt: true
-    directories:
-        - target/debug/deps
-        - target/debug/build
 
 addons:
   apt:
@@ -35,8 +30,7 @@ addons:
     - binutils-dev
 
 after_success:
-  - |
-      travis-cargo coveralls --verify
+    - travis-cargo coveralls --verify
 
 env:
   global:
