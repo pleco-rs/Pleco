@@ -65,6 +65,12 @@ num_cpus = "1.0"
 default = []
 dev = ["clippy"]
 
+[[bin]]
+name = "pleco_b"
+path = "src/main.rs"
+test = false
+doc = false
+
 [[test]]
 path = "tests/test.rs"
 name = "default"
