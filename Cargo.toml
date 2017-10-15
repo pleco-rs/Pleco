@@ -54,7 +54,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-clippy = {version = "0.0.21", optional = true}
+clippy = {version = "0.0.165", optional = true}
 lazy_static = "0.2"
 bitflags = "0.9"
 rand = "0.3"

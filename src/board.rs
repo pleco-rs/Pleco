@@ -185,7 +185,7 @@ struct PieceLocations {
 impl Clone for PieceLocations {
     // Need to use transmute copy as [_;64] does not automatically implement Clone.
     fn clone(&self) -> PieceLocations {
-        unsafe { mem::transmute_copy(&*&self.data) }
+        unsafe { mem::transmute_copy(&self.data) }
     }
 }
 
@@ -337,7 +337,7 @@ impl PieceLocations {
 ///
 /// This is information that is computed upon making a move, and requires expensive computation to do so as well.
 /// It is stored in the Heap by 'Board' as an Arc<BoardState>, as cloning the board can lead to multiple
-/// references to the same BoardState.
+/// references to the same `BoardState`.
 ///
 /// Allows for easy undo-ing of moves as these keep track of their previous board state, forming a
 /// Tree-like persistent Stack
@@ -462,7 +462,7 @@ impl BoardState {
 
 
 
-/// Represents a ChessBoard.
+/// Represents a ChessBoard through a `Board`.
 ///
 /// Board contains everything that needs to be known about the current state of the Game. It is used
 /// by both Engines and Players / Bots alike.
@@ -486,7 +486,7 @@ impl BoardState {
 /// }
 /// ```
 ///
-/// # BitBoard Representation
+/// # `BitBoard` Representation
 ///
 /// For the majority of the struct, the board utilizes [BitBoard]s, which is a u64 where each bit
 /// represents an occupied location, and each bit index represents a certain square (as in bit 0 is
@@ -599,7 +599,7 @@ impl Board {
             occ_all: self.occ_all,
             half_moves: self.half_moves,
             depth: 0,
-            piece_counts: self.piece_counts.clone(),
+            piece_counts: self.piece_counts,
             piece_locations: self.piece_locations.clone(),
             state: self.state.clone(),
             magic_helper: &MAGIC_HELPER,

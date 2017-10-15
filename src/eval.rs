@@ -86,7 +86,7 @@ pub const CASTLE_BONUS: i16 = 20;
 
 pub const KING_BOTTOM: i16 = 11;
 
-pub const MATE: i16 = -25000;
+pub const MATE: i16 = -25_000;
 pub const CHECK: i16 = 20;
 
 // Pawn, Knight, Bishop, Rook, Queen, King

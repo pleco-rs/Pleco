@@ -13,7 +13,7 @@ fn tt_bench_single_thread_insert_empty(b: &mut Bencher) {
     b.iter(|| {
         let key = rand::random::<u64>();
         let (_found, entry) = tt.probe(key);
-        entry.place(key,BitMove::new(0x555), 3, 4, 3, NodeType::Exact);
+        entry.place(key, BitMove::new(0x555), 3, 4, 3, NodeBound::Exact);
     })
 }
 
@@ -24,14 +24,14 @@ fn tt_bench_single_thread_insert_full(b: &mut Bencher) {
     for x in 0..1_600_000 {
         let key = rand::random::<u64>();
         let (_found, entry) = tt.probe(key);
-        entry.place(key,BitMove::new(0x555), 3, 4, 3, NodeType::Exact);
+        entry.place(key, BitMove::new(0x555), 3, 4, 3, NodeBound::Exact);
         entry.depth = x as u8;
     }
 
     b.iter(|| {
         let key = rand::random::<u64>();
         let (_found, entry) = tt.probe(key);
-        entry.place(key,BitMove::new(0x555), 3, 4, key as u8, NodeType::Exact);
+        entry.place(key, BitMove::new(0x555), 3, 4, key as u8, NodeBound::Exact);
     })
 }
 
@@ -53,7 +53,7 @@ fn tt_single_thread_lookup(b: &mut Bencher, num_entries: usize, placements: u64)
     for x in 0..placements {
         let key = rand::random::<u64>();
         let (_found, entry) = tt.probe(key);
-        entry.place(key,BitMove::new(0x555), 3, 4, 3, NodeType::Exact);
+        entry.place(key, BitMove::new(0x555), 3, 4, 3, NodeBound::Exact);
         entry.depth = x as u8;
     }
 

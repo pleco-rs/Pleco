@@ -75,7 +75,6 @@ pub struct MoveGen<'a> {
     them_occ: BitBoard, // Squares occupied by the opposing player
 }
 
-// TODO: MonoMorphize the gen_types
 impl<'a> MoveGen<'a> {
 
     // Helper function to setup the MoveGen structure
