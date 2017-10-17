@@ -2060,6 +2060,9 @@ impl Board {
 impl Board {
     /// Tests if a given move is legal.
     pub fn legal_move(&self, m: BitMove) -> bool {
+        if m.get_src() == m.get_dest() {
+            return false;
+        }
         let them: Player = self.turn.other_player();
         let src: SQ = m.get_src();
         let src_bb: BitBoard = sq_to_bb(src);

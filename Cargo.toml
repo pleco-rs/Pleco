@@ -18,9 +18,12 @@ include = [
     "Cargo.toml",
     ".gitignore",
     "README.md",
-    "benches/*.rs",
     "examples/*"
 ]
+
+[badges]
+travis-ci = { repository = "sfleischman105/Pleco", branch = "master" }
+coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = "github" }
 
 [profile.dev]
 opt-level = 3
@@ -74,7 +77,7 @@ default = []
 dev = ["clippy"]
 
 [[bin]]
-name = "pleco_b"
+name = "pleco"
 path = "src/main.rs"
 test = false
 doc = false

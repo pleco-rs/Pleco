@@ -3,17 +3,44 @@ extern crate pleco;
 use pleco::board::*;
 use pleco::templates::*;
 use pleco::piece_move::*;
+use pleco::tools::gen_rand_legal_board;
 
 
 
-//#[test]
-//fn test_pawn_gen() {
-//    let board = Board::simple();
-//    let vector = movegen::get_pseudo_moves(&board, Player::White);
-//    assert_eq!(vector.len(), 16);
-//}
+#[test]
+fn test_movegen_captures() {
+    let mut vec = Vec::new();
+    for i in 0..10 {
+        vec.push(gen_rand_legal_board());
+    }
+    vec.iter().for_each(|b| {
+        if !b.in_check() {
+            let moves = b.generate_moves_of_type(GenTypes::Captures);
+            for m in moves {
+                assert!(m.is_capture());
+                assert!(b.captured_piece(m).is_some());
+            }
+        }
+    })
+}
 
-// ****** Test Move representation *******
+#[test]
+fn test_movegen_quiets() {
+    let mut vec = Vec::new();
+    for i in 0..10 {
+        vec.push(gen_rand_legal_board());
+    }
+    vec.iter().for_each(|b| {
+        if !b.in_check() {
+            let moves = b.generate_moves_of_type(GenTypes::Quiets);
+            for m in moves {
+                assert!(!m.is_capture());
+                assert!(b.captured_piece(m).is_none());
+            }
+        }
+    })
+}
+
 
 // Testing with no flags and bit input
 #[test]

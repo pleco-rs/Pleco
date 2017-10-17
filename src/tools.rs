@@ -2,6 +2,7 @@
 use board::Board;
 use engine::Searcher;
 use timer::Timer;
+use rand;
 
 use bots::basic::bot_random::RandomBot;
 use bots::basic::bot_jamboree::JamboreeSearcher;
@@ -89,4 +90,36 @@ pub fn is_valid_fen(fen: &str) -> bool {
 
 
     unimplemented!();
+}
+
+/// Generates a board with a Random Position
+pub fn gen_rand_legal_board() -> Board {
+    loop {
+        let mut board = Board::default();
+        let mut i = 0;
+        let mut moves = board.generate_moves();
+        while i < 70 && !moves.is_empty() {
+            if i > 3 {
+                if rand::random::<i32>() % (71 - i) == 0  || rand::random::<usize>() % 219 == 0 {
+                    return board;
+                }
+            }
+            // apply random move
+            if rand::random::<usize>() % 10 == 0 {
+                RandomBot::best_move_depth(board.shallow_clone(), &Timer::new_no_inc(20), 1);
+            } else if rand::random::<usize>() % 4 == 0 {
+                let best_move = JamboreeSearcher::best_move_depth(board.parallel_clone(),&Timer::new_no_inc(30),5);
+                board.apply_move(best_move);
+            } else if rand::random::<usize>() % 3 == 0 {
+                let best_move = IterativeSearcher::best_move_depth(board.parallel_clone(),&Timer::new_no_inc(30),4);
+                board.apply_move(best_move);
+            } else {
+                let best_move = JamboreeSearcher::best_move_depth(board.parallel_clone(),&Timer::new_no_inc(30),4);
+                board.apply_move(best_move);
+            }
+
+            moves = board.generate_moves();
+            i += 1;
+        }
+    }
 }

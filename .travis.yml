@@ -51,11 +51,8 @@ after_success:
   - |
     if [[ "$TRAVIS_RUST_VERSION" == nightly ]]
     then
-      cargo install cargo-travis || echo "cargo-travis has been already installed"
+      cargo install --force cargo-travis || echo "cargo-travis has been already installed"
       export PATH=$HOME/.cargo/bin:$PATH
       cargo coveralls
     fi
 
-env:
-  global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
