@@ -1,7 +1,7 @@
 use board::*;
 use timer::*;
 use piece_move::*;
-use engine::Searcher;
+use engine::{Searcher,UCILimit};
 use eval::*;
 use rayon;
 
@@ -31,12 +31,9 @@ impl Searcher for ParallelSearcher {
         "Parallel Searcher"
     }
 
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
-        ParallelSearcher::best_move_depth(board, timer, MAX_PLY)
-    }
-
-    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
-        parallel_minimax(&mut board.shallow_clone(), max_depth)
+    fn best_move(board: Board, limit: UCILimit) -> BitMove {
+        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
+        parallel_minimax(&mut board.shallow_clone(),  max_depth)
             .best_move
             .unwrap()
     }

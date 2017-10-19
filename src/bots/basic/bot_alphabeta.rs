@@ -1,7 +1,7 @@
 use board::*;
 use timer::*;
 use piece_move::*;
-use engine::Searcher;
+use engine::{Searcher,UCILimit};
 use eval::*;
 
 #[allow(unused_imports)]
@@ -25,16 +25,13 @@ impl Searcher for AlphaBetaBot {
         "AlphaBeta Searcher"
     }
 
-    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
-        let alpha: i16 = NEG_INFINITY;
-        let beta: i16 = INFINITY;
+    fn best_move(board: Board, limit: UCILimit) -> BitMove {
+        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
+        let alpha = NEG_INFINITY;
+        let beta = INFINITY;
         alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
             .best_move
             .unwrap()
-    }
-
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
-        AlphaBetaBot::best_move_depth(board, timer, MAX_PLY)
     }
 }
 

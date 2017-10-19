@@ -1,5 +1,4 @@
 use board::*;
-use timer::*;
 use templates::*;
 use piece_move::BitMove;
 use engine::*;
@@ -28,20 +27,15 @@ impl Searcher for IterativeSearcher {
         "Advanced Searcher"
     }
 
-    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove {
-        iterative_deepening(board, timer, max_depth)
-        //        let alpha: i16 = NEG_INFINITY;
-        //        let beta:  i16 = INFINITY;
-        //        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2).best_move.unwrap()
+    fn best_move(board: Board, limit: UCILimit) -> BitMove {
+        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
+        iterative_deepening(board , max_depth)
     }
 
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
-        IterativeSearcher::best_move_depth(board, timer, MAX_PLY)
-    }
 }
 
 
-fn iterative_deepening(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
+fn iterative_deepening(board: Board, max_depth: u16) -> BitMove {
     // for each level from 1 to max depth, search the node and return the best move and score
     // Once we have reached ply 2, keep the score (say x), c
     //       continue onto previous ply with alpha = x - 33 and beta = x + 33

@@ -10,16 +10,16 @@ use pleco::tools::gen_rand_legal_board;
 #[test]
 fn test_movegen_captures() {
     let mut vec = Vec::new();
-    for i in 0..10 {
-        vec.push(gen_rand_legal_board());
+    for i in 0..6 {
+        let mut b = gen_rand_legal_board();
+        if !b.in_check() {
+            vec.push(b);
+        }
     }
     vec.iter().for_each(|b| {
-        if !b.in_check() {
-            let moves = b.generate_moves_of_type(GenTypes::Captures);
-            for m in moves {
-                assert!(m.is_capture());
-                assert!(b.captured_piece(m).is_some());
-            }
+        let moves = b.generate_moves_of_type(GenTypes::Captures);
+        for m in moves {
+            assert!(m.is_capture());
         }
     })
 }
@@ -27,16 +27,17 @@ fn test_movegen_captures() {
 #[test]
 fn test_movegen_quiets() {
     let mut vec = Vec::new();
-    for i in 0..10 {
-        vec.push(gen_rand_legal_board());
+    for i in 0..6 {
+        let mut b = gen_rand_legal_board();
+        if !b.in_check() {
+            vec.push(b);
+        }
     }
     vec.iter().for_each(|b| {
-        if !b.in_check() {
-            let moves = b.generate_moves_of_type(GenTypes::Quiets);
-            for m in moves {
-                assert!(!m.is_capture());
-                assert!(b.captured_piece(m).is_none());
-            }
+        let moves = b.generate_moves_of_type(GenTypes::Quiets);
+        for m in moves {
+            assert!(!m.is_capture());
+            assert!(b.captured_piece(m).is_none());
         }
     })
 }

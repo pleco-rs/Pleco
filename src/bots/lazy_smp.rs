@@ -9,7 +9,6 @@ use std::cmp::{min,max,Ordering as CmpOrder};
 use std::mem;
 
 use board::*;
-use timer::*;
 use templates::*;
 use eval::*;
 use piece_move::BitMove;
@@ -490,14 +489,9 @@ impl Searcher for LazySMPSearcher {
         "Lazy SMP Searcher"
     }
 
-    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
-        searcher.start_searching(UCILimit::Depth(max_depth), false)
-    }
-
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
-        let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
-        searcher.start_searching(UCILimit::Time(timer.clone()), false)
+        searcher.start_searching(limit, false)
     }
 }
 

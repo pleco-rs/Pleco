@@ -8,7 +8,7 @@ extern crate lazy_static;
 
 use pleco::board::Board;
 use pleco::engine::Searcher;
-use pleco::tools::gen_rand_legal_board;
+use pleco::tools::*;
 use pleco::templates::GenTypes;
 
 use test::{black_box, Bencher};
@@ -16,23 +16,24 @@ use test::{black_box, Bencher};
 lazy_static! {
     pub static ref RAND_BOARDS_NON_CHECKS: Vec<Board> = {
         let mut vec = Vec::new();
-        vec.push(Board::default());
-        for x in 1..13 {
-            let b = gen_rand_legal_board();
-            if !b.in_check() {
-                vec.push(b);
+        for x in 0..25 {
+            let mut b = gen_rand_legal_board();
+            while b.in_check() {
+                b = gen_rand_legal_board();
             }
+            vec.push(b);
         }
         vec
     };
 
     pub static ref RAND_BOARDS_CHECKS: Vec<Board> = {
         let mut vec = Vec::new();
-        for x in 0..13 {
-            let b = gen_rand_legal_board();
-            if b.in_check() {
-                vec.push(b);
+        for x in 0..30 {
+            let mut b = gen_rand_in_check();
+            while !b.in_check() {
+                 b = gen_rand_in_check();
             }
+            vec.push(b);
         }
         vec
     };
@@ -112,26 +113,21 @@ fn bench_movegen_pslegal_quiet_checks(b: &mut Bencher) {
 }
 
 #[bench]
-fn  bench_movegen_in_check_legal_evasions(b: &mut Bencher) {
+fn bench_movegen_in_check_legal_evasions(b: &mut Bencher) {
     b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_pseudolegal_moves());
-        }
-    })
-}
-
-
-#[bench]
-fn bench_movegen_in_check_pslegal_evasions(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
+        for board in RAND_BOARDS_CHECKS.iter() {
             black_box(board.generate_moves());
         }
     })
 }
 
-
-
-
+#[bench]
+fn  bench_movegen_in_check_pslegal_evasions(b: &mut Bencher) {
+    b.iter(|| {
+        for board in RAND_BOARDS_CHECKS.iter() {
+            black_box(board.generate_pseudolegal_moves());
+        }
+    })
+}
 
 

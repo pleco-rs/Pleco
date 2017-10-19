@@ -8,6 +8,7 @@ extern crate lazy_static;
 
 use pleco::board::Board;
 use pleco::tools::*;
+use pleco::eval::Eval;
 
 use test::{black_box, Bencher};
 
@@ -15,17 +16,21 @@ lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         let mut vec = Vec::new();
         vec.push(Board::default());
-        for x in 0..10 { vec.push(gen_rand_legal_board()); }
+        for x in 0..100 {
+            vec.push(gen_rand_no_check());
+        }
         vec
     };
 }
 
 
 #[bench]
-fn bench_board_10_clone(b: &mut Bencher) {
+fn bench_100_evaluations(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
-            black_box(board.shallow_clone());
+            black_box(Eval::eval_low(board));
         }
     })
 }
+
+

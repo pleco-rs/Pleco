@@ -10,18 +10,24 @@ use templates::Player;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+pub struct SearcherOption {
+    name: &'static str,
+}
+
 
 /// Trait that defines an object that can play chess
 pub trait Searcher {
-    fn best_move(board: Board, timer: &Timer) -> BitMove
+    fn name() -> &'static str where Self: Sized;
+
+    fn best_move(board: Board, limit: UCILimit) -> BitMove
     where
         Self: Sized;
-    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove
+
+    fn best_move_depth(board: Board, max_depth: u16) -> BitMove
     where
-        Self: Sized;
-    fn name() -> &'static str
-    where
-        Self: Sized;
+        Self: Sized {
+        Self::best_move(board, UCILimit::Depth(max_depth))
+    }
 }
 
 /// Trait that defines an Object that can play chess and respond to the
@@ -31,6 +37,8 @@ pub trait UCISearcher: Searcher {
 
     fn uci_go(&mut self, limits: UCILimit, use_stdout: bool) -> BitMove;
 }
+
+
 
 #[derive(Clone)]
 pub enum UCILimit {
@@ -123,8 +131,8 @@ pub fn compete<S: Searcher, T: Searcher>(_player_one: &S, _player_two: &T, minut
 
         timer.start_time();
         let ret_move = match b.turn() {
-            Player::White => <S as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
-            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
+            Player::White => <S as Searcher>::best_move_depth(b.shallow_clone(), ply),
+            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), ply),
         };
         timer.stop_time();
 

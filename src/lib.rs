@@ -43,6 +43,7 @@ pub mod engine;
 pub mod tools;
 pub mod uci;
 pub mod tt;
+pub mod bot_prelude;
 
 pub mod bots;
 
