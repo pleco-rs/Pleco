@@ -121,12 +121,15 @@ fn gen_rand_board(gen: RandGen) -> Board {
 
         while i < 70 && !moves.is_empty() {
             if i > 4 {
-                let mut to_ret = rand::random::<i32>() % cmp::max(8, 63 - i) == 0;
+                let mut to_ret = rand::random::<i32>() % cmp::max(8, 43 - i) == 0;
                 if gen != RandGen::InCheck {
-                    to_ret |= rand::random::<usize>() % 111 == 0
+                    to_ret |= rand::random::<usize>() % 87 == 0;
                 }
-                if i > 22 {
-                    to_ret |= rand::random::<usize>() % 80 == 0
+                if i > 17 {
+                    to_ret |= rand::random::<usize>() % 60 == 0;
+                    if i > 30 {
+                        to_ret |= rand::random::<usize>() % 53 == 0;
+                    }
                 }
 
                 if to_ret {

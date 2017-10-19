@@ -4,12 +4,15 @@ use board::Board;
 use std::i16;
 use templates::*;
 use bit_twiddles::*;
+use templates::{PlayerTrait,PieceTrait};
 
 lazy_static! {
     pub static ref BISHOP_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(BISHOP_POS_ARRAY)), flatten(BISHOP_POS_ARRAY) ];
     pub static ref KNIGHT_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(KNIGHT_POS_ARRAY)), flatten(KNIGHT_POS_ARRAY) ];
     pub static ref PAWN_POS:   [[i16; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
 }
+
+
 
 pub const BISHOP_POS_ARRAY: [[i16; FILE_CNT]; RANK_CNT] = [
     [-5, -5, -5, -5, -5, -5, -5, -5], // RANK_8
@@ -68,6 +71,13 @@ pub struct Eval<'a> {
     them: Player,
 }
 
+trait EvalRuns {
+    fn eval_castling<PlayerTrait>(&self) -> i16;
+    fn eval_king_pos<PlayerTrait>(&self) -> i16;
+    fn eval_bishop_pos<PlayerTrait>(&self) -> i16;
+    fn eval_threats<PlayerTrait>(&self) -> i16;
+    fn eval_piece_counts<PlayerTrait,PieceTrait>(&self) -> i16;
+}
 
 
 pub const INFINITY: i16 = 30_002;
@@ -98,6 +108,7 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [
     QUEEN_VALUE,
     KING_VALUE,
 ];
+
 
 
 impl<'a> Eval<'a> {
