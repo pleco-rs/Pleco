@@ -1,7 +1,6 @@
 use board::*;
-use timer::*;
 use piece_move::*;
-use engine::Searcher;
+use engine::{Searcher,UCILimit};
 use eval::*;
 
 #[allow(unused_imports)]
@@ -29,14 +28,13 @@ impl Searcher for SimpleBot {
         "Simple Searcher"
     }
 
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
-        SimpleBot::best_move_depth(board, timer, MAX_PLY)
+    fn best_move(board: Board, limit: UCILimit) -> BitMove {
+        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
+        minimax(&mut SimpleBot { board: board.shallow_clone()},  max_depth)
+            .best_move
+            .unwrap()
     }
 
-    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
-        let mut b = SimpleBot { board: board };
-        minimax(&mut b, max_depth).best_move.unwrap()
-    }
 }
 
 fn minimax(bot: &mut SimpleBot, max_depth: u16) -> BestMove {

@@ -1,12 +1,11 @@
 //! Miscellaneous tools for debugging and generating output.
 use board::Board;
 use engine::Searcher;
-use timer::Timer;
+use rand;
+use std::cmp;
+use piece_move::BitMove;
 
-use bots::basic::bot_random::RandomBot;
-use bots::basic::bot_jamboree::JamboreeSearcher;
-use bots::bot_iterative_parallel_mvv_lva::IterativeSearcher;
-
+use bot_prelude::{RandomBot,JamboreeSearcher,IterativeSearcher};
 
 fn gen_random_fens() {
     let mut b = Board::default();
@@ -24,9 +23,9 @@ fn gen_random_fens() {
 
     while beginning_count + middle_count + end_count <= (quota * 3) - 1 {
         if i == 0 {
-            let mov = RandomBot::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 1);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(),  1);
             b.apply_move(mov);
-            let mov = RandomBot::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 1);
+            let mov = RandomBot::best_move_depth(b.shallow_clone(),  1);
             b.apply_move(mov);
         }
         if b.checkmate() || i > max {
@@ -38,14 +37,14 @@ fn gen_random_fens() {
             }
         } else {
             if i % 11 == 9 {
-                let mov = RandomBot::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 1);
+                let mov = RandomBot::best_move_depth(b.shallow_clone(),  1);
                 b.apply_move(mov);
             } else if i % 2 == 0 {
                 let mov =
-                    JamboreeSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 5);
+                    JamboreeSearcher::best_move_depth(b.shallow_clone(),  5);
                 b.apply_move(mov);
             } else {
-                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(), &Timer::new_no_inc(20), 5);
+                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(),  5);
                 b.apply_move(mov);
             }
             i += 1;
@@ -89,4 +88,83 @@ pub fn is_valid_fen(fen: &str) -> bool {
 
 
     unimplemented!();
+}
+
+/// Generates a board with a Random Position
+pub fn gen_rand_legal_board() -> Board {
+    gen_rand_board(RandGen::All)
+}
+
+
+pub fn gen_rand_in_check() -> Board {
+    gen_rand_board(RandGen::InCheck)
+}
+
+
+pub fn gen_rand_no_check() -> Board {
+    gen_rand_board(RandGen::NoCheck)
+}
+
+#[derive(Eq, PartialEq)]
+enum RandGen {
+    InCheck,
+    NoCheck,
+    All
+}
+
+fn gen_rand_board(gen: RandGen) -> Board {
+    let side = rand::random::<i32>() % 2;
+    loop {
+        let mut board = Board::default();
+        let mut i = 0;
+        let mut moves = board.generate_moves();
+
+        while i < 70 && !moves.is_empty() {
+            if i > 4 {
+                let mut to_ret = rand::random::<i32>() % cmp::max(8, 43 - i) == 0;
+                if gen != RandGen::InCheck {
+                    to_ret |= rand::random::<usize>() % 87 == 0;
+                }
+                if i > 17 {
+                    to_ret |= rand::random::<usize>() % 60 == 0;
+                    if i > 30 {
+                        to_ret |= rand::random::<usize>() % 53 == 0;
+                    }
+                }
+
+                if to_ret {
+                    if gen == RandGen::All { return board; }
+                    if gen == RandGen::InCheck && board.in_check() { return board; }
+                    if gen == RandGen::NoCheck && !board.in_check() { return board; }
+                }
+            }
+            // apply random move
+            let best_move = if gen == RandGen::InCheck && side == i % 2{
+                create_rand_move(&board, true)
+            } else {
+                create_rand_move(&board, false)
+            };
+
+            board.apply_move(best_move);
+
+            moves = board.generate_moves();
+            i += 1;
+        }
+    }
+}
+
+fn create_rand_move(board: &Board, favorable: bool) -> BitMove {
+    let rand_num = if favorable {24} else {14};
+
+    if rand::random::<usize>() % rand_num == 0 {
+        RandomBot::best_move_depth(board.shallow_clone(), 1)
+    } else if rand::random::<usize>() % 6 == 0 {
+        IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+    } else if rand::random::<usize>() % 3 == 0 {
+        JamboreeSearcher::best_move_depth(board.shallow_clone(),4)
+    } else if !favorable && rand::random::<usize>() % 3 < 2 {
+        JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+    } else {
+        IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+    }
 }

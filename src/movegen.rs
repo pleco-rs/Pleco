@@ -1,4 +1,27 @@
-//! Module for generating moves from a [Board].
+//! Module for generating moves from a [Board]. Allow for generating Legal and Pseudo-Legal moves
+//! of various types.
+//!
+//! # Generation Types
+//!
+//! The Types of moves that can be generated are:
+//!
+//! `All`, `Captures`, `Quiets`, `QuietChecks`, `Evasions`, `NonEvasions`
+//!
+//! Generating all moves is legal to do no matter the position. However, `Captures`, `Quiets`,
+//! `QuietChecks`, and `NonEvasions` can only be done if the board is in NOT in check. Likewise,
+//! `Evasions` can only be done when the board is currently in check.
+//!
+//! # Legal vs. PseudoLegal Moves
+//!
+//! For the generation type, moves can either be generated to be Legal, Or Pseudo-Legal. A Legal
+//! move is, for as the name implies, a legal move for the current side to play for a given position.
+//! A Pseudo-Legal move is a move that is "likely" to be legal for the current position, but cannot
+//! be gaurnteed.
+//!
+//! Why would someone ever want to generate moves that might not be legal? Performance. Based on
+//! some benchmarking, generating all Pseudo-Legal moves is around twice as fast as generating all
+//! Legal moves. So, if you are fine with generating moves and then checking them post-generation
+//! with a `Board::is_legal(m: BitMove)`, then the performance boost is potentially worth it.
 
 use templates::*;
 use board::*;
@@ -6,26 +29,6 @@ use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use bit_twiddles::*;
 use magic_helper::MagicHelper;
 
-// MoveGen Classifications:
-// Evasions, Captures, Quiets, Quiet_checks, Evasions, Non Evasions, Legal
-//
-// Private generation type to match requested type
-// Legal -> All Moves
-// Captures -> Captures only, even if in check
-// Quiets -> Non captures, even if in check
-// Evasions -> In check, any move that will get out of check
-// Non Evasions -> Not in Check, generate all moves
-// Quiet Checks -> Non captures that give check
-
-//#[derive(Copy, Clone, Debug, PartialEq)]
-//enum PriGenType {
-//    Legal,
-//    Captures,
-//    Quiets,
-//    Evasions,
-//    NonEvasions,
-//    QuietChecks,
-//}
 
 /// Determines the if the moves generated are PseudoLegal or legal moves.
 /// PseudoLegal moves require that a move's legality is determined before applying
@@ -34,10 +37,10 @@ pub trait Legality {
     fn gen_legal() -> bool;
 }
 
-/// Dummy Struct to represent the generation of Legal Moves
+/// Dummy Struct to represent the generation of Legal Moves.
 pub struct Legal {}
 
-/// Dummy Struct to represent the generation of PseudoLegal Moves
+/// Dummy Struct to represent the generation of PseudoLegal Moves.
 pub struct PseudoLegal {}
 
 impl Legality for Legal {
@@ -52,18 +55,12 @@ impl Legality for PseudoLegal {
     }
 }
 
-// Public GenTypes are:
-//     All        --> All moves
-//     Captures   --> Captures only
-//     Quiets     --> Non captures
-//     Checks     --> Moves potentially giving check (Note, board cannot be in check)
 
-
-// Pieces to generate moves with inter changably
+// Pieces to generate moves with inter-changably
 const STANDARD_PIECES: [Piece; 4] = [Piece::B, Piece::N, Piece::R, Piece::Q];
 
-// Struct to house some basic information about the board, quick access to magic helper,
-// current turn, etc.
+/// Structure to generate moves from. Stores the current state of the board, and other
+/// references to help generating all possible moves.
 pub struct MoveGen<'a> {
     movelist: Vec<BitMove>,
     board: &'a Board,
@@ -91,7 +88,7 @@ impl<'a> MoveGen<'a> {
         }
     }
 
-    // Returns vector of all moves for a given board & GenType
+    /// Returns vector of all moves for a given board, Legality & GenType.
     pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> Vec<BitMove> {
         let mut movegen = MoveGen::get_self(&chessboard);
         let gen_type = G::gen_type();

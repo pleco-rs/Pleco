@@ -1,7 +1,7 @@
 use board::*;
 use timer::*;
 use piece_move::*;
-use engine::Searcher;
+use engine::{Searcher,UCILimit};
 use eval::*;
 use rayon;
 
@@ -34,11 +34,8 @@ impl Searcher for JamboreeSearcher {
         "Jamboree Searcher"
     }
 
-    fn best_move(board: Board, timer: &Timer) -> BitMove {
-        JamboreeSearcher::best_move_depth(board, timer, MAX_PLY)
-    }
-
-    fn best_move_depth(board: Board, _timer: &Timer, max_depth: u16) -> BitMove {
+    fn best_move(board: Board, limit: UCILimit) -> BitMove {
+        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
         let alpha = NEG_INFINITY;
         let beta = INFINITY;
         jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)

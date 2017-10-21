@@ -473,7 +473,7 @@ impl BoardState {
 /// # Examples
 ///
 /// ```
-/// use pleco::board::*;
+/// use pleco::Board;
 ///
 /// fn main() {
 ///     let mut chessboard = Board::default();
@@ -538,8 +538,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Player;
+    /// use pleco::{Board,Player};
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_pieces_player(Player::White),16);
@@ -578,7 +577,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let mut chessboard = Board::default();
     /// let moves = chessboard.generate_moves(); // generate all possible legal moves
@@ -621,7 +620,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let mut chessboard = Board::default();
     /// let moves = chessboard.generate_moves(); // generate all possible legal moves
@@ -756,7 +755,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     /// assert_eq!(board.count_all_pieces(),32);
@@ -931,7 +930,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let board = Board::default();
     /// assert_eq!(board.get_fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -1154,7 +1153,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let mut board = Board::default();
     /// let success = board.apply_uci_move("e2e4");
@@ -1183,8 +1182,7 @@ impl Board {
     /// # Examples
     ///
     /// ```rust,should_panic
-    /// use pleco::board::*;
-    ///
+    /// use pleco::Board;
     ///
     /// let mut chessboard = Board::default();
     ///
@@ -1657,8 +1655,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Player;
+    /// use pleco::{Board,Player};
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.turn(), Player::White);
@@ -1677,7 +1674,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let mut chessboard = Board::default();
     /// assert_eq!(chessboard.moves_played(), 0);
@@ -1730,7 +1727,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
+    /// use pleco::Board;
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.get_occupied(), 0xFFFF00000000FFFF);
@@ -1744,8 +1741,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Player;
+    /// use pleco::{Board,Player};
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.get_occupied_player(Player::White), 0x000000000000FFFF);
@@ -1769,8 +1765,8 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::{Player,Piece};
+    /// use pleco::Board;
+    /// use pleco::{Player,Piece};
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.piece_bb(Player::White,Piece::P), 0x000000000000FF00);
@@ -1784,8 +1780,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Player;
+    /// use pleco::{Board,Player};
     /// use pleco::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -1800,8 +1795,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Player;
+    /// use pleco::{Board,Player};
     /// use pleco::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -1817,8 +1811,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Piece;
+    /// use pleco::{Board,Piece};
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.piece_bb_both_players(Piece::P), 0x00FF00000000FF00);
@@ -1833,8 +1826,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::Piece;
+    /// use pleco::{Board,Piece};
     /// use pleco::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -1855,8 +1847,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::{Player,Piece};
+    /// use pleco::{Board,Player,Piece};
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_piece(Player::White, Piece::P), 8);
@@ -1870,8 +1861,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::{Player,Piece};
+    /// use pleco::{Board,Player,Piece};
     /// use pleco::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -1886,8 +1876,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::board::*;
-    /// use pleco::templates::{Player,Piece};
+    /// use pleco::{Board,Player,Piece};
     /// use pleco::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -2060,6 +2049,9 @@ impl Board {
 impl Board {
     /// Tests if a given move is legal.
     pub fn legal_move(&self, m: BitMove) -> bool {
+        if m.get_src() == m.get_dest() {
+            return false;
+        }
         let them: Player = self.turn.other_player();
         let src: SQ = m.get_src();
         let src_bb: BitBoard = sq_to_bb(src);

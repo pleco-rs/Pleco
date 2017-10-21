@@ -13,15 +13,17 @@ use std::sync::atomic::AtomicBool;
 
 /// Trait that defines an object that can play chess
 pub trait Searcher {
-    fn best_move(board: Board, timer: &Timer) -> BitMove
+    fn name() -> &'static str where Self: Sized;
+
+    fn best_move(board: Board, limit: UCILimit) -> BitMove
     where
         Self: Sized;
-    fn best_move_depth(board: Board, timer: &Timer, max_depth: u16) -> BitMove
+
+    fn best_move_depth(board: Board, max_depth: u16) -> BitMove
     where
-        Self: Sized;
-    fn name() -> &'static str
-    where
-        Self: Sized;
+        Self: Sized {
+        Self::best_move(board, UCILimit::Depth(max_depth))
+    }
 }
 
 /// Trait that defines an Object that can play chess and respond to the
@@ -32,6 +34,9 @@ pub trait UCISearcher: Searcher {
     fn uci_go(&mut self, limits: UCILimit, use_stdout: bool) -> BitMove;
 }
 
+
+/// Defines a Limit for a Searcher. e.g., when a searcher should stop
+/// searching.
 #[derive(Clone)]
 pub enum UCILimit {
     Infinite,
@@ -41,6 +46,7 @@ pub enum UCILimit {
 }
 
 impl UCILimit {
+    /// Returns if time management should be used.
     pub fn use_time(&self) -> bool {
         if let UCILimit::Time(_) = *self {
             true
@@ -49,6 +55,7 @@ impl UCILimit {
         }
     }
 
+    /// Returns if the limit is depth.
     pub fn is_depth(&self) -> bool {
         if let UCILimit::Depth(_) = *self {
             true
@@ -57,6 +64,7 @@ impl UCILimit {
         }
     }
 
+    /// Returns the depth limit if there is one, otherwise returns 10000.
     pub fn depth_limit(&self) -> u16 {
         if let UCILimit::Depth(depth) = *self {
             depth
@@ -65,6 +73,7 @@ impl UCILimit {
         }
     }
 
+    /// Returns the Timer for the UCILimit, if there is one to be sent.
     pub fn timer(&self) -> Option<Timer> {
         if let UCILimit::Time(timer) = *self {
             Some(timer.clone())
@@ -123,8 +132,8 @@ pub fn compete<S: Searcher, T: Searcher>(_player_one: &S, _player_two: &T, minut
 
         timer.start_time();
         let ret_move = match b.turn() {
-            Player::White => <S as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
-            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), &timer, ply),
+            Player::White => <S as Searcher>::best_move_depth(b.shallow_clone(), ply),
+            Player::Black => <T as Searcher>::best_move_depth(b.shallow_clone(), ply),
         };
         timer.stop_time();
 
