@@ -1,16 +1,9 @@
 //! Module for the TranspositionTable, a type of hashmap where Zobrist Keys map to information about a position.
-
-
-// https://chessprogramming.wikispaces.com/Transposition+Table for info
-
-///
-///
-///
-///
-///
-///
-///
-///
+//!
+//!
+//! A Transposition Table is a structure to quickly lookup chess positions and determine information from them.
+//! It maps from Board positions to Information such as the evaluation of that position, the best move found so far,
+//! the depth that move was found at, etc.
 
 use std::ptr::Unique;
 use std::mem;
@@ -147,7 +140,7 @@ pub struct Cluster {
 // clusters -> Pointer to the clusters
 // cap -> n number of clusters (So n * CLUSTER_SIZE) number of entries
 // time age -> documenting when an entry was placed
-/// Structure for representating a TranspositionTable. A Transposition Table is a type
+/// Structure for representing a TranspositionTable. A Transposition Table is a type
 /// of HashTable that maps Zobrist Keys to information about that position, including the best move
 /// found, score, depth the move was found at, and other information.
 pub struct TT {

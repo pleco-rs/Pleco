@@ -1780,7 +1780,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use use pleco::{Board,Player};
+    /// use pleco::{Board,Player};
     /// use pleco::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();

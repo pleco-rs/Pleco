@@ -35,7 +35,8 @@ pub trait UCISearcher: Searcher {
 }
 
 
-
+/// Defines a Limit for a Searcher. e.g., when a searcher should stop
+/// searching.
 #[derive(Clone)]
 pub enum UCILimit {
     Infinite,
@@ -45,6 +46,7 @@ pub enum UCILimit {
 }
 
 impl UCILimit {
+    /// Returns if time management should be used.
     pub fn use_time(&self) -> bool {
         if let UCILimit::Time(_) = *self {
             true
@@ -53,6 +55,7 @@ impl UCILimit {
         }
     }
 
+    /// Returns if the limit is depth.
     pub fn is_depth(&self) -> bool {
         if let UCILimit::Depth(_) = *self {
             true
@@ -61,6 +64,7 @@ impl UCILimit {
         }
     }
 
+    /// Returns the depth limit if there is one, otherwise returns 10000.
     pub fn depth_limit(&self) -> u16 {
         if let UCILimit::Depth(depth) = *self {
             depth
@@ -69,6 +73,7 @@ impl UCILimit {
         }
     }
 
+    /// Returns the Timer for the UCILimit, if there is one to be sent.
     pub fn timer(&self) -> Option<Timer> {
         if let UCILimit::Time(timer) = *self {
             Some(timer.clone())
