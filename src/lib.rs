@@ -49,7 +49,8 @@ pub mod bots;
 
 pub mod eval;
 
+pub use board::Board;
+pub use piece_move::BitMove;
+pub use templates::{Player,Piece,BitBoard,SQ};
 
 
-
-//include!("tests/test.rs");

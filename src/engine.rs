@@ -10,10 +10,6 @@ use templates::Player;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-pub struct SearcherOption {
-    name: &'static str,
-}
-
 
 /// Trait that defines an object that can play chess
 pub trait Searcher {

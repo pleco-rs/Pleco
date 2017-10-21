@@ -17,11 +17,7 @@ lazy_static! {
     pub static ref RAND_BOARDS_NON_CHECKS: Vec<Board> = {
         let mut vec = Vec::new();
         for x in 0..25 {
-            let mut b = gen_rand_legal_board();
-            while b.in_check() {
-                b = gen_rand_legal_board();
-            }
-            vec.push(b);
+            vec.push(gen_rand_no_check());
         }
         vec
     };
@@ -29,14 +25,37 @@ lazy_static! {
     pub static ref RAND_BOARDS_CHECKS: Vec<Board> = {
         let mut vec = Vec::new();
         for x in 0..30 {
-            let mut b = gen_rand_in_check();
-            while !b.in_check() {
-                 b = gen_rand_in_check();
-            }
-            vec.push(b);
+            vec.push(gen_rand_in_check());
         }
         vec
     };
+
+    pub static ref RAND_BOARDS_ANY: Vec<Board> = {
+        let mut vec = Vec::new();
+        for x in 0..30 {
+            vec.push(gen_rand_legal_board());
+        }
+        vec
+    };
+}
+
+
+#[bench]
+fn bench_movegen_any_legal(b: &mut Bencher) {
+    b.iter(|| {
+        for board in RAND_BOARDS_ANY.iter() {
+            black_box(board.generate_moves());
+        }
+    })
+}
+
+#[bench]
+fn bench_movegen_any_pseudolegal(b: &mut Bencher) {
+    b.iter(|| {
+        for board in RAND_BOARDS_ANY.iter() {
+            black_box(board.generate_moves());
+        }
+    })
 }
 
 
