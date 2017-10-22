@@ -29,6 +29,28 @@ use piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use bit_twiddles::*;
 use magic_helper::MagicHelper;
 
+//                   Legal    PseudoLegal
+//         All:  10,172 ns  |  9,636 ns
+// NonEvasions:   8,381 ns  |  4,179 ns
+//    Captures:   2,491 ns  |  2,230 ns
+//      Quiets:   2,491 ns  |  4,506 n
+// QuietChecks:   7,988 ns  |  3,411 ns
+//    Evasions:   4,034 ns  |  2,689 ns
+//
+//
+//      With Full Player MonoMorphization
+//
+//                   Legal    PseudoLegal
+//         All:   9,275 ns  |  4,814 ns
+// NonEvasions:   8,421 ns  |  4,179 ns
+//    Captures:   2,550 ns  |  2,230 ns
+//      Quiets:   2,491 ns  |  4,506 n
+// QuietChecks:   6,124 ns  |  3,411 ns
+//    Evasions:   3,930 ns  |  2,649 ns
+//
+// With Full Player MonoMorphization
+
+
 
 /// Determines the if the moves generated are PseudoLegal or legal moves.
 /// PseudoLegal moves require that a move's legality is determined before applying
@@ -65,8 +87,6 @@ pub struct MoveGen<'a> {
     movelist: Vec<BitMove>,
     board: &'a Board,
     magic: &'static MagicHelper<'static, 'static>,
-    turn: Player,
-    them: Player,
     occ: BitBoard, // Squares occupied by all
     us_occ: BitBoard, // squares occupied by player to move
     them_occ: BitBoard, // Squares occupied by the opposing player
@@ -80,8 +100,6 @@ impl<'a> MoveGen<'a> {
             movelist: Vec::with_capacity(48),
             board: &chessboard,
             magic: chessboard.magic_helper,
-            turn: chessboard.turn(),
-            them: chessboard.turn().other_player(),
             occ: chessboard.get_occupied(),
             us_occ: chessboard.get_occupied_player(chessboard.turn()),
             them_occ: chessboard.get_occupied_player(chessboard.turn().other_player()),
@@ -90,27 +108,34 @@ impl<'a> MoveGen<'a> {
 
     /// Returns vector of all moves for a given board, Legality & GenType.
     pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> Vec<BitMove> {
+        match chessboard.turn() {
+            Player::White => MoveGen::generate_helper::<L,G, WhiteType>(&chessboard),
+            Player::Black => MoveGen::generate_helper::<L,G, BlackType>(&chessboard)
+        }
+    }
+
+    fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board) -> Vec<BitMove> {
         let mut movegen = MoveGen::get_self(&chessboard);
         let gen_type = G::gen_type();
         if gen_type == GenTypes::Evasions {
-            movegen.generate_evasions::<L>();
+            movegen.generate_evasions::<L,P>();
         } else if gen_type == GenTypes::QuietChecks {
-            movegen.generate_quiet_checks::<L>();
+            movegen.generate_quiet_checks::<L,P>();
         } else {
             if gen_type == GenTypes::All {
                 if movegen.board.in_check() {
-                    movegen.generate_evasions::<L>();
+                    movegen.generate_evasions::<L,P>();
                 } else {
-                    movegen.generate_non_evasions::<L, NonEvasionsGenType>();
+                    movegen.generate_non_evasions::<L, NonEvasionsGenType,P>();
                 }
             } else {
-                movegen.generate_non_evasions::<L,G>();
+                movegen.generate_non_evasions::<L,G,P>();
             }
         }
         movegen.movelist
     }
 
-    fn generate_non_evasions<L: Legality, G: GenTypeTrait>(&mut self) {
+    fn generate_non_evasions<L: Legality, G: GenTypeTrait, P: PlayerTrait>(&mut self) {
         assert_ne!(G::gen_type(), GenTypes::All);
         assert_ne!(G::gen_type(), GenTypes::QuietChecks);
         assert_ne!(G::gen_type(), GenTypes::Evasions);
@@ -124,11 +149,7 @@ impl<'a> MoveGen<'a> {
             _ => unreachable!()
         };
 
-        if self.board.turn() == Player::White {
-            self.generate_all::<L, G, WhiteType>(target);
-        } else {
-            self.generate_all::<L, G, BlackType>(target);
-        }
+        self.generate_all::<L, G, P>(target);
     }
 
     fn generate_all<L: Legality, G: GenTypeTrait, P: PlayerTrait>(&mut self, target: BitBoard) {
@@ -148,7 +169,7 @@ impl<'a> MoveGen<'a> {
 
     }
 
-    fn generate_quiet_checks<L: Legality>(&mut self) {
+    fn generate_quiet_checks<L: Legality, P: PlayerTrait>(&mut self) {
         assert!(!self.board.in_check());
         let mut disc_check: BitBoard = self.board.discovered_check_candidates();
 
@@ -160,24 +181,20 @@ impl<'a> MoveGen<'a> {
             if piece != Piece::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
                 if piece == Piece::K {
-                    b &= self.magic.queen_moves(0,self.board.king_sq(self.them))
+                    b &= self.magic.queen_moves(0,self.board.king_sq(P::opp_player()))
                 }
                 self.move_append_from_bb::<L>(&mut b, from, MoveFlag::QuietMove);
             }
         }
-        if self.turn == Player::White {
-            self.generate_all::<L, QuietChecksGenType, WhiteType>(!self.board.get_occupied());
-        } else {
-            self.generate_all::<L, QuietChecksGenType, BlackType>(!self.board.get_occupied());
-        }
+        self.generate_all::<L, QuietChecksGenType, P>(!self.board.get_occupied());
     }
 
 
     // Helper function to generate evasions
-    fn generate_evasions<L: Legality>(&mut self) {
+    fn generate_evasions<L: Legality, P: PlayerTrait>(&mut self) {
         assert!(self.board.in_check());
 
-        let ksq: SQ = self.board.king_sq(self.turn);
+        let ksq: SQ = self.board.king_sq(P::player());
         let mut slider_attacks: BitBoard = 0;
 
         // Pieces that could possibly attack the king with sliding attacks
@@ -207,11 +224,7 @@ impl<'a> MoveGen<'a> {
 
             // Squares that allow a block or capture of the sliding piece
             let target: BitBoard = self.magic.between_bb(checking_sq, ksq) | sq_to_bb(checking_sq);
-            if self.turn == Player::White {
-                self.generate_all::<L, EvasionsGenType, WhiteType>(target);
-            } else {
-                self.generate_all::<L, EvasionsGenType, BlackType>(target);
-            }
+            self.generate_all::<L, EvasionsGenType, P>(target);
         }
     }
 
@@ -382,7 +395,7 @@ impl<'a> MoveGen<'a> {
             }
 
             if G::gen_type() == GenTypes::QuietChecks {
-                let ksq: SQ = self.board.king_sq(self.them);
+                let ksq: SQ = self.board.king_sq(P::opp_player());
                 push_one &= self.magic.pawn_attacks_from(ksq, P::opp_player());
                 push_two &= self.magic.pawn_attacks_from(ksq, P::opp_player());
 
@@ -490,9 +503,9 @@ impl<'a> MoveGen<'a> {
 
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
-                assert_eq!(rank_of_sq(ep_sq), relative_rank(self.turn, Rank::R6));
+                assert_eq!(rank_of_sq(ep_sq), relative_rank(P::player(), Rank::R6));
                 if G::gen_type() != GenTypes::Evasions || target & sq_to_bb(down(ep_sq)) != 0 {
-                    left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, self.them);
+                    left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
 
                     while left_cap != 0 {
                         let bit = lsb(left_cap);
