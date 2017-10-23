@@ -2152,7 +2152,6 @@ impl Board {
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
 
-                // TODO: is this right?
                 (self.magic_helper.rook_moves(b, opp_king_sq) & turn_sliding_p) |
                     (self.magic_helper.bishop_moves(b, opp_king_sq) & turn_diag_p) !=
                     0

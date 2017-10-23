@@ -123,12 +123,12 @@ fn gen_rand_board(gen: RandGen) -> Board {
             if i > 4 {
                 let mut to_ret = rand::random::<i32>() % cmp::max(17, 100 - i) == 0;
                 if gen != RandGen::InCheck {
-                    to_ret |= rand::random::<usize>() % 109 == 0;
+                    to_ret |= rand::random::<usize>() % 70 == 0;
                 }
                 if i > 19 {
-                    to_ret |= rand::random::<usize>() % 200 == 0;
+                    to_ret |= rand::random::<usize>() % 79 == 0;
                     if i > 34 {
-                        to_ret |= rand::random::<usize>() % 115 == 0;
+                        to_ret |= rand::random::<usize>() % 100 == 0;
                     }
                 }
 
@@ -154,7 +154,7 @@ fn gen_rand_board(gen: RandGen) -> Board {
 }
 
 fn create_rand_move(board: &Board, favorable: bool) -> BitMove {
-    let rand_num = if favorable {27} else {14};
+    let rand_num = if favorable {24} else {14};
 
     if rand::random::<usize>() % rand_num == 0 {
         RandomBot::best_move_depth(board.shallow_clone(), 1)
