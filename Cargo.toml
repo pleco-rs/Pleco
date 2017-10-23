@@ -32,6 +32,7 @@ debug = true
 [profile.release]
 opt-level = 3
 debug = true
+debug-assertions = false
 
 [profile.bench]
 opt-level = 3
@@ -42,12 +43,13 @@ debug-assertions = false
 codegen-units = 1
 
 [profile.test]
-opt-level = 1
+opt-level = 2
 debug = true
 rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 4
+panic = 'unwind'
 
 [profile.doc]
 opt-level = 0

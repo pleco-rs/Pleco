@@ -119,16 +119,16 @@ fn gen_rand_board(gen: RandGen) -> Board {
         let mut i = 0;
         let mut moves = board.generate_moves();
 
-        while i < 70 && !moves.is_empty() {
+        while i < 100 && !moves.is_empty() {
             if i > 4 {
-                let mut to_ret = rand::random::<i32>() % cmp::max(8, 43 - i) == 0;
+                let mut to_ret = rand::random::<i32>() % cmp::max(17, 100 - i) == 0;
                 if gen != RandGen::InCheck {
-                    to_ret |= rand::random::<usize>() % 87 == 0;
+                    to_ret |= rand::random::<usize>() % 109 == 0;
                 }
-                if i > 17 {
-                    to_ret |= rand::random::<usize>() % 60 == 0;
-                    if i > 30 {
-                        to_ret |= rand::random::<usize>() % 53 == 0;
+                if i > 19 {
+                    to_ret |= rand::random::<usize>() % 200 == 0;
+                    if i > 34 {
+                        to_ret |= rand::random::<usize>() % 115 == 0;
                     }
                 }
 
@@ -154,17 +154,39 @@ fn gen_rand_board(gen: RandGen) -> Board {
 }
 
 fn create_rand_move(board: &Board, favorable: bool) -> BitMove {
-    let rand_num = if favorable {24} else {14};
+    let rand_num = if favorable {27} else {14};
 
     if rand::random::<usize>() % rand_num == 0 {
         RandomBot::best_move_depth(board.shallow_clone(), 1)
     } else if rand::random::<usize>() % 6 == 0 {
-        IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+        IterativeSearcher::best_move_depth(board.shallow_clone(),3)
     } else if rand::random::<usize>() % 3 == 0 {
         JamboreeSearcher::best_move_depth(board.shallow_clone(),4)
-    } else if !favorable && rand::random::<usize>() % 3 < 2 {
+    } else if !favorable && rand::random::<usize>() % 4 < 3 {
         JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
     } else {
         IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+    }
+}
+
+fn apply_castling(board: &mut Board) -> bool {
+    let moves = board.generate_moves();
+    for mov in moves {
+        if mov.is_castle() {
+            board.apply_move(mov);
+            return true;
+        }
+    }
+    false
+}
+
+#[test]
+fn stress_test_rand_moves() {
+    let mut i = 0;
+    while i < 10 {
+        let mut board = gen_rand_legal_board();
+        let mov = IterativeSearcher::best_move_depth(board.shallow_clone(),4);
+        board.apply_move(mov);
+        i += 1;
     }
 }
