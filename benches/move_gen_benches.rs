@@ -53,7 +53,7 @@ fn bench_movegen_any_legal(b: &mut Bencher) {
 fn bench_movegen_any_pseudolegal(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS_ANY.iter() {
-            black_box(board.generate_moves());
+            black_box(board.generate_pseudolegal_moves());
         }
     })
 }

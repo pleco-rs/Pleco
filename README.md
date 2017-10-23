@@ -4,6 +4,8 @@ Pleco is a chess Engine inspired by Stockfish, written entirely in Rust.
 
 This project aims to utilize the efficiency of Rust to create a Chess Bot with the speed of modern chess engines.
 
+
+[![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
 [![Coverage Status](https://coveralls.io/repos/github/sfleischman105/Pleco/badge.svg?branch=master)](https://coveralls.io/github/sfleischman105/Pleco?branch=master)
@@ -66,7 +68,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```
 [dependencies]
-pleco = "0.1.3"
+pleco = "0.1.5"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:

@@ -450,12 +450,20 @@ impl BoardState {
     pub fn backtrace(&self) {
         self.print_info();
         if self.prev.is_some() {
-            self.get_prev().unwrap().print_info();
+            self.get_prev().unwrap().backtrace();
         }
     }
 
     pub fn print_info(&self) {
-        println!("ply: {}, move played: {}",self.ply, self.prev_move);
+
+        print!("ply: {}, move played: {} ",self.ply, self.prev_move);
+        if self.captured_piece.is_some() {
+            print!("cap {}", self.captured_piece.unwrap());
+        }
+        if self.checkers_bb != 0 {
+            print!("in check {}", bb_to_sq(self.checkers_bb));
+        }
+        println!();
     }
 }
 
@@ -1133,11 +1141,12 @@ impl Board {
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
 
-            if gives_check {
-                new_state.checkers_bb =
-                    self.attackers_to(self.king_sq(them), self.get_occupied()) &
-                        self.get_occupied_player(us);
-            }
+            new_state.checkers_bb = if gives_check {
+                self.attackers_to(self.king_sq(them), self.get_occupied()) &
+                    self.get_occupied_player(us)
+            } else {
+                0
+            };
 
             self.turn = them;
             self.set_check_info(new_state); // Set the checking information
@@ -2143,9 +2152,8 @@ impl Board {
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
 
-                // TODO: is this right?
-                (self.magic_helper.rook_moves(b, opp_king_sq) | turn_sliding_p) &
-                    (self.magic_helper.bishop_moves(b, opp_king_sq) | turn_diag_p) !=
+                (self.magic_helper.rook_moves(b, opp_king_sq) & turn_sliding_p) |
+                    (self.magic_helper.bishop_moves(b, opp_king_sq) & turn_diag_p) !=
                     0
             }
             MoveType::Castle => {

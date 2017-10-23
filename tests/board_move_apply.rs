@@ -3,7 +3,9 @@ extern crate rand;
 
 use pleco::board::Board;
 use pleco::piece_move::BitMove;
+use pleco::tools::gen_rand_legal_board;
 use std::*;
+
 
 #[test]
 fn random_moves() {
@@ -35,3 +37,4 @@ fn apply_null_moves() {
         trials += 1;
     }
 }
+
