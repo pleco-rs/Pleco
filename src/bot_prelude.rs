@@ -8,3 +8,5 @@ pub use bots::basic::bot_jamboree::JamboreeSearcher;
 
 pub use bots::bot_iterative_parallel_mvv_lva::IterativeSearcher;
 pub use bots::lazy_smp::LazySMPSearcher;
+
+pub use engine::{Searcher,UCISearcher};

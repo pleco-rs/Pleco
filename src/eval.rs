@@ -120,13 +120,13 @@ impl Eval {
 
 
 fn eval_all<P: PlayerTrait>(board: &Board) -> i16 {
-    eval_piece_counts::<P>(&board) +
-    eval_castling::<P>(&board) +
-    eval_king_pos::<P>(&board) +
-    eval_bishop_pos::<P>(&board) +
-    eval_knight_pos::<P>(&board) +
-    eval_king_blockers_pinners::<P>(&board) +
-    eval_pawns::<P>(&board)
+    eval_piece_counts::<P>(board) +
+    eval_castling::<P>(board) +
+    eval_king_pos::<P>(board) +
+    eval_bishop_pos::<P>(board) +
+    eval_knight_pos::<P>(board) +
+    eval_king_blockers_pinners::<P>(board) +
+    eval_pawns::<P>(board)
 }
 
 

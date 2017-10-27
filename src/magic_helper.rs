@@ -1,4 +1,4 @@
-//! This module contains useful pre-computed lookup tables involving [BitBoard]s.
+//! This module contains useful pre-computed lookup tables involving `BitBoard`s.
 use bit_twiddles::*;
 use templates::*;
 use std::{mem, slice, cmp};
@@ -34,14 +34,14 @@ const SEEDS: [[u64; 8]; 2] = [
 ///
 ///
 /// Thread safe. Once initializes, IT SHOULD NOT BE MODIFIED. It is intended as a globally
-/// static struct created by the [Board].
+/// static struct created by the `Board`.
 ///
 /// Currently does the following:
-///      - Generates King and Rook Move Bitboards
-///      - Generates Rook, Bishop, Queen Magic Bitboards for Move generation
+///      - Generates King and Rook Move `BitBoards`
+///      - Generates Rook, Bishop, Queen Magic `BitBoard`s for Move generation
 ///      - Generates distance table for quick lookup of distance
-///      - Line BitBoard and Vetween BitBoard given two squares
-///      - Adjacant Files BitBoard.
+///      - Line `BitBoard` and Between `BitBoard` given two squares
+///      - Adjacent Files `BitBoard`.
 ///      - Pawn Attacks from a certain square
 ///      - Zobrist Structure for Zobrist Hashing
 pub struct MagicHelper<'a, 'b> {
@@ -321,7 +321,7 @@ struct SMagic<'a> {
     shift: u32,
 }
 
-/// Temporary struct used to create an actual Magic BitBoard Object.
+/// Temporary struct used to create an actual `MagicBitBoard` Object.
 #[warn(dead_code)]
 struct PreSMagic {
     start: usize,

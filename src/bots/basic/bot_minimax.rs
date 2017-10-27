@@ -45,7 +45,7 @@ fn minimax(bot: &mut SimpleBot, max_depth: u16) -> BestMove {
     }
 
     let moves = bot.board.generate_moves();
-    if moves.len() == 0 {
+    if moves.is_empty() {
         if bot.board.in_check() {
             return BestMove::new(MATE + (bot.board.depth() as i16));
         } else {

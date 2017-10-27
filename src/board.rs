@@ -11,6 +11,7 @@ use piece_move::{BitMove, MoveType};
 use std::option::*;
 use std::sync::Arc;
 use std::{mem, fmt, char};
+use std::cmp::PartialEq;
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
@@ -165,7 +166,7 @@ impl fmt::Display for Castling {
 ///
 /// Piece Locations is a BLIND structure, Providing a function of  |sq| -> |Piece AND/OR Player|
 /// The reverse cannot be done Looking up squares from a piece / player.
-struct PieceLocations {
+pub struct PieceLocations {
     // Pieces are represented by the following bit_patterns:
     // x000 -> Pawn (P)
     // x001 -> Knight(N)
@@ -180,13 +181,6 @@ struct PieceLocations {
 
     // array of u8's, with standard ordering mapping index to square
     data: [u8; 64],
-}
-
-impl Clone for PieceLocations {
-    // Need to use transmute copy as [_;64] does not automatically implement Clone.
-    fn clone(&self) -> PieceLocations {
-        unsafe { mem::transmute_copy(&self.data) }
-    }
 }
 
 
@@ -331,7 +325,23 @@ impl PieceLocations {
     }
 }
 
+impl Clone for PieceLocations {
+    // Need to use transmute copy as [_;64] does not automatically implement Clone.
+    fn clone(&self) -> PieceLocations {
+        unsafe { mem::transmute_copy(&self.data) }
+    }
+}
 
+impl PartialEq for PieceLocations {
+    fn eq(&self, other: &PieceLocations) -> bool {
+        for sq in 0..64 {
+            if self.data[sq] != other.data[sq] {
+                return false;
+            }
+        }
+        true
+    }
+}
 
 /// Holds useful information concerning the current state of the board.
 ///
@@ -467,16 +477,28 @@ impl BoardState {
     }
 }
 
+impl PartialEq for BoardState {
+    fn eq(&self, other: &BoardState) -> bool {
+        self.castling == other.castling &&
+            self.rule_50 == other.rule_50 &&
+            self.ep_square == other.ep_square &&
+            self.zobrast == other.zobrast &&
+            self.captured_piece == other.captured_piece &&
+            self.checkers_bb == other.checkers_bb &&
+            self.blockers_king == other.blockers_king &&
+            self.pinners_king == other.pinners_king &&
+            self.check_sqs == other.check_sqs
+    }
+}
 
 
-
-/// Represents a ChessBoard through a `Board`.
+/// Represents a Chessboard through a `Board`.
 ///
 /// Board contains everything that needs to be known about the current state of the Game. It is used
 /// by both Engines and Players / Bots alike.
 ///
 /// Ideally, the Engine contains the original Representation of a board (owns the board), and utilizes
-/// [Board::shallow_clone()] to share this representaion with Players.
+/// `Board::shallow_clone()` to share this representaion with Players.
 ///
 /// # Examples
 ///
@@ -537,6 +559,15 @@ pub struct Board {
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.pretty_string())
+    }
+}
+
+impl PartialEq for Board {
+    fn eq(&self, other: &Board) -> bool {
+        self.turn == other.turn &&
+            self.occ_all == other.occ_all &&
+            self.state == other.state &&
+            self.piece_locations == other.piece_locations
     }
 }
 
@@ -608,7 +639,7 @@ impl Board {
             depth: 0,
             piece_counts: self.piece_counts,
             piece_locations: self.piece_locations.clone(),
-            state: self.state.clone(),
+            state: Arc::clone(&self.state),
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -1034,7 +1065,7 @@ impl Board {
             let new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
 
             // Set the prev state
-            new_state.prev = Some(self.state.clone());
+            new_state.prev = Some(Arc::clone(&self.state));
 
             // Increment these
             self.half_moves += 1;
@@ -1172,8 +1203,8 @@ impl Board {
     pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
         let all_moves: Vec<BitMove> = self.generate_moves();
         let bit_move: Option<BitMove> = all_moves.iter()
-            .find(|m| &m.stringify() == uci_move)
-            .map(|m| m.clone());
+            .find(|m| m.stringify() == uci_move)
+            .cloned();
         if bit_move.is_some() {
             self.apply_move(bit_move.unwrap());
             return true;
@@ -1295,7 +1326,7 @@ impl Board {
             new_state.rule_50 += 1;
             new_state.ply += 1;
 
-            new_state.prev = Some(self.state.clone());
+            new_state.prev = Some(Arc::clone(&self.state));
 
             if self.state.ep_square != NO_SQ {
                 zob ^= self.magic_helper.z_ep_file(self.state.ep_square);

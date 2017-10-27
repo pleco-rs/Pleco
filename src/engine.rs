@@ -69,7 +69,7 @@ impl UCILimit {
         if let UCILimit::Depth(depth) = *self {
             depth
         } else {
-            10000
+            10_000
         }
     }
 

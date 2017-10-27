@@ -61,7 +61,7 @@ fn jamboree(
     }
 
     let moves = board.generate_moves();
-    if moves.len() == 0 {
+    if moves.is_empty() {
         if board.in_check() {
             return BestMove::new(MATE + (board.depth() as i16));
         } else {
@@ -165,7 +165,7 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     let moves = board.generate_moves();
 
-    if moves.len() == 0 {
+    if moves.is_empty() {
         if board.in_check() {
             return BestMove::new(MATE + (board.depth() as i16));
         } else {

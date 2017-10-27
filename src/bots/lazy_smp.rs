@@ -133,7 +133,7 @@ struct Thread {
 impl Thread {
     pub fn idle_loop(&mut self) {
         {
-            let &(ref lock, ref cvar) = &*(self.cond_var.clone());
+            let &(ref lock, ref cvar) = &*(Arc::clone(&self.cond_var));
             let mut started = lock.lock().unwrap();
             while !*started {
                 started = cvar.wait(started).unwrap();
@@ -252,7 +252,7 @@ impl Thread {
             self.board.generate_moves()
         };
 
-        if moves.len() == 0 {
+        if moves.is_empty() {
             if self.board.in_check() {
                 return MATE + (self.board.depth() as i16);
             } else {
@@ -373,9 +373,9 @@ impl LazySMPSearcher {
                 root_moves: shared_moves,
                 id: x,
                 tt: &TT_TABLE,
-                nodes: nodes.clone(),
-                local_stop: stop.clone(),
-                cond_var: cond_var.clone(),
+                nodes: Arc::clone(&nodes),
+                local_stop: Arc::clone(&stop),
+                cond_var: Arc::clone(&cond_var),
                 thread_stack: init_thread_stack(),
                 limit: UCILimit::Infinite,
             };
@@ -394,9 +394,9 @@ impl LazySMPSearcher {
             root_moves: main_thread_moves,
             id: 0,
             tt: &TT_TABLE,
-            nodes: nodes.clone(),
-            local_stop: stop.clone(),
-            cond_var: cond_var.clone(),
+            nodes: Arc::clone(&nodes),
+            local_stop: Arc::clone(&stop),
+            cond_var: Arc::clone(&cond_var),
             thread_stack: init_thread_stack(),
             limit: UCILimit::Infinite,
         };
@@ -469,6 +469,10 @@ impl LazySMPSearcher {
         }
 
         best_root_move.bit_move
+    }
+
+    pub fn perft(depth: u16) -> u64 {
+        unimplemented!()
     }
 }
 
