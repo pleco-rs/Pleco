@@ -4,7 +4,7 @@ use engine::{UCILimit,UCISearcher};
 use board::Board;
 use bots::lazy_smp::LazySMPSearcher;
 use timer::Timer;
-use piece_move::BitMove;
+use core::piece_move::BitMove;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -99,7 +99,7 @@ fn uci() {
         } else if command == "position" {
             board = parse_board_position(args_clone);
         } else if command == "go" {
-            mid_search_loop(&mut board, parse_limit(args_clone), stop_searching.clone());
+            mid_search_loop(&mut board, parse_limit(args_clone), Arc::clone(&stop_searching));
         } else if command == "stop" {
             stop_searching.store(true, Ordering::Relaxed);
         } else {
@@ -111,7 +111,7 @@ fn uci() {
 
 fn mid_search_loop(board: &mut Board, limit: UCILimit, stop: Arc<AtomicBool>) {
     stop.store(false, Ordering::Relaxed);
-    let mut searcher = LazySMPSearcher::setup(board.shallow_clone(), stop.clone());
+    let mut searcher = LazySMPSearcher::setup(board.shallow_clone(), Arc::clone(&stop));
     thread::spawn(move || {
         searcher.uci_go(limit, true)
     });

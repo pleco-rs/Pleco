@@ -33,11 +33,7 @@ extern crate num_cpus;
 extern crate rand;
 
 pub mod board;
-pub mod bit_twiddles;
-pub mod movegen;
-pub mod piece_move;
-pub mod templates;
-pub mod magic_helper;
+
 pub mod timer;
 pub mod engine;
 pub mod tools;
@@ -45,12 +41,14 @@ pub mod uci;
 pub mod tt;
 pub mod bot_prelude;
 
+
+pub mod core;
+
 pub mod bots;
 
-pub mod eval;
 
 pub use board::Board;
-pub use piece_move::BitMove;
-pub use templates::{Player,Piece,BitBoard,SQ};
+pub use core::piece_move::BitMove;
+pub use core::templates::{Player,Piece,BitBoard,SQ};
 
 

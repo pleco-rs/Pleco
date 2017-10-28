@@ -11,7 +11,7 @@
 //! `QuietChecks`, and `NonEvasions` can only be done if the board is in NOT in check. Likewise,
 //! `Evasions` can only be done when the board is currently in check.
 //!
-//! # Legal vs. PseudoLegal Moves
+//! # `Legal` vs. `PseudoLegal` Moves
 //!
 //! For the generation type, moves can either be generated to be Legal, Or Pseudo-Legal. A Legal
 //! move is, for as the name implies, a legal move for the current side to play for a given position.
@@ -23,11 +23,11 @@
 //! Legal moves. So, if you are fine with generating moves and then checking them post-generation
 //! with a `Board::is_legal(m: BitMove)`, then the performance boost is potentially worth it.
 
-use templates::*;
+use core::templates::*;
 use board::*;
-use piece_move::{MoveFlag, BitMove, PreMoveInfo};
-use bit_twiddles::*;
-use magic_helper::MagicHelper;
+use core::piece_move::{MoveFlag, BitMove, PreMoveInfo};
+use core::bit_twiddles::*;
+use core::magic_helper::MagicHelper;
 
 //                   Legal    PseudoLegal
 //         All:  10,172 ns  |  9,636 ns
@@ -52,17 +52,17 @@ use magic_helper::MagicHelper;
 
 
 
-/// Determines the if the moves generated are PseudoLegal or legal moves.
+/// Determines the if the moves generated are `PseudoLegal` or `Legal` moves.
 /// PseudoLegal moves require that a move's legality is determined before applying
 /// to a `Board`.
 pub trait Legality {
     fn gen_legal() -> bool;
 }
 
-/// Dummy Struct to represent the generation of Legal Moves.
+/// Dummy Struct to represent the generation of `Legal` Moves.
 pub struct Legal {}
 
-/// Dummy Struct to represent the generation of PseudoLegal Moves.
+/// Dummy Struct to represent the generation of `PseudoLegal` Moves.
 pub struct PseudoLegal {}
 
 impl Legality for Legal {
@@ -121,7 +121,7 @@ impl<'a> MoveGen<'a> {
             movegen.generate_evasions::<L,P>();
         } else if gen_type == GenTypes::QuietChecks {
             movegen.generate_quiet_checks::<L,P>();
-        } else {
+        } else  {
             if gen_type == GenTypes::All {
                 if movegen.board.in_check() {
                     movegen.generate_evasions::<L,P>();
@@ -251,8 +251,7 @@ impl<'a> MoveGen<'a> {
 
             let ksq: SQ = self.board.king_sq(P::player());
             let r_from: SQ = self.board.castling_rook_square(side);
-            let k_to = relative_square(
-                P::player(),
+            let k_to = P::player().relative_square(
                 if king_side {
                     Square::G1 as SQ
                 } else {
@@ -328,38 +327,6 @@ impl<'a> MoveGen<'a> {
             (RANK_1, RANK_2, RANK_6)
         };
 
-        // some functions we need to shift bitboards around & move squares. We do this because it depends only on the players side,
-        // and we use these functions alot.
-        let (down, _up, left_down, right_down, shift_up, shift_left_up, shift_right_up): (
-            fn(SQ) -> SQ,
-            fn(SQ) -> SQ,
-            fn(SQ) -> SQ,
-            fn(SQ) -> SQ,
-            fn(u64) -> u64,
-            fn(u64) -> u64,
-            fn(u64) -> u64,
-        ) = if P::player() == Player::White {
-            (
-                |x: SQ| x.wrapping_sub(8), // Down
-                |x: SQ| x.wrapping_add(8), // Up
-                |x: SQ| x.wrapping_sub(9), // left_down
-                |x: SQ| x.wrapping_sub(7), // right_down
-                |x: u64| x.wrapping_shl(8), // Shift_up
-                |x: u64| (x & !FILE_A).wrapping_shl(7), // Shift_left_up
-                |x: u64| (x & !FILE_H).wrapping_shl(9),
-            ) // Shift_Right_up
-        } else {
-            (
-                |x: SQ| x.wrapping_add(8),
-                |x: SQ| x.wrapping_sub(8),
-                |x: SQ| x.wrapping_add(9),
-                |x: SQ| x.wrapping_add(7),
-                |x: u64| x.wrapping_shr(8),
-                |x: u64| (x & !FILE_H).wrapping_shr(7),
-                |x: u64| (x & !FILE_A).wrapping_shr(9),
-            )
-        };
-
         let all_pawns: BitBoard = self.board.piece_bb(P::player(), Piece::P);
 
         // seperate these two for promotion moves and non promotions
@@ -385,9 +352,9 @@ impl<'a> MoveGen<'a> {
                     !self.board.get_occupied()
                 };
 
-            let mut push_one: BitBoard = empty_squares & shift_up(pawns_not_rank_7);
+            let mut push_one: BitBoard = empty_squares & P::shift_up(pawns_not_rank_7);
             // double pushes are pawns that can be pushed one and remain on rank3
-            let mut push_two: BitBoard = shift_up(push_one & rank_3) & empty_squares;
+            let mut push_two: BitBoard = P::shift_up(push_one & rank_3) & empty_squares;
 
             if G::gen_type() == GenTypes::Evasions {
                 push_one &= target;
@@ -401,9 +368,9 @@ impl<'a> MoveGen<'a> {
 
                 let dc_candidates: BitBoard = self.board.discovered_check_candidates();
                 if pawns_not_rank_7 & dc_candidates != 0 {
-                    let dc1: BitBoard = shift_up(pawns_not_rank_7 & dc_candidates) &
+                    let dc1: BitBoard = P::shift_up(pawns_not_rank_7 & dc_candidates) &
                         empty_squares & !file_bb(ksq);
-                    let dc2: BitBoard = shift_up(rank_3 & dc1) & empty_squares;
+                    let dc2: BitBoard = P::shift_up(rank_3 & dc1) & empty_squares;
 
                     push_one |= dc1;
                     push_two |= dc2;
@@ -413,7 +380,7 @@ impl<'a> MoveGen<'a> {
             while push_one != 0 {
                 let bit: BitBoard = lsb(push_one);
                 let dst: SQ = bb_to_sq(bit);
-                let src: SQ = down(dst);
+                let src: SQ = P::down(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
@@ -425,7 +392,7 @@ impl<'a> MoveGen<'a> {
             while push_two != 0 {
                 let bit: BitBoard = lsb(push_two);
                 let dst: SQ = bb_to_sq(bit);
-                let src: SQ = down(down(dst));
+                let src: SQ = P::down(P::down(dst));
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
@@ -443,28 +410,28 @@ impl<'a> MoveGen<'a> {
                 empty_squares &= target;
             }
 
-            let mut no_promo: BitBoard = shift_up(pawns_rank_7) & empty_squares;
-            let mut left_cap_promo: BitBoard = shift_left_up(pawns_rank_7) & enemies;
-            let mut right_cap_promo: BitBoard = shift_right_up(pawns_rank_7) & enemies;
+            let mut no_promo: BitBoard = P::shift_up(pawns_rank_7) & empty_squares;
+            let mut left_cap_promo: BitBoard = P::shift_up_left(pawns_rank_7) & enemies;
+            let mut right_cap_promo: BitBoard = P::shift_up_right(pawns_rank_7) & enemies;
 
             while no_promo != 0 {
                 let bit = lsb(no_promo);
                 let dst: SQ = bb_to_sq(bit);
-                self.create_all_promotions::<L>(dst, down(dst), false);
+                self.create_all_promotions::<L>(dst, P::down(dst), false);
                 no_promo &= !bit;
             }
 
             while left_cap_promo != 0 {
                 let bit = lsb(left_cap_promo);
                 let dst: SQ = bb_to_sq(bit);
-                self.create_all_promotions::<L>(dst, right_down(dst), true);
+                self.create_all_promotions::<L>(dst, P::down_right(dst), true);
                 left_cap_promo &= !bit;
             }
 
             while right_cap_promo != 0 {
                 let bit = lsb(right_cap_promo);
                 let dst: SQ = bb_to_sq(bit);
-                self.create_all_promotions::<L>(dst, left_down(dst), true);
+                self.create_all_promotions::<L>(dst, P::down_left(dst), true);
                 right_cap_promo &= !bit;
             }
         }
@@ -474,13 +441,13 @@ impl<'a> MoveGen<'a> {
             G::gen_type() == GenTypes::NonEvasions || G::gen_type() == GenTypes::All
         {
 
-            let mut left_cap: BitBoard = shift_left_up(pawns_not_rank_7) & enemies;
-            let mut right_cap: BitBoard = shift_right_up(pawns_not_rank_7) & enemies;
+            let mut left_cap: BitBoard = P::shift_up_left(pawns_not_rank_7) & enemies;
+            let mut right_cap: BitBoard = P::shift_up_right(pawns_not_rank_7) & enemies;
 
             while left_cap != 0 {
                 let bit = lsb(left_cap);
                 let dst: SQ = bb_to_sq(bit);
-                let src: SQ = right_down(dst);
+                let src: SQ = P::down_right(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
@@ -492,7 +459,7 @@ impl<'a> MoveGen<'a> {
             while right_cap != 0 {
                 let bit = lsb(right_cap);
                 let dst: SQ = bb_to_sq(bit);
-                let src: SQ = left_down(dst);
+                let src: SQ = P::down_left(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
@@ -504,7 +471,7 @@ impl<'a> MoveGen<'a> {
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
                 assert_eq!(rank_of_sq(ep_sq), relative_rank(P::player(), Rank::R6));
-                if G::gen_type() != GenTypes::Evasions || target & sq_to_bb(down(ep_sq)) != 0 {
+                if G::gen_type() != GenTypes::Evasions || target & sq_to_bb(P::down(ep_sq)) != 0 {
                     left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
 
                     while left_cap != 0 {
@@ -523,16 +490,17 @@ impl<'a> MoveGen<'a> {
     }
 
     // Helper function for creating promotions
+    #[inline]
     fn create_all_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
         let prom_pieces = [Piece::Q, Piece::N, Piece::R, Piece::B];
-        for piece in prom_pieces.into_iter() {
+        for piece in &prom_pieces {
             if is_capture {
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
                     flags: MoveFlag::Promotion {
                         capture: true,
-                        prom: piece.clone(),
+                        prom: *piece,
                     },
                 }));
             } else {
@@ -541,7 +509,7 @@ impl<'a> MoveGen<'a> {
                     dst: dst,
                     flags: MoveFlag::Promotion {
                         capture: false,
-                        prom: piece.clone(),
+                        prom: *piece,
                     },
                 }));
             }

@@ -1,8 +1,8 @@
 extern crate pleco;
 
 use pleco::board::*;
-use pleco::templates::*;
-use pleco::piece_move::*;
+use pleco::core::templates::*;
+use pleco::core::piece_move::*;
 
 use pleco::engine::Searcher;
 use pleco::bot_prelude::*;

@@ -1,8 +1,8 @@
 use board::Board;
-use timer::Timer;
-use piece_move::BitMove;
+use core::piece_move::BitMove;
 extern crate rand;
 use engine::{Searcher,UCILimit};
+use timer::Timer;
 
 
 pub struct RandomBot {

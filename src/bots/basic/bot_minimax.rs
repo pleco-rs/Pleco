@@ -1,7 +1,7 @@
 use board::*;
-use piece_move::*;
+use core::piece_move::*;
 use engine::{Searcher,UCILimit};
-use eval::*;
+use board::eval::*;
 
 #[allow(unused_imports)]
 use test::Bencher;

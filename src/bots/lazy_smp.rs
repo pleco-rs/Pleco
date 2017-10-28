@@ -9,9 +9,9 @@ use std::cmp::{min,max,Ordering as CmpOrder};
 use std::mem;
 
 use board::*;
-use templates::*;
-use eval::*;
-use piece_move::BitMove;
+use core::templates::*;
+use board::eval::*;
+use core::piece_move::BitMove;
 use tt::*;
 use engine::*;
 
@@ -305,7 +305,7 @@ impl Thread {
                 let piece = self.board.piece_at_sq((a).get_src()).unwrap();
 
                 if a.is_capture() {
-                    value_of_piece(self.board.captured_piece(a).unwrap()) - value_of_piece(piece)
+                    self.board.captured_piece(a).unwrap().value() - piece.value()
                 } else if piece == Piece::P {
                     if a.is_double_push().0 {
                         -2

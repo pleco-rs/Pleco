@@ -1,5 +1,5 @@
 //! Module for the implementation and definition of a move to be played.
-use templates::*;
+use core::templates::*;
 use std::fmt;
 
 // A move needs 16 bits to be stored
@@ -47,10 +47,10 @@ static SP_MASK: u16 = 0b0011_000000_000000;
 
 /// Represents a singular move. 
 ///
-/// A [BitMove] consists of 16 bits, all of which to include a source square, destination square,
+/// A `BitMove` consists of 16 bits, all of which to include a source square, destination square,
 /// and special move-flags to differentiate types of moves. 
 ///
-/// A [BitMove] should never be created directly, but rather instigated with a [PreMoveInfo]. This is because
+/// A `BitMove` should never be created directly, but rather instigated with a `PreMoveInfo`. This is because
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct BitMove {
@@ -67,7 +67,7 @@ pub enum MoveFlag {
     QuietMove,
 }
 
-/// A Subset of MoveFlag, used to determine the overall classfication of a move.
+/// A Subset of `MoveFlag`, used to determine the overall classification of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum MoveType {
     Promotion,
@@ -76,7 +76,7 @@ pub enum MoveType {
     Normal,
 }
 
-/// Useful pre-incoding of a move's information before it is compressed into a BitMove struct.
+/// Useful pre-incoding of a move's information before it is compressed into a `BitMove` struct.
 #[derive(Copy, Clone, PartialEq)]
 pub struct PreMoveInfo {
     pub src: SQ,

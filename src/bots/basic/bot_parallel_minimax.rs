@@ -1,8 +1,8 @@
 use board::*;
 use timer::*;
-use piece_move::*;
+use core::piece_move::*;
 use engine::{Searcher,UCILimit};
-use eval::*;
+use board::eval::*;
 use rayon;
 
 #[allow(unused_imports)]

@@ -8,7 +8,7 @@ extern crate lazy_static;
 
 use pleco::board::Board;
 use pleco::tools::*;
-use pleco::eval::Eval;
+use pleco::board::eval::Eval;
 
 use test::{black_box, Bencher};
 

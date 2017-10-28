@@ -2,8 +2,9 @@ extern crate pleco;
 
 use pleco::board as board;
 use self::board::{Board as Board};
-use pleco::templates::*;
-use pleco::piece_move::*;
+use pleco::core::templates::*;
+use pleco::core::piece_move;
+use pleco::core::piece_move::*;
 use pleco::*;
 
 

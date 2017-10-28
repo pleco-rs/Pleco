@@ -1,8 +1,8 @@
 use board::*;
 use timer::*;
-use piece_move::*;
+use core::piece_move::*;
 use engine::{Searcher,UCILimit};
-use eval::*;
+use board::eval::*;
 
 #[allow(unused_imports)]
 use test::Bencher;
@@ -76,68 +76,3 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 fn eval_board(board: &mut Board) -> BestMove {
     BestMove::new(Eval::eval_low(&board))
 }
-
-#[test]
-pub fn test_fens() {
-    use templates::TEST_FENS;
-    for str in TEST_FENS.iter() {
-        Board::new_from_fen(str);
-    }
-}
-
-
-//#[bench]
-//fn bench_bot_ply_3__alphabeta_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-////            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}
-//
-//#[bench]
-//fn bench_bot_ply_4__alphabeta_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),4);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}
-//
-//#[bench]
-//fn bench_bot_ply_5__alphabeta_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = AlphaBetaBot::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}
-//
-//

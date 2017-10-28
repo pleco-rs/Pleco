@@ -1,8 +1,8 @@
 use board::*;
-use templates::*;
-use piece_move::BitMove;
+use core::templates::*;
+use core::piece_move::BitMove;
 use engine::*;
-use eval::*;
+use board::eval::*;
 use rayon;
 
 #[allow(unused_imports)]
@@ -312,7 +312,7 @@ fn mvv_lva_sort(moves: &mut [BitMove], board: &Board) {
         let piece = board.piece_at_sq((*a).get_src()).unwrap();
 
         if a.is_capture() {
-            value_of_piece(board.captured_piece(*a).unwrap()) - value_of_piece(piece)
+            board.captured_piece(*a).unwrap().value() - piece.value()
         } else if piece == Piece::P {
             if a.is_double_push().0 {
                 -2

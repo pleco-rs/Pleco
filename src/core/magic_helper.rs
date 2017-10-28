@@ -1,6 +1,7 @@
 //! This module contains useful pre-computed lookup tables involving `BitBoard`s.
-use bit_twiddles::*;
-use templates::*;
+use core::bit_twiddles::*;
+use core::masks::*;
+use core::templates::*;
 use std::{mem, slice, cmp};
 
 
@@ -709,7 +710,9 @@ pub fn diff(x: u8, y: u8) -> u8 {
 #[cfg(test)]
 mod tests {
 
-    use magic_helper::*;
+    use super::*;
+    use core::masks::*;
+    use core::templates::*;
 
 //    #[allow(unused_imports)]
 //    use test;

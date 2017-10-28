@@ -4,7 +4,7 @@ extern crate test;
 extern crate rand;
 
 use self::pleco::tt::*;
-use self::pleco::piece_move::BitMove;
+use self::pleco::core::piece_move::BitMove;
 use self::test::{black_box, Bencher};
 
 

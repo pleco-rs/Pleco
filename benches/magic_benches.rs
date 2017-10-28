@@ -3,7 +3,7 @@
 extern crate pleco;
 extern crate test;
 
-use pleco::magic_helper::MagicHelper;
+use pleco::core::magic_helper::MagicHelper;
 use test::{black_box, Bencher};
 
 

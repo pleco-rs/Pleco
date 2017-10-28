@@ -3,14 +3,29 @@
 //! gathering information about the current state of the board.
 //!
 //!
-use templates::*;
-use magic_helper::MagicHelper;
-use movegen::{MoveGen,Legal,PseudoLegal};
-use bit_twiddles::*;
-use piece_move::{BitMove, MoveType};
+//!
+
+
+pub mod movegen;
+pub mod eval;
+pub mod castle_rights;
+pub mod piece_locations;
+pub mod board_state;
+
+use core::templates::*;
+use core::magic_helper::MagicHelper;
+use core::bit_twiddles::*;
+use core::piece_move::{BitMove, MoveType};
+use core::masks::*;
+
+use self::castle_rights::Castling;
+use self::piece_locations::PieceLocations;
+use self::board_state::BoardState;
+use self::movegen::{MoveGen,Legal,PseudoLegal};
+
 use std::option::*;
 use std::sync::Arc;
-use std::{mem, fmt, char};
+use std::{fmt, char};
 use std::cmp::PartialEq;
 
 lazy_static! {
@@ -19,478 +34,6 @@ lazy_static! {
     /// See `pleco::MagicHelper` for more information.
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
-
-
-bitflags! {
-    /// Structure to help with recognizing the various possibilities of castling/
-    ///
-    /// For internal use by the Board only
-    ///
-    /// Keeps track two things for each player
-    /// 1) What sides are possible to castle from
-    /// 2) Has this player castled
-    ///
-    /// Does not garauntee that the player containing a castling bit can castle at that
-    /// time. Rather marks that castling is a possibility, e.g. a Castling struct
-    /// containing a bit marking WHITE_Q means that neither the White King or Queen-side
-    /// rook has moved since the game started.
-    struct Castling: u8 {
-        const WHITE_K      = C_WHITE_K_MASK; // White has King-side Castling ability
-        const WHITE_Q      = C_WHITE_Q_MASK; // White has Queen-side Castling ability
-        const BLACK_K      = C_BLACK_K_MASK; // Black has King-side Castling ability
-        const BLACK_Q      = C_BLACK_Q_MASK; // White has Queen-side Castling ability
-        const WHITE_CASTLE = 0b0100_0000; // White has castled
-        const BLACK_CASTLE = 0b0001_0000; // Black has castled
-        const WHITE_ALL    = WHITE_K.bits // White can castle for both sides
-                           | WHITE_Q.bits;
-        const BLACK_ALL    = BLACK_K.bits // Black can castle for both sides
-                           | BLACK_Q.bits;
-    }
-}
-
-impl Castling {
-    /// Removes all castling possibility for a single player
-    pub fn remove_player_castling(&mut self, player: Player) {
-        match player {
-            Player::White => self.bits &= BLACK_ALL.bits,
-            Player::Black => self.bits &= WHITE_ALL.bits,
-        }
-    }
-
-    /// Removes King-Side castling possibility for a single player
-    pub fn remove_king_side_castling(&mut self, player: Player) {
-        match player {
-            Player::White => self.bits &= !WHITE_K.bits,
-            Player::Black => self.bits &= !BLACK_K.bits,
-        }
-    }
-
-    /// Removes Queen-Side castling possibility for a single player
-    pub fn remove_queen_side_castling(&mut self, player: Player) {
-        match player {
-            Player::White => self.bits &= !WHITE_Q.bits,
-            Player::Black => self.bits &= !BLACK_Q.bits,
-        }
-    }
-
-    /// Returns if a player can castle for a given side
-    pub fn castle_rights(&self, player: Player, side: CastleType) -> bool {
-        match player {
-            Player::White => {
-                match side {
-                    CastleType::KingSide => self.contains(WHITE_K),
-                    CastleType::QueenSide => self.contains(WHITE_Q),
-                }
-            }
-            Player::Black => {
-                match side {
-                    CastleType::KingSide => self.contains(BLACK_K),
-                    CastleType::QueenSide => self.contains(BLACK_Q),
-                }
-            }
-        }
-    }
-
-    /// Sets the bits to represent a given player has castled
-    pub fn set_castling(&mut self, player: Player) {
-        match player {
-            Player::White => self.bits |= WHITE_CASTLE.bits,
-            Player::Black => self.bits |= BLACK_CASTLE.bits,
-        }
-    }
-
-    /// Returns if a given player has castled
-    pub fn has_castled(&self, player: Player) -> bool {
-        match player {
-            Player::White => self.contains(WHITE_CASTLE),
-            Player::Black => self.contains(BLACK_CASTLE),
-        }
-    }
-
-    /// Returns if both players have lost their ability to castle
-    pub fn no_castling(&self) -> bool {
-        !self.contains(WHITE_K) && !self.contains(WHITE_Q) && !self.contains(BLACK_K) &&
-            !self.contains(BLACK_Q)
-    }
-
-    pub fn update_castling(&mut self, to: SQ, from: SQ) -> u8 {
-        let mask_change: u8 = castle_rights_mask(to) | castle_rights_mask(from);
-        let to_return: u8 = self.bits & mask_change;
-        self.bits &= !mask_change;
-        to_return
-    }
-
-    /// Returns a pretty String representing the castling state
-    ///
-    /// Used for FEN Strings, with ('K' | 'Q') representing white castling abilities,
-    /// and ('k' | 'q') representing black castling abilities. If there are no bits set,
-    /// returns a String containing "-".
-    pub fn pretty_string(&self) -> String {
-        if self.no_castling() {
-            "-".to_owned()
-        } else {
-            let mut s = String::default();
-            if self.contains(WHITE_K) {
-                s.push('K');
-            }
-            if self.contains(WHITE_Q) {
-                s.push('Q');
-            }
-
-            if self.contains(BLACK_K) {
-                s.push('k');
-            }
-
-            if self.contains(BLACK_Q) {
-                s.push('q');
-            }
-            assert!(!s.is_empty());
-            s
-        }
-    }
-}
-
-
-impl fmt::Display for Castling {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.pretty_string())
-    }
-}
-
-
-
-
-
-/// Struct to allow fast lookups for any square. Given a square, allows for determining if there
-/// is a piece currently there, and if so, allows for determining it's color and type of piece.
-///
-/// Piece Locations is a BLIND structure, Providing a function of  |sq| -> |Piece AND/OR Player|
-/// The reverse cannot be done Looking up squares from a piece / player.
-pub struct PieceLocations {
-    // Pieces are represented by the following bit_patterns:
-    // x000 -> Pawn (P)
-    // x001 -> Knight(N)
-    // x010 -> Bishop (B)
-    // x011 -> Rook(R)
-    // x100 -> Queen(Q)
-    // x101 -> King (K)
-    // x110 -> ??? Undefined ??
-    // x111 -> None
-    // 0xxx -> White Piece
-    // 1xxx -> Black Piece
-
-    // array of u8's, with standard ordering mapping index to square
-    data: [u8; 64],
-}
-
-
-impl PieceLocations {
-    /// Constructs a new Piece Locations with a defaulty of no pieces on the board
-    pub fn blank() -> PieceLocations {
-        PieceLocations { data: [0b0111; 64] }
-    }
-
-    /// Constructs a new Piece Locations with the memory at a default of Zeros
-    ///
-    /// This function is unsafe as Zeros represent Pawns, and therefore care mus be taken
-    /// to iterate through every square and ensure the correct piece or lack of piece
-    /// is placed
-    pub unsafe fn default() -> PieceLocations {
-        PieceLocations { data: [0; 64] }
-    }
-
-    /// Places a given piece for a given player at a certain square
-    ///
-    /// # Panics
-    /// Panics if Square is of index higher than 63
-    pub fn place(&mut self, square: SQ, player: Player, piece: Piece) {
-        assert!(sq_is_okay(square));
-        self.data[square as usize] = self.create_sq(player, piece);
-    }
-
-    /// Removes a Square
-    ///
-    /// # Panics
-    ///
-    /// Panics if Square is of index higher than 63
-    pub fn remove(&mut self, square: SQ) {
-        assert!(sq_is_okay(square));
-        self.data[square as usize] = 0b0111
-    }
-
-    /// Returns the Piece at a square, Or None if the square is empty.
-    ///
-    /// # Panics
-    ///
-    /// Panics if Square is of index higher than 63.
-    pub fn piece_at(&self, square: SQ) -> Option<Piece> {
-        assert!(sq_is_okay(square));
-        let byte: u8 = self.data[square as usize] & 0b0111;
-        match byte {
-            0b0000 => Some(Piece::P),
-            0b0001 => Some(Piece::N),
-            0b0010 => Some(Piece::B),
-            0b0011 => Some(Piece::R),
-            0b0100 => Some(Piece::Q),
-            0b0101 => Some(Piece::K),
-            0b0110 => unreachable!(), // Undefined
-            0b0111 => None,
-            _ => unreachable!(),
-        }
-    }
-
-    /// Returns the Piece at a square for a given player.
-    ///
-    /// If there is no piece at that square, or there is a piece of another player at that square,
-    /// returns None.
-    ///
-    /// # Panics
-    ///
-    /// Panics if Square is of index higher than 63
-    pub fn piece_at_for_player(&self, square: SQ, player: Player) -> Option<Piece> {
-        let op = self.player_piece_at(square);
-        if op.is_some() {
-            let p = op.unwrap();
-            if p.0 == player {
-                Some(p.1)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-
-    /// Returns the player (if any) is occupying a square
-    ///
-    /// # Panics
-    ///
-    /// Panics if Square is of index higher than 63
-    pub fn player_at(&self, square: SQ) -> Option<Player> {
-        let byte: u8 = self.data[square as usize];
-        if byte == 0b0111 || byte == 0b1111 {
-            return None;
-        }
-        if byte < 8 {
-            Some(Player::White)
-        } else {
-            Some(Player::Black)
-        }
-    }
-
-    /// Returns a Tuple of (Player,Piece) of the player and associated piece at a
-    /// given square. Returns None if the square is unoccupied.
-    ///
-    /// # Panics
-    ///
-    /// Panics if Square is of index higher than 63
-    pub fn player_piece_at(&self, square: SQ) -> Option<(Player, Piece)> {
-        let byte: u8 = self.data[square as usize];
-        match byte {
-            0b0000 => Some((Player::White, Piece::P)),
-            0b0001 => Some((Player::White, Piece::N)),
-            0b0010 => Some((Player::White, Piece::B)),
-            0b0011 => Some((Player::White, Piece::R)),
-            0b0100 => Some((Player::White, Piece::Q)),
-            0b0101 => Some((Player::White, Piece::K)),
-            0b0110 => unreachable!(), // Undefined
-            0b0111 | 0b1111 => None,
-            0b1000 => Some((Player::Black, Piece::P)),
-            0b1001 => Some((Player::Black, Piece::N)),
-            0b1010 => Some((Player::Black, Piece::B)),
-            0b1011 => Some((Player::Black, Piece::R)),
-            0b1100 => Some((Player::Black, Piece::Q)),
-            0b1101 => Some((Player::Black, Piece::K)),
-            0b1110 => unreachable!(), // Undefined
-            _ => unreachable!(),
-        }
-    }
-
-
-
-    /// Helper method to return the bit representation of a given piece and player
-    fn create_sq(&self, player: Player, piece: Piece) -> u8 {
-        let mut loc: u8 = match piece {
-            Piece::P => 0b0000,
-            Piece::N => 0b0001,
-            Piece::B => 0b0010,
-            Piece::R => 0b0011,
-            Piece::Q => 0b0100,
-            Piece::K => 0b0101,
-        };
-        if player == Player::Black {
-            loc |= 0b1000;
-        }
-        loc
-    }
-}
-
-impl Clone for PieceLocations {
-    // Need to use transmute copy as [_;64] does not automatically implement Clone.
-    fn clone(&self) -> PieceLocations {
-        unsafe { mem::transmute_copy(&self.data) }
-    }
-}
-
-impl PartialEq for PieceLocations {
-    fn eq(&self, other: &PieceLocations) -> bool {
-        for sq in 0..64 {
-            if self.data[sq] != other.data[sq] {
-                return false;
-            }
-        }
-        true
-    }
-}
-
-/// Holds useful information concerning the current state of the board.
-///
-/// This is information that is computed upon making a move, and requires expensive computation to do so as well.
-/// It is stored in the Heap by 'Board' as an Arc<BoardState>, as cloning the board can lead to multiple
-/// references to the same `BoardState`.
-///
-/// Allows for easy undo-ing of moves as these keep track of their previous board state, forming a
-/// Tree-like persistent Stack
-#[derive(Clone)]
-pub struct BoardState {
-    // The Following Fields are easily copied from the previous version and possbily modified
-    castling: Castling,
-    pub rule_50: i16,
-    pub ply: u16,
-    pub ep_square: SQ,
-
-    // These fields MUST be Recomputed after a move
-    pub zobrast: u64,
-    pub captured_piece: Option<Piece>,
-    pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
-    pub blockers_king: [BitBoard; PLAYER_CNT],
-    pub pinners_king: [BitBoard; PLAYER_CNT],
-    pub check_sqs: [BitBoard; PIECE_CNT],
-
-    pub prev_move: BitMove,
-
-    // Previous State of the board ( one move ago)
-    pub prev: Option<Arc<BoardState>>,
-
-    //  castling      ->  Castling Bit Structure, keeping track of if either player can castle.
-    //                    as well as if they have castled.
-    //  rule50        ->  Moves since last capture, pawn move or castle. Used for Draws.
-    //  ply           ->  How many moves deep this current thread is.
-    //                    ** NOTE: CURRENTLY UNUSED **
-    //  ep_square     ->  If the last move was a double pawn push, this will be equal to the square behind.
-    //                    the push. ep_square =  abs(sq_to - sq_from) / 2
-    //                    If last move was not a double push, this will equal NO_SQ (which is 64).
-    //  zobrast       ->  Zobrist Key of the current board.
-    //  capture_piece ->  The Piece (if any) that was last captured
-    //  checkers_bb   ->  Bitboard of all pieces who currently check the king
-
-    //  blockers_king ->  Per each player, bitboard of pieces blocking an attack on a that player's king.
-    //                    NOTE: Can contain opponents pieces. E.g. a Black Pawn can block an attack of a white king
-    //                    if there is a queen (or some other sliding piece) on the same line.
-    //  pinners_king  ->  Per each player, bitboard of pieces currently pinning the opponent's king.
-    //                    e.g:, a Black Queen pinning a piece (of either side) to White's King
-    //  check_sqs     ->  Array of BitBoards where for Each Piece, gives a spot the piece can move to where
-    //                    the opposing player's king would be in check.
-}
-
-impl BoardState {
-    /// Constructs a `BoardState` from the starting position
-    pub fn default() -> BoardState {
-        BoardState {
-            castling: Castling::all(),
-            rule_50: 0,
-            ply: 0,
-            ep_square: NO_SQ,
-            zobrast: 0,
-            captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
-            prev_move: BitMove::null(),
-            prev: None,
-        }
-    }
-
-    /// Constructs a blank `BoardState`.
-    pub fn blank() -> BoardState {
-        BoardState {
-            castling: Castling::empty(),
-            rule_50: 0,
-            ply: 0,
-            ep_square: NO_SQ,
-            zobrast: 0,
-            captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
-            prev_move: BitMove::null(),
-            prev: None,
-        }
-    }
-
-    /// Constructs a partial clone of a `BoardState`.
-    ///
-    /// Castling, rule_50, ply, and ep_square are copied. The copied fields need to be
-    /// modified accordingly, and the remaining fields need to be generated.
-    pub fn partial_clone(&self) -> BoardState {
-        BoardState {
-            castling: self.castling,
-            rule_50: self.rule_50,
-            ply: self.ply,
-            ep_square: self.ep_square,
-            zobrast: self.zobrast,
-            captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
-            prev_move: BitMove::null(),
-            prev: self.get_prev(),
-        }
-    }
-
-    /// Return the previous BoardState from one move ago.
-    pub fn get_prev(&self) -> Option<Arc<BoardState>> {
-        (&self).prev.as_ref().cloned()
-    }
-
-
-    pub fn backtrace(&self) {
-        self.print_info();
-        if self.prev.is_some() {
-            self.get_prev().unwrap().backtrace();
-        }
-    }
-
-    pub fn print_info(&self) {
-
-        print!("ply: {}, move played: {} ",self.ply, self.prev_move);
-        if self.captured_piece.is_some() {
-            print!("cap {}", self.captured_piece.unwrap());
-        }
-        if self.checkers_bb != 0 {
-            print!("in check {}", bb_to_sq(self.checkers_bb));
-        }
-        println!();
-    }
-}
-
-impl PartialEq for BoardState {
-    fn eq(&self, other: &BoardState) -> bool {
-        self.castling == other.castling &&
-            self.rule_50 == other.rule_50 &&
-            self.ep_square == other.ep_square &&
-            self.zobrast == other.zobrast &&
-            self.captured_piece == other.captured_piece &&
-            self.checkers_bb == other.checkers_bb &&
-            self.blockers_king == other.blockers_king &&
-            self.pinners_king == other.pinners_king &&
-            self.check_sqs == other.check_sqs
-    }
-}
-
 
 /// Represents a Chessboard through a `Board`.
 ///
@@ -871,14 +414,7 @@ impl Board {
         // Castle Bytes
         let mut castle_bytes = Castling::empty();
         for char in det_split[2].chars() {
-            match char {
-                'K' => castle_bytes |= WHITE_K,
-                'Q' => castle_bytes |= WHITE_Q,
-                'k' => castle_bytes |= BLACK_K,
-                'q' => castle_bytes |= BLACK_Q,
-                '-' => {}
-                _ => panic!(),
-            }
+            castle_bytes.add_castling_char(char);
         }
 
         // EP square
@@ -1203,8 +739,8 @@ impl Board {
     pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
         let all_moves: Vec<BitMove> = self.generate_moves();
         let bit_move: Option<BitMove> = all_moves.iter()
-            .find(|m| m.stringify() == uci_move)
-            .cloned();
+                                                 .find(|m| m.stringify() == uci_move)
+                                                 .cloned();
         if bit_move.is_some() {
             self.apply_move(bit_move.unwrap());
             return true;
@@ -1411,7 +947,7 @@ impl Board {
     ///
     /// ```rust
     /// use pleco::board::*;
-    /// use pleco::templates::GenTypes;
+    /// use pleco::core::templates::GenTypes;
     ///
     /// let chessboard = Board::default();
     /// let capturing_moves = chessboard.generate_moves_of_type(GenTypes::Captures);
@@ -1487,7 +1023,7 @@ impl Board {
         let occupied = self.get_occupied();
 
         board_state.check_sqs[Piece::P as usize] = self.magic_helper
-            .pawn_attacks_from(ksq, self.turn.other_player());
+                                                       .pawn_attacks_from(ksq, self.turn.other_player());
         board_state.check_sqs[Piece::N as usize] = self.magic_helper.knight_moves(ksq);
         board_state.check_sqs[Piece::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
         board_state.check_sqs[Piece::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
@@ -1591,11 +1127,11 @@ impl Board {
 
         *r_src = *to_r_orig;
         if king_side {
-            *to_r_orig = relative_square(player, 6);
-            *r_dst = relative_square(player, 5);
+            *to_r_orig = player.relative_square( 6);
+            *r_dst = player.relative_square( 5);
         } else {
-            *to_r_orig = relative_square(player, 2);
-            *r_dst = relative_square(player, 3);
+            *to_r_orig = player.relative_square( 2);
+            *r_dst = player.relative_square( 3);
         }
         self.move_piece_c(Piece::K, k_src, *to_r_orig, player);
         self.move_piece_c(Piece::R, *r_src, *r_dst, player);
@@ -1612,9 +1148,9 @@ impl Board {
         let k_dst: SQ = self.king_sq(player);
         let king_side: bool = k_src < r_src;
         let r_dst: SQ = if king_side {
-            relative_square(player, 5)
+            player.relative_square(5)
         } else {
-            relative_square(player, 3)
+            player.relative_square(3)
         };
 
         self.move_piece_c(Piece::K, k_dst, k_src, player);
@@ -1629,9 +1165,9 @@ impl Board {
 
         let mut snipers: BitBoard = sliders &
             ((self.magic_helper.rook_moves(0, s) &
-                  (self.piece_two_bb_both_players(Piece::R, Piece::Q))) |
-                 (self.magic_helper.bishop_moves(0, s) &
-                      (self.piece_two_bb_both_players(Piece::B, Piece::Q))));
+                (self.piece_two_bb_both_players(Piece::R, Piece::Q))) |
+                (self.magic_helper.bishop_moves(0, s) &
+                    (self.piece_two_bb_both_players(Piece::B, Piece::Q))));
 
 
         while snipers != 0 {
@@ -1821,7 +1357,7 @@ impl Board {
     ///
     /// ```
     /// use pleco::{Board,Player};
-    /// use pleco::bit_twiddles::*;
+    /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(popcount64(chessboard.sliding_piece_bb(Player::White)), 3);
@@ -1836,7 +1372,7 @@ impl Board {
     ///
     /// ```
     /// use pleco::{Board,Player};
-    /// use pleco::bit_twiddles::*;
+    /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(popcount64(chessboard.diagonal_piece_bb(Player::White)), 3);
@@ -1867,7 +1403,7 @@ impl Board {
     ///
     /// ```
     /// use pleco::{Board,Piece};
-    /// use pleco::bit_twiddles::*;
+    /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(popcount64(chessboard.piece_two_bb_both_players(Piece::Q,Piece::K)), 4);
@@ -1902,7 +1438,7 @@ impl Board {
     ///
     /// ```
     /// use pleco::{Board,Player,Piece};
-    /// use pleco::bit_twiddles::*;
+    /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_pieces_player(Player::White), 16);
@@ -1917,7 +1453,7 @@ impl Board {
     ///
     /// ```
     /// use pleco::{Board,Player,Piece};
-    /// use pleco::bit_twiddles::*;
+    /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_all_pieces(), 32);
@@ -2072,14 +1608,14 @@ impl Board {
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
         (self.magic_helper.pawn_attacks_from(sq, Player::Black) &
-             self.piece_bb(Player::White, Piece::P)) |
+            self.piece_bb(Player::White, Piece::P)) |
             (self.magic_helper.pawn_attacks_from(sq, Player::White) &
-                 self.piece_bb(Player::Black, Piece::P)) |
+                self.piece_bb(Player::Black, Piece::P)) |
             (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(Piece::N)) |
             (self.magic_helper.rook_moves(occupied, sq) &
-                 (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black))) |
+                (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black))) |
             (self.magic_helper.bishop_moves(occupied, sq) &
-                 (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
+                (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
             (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(Piece::K))
     }
 }
@@ -2106,16 +1642,23 @@ impl Board {
                 dst_bb;
 
             return (self.magic_helper.rook_moves(occupied, k_sq) &
-                        self.sliding_piece_bb(them) == 0) &&
+                self.sliding_piece_bb(them) == 0) &&
                 (self.magic_helper.queen_moves(occupied, k_sq) & self.diagonal_piece_bb(them) == 0);
         }
 
         // If Moving the king, check if the square moved to is not being attacked
         // Castles are checking during move gen for check, so we goo dthere
-        if self.piece_at_sq(src).unwrap() == Piece::K {
+//        println!("GUCCI");
+        let piece = self.piece_at_sq(src);
+        if piece.is_none() {
+            return false;
+        }
+
+        if piece.unwrap() == Piece::K {
             return m.move_type() == MoveType::Castle ||
                 (self.attackers_to(dst, self.get_occupied()) & self.get_occupied_player(them)) == 0;
         }
+//        println!("GUCCI2");
 
         // Making sure not moving a pinned piece
         (self.pinned_pieces(self.turn) & src_bb) == 0 ||
@@ -2140,6 +1683,7 @@ impl Board {
 
         // Stupidity Checks
         assert_ne!(src, dst);
+
         assert_eq!(self.color_of_sq(src).unwrap(), self.turn);
 
         // Searches for direct checks from the pre-computed array
@@ -2192,8 +1736,8 @@ impl Board {
                 let k_from: SQ = src;
                 let r_from: SQ = dst;
 
-                let k_to: SQ = relative_square(self.turn, { if r_from > k_from { 6 } else { 2 } });
-                let r_to: SQ = relative_square(self.turn, { if r_from > k_from { 5 } else { 3 } });
+                let k_to: SQ = self.turn.relative_square( { if r_from > k_from { 6 } else { 2 } });
+                let r_to: SQ = self.turn.relative_square( { if r_from > k_from { 5 } else { 3 } });
 
                 let opp_k_bb = sq_to_bb(opp_king_sq);
                 (self.magic_helper.rook_moves(0, r_to) & opp_k_bb != 0) &&
