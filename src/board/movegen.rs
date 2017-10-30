@@ -470,7 +470,7 @@ impl<'a> MoveGen<'a> {
 
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
-                assert_eq!(rank_of_sq(ep_sq), relative_rank(P::player(), Rank::R6));
+                assert_eq!(rank_of_sq(ep_sq), P::player().relative_rank( Rank::R6));
                 if G::gen_type() != GenTypes::Evasions || target & sq_to_bb(P::down(ep_sq)) != 0 {
                     left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
 

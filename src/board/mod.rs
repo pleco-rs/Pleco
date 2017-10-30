@@ -653,7 +653,7 @@ impl Board {
                         Player::Black => cap_sq += 8,
                     };
                     assert_eq!(piece, Piece::P);
-                    assert_eq!(relative_rank(us, Rank::R6), rank_of_sq(to));
+                    assert_eq!(us.relative_rank( Rank::R6), rank_of_sq(to));
                     assert!(self.piece_at_sq(to).is_none());
                     assert_eq!(self.piece_at_sq(cap_sq).unwrap(), Piece::P);
                     assert_eq!(self.player_at_sq(cap_sq).unwrap(), them);
@@ -1637,7 +1637,7 @@ impl Board {
         if m.move_type() == MoveType::EnPassant {
             let k_sq: SQ = self.king_sq(self.turn);
             let dst_bb: BitBoard = sq_to_bb(dst);
-            let captured_sq: SQ = (dst as i8).wrapping_sub(pawn_push(self.turn)) as u8;
+            let captured_sq: SQ = (dst as i8).wrapping_sub(self.turn.pawn_push()) as u8;
             let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ sq_to_bb(captured_sq)) |
                 dst_bb;
 
