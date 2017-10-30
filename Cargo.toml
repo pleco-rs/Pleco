@@ -34,14 +34,17 @@ debug = true
 opt-level = 3
 debug = true
 debug-assertions = false
+panic = "abort"
+lto = true
 
 [profile.bench]
 opt-level = 3
 debug = false
 rpath = false
-lto = false
+lto = true
 debug-assertions = false
 codegen-units = 1
+panic = "abort"
 
 [profile.test]
 opt-level = 2
@@ -68,7 +71,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-clippy = {version = "0.0.165", optional = true}
+clippy = {version = "0.0.166", optional = true}
 lazy_static = "0.2"
 bitflags = "0.9"
 rand = "0.3"
@@ -84,6 +87,7 @@ name = "pleco"
 path = "src/main.rs"
 test = false
 doc = false
+
 
 #
 #[[bench]]

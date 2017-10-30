@@ -36,7 +36,38 @@ impl Player {
         assert!(sq_is_okay(sq));
         sq ^ ((*self) as u8 * 56)
     }
+
+    #[inline]
+    pub fn pawn_push(&self) -> i8 {
+        match *self {
+            Player::White => NORTH,
+            Player::Black => SOUTH,
+        }
+    }
+
+    #[inline]
+    pub fn relative_rank_of_sq(&self, sq: SQ) -> Rank {
+        self.relative_rank(rank_of_sq(sq))
+    }
+
+    #[inline]
+    pub fn relative_rank(&self, rank: Rank) -> Rank {
+        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
+    }
 }
+
+
+
+#[inline]
+pub fn relative_rank_of_sq(p: Player, sq: SQ) -> Rank {
+    relative_rank(p, rank_of_sq(sq))
+}
+
+#[inline]
+pub fn relative_rank(p: Player, rank: Rank) -> Rank {
+    ALL_RANKS[((rank as u8) ^ (p as u8 * 7)) as usize]
+}
+
 
 impl fmt::Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -461,30 +492,11 @@ pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
 
 
 
-
-
-#[inline]
-pub fn relative_rank_of_sq(p: Player, sq: SQ) -> Rank {
-    relative_rank(p, rank_of_sq(sq))
-}
-
-#[inline]
-pub fn relative_rank(p: Player, rank: Rank) -> Rank {
-    ALL_RANKS[((rank as u8) ^ (p as u8 * 7)) as usize]
-}
-
 #[inline]
 pub fn make_sq(file: File, rank: Rank) -> SQ {
     ((rank as u8).wrapping_shl(3) + (file as u8)) as u8
 }
 
-#[inline]
-pub fn pawn_push(player: Player) -> i8 {
-    match player {
-        Player::White => NORTH,
-        Player::Black => SOUTH,
-    }
-}
 
 
 // For whatever rank the bit is in, gets the whole bitboard
