@@ -2,10 +2,10 @@ macro_rules! impl_indv_shift_ops {
     ($t:ty, $tname:ident, $fname:ident, $w:ident, $ta_name:ident, $fa_name:ident) => (
 
         impl $tname<usize> for $t {
-            type Output = Self;
+            type Output = $t;
 
             #[inline]
-            fn $fname(self, rhs: usize) -> Self {
+            fn $fname(self, rhs: usize) -> $t {
                 Self::from((self.0).$w(rhs as u32))
             }
         }
@@ -25,10 +25,10 @@ macro_rules! impl_indv_bit_ops {
     ($t:ty, $tname:ident, $fname:ident, $w:ident, $ta_name:ident, $fa_name:ident) => (
 
         impl $tname for $t {
-            type Output = Self;
+            type Output = $t;
 
             #[inline]
-            fn $fname(self, rhs: $t) -> Self {
+            fn $fname(self, rhs: $t) -> $t {
                 Self::from((self.0).$w(rhs.0))
             }
         }
@@ -63,6 +63,7 @@ macro_rules! impl_bit_ops {
         impl_indv_bit_ops!( $t,  BitOr,  bitor,  bitor,           BitOrAssign,  bitor_assign);
         impl_indv_bit_ops!( $t,  BitAnd, bitand, bitand,          BitAndAssign, bitand_assign);
         impl_indv_bit_ops!( $t,  BitXor, bitxor, bitxor,          BitXorAssign, bitxor_assign);
+
         impl_indv_bit_ops!( $t,  Add,    add,    wrapping_add,    AddAssign, add_assign);
         impl_indv_bit_ops!( $t,  Div,    div,    wrapping_div,    DivAssign, div_assign);
         impl_indv_bit_ops!( $t,  Mul,    mul,    wrapping_mul,    MulAssign, mul_assign);
@@ -71,19 +72,11 @@ macro_rules! impl_bit_ops {
         impl_indv_shift_ops!($t, Shr,    shr,    wrapping_shr,    ShrAssign, shr_assign);
 
         impl Not for $t {
-            type Output = Self;
+            type Output = $t;
 
             #[inline]
-            fn not(self) -> Self {
-                Self::from((self.0).not())
-            }
-        }
-
-        impl $t {
-
-            #[inline]
-            pub fn data(self) -> $b {
-                self.0
+            fn not(self) -> $t {
+                $t(!self.0)
             }
         }
     )

@@ -324,6 +324,7 @@ impl<'a> MoveGen<'a> {
     // Generate pawn moves
     fn generate_pawn_moves<L: Legality, G: GenTypeTrait, P: PlayerTrait>(&mut self, target: BitBoard) {
 
+
         let (rank_8, rank_7, rank_3): (BitBoard, BitBoard, BitBoard) = if P::player() == Player::White {
             (BitBoard::RANK_8, BitBoard::RANK_7, BitBoard::RANK_3)
         } else {
@@ -332,11 +333,11 @@ impl<'a> MoveGen<'a> {
 
         let all_pawns: BitBoard = self.board.piece_bb(P::player(), Piece::P);
 
+        let mut empty_squares = BitBoard(0);
+
         // seperate these two for promotion moves and non promotions
         let pawns_rank_7: BitBoard = all_pawns & rank_7;
         let pawns_not_rank_7: BitBoard = all_pawns & !rank_7;
-
-        let mut empty_squares: BitBoard = BitBoard(0);
 
         let enemies: BitBoard = if G::gen_type() == GenTypes::Evasions {
             self.them_occ & target
@@ -417,6 +418,7 @@ impl<'a> MoveGen<'a> {
             let mut left_cap_promo: BitBoard = P::shift_up_left(pawns_rank_7) & enemies;
             let mut right_cap_promo: BitBoard = P::shift_up_right(pawns_rank_7) & enemies;
 
+
             while no_promo.is_not_empty() {
                 let bit = no_promo.lsb();
                 let dst: SQ = bit.bb_to_sq();
@@ -424,19 +426,24 @@ impl<'a> MoveGen<'a> {
                 no_promo &= !bit;
             }
 
-            while left_cap_promo.is_not_empty() {
-                let bit = left_cap_promo.lsb();
-                let dst: SQ = bit.bb_to_sq();
-                self.create_all_promotions::<L>(dst, P::down_right(dst), true);
-                left_cap_promo &= !bit;
+            //TODO: This right? Should I disclude captures?
+            if G::gen_type() != GenTypes::Quiets {
+
+                while left_cap_promo.is_not_empty() {
+                    let bit = left_cap_promo.lsb();
+                    let dst: SQ = bit.bb_to_sq();
+                    self.create_all_promotions::<L>(dst, P::down_right(dst), true);
+                    left_cap_promo &= !bit;
+                }
+
+                while right_cap_promo.is_not_empty() {
+                    let bit = right_cap_promo.lsb();
+                    let dst: SQ = bit.bb_to_sq();
+                    self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                    right_cap_promo &= !bit;
+                }
             }
 
-            while right_cap_promo.is_not_empty() {
-                let bit = right_cap_promo.lsb();
-                let dst: SQ = bit.bb_to_sq();
-                self.create_all_promotions::<L>(dst, P::down_left(dst), true);
-                right_cap_promo &= !bit;
-            }
         }
 
         // Captures
