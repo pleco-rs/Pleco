@@ -4,6 +4,7 @@ extern crate pleco;
 extern crate test;
 
 use pleco::core::magic_helper::MagicHelper;
+use pleco::{SQ,BitBoard};
 use test::{black_box, Bencher};
 
 
@@ -14,7 +15,7 @@ fn bench_rook_lookup(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.rook_moves(a,c);
+            let x: u64 = m.rook_moves(BitBoard(a),SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -27,7 +28,7 @@ fn bench_bishop_lookup(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.bishop_moves(a,c);
+            let x: u64 = m.bishop_moves(BitBoard(a),SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -39,7 +40,7 @@ fn bench_queen_lookup(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.queen_moves(a,c);
+            let x: u64 = m.queen_moves(BitBoard(a),SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -51,7 +52,7 @@ fn bench_king_lookup(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.king_moves(c);
+            let x: u64 = m.king_moves(SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -63,7 +64,7 @@ fn bench_knight_lookup(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let x: u64 = m.knight_moves(c);
+            let x: u64 = m.knight_moves(SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -76,11 +77,11 @@ fn bench_multi_lookup_sequential(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let mut x: u64 = m.knight_moves(c);
-            x ^= m.king_moves(c);
-            x ^= m.bishop_moves(x,c);
-            x ^= m.rook_moves(x,c);
-            x ^= m.queen_moves(x,c);
+            let mut x: u64 = m.knight_moves(SQ(c)).0;
+            x ^= m.king_moves(SQ(c)).0;
+            x ^= m.bishop_moves(BitBoard(x),SQ(c)).0;
+            x ^= m.rook_moves(BitBoard(x),SQ(c)).0;
+            x ^= m.queen_moves(BitBoard(x),SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -94,11 +95,11 @@ fn bench_multi_lookup_stutter(b: &mut Bencher) {
     b.iter(|| {
         let n: u8 = test::black_box(64);
         (0..n).fold(0, |a: u64, c| {
-            let mut x: u64 = m.queen_moves(a,c);
-            x ^= m.king_moves(c);
-            x ^= m.bishop_moves(x,c);
-            x ^= m.knight_moves(c);
-            x ^= m.rook_moves(x,c);
+            let mut x: u64 = m.queen_moves(BitBoard(a),SQ(c)).0;
+            x ^= m.king_moves(SQ(c)).0;
+            x ^= m.bishop_moves(BitBoard(a),SQ(c)).0;
+            x ^= m.knight_moves(SQ(c)).0;
+            x ^= m.rook_moves(BitBoard(a),SQ(c)).0;
             a ^ (x) }
         )
     })
@@ -110,7 +111,7 @@ fn bench_magic_helper_creation(b: &mut Bencher) {
         let n: u8 = black_box(1);
         (0..n).fold(0, |a: u64, c| {
             let m = MagicHelper::new();
-            let x: u64 = m.king_moves(c);
+            let x: u64 = m.king_moves(SQ(c)).0;
             a ^ (x) }
         )
     })

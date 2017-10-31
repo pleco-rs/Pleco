@@ -316,7 +316,7 @@ fn apply_castling(board: &mut Board) -> bool {
 #[test]
 fn stress_test_rand_moves() {
     let mut i = 0;
-    while i < 10 {
+    while i < 18 {
         let mut board = gen_rand_legal_board();
         let mov = IterativeSearcher::best_move_depth(board.shallow_clone(),4);
         board.apply_move(mov);

@@ -1,16 +1,16 @@
 extern crate pleco;
 
+use pleco::{SQ,BitBoard};
 use pleco::board::*;
 use pleco::core::templates::*;
 use pleco::core::piece_move::*;
 use pleco::tools::gen_rand_legal_board;
 
 
-
 #[test]
 fn test_movegen_captures() {
     let mut vec = Vec::new();
-    for i in 0..6 {
+    for _i in 0..6 {
         let mut b = gen_rand_legal_board();
         if !b.in_check() {
             vec.push(b);
@@ -27,7 +27,7 @@ fn test_movegen_captures() {
 #[test]
 fn test_movegen_quiets() {
     let mut vec = Vec::new();
-    for i in 0..6 {
+    for _i in 0..6 {
         let mut b = gen_rand_legal_board();
         if !b.in_check() {
             vec.push(b);
@@ -48,8 +48,8 @@ fn test_movegen_quiets() {
 fn bit_move_position() {
     let bits: u16 = 0b0000111011010000;
     let bit_move = BitMove::new(bits);
-    assert_eq!(bit_move.get_src(), 0b010000);
-    assert_eq!(bit_move.get_dest(), 0b111011);
+    assert_eq!(bit_move.get_src().0, 0b010000);
+    assert_eq!(bit_move.get_dest().0, 0b111011);
     assert!(bit_move.is_quiet_move());
     assert!(!bit_move.is_promo());
     assert!(!bit_move.is_capture());
@@ -72,8 +72,8 @@ fn test_move_permutations() {
     let moves = all_move_flags();
     for move_flag in moves {
         let pre_move_info = PreMoveInfo {
-            src: 9,
-            dst: 42,
+            src: SQ(9),
+            dst: SQ(42),
             flags: move_flag,
         };
         let move_info = BitMove::init(pre_move_info);
@@ -110,8 +110,8 @@ fn bit_move_promoions() {
         prom: Piece::P,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -124,8 +124,8 @@ fn bit_move_promoions() {
         prom: Piece::N,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -138,8 +138,8 @@ fn bit_move_promoions() {
         prom: Piece::B,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -152,8 +152,8 @@ fn bit_move_promoions() {
         prom: Piece::R,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -166,8 +166,8 @@ fn bit_move_promoions() {
         prom: Piece::K,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -180,8 +180,8 @@ fn bit_move_promoions() {
         prom: Piece::Q,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -194,8 +194,8 @@ fn bit_move_promoions() {
         prom: Piece::P,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -208,8 +208,8 @@ fn bit_move_promoions() {
         prom: Piece::N,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -222,8 +222,8 @@ fn bit_move_promoions() {
         prom: Piece::B,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -236,8 +236,8 @@ fn bit_move_promoions() {
         prom: Piece::R,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -250,8 +250,8 @@ fn bit_move_promoions() {
         prom: Piece::K,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);
@@ -264,8 +264,8 @@ fn bit_move_promoions() {
         prom: Piece::Q,
     };
     let pre_move_info = PreMoveInfo {
-        src: 9,
-        dst: 42,
+        src: SQ(9),
+        dst: SQ(42),
         flags: move_flag,
     };
     let move_info = BitMove::init(pre_move_info);

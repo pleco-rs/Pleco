@@ -78,6 +78,14 @@ macro_rules! impl_bit_ops {
                 Self::from((self.0).not())
             }
         }
+
+        impl $t {
+
+            #[inline]
+            pub fn data(self) -> $b {
+                self.0
+            }
+        }
     )
 }
 

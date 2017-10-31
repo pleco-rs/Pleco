@@ -1,21 +1,25 @@
 
-use super::bitboard::*;
-use super::bit_twiddles::*;
+use super::bitboard::BitBoard;
 use super::masks::*;
 use super::templates::*;
 
 
+use std::fmt;
 use std::ops::*;
 
-#[derive(Copy, Clone, Default, Hash, PartialEq, Eq)]
-pub struct Sq(pub u8);
-
-impl_bit_ops!(Sq, u8);
 
 
-impl Sq {
+#[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]
+pub struct SQ(pub u8);
+
+impl_bit_ops!(SQ, u8);
+
+pub const NO_SQ: SQ = SQ(64);
+
+
+impl SQ {
     #[inline]
-    pub fn parse_sq(self) -> String {
+    pub fn to_string(self) -> String {
         assert!(self.is_okay());
         let mut str = String::default();
         str.push(FILE_DISPLAYS[self.file_of_sq() as usize]);
@@ -29,14 +33,16 @@ impl Sq {
     }
 
     #[inline]
-    pub fn sq_to_bb(self) -> Bitboard {
+    pub fn sq_to_bb(self) -> BitBoard {
         assert!(self.is_okay());
-        Bitboard((1 as u64).wrapping_shl(self.0 as u32))
+        BitBoard((1 as u64).wrapping_shl(self.0 as u32))
     }
 
+
+
     #[inline]
-    pub fn rank_bb(self) -> Bitboard {
-        Bitboard(RANK_BB[self.rank_of_sq() as usize])
+    pub fn rank_bb(self) -> BitBoard {
+        BitBoard(RANK_BB[self.rank_of_sq() as usize])
     }
 
     #[inline]
@@ -50,8 +56,8 @@ impl Sq {
     }
 
     #[inline]
-    pub fn file_bb(self) -> u64 {
-        FILE_BB[self.file_of_sq() as usize]
+    pub fn file_bb(self) -> BitBoard {
+        BitBoard(FILE_BB[self.file_of_sq() as usize])
     }
 
     #[inline]
@@ -74,5 +80,11 @@ impl Sq {
             BLACK_KING_START => C_BLACK_K_MASK | C_BLACK_Q_MASK,
             _ => 0
         }
+    }
+}
+
+impl fmt::Display for SQ {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(&self.to_string())
     }
 }

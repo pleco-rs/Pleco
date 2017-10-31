@@ -2,6 +2,9 @@ use core::templates::*;
 use std::fmt;
 use core::masks::*;
 
+use core::bitboard::BitBoard;
+use core::sq::SQ;
+
 bitflags! {
     /// Structure to help with recognizing the various possibilities of castling/
     ///
@@ -95,7 +98,7 @@ impl Castling {
     }
 
     pub fn update_castling(&mut self, to: SQ, from: SQ) -> u8 {
-        let mask_change: u8 = castle_rights_mask(to) | castle_rights_mask(from);
+        let mask_change: u8 = to.castle_rights_mask() | from.castle_rights_mask();
         let to_return: u8 = self.bits & mask_change;
         self.bits &= !mask_change;
         to_return

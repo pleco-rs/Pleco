@@ -1,17 +1,20 @@
 //! Miscellaneos functions, traits, and constants to be used by other modules.
 use super::bit_twiddles::*;
 use super::masks::*;
+use core::sq::SQ;
+use core::bitboard::BitBoard;
+
 use std::mem;
 use std::fmt;
 
 /// `BitBoard` is a u64, where the bits of each index represent a square.
-pub type BitBoard = u64;
+//pub type BitBoard = u64;
 
 /// Alias for a certain square number.
-pub type SQ = u8;
+//pub type SQ = u8;
 
 
-pub const NO_SQ: SQ = 64;
+
 
 /// Enum to represent the Players White & Black.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -33,8 +36,8 @@ impl Player {
     /// Returns the relative square from a given square.
     #[inline]
     pub fn relative_square(&self, sq: SQ) -> SQ {
-        assert!(sq_is_okay(sq));
-        sq ^ ((*self) as u8 * 56)
+        assert!(sq.is_okay());
+        sq ^ SQ((*self) as u8 * 56)
     }
 
     #[inline]
@@ -47,7 +50,7 @@ impl Player {
 
     #[inline]
     pub fn relative_rank_of_sq(&self, sq: SQ) -> Rank {
-        self.relative_rank(rank_of_sq(sq))
+        self.relative_rank(sq.rank_of_sq())
     }
 
     #[inline]
@@ -56,12 +59,6 @@ impl Player {
     }
 }
 
-
-
-#[inline]
-pub fn relative_rank_of_sq(p: Player, sq: SQ) -> Rank {
-    relative_rank(p, rank_of_sq(sq))
-}
 
 #[inline]
 pub fn relative_rank(p: Player, rank: Rank) -> Rank {
@@ -120,37 +117,37 @@ impl PlayerTrait for WhiteType {
         Player::Black
     }
 
-    fn down(sq: SQ) -> SQ { sq.wrapping_sub(8) }
+    fn down(sq: SQ) -> SQ { sq - SQ(8) }
 
-    fn up(sq: SQ) -> SQ { sq.wrapping_add(8) }
+    fn up(sq: SQ) -> SQ { sq + SQ(8) }
 
-    fn left(sq: SQ) -> SQ { sq.wrapping_sub(1) }
+    fn left(sq: SQ) -> SQ { sq - SQ(1) }
 
-    fn right(sq: SQ) -> SQ { sq.wrapping_add(1) }
+    fn right(sq: SQ) -> SQ { sq + SQ(1) }
 
-    fn down_left(sq: SQ) -> SQ { sq.wrapping_sub(9) }
+    fn down_left(sq: SQ) -> SQ { sq - SQ(9) }
 
-    fn down_right(sq: SQ) -> SQ { sq.wrapping_sub(7) }
+    fn down_right(sq: SQ) -> SQ { sq - SQ(7) }
 
-    fn up_left(sq: SQ) -> SQ { sq.wrapping_add(7) }
+    fn up_left(sq: SQ) -> SQ { sq + SQ(7) }
 
-    fn up_right(sq: SQ) -> SQ { sq.wrapping_add(9) }
+    fn up_right(sq: SQ) -> SQ { sq + SQ(9) }
 
-    fn shift_down(bb: BitBoard) -> BitBoard { bb.wrapping_shr(8) }
+    fn shift_down(bb: BitBoard) -> BitBoard { bb >> 8 }
 
-    fn shift_up(bb: BitBoard) -> BitBoard { bb.wrapping_shl(8) }
+    fn shift_up(bb: BitBoard) -> BitBoard { bb << 8 }
 
-    fn shift_left(bb: BitBoard) -> BitBoard { (bb & !FILE_A).wrapping_shr(1) }
+    fn shift_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) >> 1 }
 
-    fn shift_right(bb: BitBoard) -> BitBoard { (bb & !FILE_H).wrapping_shl(1) }
+    fn shift_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) << 1 }
 
-    fn shift_down_left(bb: BitBoard) -> BitBoard { (bb & !FILE_A).wrapping_shr(9) }
+    fn shift_down_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) >> 9 }
 
-    fn shift_down_right(bb: BitBoard) -> BitBoard { (bb & !FILE_H).wrapping_shr(7) }
+    fn shift_down_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) >> 7 }
 
-    fn shift_up_left(bb: BitBoard) -> BitBoard { (bb & !FILE_A).wrapping_shl(7) }
+    fn shift_up_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) << 7 }
 
-    fn shift_up_right(bb: BitBoard) -> BitBoard { (bb & !FILE_H).wrapping_shl(9) }
+    fn shift_up_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) << 9 }
 }
 
 impl PlayerTrait for BlackType {
@@ -162,48 +159,48 @@ impl PlayerTrait for BlackType {
         Player::White
     }
 
-    fn down(sq: SQ) -> SQ { sq.wrapping_add(8) }
+    fn down(sq: SQ) -> SQ { sq + SQ(8) }
 
-    fn up(sq: SQ) -> SQ { sq.wrapping_sub(8) }
+    fn up(sq: SQ) -> SQ { sq - SQ(8) }
 
-    fn left(sq: SQ) -> SQ { sq.wrapping_add(1) }
+    fn left(sq: SQ) -> SQ { sq + SQ(1) }
 
-    fn right(sq: SQ) -> SQ { sq.wrapping_sub(1) }
+    fn right(sq: SQ) -> SQ { sq - SQ(1) }
 
-    fn down_left(sq: SQ) -> SQ { sq.wrapping_add(9) }
+    fn down_left(sq: SQ) -> SQ { sq + SQ(9) }
 
-    fn down_right(sq: SQ) -> SQ { sq.wrapping_add(7) }
+    fn down_right(sq: SQ) -> SQ { sq + SQ(7) }
 
-    fn up_left(sq: SQ) -> SQ { sq.wrapping_sub(7) }
+    fn up_left(sq: SQ) -> SQ { sq - SQ(7) }
 
-    fn up_right(sq: SQ) -> SQ { sq.wrapping_sub(9) }
+    fn up_right(sq: SQ) -> SQ { sq - SQ(9) }
 
-    fn shift_down(bb: BitBoard) -> BitBoard { bb.wrapping_shl(8) }
+    fn shift_down(bb: BitBoard) -> BitBoard { bb << (8) }
 
-    fn shift_up(bb: BitBoard) -> BitBoard { bb.wrapping_shr(8) }
+    fn shift_up(bb: BitBoard) -> BitBoard { bb >> (8) }
 
     fn shift_left(bb: BitBoard) -> BitBoard {
-        (bb & !FILE_H).wrapping_shl(1)
+        (bb & !BitBoard::FILE_H) << (1)
     }
 
     fn shift_right(bb: BitBoard) -> BitBoard {
-        (bb & !FILE_A).wrapping_shr(1)
+        (bb & !BitBoard::FILE_A) >> (1)
     }
 
     fn shift_down_left(bb: BitBoard) -> BitBoard {
-        (bb & !FILE_H).wrapping_shl(9)
+        (bb & !BitBoard::FILE_H) << (9)
     }
 
     fn shift_down_right(bb: BitBoard) -> BitBoard {
-        (bb & !FILE_A).wrapping_shl(7)
+        (bb & !BitBoard::FILE_A) << (7)
     }
 
     fn shift_up_left(bb: BitBoard) -> BitBoard {
-        (bb & !FILE_H).wrapping_shr(7)
+        (bb & !BitBoard::FILE_H) >> (7)
     }
 
     fn shift_up_right(bb: BitBoard) -> BitBoard {
-        (bb & !FILE_A).wrapping_shr(9)
+        (bb & !BitBoard::FILE_A) >> (9)
     }
 }
 
@@ -439,129 +436,119 @@ pub enum Square {
     A8 = 56, B8, C8, D8, E8, F8, G8, H8,
 }
 
-
-pub fn castle_rights_mask(s: SQ) -> u8 {
-    match s {
-        ROOK_WHITE_KSIDE_START => C_WHITE_K_MASK,
-        ROOK_WHITE_QSIDE_START => C_WHITE_Q_MASK,
-        ROOK_BLACK_KSIDE_START => C_BLACK_K_MASK,
-        ROOK_BLACK_QSIDE_START => C_BLACK_Q_MASK,
-        WHITE_KING_START => C_WHITE_K_MASK | C_WHITE_Q_MASK,
-        BLACK_KING_START => C_BLACK_K_MASK | C_BLACK_Q_MASK,
-        _ => 0
-    }
-}
-
-
-
-#[inline]
-pub fn copy_piece_bbs(
-    bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT],
-) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
-    let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
-    new_bbs
-}
-
-#[inline]
-pub fn return_start_bb() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
-    [
-        [
-            START_W_PAWN,
-            START_W_KNIGHT,
-            START_W_BISHOP,
-            START_W_ROOK,
-            START_W_QUEEN,
-            START_W_KING,
-        ],
-        [
-            START_B_PAWN,
-            START_B_KNIGHT,
-            START_B_BISHOP,
-            START_B_ROOK,
-            START_B_QUEEN,
-            START_B_KING,
-        ],
-    ]
-}
-
-#[inline]
-pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
-    let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
-    new_bbs
-}
+//
+//pub fn castle_rights_mask(s: SQ) -> u8 {
+//    match s {
+//        ROOK_WHITE_KSIDE_START => C_WHITE_K_MASK,
+//        ROOK_WHITE_QSIDE_START => C_WHITE_Q_MASK,
+//        ROOK_BLACK_KSIDE_START => C_BLACK_K_MASK,
+//        ROOK_BLACK_QSIDE_START => C_BLACK_Q_MASK,
+//        WHITE_KING_START => C_WHITE_K_MASK | C_WHITE_Q_MASK,
+//        BLACK_KING_START => C_BLACK_K_MASK | C_BLACK_Q_MASK,
+//        _ => 0
+//    }
+//}
+//
+//
+//
+//#[inline]
+//pub fn copy_piece_bbs(
+//    bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT],
+//) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+//    let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
+//    new_bbs
+//}
+//
+//#[inline]
+//pub fn return_start_bb() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+//    [
+//        [
+//            START_W_PAWN,
+//            START_W_KNIGHT,
+//            START_W_BISHOP,
+//            START_W_ROOK,
+//            START_W_QUEEN,
+//            START_W_KING,
+//        ],
+//        [
+//            START_B_PAWN,
+//            START_B_KNIGHT,
+//            START_B_BISHOP,
+//            START_B_ROOK,
+//            START_B_QUEEN,
+//            START_B_KING,
+//        ],
+//    ]
+//}
+//
+//#[inline]
+//pub fn copy_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
+//    let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
+//    new_bbs
+//}
 
 
 
 #[inline]
 pub fn make_sq(file: File, rank: Rank) -> SQ {
-    ((rank as u8).wrapping_shl(3) + (file as u8)) as u8
+    SQ(((rank as u8).wrapping_shl(3) + (file as u8)) as u8)
 }
 
 
 
 // For whatever rank the bit is in, gets the whole bitboard
 #[inline]
-pub fn rank_bb(s: SQ) -> BitBoard {
+pub fn rank_bb(s: u8) -> u64 {
     RANK_BB[rank_of_sq(s) as usize]
 }
 
 #[inline]
-pub fn rank_of_sq(s: SQ) -> Rank {
+pub fn rank_of_sq(s: u8) -> Rank {
     ALL_RANKS[(s >> 3) as usize]
 }
 
 #[inline]
-pub fn rank_idx_of_sq(s: SQ) -> u8 {
+pub fn rank_idx_of_sq(s: u8) -> u8 {
     (s >> 3) as u8
 }
 
 #[inline]
-pub fn file_bb(s: SQ) -> u64 {
+pub fn file_bb(s: u8) -> u64 {
     FILE_BB[file_of_sq(s) as usize]
 }
 
 #[inline]
-pub fn file_of_sq(s: SQ) -> File {
+pub fn file_of_sq(s: u8) -> File {
     ALL_FILES[(s & 0b0000_0111) as usize]
 }
 
 #[inline]
-pub fn file_idx_of_sq(s: SQ) -> u8 {
+pub fn file_idx_of_sq(s: u8) -> u8 {
     (s & 0b0000_0111) as u8
 }
 
 // Assumes only one bit!
 #[inline]
-pub fn bb_to_sq(b: BitBoard) -> SQ {
+pub fn bb_to_sq(b: u64) -> u8 {
     debug_assert_eq!(popcount64(b), 1);
     bit_scan_forward(b)
 }
 
 // Given a Square (u8) that is valid, returns the bitboard representaton
 #[inline]
-pub fn sq_to_bb(s: SQ) -> BitBoard {
+pub fn sq_to_bb(s: u8) -> u64 {
     assert!(sq_is_okay(s));
     (1 as u64).wrapping_shl(s as u32)
 }
 
-// Returns the String of a given square
-#[inline]
-pub fn parse_sq(s: SQ) -> String {
-    assert!(sq_is_okay(s));
-    let mut str = String::default();
-    str.push(FILE_DISPLAYS[file_of_sq(s) as usize]);
-    str.push(RANK_DISPLAYS[rank_of_sq(s) as usize]);
-    str
-}
-
 // Function to make sure a Square is okay
 #[inline]
-pub fn sq_is_okay(s: SQ) -> bool {
+pub fn sq_is_okay(s: u8) -> bool {
     s < 64
 }
 
 pub fn print_bitboard(input: BitBoard) {
-    print_u64(reverse_bytes(input));
+    print_u64(reverse_bytes(input.0));
 }
 
 pub fn print_u64(input: u64) {

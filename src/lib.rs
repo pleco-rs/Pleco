@@ -50,6 +50,9 @@ pub mod bots;
 
 pub use board::Board;
 pub use core::piece_move::BitMove;
-pub use core::templates::{Player,Piece,BitBoard,SQ};
+pub use core::sq::SQ;
+pub use core::bitboard::BitBoard;
+pub use core::templates::{Player,Piece};
+
 
 

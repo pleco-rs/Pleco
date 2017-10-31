@@ -2,6 +2,8 @@ use super::castle_rights::Castling;
 
 use core::templates::*;
 use core::piece_move::BitMove;
+use core::sq::{SQ,NO_SQ};
+use core::bitboard::BitBoard;
 use core::masks::*;
 
 use std::sync::Arc;
@@ -66,10 +68,10 @@ impl BoardState {
             ep_square: NO_SQ,
             zobrast: 0,
             captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
+            checkers_bb: BitBoard(0),
+            blockers_king: [BitBoard(0); PLAYER_CNT],
+            pinners_king: [BitBoard(0); PLAYER_CNT],
+            check_sqs: [BitBoard(0); PIECE_CNT],
             prev_move: BitMove::null(),
             prev: None,
         }
@@ -84,10 +86,10 @@ impl BoardState {
             ep_square: NO_SQ,
             zobrast: 0,
             captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
+            checkers_bb: BitBoard(0),
+            blockers_king: [BitBoard(0); PLAYER_CNT],
+            pinners_king: [BitBoard(0); PLAYER_CNT],
+            check_sqs: [BitBoard(0); PIECE_CNT],
             prev_move: BitMove::null(),
             prev: None,
         }
@@ -105,10 +107,10 @@ impl BoardState {
             ep_square: self.ep_square,
             zobrast: self.zobrast,
             captured_piece: None,
-            checkers_bb: 0,
-            blockers_king: [0; PLAYER_CNT],
-            pinners_king: [0; PLAYER_CNT],
-            check_sqs: [0; PIECE_CNT],
+            checkers_bb: BitBoard(0),
+            blockers_king: [BitBoard(0); PLAYER_CNT],
+            pinners_king: [BitBoard(0); PLAYER_CNT],
+            check_sqs: [BitBoard(0); PIECE_CNT],
             prev_move: BitMove::null(),
             prev: self.get_prev(),
         }
@@ -133,8 +135,8 @@ impl BoardState {
         if self.captured_piece.is_some() {
             print!("cap {}", self.captured_piece.unwrap());
         }
-        if self.checkers_bb != 0 {
-            print!("in check {}", bb_to_sq(self.checkers_bb));
+        if !self.checkers_bb.is_empty() {
+            print!("in check {}", self.checkers_bb.bb_to_sq());
         }
         println!();
     }

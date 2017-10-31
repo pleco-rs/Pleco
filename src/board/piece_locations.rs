@@ -1,6 +1,8 @@
 
 use core::templates::*;
 use std::mem;
+use core::sq::SQ;
+use core::bitboard::BitBoard;
 
 /// Struct to allow fast lookups for any square. Given a square, allows for determining if there
 /// is a piece currently there, and if so, allows for determining it's color and type of piece.
@@ -45,8 +47,8 @@ impl PieceLocations {
     /// # Panics
     /// Panics if Square is of index higher than 63
     pub fn place(&mut self, square: SQ, player: Player, piece: Piece) {
-        assert!(sq_is_okay(square));
-        self.data[square as usize] = self.create_sq(player, piece);
+        assert!(square.is_okay());
+        self.data[square.0 as usize] = self.create_sq(player, piece);
     }
 
     /// Removes a Square
@@ -55,8 +57,8 @@ impl PieceLocations {
     ///
     /// Panics if Square is of index higher than 63
     pub fn remove(&mut self, square: SQ) {
-        assert!(sq_is_okay(square));
-        self.data[square as usize] = 0b0111
+        assert!(square.is_okay());
+        self.data[square.0 as usize] = 0b0111
     }
 
     /// Returns the Piece at a square, Or None if the square is empty.
@@ -65,8 +67,8 @@ impl PieceLocations {
     ///
     /// Panics if Square is of index higher than 63.
     pub fn piece_at(&self, square: SQ) -> Option<Piece> {
-        assert!(sq_is_okay(square));
-        let byte: u8 = self.data[square as usize] & 0b0111;
+        assert!(square.is_okay());
+        let byte: u8 = self.data[square.0 as usize] & 0b0111;
         match byte {
             0b0000 => Some(Piece::P),
             0b0001 => Some(Piece::N),
@@ -108,7 +110,7 @@ impl PieceLocations {
     ///
     /// Panics if Square is of index higher than 63
     pub fn player_at(&self, square: SQ) -> Option<Player> {
-        let byte: u8 = self.data[square as usize];
+        let byte: u8 = self.data[square.0 as usize];
         if byte == 0b0111 || byte == 0b1111 {
             return None;
         }
@@ -126,7 +128,7 @@ impl PieceLocations {
     ///
     /// Panics if Square is of index higher than 63
     pub fn player_piece_at(&self, square: SQ) -> Option<(Player, Piece)> {
-        let byte: u8 = self.data[square as usize];
+        let byte: u8 = self.data[square.0 as usize];
         match byte {
             0b0000 => Some((Player::White, Piece::P)),
             0b0001 => Some((Player::White, Piece::N)),
