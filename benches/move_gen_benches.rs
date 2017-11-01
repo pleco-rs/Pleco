@@ -8,7 +8,7 @@ extern crate lazy_static;
 
 use pleco::engine::Searcher;
 use pleco::tools::*;
-use pleco::core::templates::GenTypes;
+use pleco::core::GenTypes;
 use pleco::{SQ,BitBoard,Player,Piece,Board};
 
 use test::{black_box, Bencher};

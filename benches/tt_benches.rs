@@ -7,7 +7,6 @@ use self::pleco::tt::*;
 use self::pleco::core::piece_move::BitMove;
 use self::test::{black_box, Bencher};
 
-
 #[bench]
 fn tt_bench_single_thread_insert_empty(b: &mut Bencher) {
     let tt = TT::new_num_entries(400_000);
