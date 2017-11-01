@@ -1,10 +1,10 @@
 //! This module contains useful pre-computed lookup tables involving `BitBoard`s.
 use super::bit_twiddles::*;
 use super::masks::*;
-use super::templates::*;
 use super::sq::SQ;
 use super::bitboard::BitBoard;
 use std::{mem, slice, cmp};
+use super::*;
 
 
 
@@ -221,7 +221,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Returns if three Squares are in the same diagonal, file, or rank
     #[inline(always)]
     pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
-        (self.line_bb(s1, s2) & s3.sq_to_bb()).is_not_empty()
+        (self.line_bb(s1, s2) & s3.to_bb()).is_not_empty()
     }
 
     /// Returns the Zobrist Hash for a given piece as a given Square
@@ -253,13 +253,13 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
     #[inline(always)]
     fn bishop_moves_bb(&self, occupied: u64, square: u8) -> u64 {
-        assert!(sq_is_okay(square));
+        assert!(square < 64);
         self.magic_bishop.attacks(occupied, square)
     }
 
     #[inline(always)]
     fn rook_moves_bb(&self, occupied: u64, square: u8) -> u64 {
-        assert!(sq_is_okay(square));
+        assert!(square < 64);
         self.magic_rook.attacks(occupied, square)
     }
 
@@ -308,10 +308,10 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         for i in 0..56 as u8 {
             let mut bb: u64 = 0;
             if file_of_sq(i) != File::A {
-                bb |= sq_to_bb(i + 7)
+                bb |= u8_to_u64(i + 7)
             }
             if file_of_sq(i) != File::H {
-                bb |= sq_to_bb(i + 9)
+                bb |= u8_to_u64(i + 9)
             }
             self.pawn_attacks_from[0][i as usize] = bb;
         }
@@ -320,10 +320,10 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         for i in 8..64 as u8 {
             let mut bb: u64 = 0;
             if file_of_sq(i) != File::A {
-                bb |= sq_to_bb(i - 9)
+                bb |= u8_to_u64(i - 9)
             }
             if file_of_sq(i) != File::H {
-                bb |= sq_to_bb(i - 7)
+                bb |= u8_to_u64(i - 7)
             }
             self.pawn_attacks_from[1][i as usize] = bb;
         }

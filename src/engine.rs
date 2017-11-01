@@ -5,7 +5,7 @@ extern crate rand;
 use core::piece_move::BitMove;
 use timer::Timer;
 use board::Board;
-use core::templates::Player;
+use core::Player;
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;

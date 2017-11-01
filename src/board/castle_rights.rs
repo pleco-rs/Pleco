@@ -1,8 +1,8 @@
-use core::templates::*;
+use core::*;
 use std::fmt;
 use core::masks::*;
 
-use core::bitboard::BitBoard;
+
 use core::sq::SQ;
 
 bitflags! {

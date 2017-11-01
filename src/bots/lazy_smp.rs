@@ -9,7 +9,7 @@ use std::cmp::{min,max,Ordering as CmpOrder};
 use std::mem;
 
 use board::*;
-use core::templates::*;
+use core::*;
 use board::eval::*;
 use core::piece_move::BitMove;
 use tt::*;

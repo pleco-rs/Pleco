@@ -178,6 +178,24 @@ pub fn reverse_byte(b: u8) -> u8 {
     m
 }
 
+
+
+
+pub fn string_u64(input: u64) -> String {
+    let mut s = String::new();
+    let format_in = format_u64(input);
+    for x in 0..8 {
+        let slice = &format_in[x * 8..(x * 8) + 8];
+        s += slice;
+        s += "\n";
+    }
+    s
+}
+
+fn format_u64(input: u64) -> String {
+    format!("{:064b}", input)
+}
+
 #[cfg(test)]
 mod tests {
 

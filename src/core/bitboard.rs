@@ -5,6 +5,7 @@ use super::masks::*;
 
 use std::mem;
 use std::ops::*;
+use std::fmt;
 
 #[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]
 pub struct BitBoard(pub u64);
@@ -30,23 +31,23 @@ impl BitBoard {
     pub const RANK_7: BitBoard = BitBoard(0x00FF_0000_0000_0000);
     pub const RANK_8: BitBoard = BitBoard(0xFF00_0000_0000_0000);
 
-    #[inline]
-    pub fn bb_to_sq(self) -> SQ {
+    #[inline(always)]
+    pub fn to_sq(self) -> SQ {
         debug_assert_eq!(self.count_bits(), 1);
         SQ(bit_scan_forward(self.0))
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn count_bits(self) -> u8 {
         popcount64(self.0)
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn bit_scan_forward(self) -> SQ {
         SQ(self.bit_scan_forward_u8())
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn bit_scan_forward_u8(self) -> u8 {
         assert!(self.is_not_empty());
         bit_scan_forward(self.0)
@@ -59,22 +60,22 @@ impl BitBoard {
 
 
 
-    #[inline]
+    #[inline(always)]
     pub fn is_empty(self) -> bool {
         self.0 == 0
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn is_not_empty(self) -> bool {
         self.0 != 0
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn lsb(self) -> BitBoard {
         BitBoard(self.lsb_u64())
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn lsb_u64(self) -> u64 {
         lsb(self.0)
     }
@@ -97,17 +98,24 @@ impl BitBoard {
         ], ]
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn clone_all_occ(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT], ) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
         let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
         new_bbs
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn clone_occ_bbs(bbs: &[BitBoard; PLAYER_CNT]) -> [BitBoard; PLAYER_CNT] {
         let new_bbs: [BitBoard; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
         new_bbs
     }
-
 }
 
+
+
+impl fmt::Display for BitBoard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = &string_u64(reverse_bytes(self.0));
+        f.pad(s)
+    }
+}

@@ -1,6 +1,6 @@
 use super::castle_rights::Castling;
 
-use core::templates::*;
+use core::*;
 use core::piece_move::BitMove;
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
@@ -136,7 +136,7 @@ impl BoardState {
             print!("cap {}", self.captured_piece.unwrap());
         }
         if !self.checkers_bb.is_empty() {
-            print!("in check {}", self.checkers_bb.bb_to_sq());
+            print!("in check {}", self.checkers_bb.to_sq());
         }
         println!();
     }

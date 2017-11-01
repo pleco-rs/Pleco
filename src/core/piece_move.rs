@@ -1,7 +1,6 @@
 //! Module for the implementation and definition of a move to be played.
-use core::templates::*;
+use super::*;
 use super::sq::SQ;
-use super::bitboard::BitBoard;
 use std::fmt;
 
 // A move needs 16 bits to be stored

@@ -1,8 +1,8 @@
 
-use core::templates::*;
+use core::*;
 use std::mem;
 use core::sq::SQ;
-use core::bitboard::BitBoard;
+
 
 /// Struct to allow fast lookups for any square. Given a square, allows for determining if there
 /// is a piece currently there, and if so, allows for determining it's color and type of piece.

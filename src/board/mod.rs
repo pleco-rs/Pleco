@@ -12,14 +12,13 @@ pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
 
-use core::templates::*;
 use core::magic_helper::MagicHelper;
-use core::bit_twiddles::*;
 use core::piece_move::{BitMove, MoveType};
 use core::masks::*;
 
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
+use core::*;
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
@@ -273,7 +272,7 @@ impl Board {
         // Loop through each square and see if any bitboard contains something at that location, and set
         // the Boards' PieceLocations accordingly.
         for square in 0..SQ_CNT as u8 {
-            let bb = SQ(square).sq_to_bb();
+            let bb = SQ(square).to_bb();
             if (bb & self.get_occupied()).is_not_empty() {
                 let player = if (bb & self.occupied_black()).is_empty() {
                     Player::White
@@ -318,7 +317,7 @@ impl Board {
             if player_piece.is_some() {
                 let player: Player = player_piece.unwrap().0;
                 let piece = player_piece.unwrap().1;
-                let bb = SQ(sq).sq_to_bb();
+                let bb = SQ(sq).to_bb();
                 self.bit_boards[player as usize][piece as usize] |= bb;
                 self.occ[player as usize] |= bb;
             }
@@ -951,7 +950,7 @@ impl Board {
     ///
     /// ```rust
     /// use pleco::board::*;
-    /// use pleco::core::templates::GenTypes;
+    /// use pleco::core::GenTypes;
     ///
     /// let chessboard = Board::default();
     /// let capturing_moves = chessboard.generate_moves_of_type(GenTypes::Captures);
@@ -1066,7 +1065,7 @@ impl Board {
     /// Assumes there is not already a piece at that square. If there already is,
     /// Undefined Behavior will result.
     fn put_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
-        let bb = square.sq_to_bb();
+        let bb = square.to_bb();
         self.occ_all |= bb;
         self.occ[player as usize] |= bb;
         self.bit_boards[player as usize][piece as usize] |= bb;
@@ -1083,7 +1082,7 @@ impl Board {
     /// Panics if there is a piece at the given square.
     fn remove_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
         assert_eq!(self.piece_at_sq(square).unwrap(), piece);
-        let bb = square.sq_to_bb();
+        let bb = square.to_bb();
         self.occ_all ^= bb;
         self.occ[player as usize] ^= bb;
         self.bit_boards[player as usize][piece as usize] ^= bb;
@@ -1100,7 +1099,7 @@ impl Board {
     /// Panics if the two and from square are equal
     fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ, player: Player) {
         assert_ne!(from, to);
-        let comb_bb: BitBoard = from.sq_to_bb() | to.sq_to_bb();
+        let comb_bb: BitBoard = from.to_bb() | to.to_bb();
 
         self.occ_all ^= comb_bb;
         self.occ[player as usize] ^= comb_bb;
@@ -1176,7 +1175,7 @@ impl Board {
 
         while snipers.is_not_empty() {
             let lsb: BitBoard = snipers.lsb();
-            let sniper_sq: SQ = lsb.bb_to_sq();
+            let sniper_sq: SQ = lsb.to_sq();
 
             let b: BitBoard = self.magic_helper.between_bb(s, sniper_sq) & occupied;
 
@@ -1184,7 +1183,7 @@ impl Board {
                 result |= b;
                 let other_occ = self.get_occupied_player(self.player_at_sq(s).unwrap());
                 if (b & other_occ).is_not_empty() {
-                    *pinners |= sniper_sq.sq_to_bb();
+                    *pinners |= sniper_sq.to_bb();
                 }
             }
             snipers &= !lsb;
@@ -1472,7 +1471,7 @@ impl Board {
     ///
     /// Number of bits must be equal to 1, or else a panic will occur.
     pub fn piece_at_bb(&self, src_bit: BitBoard, player: Player) -> Option<Piece> {
-        let sq: SQ = src_bit.bb_to_sq();
+        let sq: SQ = src_bit.to_sq();
         assert!(sq.is_okay());
         self.piece_locations.piece_at_for_player(sq, player)
     }
@@ -1483,7 +1482,7 @@ impl Board {
     ///
     /// Number of bits must be equal to 1, or else a panic will occur.
     pub fn piece_at_bb_all(&self, src_bit: BitBoard) -> Option<Piece> {
-        let square: SQ = src_bit.bb_to_sq();
+        let square: SQ = src_bit.to_sq();
         assert!(square.is_okay());
         self.piece_locations.piece_at(square)
     }
@@ -1498,7 +1497,7 @@ impl Board {
     /// Returns the Player, if any, occupying the square.
     pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
         assert!(sq.is_okay());
-        let bb: BitBoard = sq.sq_to_bb();
+        let bb: BitBoard = sq.to_bb();
         if (bb & self.occupied_black()).is_not_empty() {
             return Some(Player::Black);
         }
@@ -1515,7 +1514,7 @@ impl Board {
 
     /// Returns the square of the King for a given player
     pub fn king_sq(&self, player: Player) -> SQ {
-        (self.bit_boards[player as usize][Piece::K as usize]).bb_to_sq()
+        (self.bit_boards[player as usize][Piece::K as usize]).to_sq()
     }
 
     /// Returns the pinned pieces of the given player.
@@ -1635,15 +1634,15 @@ impl Board {
         }
         let them: Player = self.turn.other_player();
         let src: SQ = m.get_src();
-        let src_bb: BitBoard = src.sq_to_bb();
+        let src_bb: BitBoard = src.to_bb();
         let dst: SQ = m.get_dest();
 
         // Special en_passant case
         if m.move_type() == MoveType::EnPassant {
             let k_sq: SQ = self.king_sq(self.turn);
-            let dst_bb: BitBoard = dst.sq_to_bb();
+            let dst_bb: BitBoard = dst.to_bb();
             let captured_sq: SQ = SQ((dst.0 as i8).wrapping_sub(self.turn.pawn_push()) as u8);
-            let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.sq_to_bb()) |
+            let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) |
                 dst_bb;
 
             return (self.magic_helper.rook_moves(occupied, k_sq) &
@@ -1682,8 +1681,8 @@ impl Board {
         // I am too drunk to be making this right now
         let src: SQ = m.get_src();
         let dst: SQ = m.get_dest();
-        let src_bb: BitBoard = src.sq_to_bb();
-        let dst_bb: BitBoard = dst.sq_to_bb();
+        let src_bb: BitBoard = src.to_bb();
+        let dst_bb: BitBoard = dst.to_bb();
         let opp_king_sq: SQ = self.king_sq(self.turn.other_player());
 
         // Stupidity Checks
@@ -1722,12 +1721,12 @@ impl Board {
                     }
                     _ => unreachable!(),
                 };
-                (attacks_bb & opp_king_sq.sq_to_bb()).is_not_empty()
+                (attacks_bb & opp_king_sq.to_bb()).is_not_empty()
             }
             MoveType::EnPassant => {
                 // Check for indirect check from the removal of the captured pawn
-                let captured_sq: SQ = make_sq(dst.file_of_sq(), src.rank_of_sq());
-                let b: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.sq_to_bb()) | dst_bb;
+                let captured_sq: SQ = SQ::make(dst.file_of_sq(), src.rank_of_sq());
+                let b: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
 
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
@@ -1743,11 +1742,11 @@ impl Board {
                 let k_to: SQ = self.turn.relative_square( { if r_from.0 > k_from.0 { SQ(6) } else { SQ(2) } });
                 let r_to: SQ = self.turn.relative_square( { if r_from.0 > k_from.0 { SQ(5) } else { SQ(3) } });
 
-                let opp_k_bb = opp_king_sq.sq_to_bb();
+                let opp_k_bb = opp_king_sq.to_bb();
                 (self.magic_helper.rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty() &&
                     (self.magic_helper.rook_moves(
-                        r_to.sq_to_bb() | k_to.sq_to_bb() |
-                            (self.get_occupied() ^ k_from.sq_to_bb() ^ r_from.sq_to_bb()),
+                        r_to.to_bb() | k_to.to_bb() |
+                            (self.get_occupied() ^ k_from.to_bb() ^ r_from.to_bb()),
                         r_to,
                     ) & opp_k_bb).is_not_empty()
             }
@@ -1766,7 +1765,7 @@ impl Board {
             return Some(Piece::P);
         }
         let dst = m.get_dest();
-        self.piece_at_bb(dst.sq_to_bb(), self.turn.other_player())
+        self.piece_at_bb(dst.to_bb(), self.turn.other_player())
     }
 }
 
@@ -1803,26 +1802,26 @@ impl Board {
     /// Get Debug Information.
     pub fn print_debug_info(&self) {
         println!("White Pinners ");
-        print_bitboard(self.state.pinners_king[0]);
+        println!("{}", self.state.pinners_king[0]);
         println!("Black Pinners ");
-        print_bitboard(self.state.pinners_king[1]);
+        println!("{}", self.state.pinners_king[1]);
 
         println!("White Blockers ");
-        print_bitboard(self.state.blockers_king[0]);
+        println!("{}", self.state.blockers_king[0]);
         println!("Black Blockers ");
-        print_bitboard(self.state.blockers_king[1]);
+        println!("{}", self.state.blockers_king[1]);
 
         println!("Checkers ");
-        print_bitboard(self.state.checkers_bb);
+        println!("{}", self.state.checkers_bb);
 
         println!("Bishop check sqs");
-        print_bitboard(self.state.check_sqs[Piece::B as usize]);
+        println!("{}", self.state.check_sqs[Piece::B as usize]);
 
         println!("Rook check sqs");
-        print_bitboard(self.state.check_sqs[Piece::R as usize]);
+        println!("{}", self.state.check_sqs[Piece::R as usize]);
 
         println!("Queen check sqs");
-        print_bitboard(self.state.check_sqs[Piece::Q as usize]);
+        println!("{}", self.state.check_sqs[Piece::Q as usize]);
     }
 
     /// Prints a prettified representation of the board.
@@ -1927,8 +1926,8 @@ mod tests {
 
     extern crate rand;
     use board::Board;
-    use SQ;
-    use BitBoard;
+
+
 
     #[test]
     fn random_move_apply() {

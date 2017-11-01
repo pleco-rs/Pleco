@@ -2,11 +2,9 @@
 
 use board::Board;
 use std::i16;
-use core::templates::*;
-use core::bit_twiddles::*;
-use core::templates::{PlayerTrait};
+use core::*;
+use core::{PlayerTrait};
 use core::masks::*;
-use core::sq::SQ;
 use core::bitboard::BitBoard;
 
 lazy_static! {
@@ -112,11 +110,10 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [
 
 impl Eval {
     pub fn eval_low(board: &Board) -> i16 {
-//        match board.turn() {
-//            Player::White => eval_all::<WhiteType>(&board) - eval_all::<BlackType>(&board),
-//            Player::Black => eval_all::<BlackType>(&board) - eval_all::<WhiteType>(&board)
-//        }
-        3
+        match board.turn() {
+            Player::White => eval_all::<WhiteType>(&board) - eval_all::<BlackType>(&board),
+            Player::Black => eval_all::<BlackType>(&board) - eval_all::<WhiteType>(&board)
+        }
     }
 }
 
@@ -179,7 +176,7 @@ fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut us_b = board.piece_bb(P::player(), Piece::B);
     while us_b.is_not_empty() {
         let lsb = us_b.lsb();
-        score += BISHOP_POS[P::player() as usize][lsb.bb_to_sq().0 as usize];
+        score += BISHOP_POS[P::player() as usize][lsb.to_sq().0 as usize];
         us_b &= !lsb;
     }
 
@@ -196,7 +193,7 @@ fn eval_knight_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut us_b = board.piece_bb(P::player(), Piece::N);
     while us_b.is_not_empty() {
         let lsb = us_b.lsb();
-        score += KNIGHT_POS[P::player() as usize][lsb.bb_to_sq().0 as usize];
+        score += KNIGHT_POS[P::player() as usize][lsb.to_sq().0 as usize];
         us_b &= !lsb;
     }
 
@@ -231,7 +228,7 @@ fn eval_pawns<P: PlayerTrait>(board: &Board) -> i16 {
 
     while bb.is_not_empty() {
         let lsb = bb.lsb();
-        let sq = lsb.bb_to_sq();
+        let sq = lsb.to_sq();
         sqs_defended |= board.magic_helper.pawn_attacks_from(sq, P::player());
         file_counts[(sq.0 % 8) as usize] += 1;
         score += PAWN_POS[P::player() as usize][sq.0 as usize];

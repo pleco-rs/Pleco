@@ -52,7 +52,7 @@ pub use board::Board;
 pub use core::piece_move::BitMove;
 pub use core::sq::SQ;
 pub use core::bitboard::BitBoard;
-pub use core::templates::{Player,Piece};
+pub use core::{Player,Piece};
 
 
 

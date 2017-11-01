@@ -2,8 +2,8 @@
 use board::Board;
 use engine::Searcher;
 use rand;
-use core::templates::*;
-use std::{cmp,char};
+
+use std::cmp;
 use core::piece_move::BitMove;
 
 use bot_prelude::{RandomBot,JamboreeSearcher,IterativeSearcher};

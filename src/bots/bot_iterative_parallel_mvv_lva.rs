@@ -1,5 +1,5 @@
 use board::*;
-use core::templates::*;
+use core::*;
 use core::piece_move::BitMove;
 use engine::*;
 use board::eval::*;

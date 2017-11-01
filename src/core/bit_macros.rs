@@ -86,7 +86,6 @@ macro_rules! impl_bit_ops {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
     use std::ops::*;
 
     macro_rules! test_bit_ops_impls {

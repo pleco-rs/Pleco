@@ -23,10 +23,9 @@
 //! Legal moves. So, if you are fine with generating moves and then checking them post-generation
 //! with a `Board::is_legal(m: BitMove)`, then the performance boost is potentially worth it.
 
-use core::templates::*;
 use board::*;
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo};
-use core::bit_twiddles::*;
+use core::*;
 use core::magic_helper::MagicHelper;
 
 use core::sq::SQ;
@@ -178,7 +177,7 @@ impl<'a> MoveGen<'a> {
 
         while disc_check.is_not_empty() {
             let dc_lsb: BitBoard = disc_check.lsb();
-            let from: SQ = dc_lsb.bb_to_sq();
+            let from: SQ = dc_lsb.to_sq();
             disc_check &= !dc_lsb;
             let piece: Piece = self.board.piece_at_sq(from).unwrap();
             if piece != Piece::P {
@@ -206,7 +205,7 @@ impl<'a> MoveGen<'a> {
         // This is getting all the squares that are attacked by sliders
         while sliders.is_not_empty() {
             let check_sq_bb: BitBoard = sliders.lsb();
-            let check_sq: SQ = check_sq_bb.bb_to_sq();
+            let check_sq: SQ = check_sq_bb.to_sq();
             slider_attacks |= self.magic.line_bb(check_sq, ksq) ^ check_sq_bb;
             sliders &= !check_sq_bb;
         }
@@ -226,7 +225,7 @@ impl<'a> MoveGen<'a> {
             let checking_sq: SQ = self.board.checkers().bit_scan_forward();
 
             // Squares that allow a block or capture of the sliding piece
-            let target: BitBoard = self.magic.between_bb(checking_sq, ksq) | checking_sq.sq_to_bb();
+            let target: BitBoard = self.magic.between_bb(checking_sq, ksq) | checking_sq.to_bb();
             self.generate_all::<L, EvasionsGenType, P>(target);
         }
     }
@@ -256,9 +255,9 @@ impl<'a> MoveGen<'a> {
             let r_from: SQ = self.board.castling_rook_square(side);
             let k_to = P::player().relative_square(
                 if king_side {
-                    SQ(Square::G1 as u8)
+                    SQ::G1
                 } else {
-                    SQ(Square::C1 as u8)
+                    SQ::C1
                 },
             );
 
@@ -307,7 +306,7 @@ impl<'a> MoveGen<'a> {
         let mut piece_bb: BitBoard = self.board.piece_bb(PL::player(), P::piece_type());
         while piece_bb.is_not_empty() {
             let b: BitBoard = piece_bb.lsb();
-            let src: SQ = b.bb_to_sq();
+            let src: SQ = b.to_sq();
             let moves_bb: BitBoard = self.moves_bb(P::piece_type(), src) & !self.us_occ & target;
             let mut captures_bb: BitBoard = moves_bb & self.them_occ;
             let mut non_captures_bb: BitBoard = moves_bb & !self.them_occ;
@@ -383,7 +382,7 @@ impl<'a> MoveGen<'a> {
 
             while push_one.is_not_empty() {
                 let bit: BitBoard = push_one.lsb();
-                let dst: SQ = bit.bb_to_sq();
+                let dst: SQ = bit.to_sq();
                 let src: SQ = P::down(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
@@ -395,7 +394,7 @@ impl<'a> MoveGen<'a> {
 
             while push_two.is_not_empty() {
                 let bit: BitBoard = push_two.lsb();
-                let dst: SQ = bit.bb_to_sq();
+                let dst: SQ = bit.to_sq();
                 let src: SQ = P::down(P::down(dst));
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
@@ -421,27 +420,23 @@ impl<'a> MoveGen<'a> {
 
             while no_promo.is_not_empty() {
                 let bit = no_promo.lsb();
-                let dst: SQ = bit.bb_to_sq();
+                let dst: SQ = bit.to_sq();
                 self.create_all_promotions::<L>(dst, P::down(dst), false);
                 no_promo &= !bit;
             }
 
-            //TODO: This right? Should I disclude captures?
-            if G::gen_type() != GenTypes::Quiets {
+            while left_cap_promo.is_not_empty() {
+                let bit = left_cap_promo.lsb();
+                let dst: SQ = bit.to_sq();
+                self.create_all_promotions::<L>(dst, P::down_right(dst), true);
+                left_cap_promo &= !bit;
+            }
 
-                while left_cap_promo.is_not_empty() {
-                    let bit = left_cap_promo.lsb();
-                    let dst: SQ = bit.bb_to_sq();
-                    self.create_all_promotions::<L>(dst, P::down_right(dst), true);
-                    left_cap_promo &= !bit;
-                }
-
-                while right_cap_promo.is_not_empty() {
-                    let bit = right_cap_promo.lsb();
-                    let dst: SQ = bit.bb_to_sq();
-                    self.create_all_promotions::<L>(dst, P::down_left(dst), true);
-                    right_cap_promo &= !bit;
-                }
+            while right_cap_promo.is_not_empty() {
+                let bit = right_cap_promo.lsb();
+                let dst: SQ = bit.to_sq();
+                self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                right_cap_promo &= !bit;
             }
 
         }
@@ -456,7 +451,7 @@ impl<'a> MoveGen<'a> {
 
             while left_cap.is_not_empty() {
                 let bit = left_cap.lsb();
-                let dst: SQ = bit.bb_to_sq();
+                let dst: SQ = bit.to_sq();
                 let src: SQ = P::down_right(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
@@ -468,7 +463,7 @@ impl<'a> MoveGen<'a> {
 
             while right_cap.is_not_empty() {
                 let bit = right_cap.lsb();
-                let dst: SQ = bit.bb_to_sq();
+                let dst: SQ = bit.to_sq();
                 let src: SQ = P::down_left(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
@@ -481,12 +476,12 @@ impl<'a> MoveGen<'a> {
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
                 assert_eq!(ep_sq.rank_of_sq(), P::player().relative_rank( Rank::R6));
-                if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).sq_to_bb()).is_not_empty() {
+                if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).to_bb()).is_not_empty() {
                     left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
 
                     while left_cap.is_not_empty() {
                         let bit = left_cap.lsb();
-                        let src: SQ = bit.bb_to_sq();
+                        let src: SQ = bit.to_sq();
                         self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                             src: src,
                             dst: ep_sq,
@@ -547,7 +542,7 @@ impl<'a> MoveGen<'a> {
             let bit: BitBoard = bits.lsb();
             let b_move = BitMove::init(PreMoveInfo {
                 src: src,
-                dst: bit.bb_to_sq(),
+                dst: bit.to_sq(),
                 flags: move_flag,
             });
             self.check_and_add::<L>(b_move);
