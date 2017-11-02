@@ -98,6 +98,8 @@ pub struct MoveGen<'a> {
 
 impl<'a> MoveGen<'a> {
 
+    // TODO: allow for different capacities based off legal vs pseudo legal & movetype
+
     // Helper function to setup the MoveGen structure.
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
