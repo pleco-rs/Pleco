@@ -2,8 +2,28 @@
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
 //!
+//! # Examples
 //!
+//! Basic usage.
+//! ```
+//! let mut board = Board::default();  // create a board
 //!
+//! board.apply_uci_move("e2e4");  // apply a uci move
+//!
+//! assert_eq(board.moves_played(),1);
+//! board.undo_move(); // undo the last move played
+//!
+//! assert_eq(board.moves_played(),0);
+//! ```
+//!
+//! Generating and applying moves.
+//! ```
+//! let mut board = Board::default();
+//!
+//! let moves = board.generate_moves();
+//!
+//! board.apply_move(moves[0]);
+//! ```
 
 
 pub mod movegen;
@@ -14,8 +34,8 @@ pub mod board_state;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
+use core::mono_traits::*;
 use core::masks::*;
-
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
@@ -1926,8 +1946,6 @@ mod tests {
 
     extern crate rand;
     use board::Board;
-
-
 
     #[test]
     fn random_move_apply() {

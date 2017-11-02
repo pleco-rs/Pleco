@@ -1,3 +1,9 @@
+//! Contains the `BoardState` structure for the `Board`. Helps to preserve the previous state
+//! of the board without needing to re-compute information.
+//!
+//! See [this blog post](https://sfleischman105.github.io/2017/10/26/creating-a-chess-engine.html) for
+//! more information about the design of this.
+
 use super::castle_rights::Castling;
 
 use core::*;
@@ -15,7 +21,7 @@ use std::sync::Arc;
 /// references to the same `BoardState`.
 ///
 /// Allows for easy undo-ing of moves as these keep track of their previous board state, forming a
-/// Tree-like persistent Stack
+/// Tree-like persistent Stack.
 #[derive(Clone)]
 pub struct BoardState {
     // The Following Fields are easily copied from the previous version and possbily modified
@@ -59,7 +65,7 @@ pub struct BoardState {
 }
 
 impl BoardState {
-    /// Constructs a `BoardState` from the starting position
+    /// Constructs a `BoardState` from the starting position.
     pub fn default() -> BoardState {
         BoardState {
             castling: Castling::all(),
@@ -121,7 +127,9 @@ impl BoardState {
         (&self).prev.as_ref().cloned()
     }
 
-
+    /// Iterates through all previous `BoardStates` and prints their information.
+    ///
+    /// Used primarily for debugging.
     pub fn backtrace(&self) {
         self.print_info();
         if self.prev.is_some() {
@@ -130,7 +138,6 @@ impl BoardState {
     }
 
     pub fn print_info(&self) {
-
         print!("ply: {}, move played: {} ",self.ply, self.prev_move);
         if self.captured_piece.is_some() {
             print!("cap {}", self.captured_piece.unwrap());

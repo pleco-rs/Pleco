@@ -1,7 +1,11 @@
+//! Module for the `Castling` structure, which helps provide an easy way for the
+//! `Board` to keep track of the various castling rights available for each player.
+//!
+//! Also keeps track of if a player has castled.
+
 use core::*;
 use std::fmt;
 use core::masks::*;
-
 
 use core::sq::SQ;
 

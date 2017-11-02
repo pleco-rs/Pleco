@@ -1,24 +1,74 @@
 //! This module contains useful pre-computed lookup tables involving `BitBoard`s.
+//!
+//! A `MagicHelper` is computed at the beginning of execution using `lazy_static` inside
+//! [board/mod.rs].
+
 use super::bit_twiddles::*;
 use super::masks::*;
 use super::sq::SQ;
 use super::bitboard::BitBoard;
-use std::{mem, slice, cmp};
+use std::{mem, slice};
 use super::*;
 
 
-
+/// Size of the magic rook table.
 const ROOK_M_SIZE: usize = 102_400;
+/// Size of the magic bishop table.
 const BISHOP_M_SIZE: usize = 5248;
+
 const B_DELTAS: [i8; 4] = [7, 9, -9, -7];
 const R_DELTAS: [i8; 4] = [8, 1, -8, -1];
 const DELTAS: [[i8; 4]; 2] = [B_DELTAS, R_DELTAS];
+
+/// Seeds for the `PRNG`.
 const SEEDS: [[u64; 8]; 2] = [
     [8977, 44_560, 54_343, 38_998, 5731, 95_205, 104_912, 17_020],
     [728, 10_316, 55_013, 32_803, 12_281, 15_100, 16_645, 255],
 ];
 
+/// Structure for helping determine Zobrist hashes for a given position.
+pub struct Zobrist {
+    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
+    pub en_p: [u64; FILE_CNT], // 8 * 8
+    pub castle: [u64; ALL_CASTLING_RIGHTS], // 8 * 4
+    pub side: u64, // 8
+}
 
+// Creates zobrist hashes based on a Pseudo Random Number generator.
+impl Zobrist {
+
+    /// Returns a Zobrist object.
+    fn default() -> Zobrist {
+        let mut zob = Zobrist {
+            sq_piece: [[0; PIECE_CNT]; SQ_CNT],
+            en_p: [0; FILE_CNT],
+            castle: [0; ALL_CASTLING_RIGHTS],
+            side: 0,
+        };
+
+        let zobrist_seed: u64 = 23_081;
+        let mut rng = PRNG::init(zobrist_seed);
+
+        for i in 0..SQ_CNT {
+            for j in 0..PIECE_CNT {
+                zob.sq_piece[i][j] = rng.rand_change();
+            }
+        }
+
+        for i in 0..FILE_CNT {
+            zob.en_p[i] = rng.rand_change()
+        }
+
+        zob.castle[0] = 0;
+
+        for i in 1..ALL_CASTLING_RIGHTS {
+            zob.castle[i] = rng.rand_change()
+        }
+
+        zob.side = rng.rand_change();
+        zob
+    }
+}
 
 
 // Size (Bytes) of each field in the Stack / Heap (Dispite this being statically allocated)
@@ -61,56 +111,12 @@ pub struct MagicHelper<'a, 'b> {
     pub zobrist: Zobrist,
 }
 
-/// Structure for helping determine Zobrist hashes.
-pub struct Zobrist {
-    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
-    pub en_p: [u64; FILE_CNT], // 8 * 8
-    pub castle: [u64; ALL_CASTLING_RIGHTS], // 8 * 4
-    pub side: u64, // 8
-}
-
-// Creates zobrist hashes based on a Pseudo Random Number generator.
-impl Zobrist {
-
-    fn default() -> Zobrist {
-        let mut zob = Zobrist {
-            sq_piece: [[0; PIECE_CNT]; SQ_CNT],
-            en_p: [0; FILE_CNT],
-            castle: [0; ALL_CASTLING_RIGHTS],
-            side: 0,
-        };
-
-        let zobrist_seed: u64 = 23_081;
-        let mut rng = PRNG::init(zobrist_seed);
-
-        for i in 0..SQ_CNT {
-            for j in 0..PIECE_CNT {
-                zob.sq_piece[i][j] = rng.rand_change();
-            }
-        }
-
-        for i in 0..FILE_CNT {
-            zob.en_p[i] = rng.rand_change()
-        }
-
-        zob.castle[0] = 0;
-
-        for i in 1..ALL_CASTLING_RIGHTS {
-            zob.castle[i] = rng.rand_change()
-        }
-
-        zob.side = rng.rand_change();
-        zob
-    }
-}
-
 unsafe impl<'a, 'b> Send for MagicHelper<'a, 'b> {}
 
 unsafe impl<'a, 'b> Sync for MagicHelper<'a, 'b> {}
 
-
 impl<'a, 'b> MagicHelper<'a, 'b> {
-    /// Create a new Magic Helper
+    /// Create a new Magic Helper.
     pub fn new() -> MagicHelper<'a, 'b> {
         let mut mhelper = MagicHelper {
             magic_rook: MagicTable::init(ROOK_M_SIZE,&R_DELTAS),
@@ -132,7 +138,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
 
 
-    /// Generate Knight Moves bitboard from a source square
+    /// Generate Knight Moves `BitBoard` from a source square.
     #[inline(always)]
     pub fn knight_moves(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
@@ -142,7 +148,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         )
     }
 
-    /// Generate King moves bitboard from a source square
+    /// Generate King moves `BitBoard` from a source square.
     #[inline(always)]
     pub fn king_moves(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
@@ -152,21 +158,21 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         )
     }
 
-    /// Generate Bishop Moves from a bishop square and all occupied squares on the board
+    /// Generate Bishop Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         assert!(sq.is_okay());
         BitBoard(self.magic_bishop.attacks(occupied.0, sq.0))
     }
 
-    /// Generate Rook Moves from a bishop square and all occupied squares on the board
+    /// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         assert!(sq.is_okay());
         BitBoard(self.magic_rook.attacks(occupied.0, sq.0))
     }
 
-    /// Generate Queen Moves from a bishop square and all occupied squares on the board
+    /// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         assert!(sq.is_okay());
@@ -182,7 +188,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         self.dist_table[sq_one.0 as usize][sq_two.0 as usize]
     }
 
-    /// Get the line (diagonal / file / rank) that two squares both exist on, if it exists.
+    /// Get the line (diagonal / file / rank) `BitBoard` that two squares both exist on, if it exists.
     #[inline(always)]
     pub fn line_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
         assert!(sq_one.is_okay());
@@ -190,7 +196,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         BitBoard(self.line_bitboard[sq_one.0 as usize][sq_two.0 as usize])
     }
 
-    /// Get the line (diagonal / file / rank) between two squares, not including the squares, if it exists
+    /// Get the line (diagonal / file / rank) `BitBoard` between two squares, not including the squares, if it exists.
     #[inline(always)]
     pub fn between_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
         assert!(sq_one.is_okay());
@@ -198,15 +204,15 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         BitBoard(self.between_sqs_bb[sq_one.0 as usize][sq_two.0 as usize])
     }
 
-    /// Gets the adjacent files of the square
+    /// Gets the adjacent files `BitBoard` of the square
     #[inline(always)]
     pub fn adjacent_file(&self, sq: SQ) -> BitBoard {
         assert!(sq.is_okay());
         BitBoard(self.adjacent_files_bb[sq.file_of_sq() as usize])
     }
 
-    /// Pawn attacks from a given square, per player,
-    /// Basically, given square x, returns the BitBoard of squares a pawn on x attacks
+    /// Pawn attacks `BitBoard` from a given square, per player.
+    /// Basically, given square x, returns the BitBoard of squares a pawn on x attacks.
     #[inline(always)]
     pub fn pawn_attacks_from(&self, sq: SQ, player: Player) -> BitBoard {
         assert!(sq.is_okay());
@@ -218,7 +224,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     }
 
 
-    /// Returns if three Squares are in the same diagonal, file, or rank
+    /// Returns if three Squares are in the same diagonal, file, or rank.
     #[inline(always)]
     pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
         (self.line_bb(s1, s2) & s3.to_bb()).is_not_empty()
@@ -231,14 +237,14 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         self.zobrist.sq_piece[square.0 as usize][piece as usize]
     }
 
-    /// Returns the zobrist hash for the given Square of Enpassant
+    /// Returns the zobrist hash for the given Square of Enpassant.
     /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
     #[inline(always)]
     pub fn z_ep_file(&self, square: SQ) -> u64 {
         self.zobrist.en_p[file_of_sq(square.0) as usize]
     }
 
-    /// Returns a zobrast hash of the castling rights, as defined by the Board
+    /// Returns a zobrast hash of the castling rights, as defined by the Board.
     #[inline(always)]
     pub fn z_castle_rights(&self, castle: u8) -> u64 {
         debug_assert!((castle as usize) < ALL_CASTLING_RIGHTS);
@@ -301,8 +307,8 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         }
     }
 
-
-
+    /// Generate the pawn attacks table. Maps from a square to the bitboard of
+    /// possible attacks from that square. This is done per player.
     fn gen_pawn_attacks(&mut self) {
         // gen white pawn attacks
         for i in 0..56 as u8 {
@@ -331,9 +337,9 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 }
 
 
-// Magic BitBoard structure. For a certain square, contains a mask,
-// magic number, number to shift by, and a pointer into the array slice
-// where the position is held
+/// Structure inside a `MagicTable` for a specific hash. For a certain square,
+/// contains a mask,  magic number, number to shift by, and a pointer into the array slice
+/// where the position is held.
 #[warn(dead_code)]
 struct SMagic<'a> {
     ptr: &'a [u64],
@@ -342,7 +348,7 @@ struct SMagic<'a> {
     shift: u32,
 }
 
-/// Temporary struct used to create an actual `MagicBitBoard` Object.
+/// Temporary struct used to create an actual `SMagic` Object.
 #[warn(dead_code)]
 struct PreSMagic {
     start: usize,
@@ -375,14 +381,16 @@ impl PreSMagic {
     }
 }
 
+/// Contains the actual data of pre-computed tables for a given
+/// piece (either rook or bishop).
 struct MagicTable<'a> {
     sq_magics: [SMagic<'a>; 64],
     attacks: Vec<u64>
 }
 
 impl<'a> MagicTable<'a> {
-    // simple version that creates the table with an empty array.
-    // used for testing purposes where MagicStruct is not needed
+    /// Simple version that creates the table with an empty array.
+    /// used for testing purposes where MagicStruct is not needed.
     pub fn simple() -> MagicTable<'a> {
         let sq_table: [SMagic<'a>; 64] = unsafe { mem::uninitialized() };
         MagicTable {
@@ -391,7 +399,8 @@ impl<'a> MagicTable<'a> {
         }
     }
 
-    // Creates the MagicTable Struct
+    /// Creates the `MagicTable` struct. The table size is relative to the piece for computation,
+    /// and the deltas are the directions on the board the piece can go.
     pub fn init(table_size: usize, deltas: &[i8; 4]) -> MagicTable<'a> {
         // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
         let mut pre_sq_table: [PreSMagic; 64] = unsafe { PreSMagic::init64() };
@@ -538,7 +547,9 @@ impl<'a> MagicTable<'a> {
         }
     }
 
-    //NOTE: Result needs to be AND'd with player's occupied bitboard, so doesnt allow capturing self.
+    /// Returns an attack bitboard (as a u64) for a given square and occupancy board.
+    /// The result must be AND'd with the negation of the player's occupied bitboard, as
+    /// the returned u64 also contains bits where the piece can capture it's own pieces.
     #[inline(always)]
     pub fn attacks(&self, mut occupied: u64, square: u8) -> u64 {
         let magic_entry = unsafe { self.sq_magics.get_unchecked(square as usize)};
@@ -549,25 +560,29 @@ impl<'a> MagicTable<'a> {
     }
 }
 
-// Object to assist with Generating Random numbers for Magics
-struct PRNG {
+/// Object for generating pseudo-random numbers.
+pub struct PRNG {
     seed: u64,
 }
 
 impl PRNG {
-    // Creates PRNG from a seed, seed cannot be zero
+    /// Creates PRNG from a seed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the seed is zero.
     pub fn init(s: u64) -> PRNG {
         assert_ne!(s, 0);
         PRNG { seed: s }
     }
 
-    // Returns pseudo random number
+    /// Returns a pseudo-random number.
     #[allow(dead_code)]
     pub fn rand(&mut self) -> u64 {
         self.rand_change()
     }
 
-    // Returns a number with on average 8 bits being set.
+    /// Returns a pseudo-random number with on average 8 bits being set.
     pub fn sparse_rand(&mut self) -> u64 {
         let mut s = self.rand_change();
         s &= self.rand_change();
@@ -575,6 +590,7 @@ impl PRNG {
         s
     }
 
+    /// Randomizes the current seed and returns a random value.
     fn rand_change(&mut self) -> u64 {
         self.seed ^= self.seed >> 12;
         self.seed ^= self.seed << 25;
@@ -583,8 +599,7 @@ impl PRNG {
     }
 }
 
-// Returns an array of king moves, seeing as kings can only move up to
-// 8 static places no matter the square
+/// Returns an array of king moves (bitboards) for each square.
 fn gen_king_moves() -> [u64; 64] {
     let mut moves: [u64; 64] = [0; 64];
 
@@ -673,9 +688,9 @@ fn gen_knight_moves() -> [u64; 64] {
     moves
 }
 
-// Returns a bitboards of sliding attacks given an array of 4 deltas
-// Does not include the original position
-// includes occupied bits if it runs into them, but stops before going further
+/// Returns a bitboards of sliding attacks given an array of 4 deltas/
+/// Does not include the original position/
+/// Includes occupied bits if it runs into them, but stops before going further.
 fn sliding_attack(deltas: &[i8; 4], sq: u8, occupied: u64) -> u64 {
     assert!(sq < 64);
     let mut attack: u64 = 0;
@@ -683,7 +698,7 @@ fn sliding_attack(deltas: &[i8; 4], sq: u8, occupied: u64) -> u64 {
     for delta in deltas.iter().take(4 as usize) {
         let mut s: u8 = ((square as i16) + (*delta as i16)) as u8;
         'inner: while s < 64 &&
-            sq_distance(SQ(s as u8), SQ(((s as i16) - (*delta as i16)) as u8)) == 1
+            SQ(s as u8).distance(SQ(((s as i16) - (*delta as i16)) as u8)) == 1
         {
             attack |= (1 as u64).wrapping_shl(s as u32);
             if occupied & (1 as u64).wrapping_shl(s as u32) != 0 {
@@ -695,37 +710,17 @@ fn sliding_attack(deltas: &[i8; 4], sq: u8, occupied: u64) -> u64 {
     attack
 }
 
-// Return a quick lookup table of the distance of any two pieces
-// distance is in terms of squares away, not algebraic distance
+/// Return an array mapping from two squares to the distance between them.
+/// distance is in terms of squares away, not algebraic distance.
 fn init_distance_table() -> [[u8; 64]; 64] {
     let mut arr: [[u8; 64]; 64] = [[0; 64]; 64];
     for i in 0..64 as u8 {
         for j in 0..64 as u8 {
-            arr[i as usize][j as usize] = sq_distance(SQ(i), SQ(j));
+            arr[i as usize][j as usize] = (SQ(i)).distance(SQ(j));
         }
     }
     arr
 }
-
-
-
-// Returns distance of two squares
-pub fn sq_distance(sq1: SQ, sq2: SQ) -> u8 {
-    let x = diff(sq1.rank_idx_of_sq(), sq2.rank_idx_of_sq());
-    let y = diff(sq1.file_idx_of_sq(), sq2.file_idx_of_sq());
-    cmp::max(x, y)
-}
-
-// returns the difference between two unsigned u8s
-pub fn diff(x: u8, y: u8) -> u8 {
-    if x < y {
-        y - x
-    } else {
-        x - y
-    }
-}
-
-
 
 #[cfg(test)]
 mod tests {

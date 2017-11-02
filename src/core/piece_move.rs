@@ -1,4 +1,5 @@
 //! Module for the implementation and definition of a move to be played.
+
 use super::*;
 use super::sq::SQ;
 use std::fmt;
@@ -304,7 +305,7 @@ impl BitMove {
         s
     }
 
-    /// Returns the raw number represenation of the move.
+    /// Returns the raw number representation of the move.
     pub fn get_raw(&self) -> u16 {
         self.data
     }

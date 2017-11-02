@@ -32,6 +32,7 @@ extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
 
+pub mod core;
 pub mod board;
 
 pub mod timer;
@@ -39,14 +40,10 @@ pub mod engine;
 pub mod tools;
 pub mod uci;
 pub mod tt;
-pub mod bot_prelude;
-
-
-
-pub mod core;
 
 pub mod bots;
 
+pub mod bot_prelude;
 
 pub use board::Board;
 pub use core::piece_move::BitMove;

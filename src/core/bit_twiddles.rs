@@ -63,7 +63,7 @@ pub fn popcount64(x: u64) -> u8 {
 /// ```
 /// use pleco::core::bit_twiddles::*;
 ///
-/// assert_eq!(bit_scan_forward(0b10100),2)
+/// assert_eq!(bit_scan_forward(0b10100),2);
 /// ```
 ///
 #[inline(always)]
@@ -110,7 +110,7 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
 }
 
-/// Returns if there are more than one bits in a u64
+/// Returns if there are more than one bits in a u64.
 ///
 /// # Examples
 ///
@@ -142,7 +142,7 @@ pub fn lsb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
 
-/// Counts the number of bits
+/// Counts the number of bits in a u64.
 #[inline(always)]
 fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
@@ -157,6 +157,28 @@ fn popcount_old(x: u64) -> u8 {
         POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]
 }
 
+// Returns the positive difference between two unsigned u8s.
+#[inline(always)]
+pub fn diff(x: u8, y: u8) -> u8 {
+    if x < y {
+        y - x
+    } else {
+        x - y
+    }
+}
+
+
+/// Reverses all the bytes in a u64.
+///
+/// # Examples
+///
+/// ```
+/// use pleco::core::bit_twiddles::*;
+///
+/// let x: u64 =  0b11001100_00000001;
+/// let reverse = 0b00110011_10000000;
+/// assert_eq!(reverse, reverse_bytes(x));
+/// ```
 pub fn reverse_bytes(b: u64) -> u64 {
     let mut m: u64 = 0;
     m |= (reverse_byte(((b >> 56) & 0xFF) as u8) as u64) << 56;
@@ -170,6 +192,17 @@ pub fn reverse_bytes(b: u64) -> u64 {
     m
 }
 
+/// Reverses all a byte.
+///
+/// # Examples
+///
+/// ```
+/// use pleco::core::bit_twiddles::*;
+///
+/// let x: u8 =  0b00000001;
+/// let reverse = 0b10000000;
+/// assert_eq!(reverse, reverse_byte(x));
+/// ```
 pub fn reverse_byte(b: u8) -> u8 {
     let m: u8 = ((0b0000_0001 & b) << 7) | ((0b0000_0010 & b) << 5) | ((0b0000_0100 & b) << 3) |
         ((0b0000_1000 & b) << 1) |
@@ -178,9 +211,8 @@ pub fn reverse_byte(b: u8) -> u8 {
     m
 }
 
-
-
-
+/// Returns a String of the given u64, formatted in the order of where each bit maps to
+/// a specific square.
 pub fn string_u64(input: u64) -> String {
     let mut s = String::new();
     let format_in = format_u64(input);
@@ -192,6 +224,7 @@ pub fn string_u64(input: u64) -> String {
     s
 }
 
+/// Returns a stringified u64 with all 64 bits being represented.
 fn format_u64(input: u64) -> String {
     format!("{:064b}", input)
 }

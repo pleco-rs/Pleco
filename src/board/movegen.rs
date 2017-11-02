@@ -16,7 +16,7 @@
 //! For the generation type, moves can either be generated to be Legal, Or Pseudo-Legal. A Legal
 //! move is, for as the name implies, a legal move for the current side to play for a given position.
 //! A Pseudo-Legal move is a move that is "likely" to be legal for the current position, but cannot
-//! be gaurnteed.
+//! be guaranteed.
 //!
 //! Why would someone ever want to generate moves that might not be legal? Performance. Based on
 //! some benchmarking, generating all Pseudo-Legal moves is around twice as fast as generating all
@@ -24,10 +24,11 @@
 //! with a `Board::is_legal(m: BitMove)`, then the performance boost is potentially worth it.
 
 use board::*;
+
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use core::*;
 use core::magic_helper::MagicHelper;
-
+use core::mono_traits::*;
 use core::sq::SQ;
 use core::bitboard::BitBoard;
 
@@ -58,6 +59,7 @@ use core::bitboard::BitBoard;
 /// PseudoLegal moves require that a move's legality is determined before applying
 /// to a `Board`.
 pub trait Legality {
+    /// Returns if the only legal moves should be generated.
     fn gen_legal() -> bool;
 }
 
@@ -96,7 +98,7 @@ pub struct MoveGen<'a> {
 
 impl<'a> MoveGen<'a> {
 
-    // Helper function to setup the MoveGen structure
+    // Helper function to setup the MoveGen structure.
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
             movelist: Vec::with_capacity(48),
@@ -116,6 +118,7 @@ impl<'a> MoveGen<'a> {
         }
     }
 
+    /// Directly generates the moves.
     fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board) -> Vec<BitMove> {
         let mut movegen = MoveGen::get_self(&chessboard);
         let gen_type = G::gen_type();
@@ -137,13 +140,14 @@ impl<'a> MoveGen<'a> {
         movegen.movelist
     }
 
+    /// Generates non-evasions, ala the board is in check.
     fn generate_non_evasions<L: Legality, G: GenTypeTrait, P: PlayerTrait>(&mut self) {
         assert_ne!(G::gen_type(), GenTypes::All);
         assert_ne!(G::gen_type(), GenTypes::QuietChecks);
         assert_ne!(G::gen_type(), GenTypes::Evasions);
         assert!(!self.board.in_check());
 
-        // target = Bitboard of squares the generator should aim for
+        // target = bitboard of squares the generator should aim for
         let target: BitBoard = match G::gen_type() {
             GenTypes::NonEvasions => !self.us_occ,
             GenTypes::Captures => self.them_occ,
@@ -154,6 +158,8 @@ impl<'a> MoveGen<'a> {
         self.generate_all::<L, G, P>(target);
     }
 
+    /// Generates all moves of a certain legality, `GenType`, and player. The target is the
+    /// bitboard of the squares where moves should be generated.
     fn generate_all<L: Legality, G: GenTypeTrait, P: PlayerTrait>(&mut self, target: BitBoard) {
         self.generate_pawn_moves::<L, G, P>(target);
         self.moves_per_piece::<L, P, KnightType>(target);
@@ -171,6 +177,7 @@ impl<'a> MoveGen<'a> {
 
     }
 
+    /// Generates quiet checks.
     fn generate_quiet_checks<L: Legality, P: PlayerTrait>(&mut self) {
         assert!(!self.board.in_check());
         let mut disc_check: BitBoard = self.board.discovered_check_candidates();

@@ -1,8 +1,8 @@
+//! Contains a structure that maps from squares of a board to a player / piece at that square.
 
 use core::*;
 use std::mem;
 use core::sq::SQ;
-
 
 /// Struct to allow fast lookups for any square. Given a square, allows for determining if there
 /// is a piece currently there, and if so, allows for determining it's color and type of piece.
@@ -28,44 +28,45 @@ pub struct PieceLocations {
 
 
 impl PieceLocations {
-    /// Constructs a new Piece Locations with a defaulty of no pieces on the board
+    /// Constructs a new `PieceLocations` with a default of no pieces on the board.
     pub fn blank() -> PieceLocations {
         PieceLocations { data: [0b0111; 64] }
     }
 
-    /// Constructs a new Piece Locations with the memory at a default of Zeros
+    /// Constructs a new `PieceLocations` with the memory at a default of Zeros.
     ///
     /// This function is unsafe as Zeros represent Pawns, and therefore care mus be taken
     /// to iterate through every square and ensure the correct piece or lack of piece
-    /// is placed
+    /// is placed.
     pub unsafe fn default() -> PieceLocations {
         PieceLocations { data: [0; 64] }
     }
 
-    /// Places a given piece for a given player at a certain square
+    /// Places a given piece for a given player at a certain square.
     ///
     /// # Panics
-    /// Panics if Square is of index higher than 63
+    ///
+    /// Panics if Square is of index higher than 63.
     pub fn place(&mut self, square: SQ, player: Player, piece: Piece) {
         assert!(square.is_okay());
         self.data[square.0 as usize] = self.create_sq(player, piece);
     }
 
-    /// Removes a Square
+    /// Removes a Square.
     ///
     /// # Panics
     ///
-    /// Panics if Square is of index higher than 63
+    /// Panics if Square is of index higher than 63.
     pub fn remove(&mut self, square: SQ) {
         assert!(square.is_okay());
         self.data[square.0 as usize] = 0b0111
     }
 
-    /// Returns the Piece at a square, Or None if the square is empty.
+    /// Returns the Piece at a `SQ`, Or None if the square is empty.
     ///
     /// # Panics
     ///
-    /// Panics if Square is of index higher than 63.
+    /// Panics if square is of index higher than 63.
     pub fn piece_at(&self, square: SQ) -> Option<Piece> {
         assert!(square.is_okay());
         let byte: u8 = self.data[square.0 as usize] & 0b0111;
@@ -82,14 +83,14 @@ impl PieceLocations {
         }
     }
 
-    /// Returns the Piece at a square for a given player.
+    /// Returns the Piece at a `SQ` for a given player.
     ///
     /// If there is no piece at that square, or there is a piece of another player at that square,
     /// returns None.
     ///
     /// # Panics
     ///
-    /// Panics if Square is of index higher than 63
+    /// Panics if Square is of index higher than 63.
     pub fn piece_at_for_player(&self, square: SQ, player: Player) -> Option<Piece> {
         let op = self.player_piece_at(square);
         if op.is_some() {
@@ -104,11 +105,11 @@ impl PieceLocations {
         }
     }
 
-    /// Returns the player (if any) is occupying a square
+    /// Returns the `Player` (if any) is occupying a `SQ`.
     ///
     /// # Panics
     ///
-    /// Panics if Square is of index higher than 63
+    /// Panics if Square is of index higher than 63.
     pub fn player_at(&self, square: SQ) -> Option<Player> {
         let byte: u8 = self.data[square.0 as usize];
         if byte == 0b0111 || byte == 0b1111 {
@@ -121,12 +122,12 @@ impl PieceLocations {
         }
     }
 
-    /// Returns a Tuple of (Player,Piece) of the player and associated piece at a
+    /// Returns a Tuple of `(Player,Piece)` of the player and associated piece at a
     /// given square. Returns None if the square is unoccupied.
     ///
     /// # Panics
     ///
-    /// Panics if Square is of index higher than 63
+    /// Panics if Square is of index higher than 63.
     pub fn player_piece_at(&self, square: SQ) -> Option<(Player, Piece)> {
         let byte: u8 = self.data[square.0 as usize];
         match byte {
@@ -151,7 +152,7 @@ impl PieceLocations {
 
 
 
-    /// Helper method to return the bit representation of a given piece and player
+    /// Helper method to return the bit representation of a given piece and player.
     fn create_sq(&self, player: Player, piece: Piece) -> u8 {
         let mut loc: u8 = match piece {
             Piece::P => 0b0000,

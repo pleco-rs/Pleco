@@ -1,3 +1,8 @@
+//! Macros for easily implementing bit operations, shifting operations, math operations,
+//! and the `From` trait to a struct.
+
+/// Allows for shifting operations to be applied to a struct consisting of a singular tuple
+/// containing a type that implements that bit operation.
 macro_rules! impl_indv_shift_ops {
     ($t:ty, $tname:ident, $fname:ident, $w:ident, $ta_name:ident, $fa_name:ident) => (
 
@@ -21,6 +26,8 @@ macro_rules! impl_indv_shift_ops {
 }
 
 
+/// Allows for bit operations to be applied to a struct consisting of a singular tuple
+/// containing a type that implements that bit operation.
 macro_rules! impl_indv_bit_ops {
     ($t:ty, $tname:ident, $fname:ident, $w:ident, $ta_name:ident, $fa_name:ident) => (
 
@@ -44,7 +51,9 @@ macro_rules! impl_indv_bit_ops {
 }
 
 
-
+/// Implies bit operations `&, |, ^, !`, shifting operations `<< >>`,
+/// math operations `+, -, *, /, %` and `From` trait to a struct consisting of a
+/// singular tuple. This tuple must contain a type that implements these bit operations.
 macro_rules! impl_bit_ops {
     ($t:tt, $b:tt) => (
         impl From<$b> for $t {
@@ -68,6 +77,7 @@ macro_rules! impl_bit_ops {
         impl_indv_bit_ops!( $t,  Div,    div,    wrapping_div,    DivAssign, div_assign);
         impl_indv_bit_ops!( $t,  Mul,    mul,    wrapping_mul,    MulAssign, mul_assign);
         impl_indv_bit_ops!( $t,  Sub,    sub,    wrapping_sub,    SubAssign, sub_assign);
+
         impl_indv_shift_ops!($t, Shl,    shl,    wrapping_shl,    ShlAssign, shl_assign);
         impl_indv_shift_ops!($t, Shr,    shr,    wrapping_shr,    ShrAssign, shr_assign);
 

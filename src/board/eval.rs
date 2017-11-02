@@ -3,9 +3,9 @@
 use board::Board;
 use std::i16;
 use core::*;
-use core::{PlayerTrait};
 use core::masks::*;
 use core::bitboard::BitBoard;
+use core::mono_traits::*;
 
 lazy_static! {
     pub static ref BISHOP_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(BISHOP_POS_ARRAY)), flatten(BISHOP_POS_ARRAY) ];
