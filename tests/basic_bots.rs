@@ -1,8 +1,5 @@
 extern crate pleco;
 
-use pleco::board::*;
-use pleco::templates::*;
-use pleco::piece_move::*;
 
 use pleco::engine::Searcher;
 use pleco::bot_prelude::*;
@@ -12,7 +9,7 @@ use pleco::tools::gen_rand_legal_board;
 
 #[test]
 fn test_all_bot() {
-    for x in 0..5 {
+    for _x in 0..5 {
         let board = gen_rand_legal_board();
         RandomBot::best_move_depth(board.shallow_clone(), 4);
         SimpleBot::best_move_depth(board.shallow_clone(), 4);

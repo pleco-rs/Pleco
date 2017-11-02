@@ -47,7 +47,7 @@ const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 /// # Examples
 ///
 /// ```
-/// use pleco::bit_twiddles::*;
+/// use pleco::core::bit_twiddles::*;
 ///
 /// assert_eq!(popcount64(0b1001), 2);
 /// ```
@@ -61,9 +61,9 @@ pub fn popcount64(x: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use pleco::bit_twiddles::*;
+/// use pleco::core::bit_twiddles::*;
 ///
-/// assert_eq!(bit_scan_forward(0b10100),2)
+/// assert_eq!(bit_scan_forward(0b10100),2);
 /// ```
 ///
 #[inline(always)]
@@ -77,7 +77,7 @@ pub fn bit_scan_forward(bits: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use pleco::bit_twiddles::*;
+/// use pleco::core::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_forward(0b100),2);
 /// ```
@@ -93,7 +93,7 @@ pub fn bit_scan_forward_rust_trailing(bits: u64) -> u8 {
 /// # Examples
 ///
 /// ```
-/// use pleco::bit_twiddles::*;
+/// use pleco::core::bit_twiddles::*;
 ///
 /// assert_eq!(bit_scan_reverse(0b101),2);
 /// ```
@@ -110,12 +110,12 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
 }
 
-/// Returns if there are more than one bits in a u64
+/// Returns if there are more than one bits in a u64.
 ///
 /// # Examples
 ///
 /// ```
-/// use pleco::bit_twiddles::*;
+/// use pleco::core::bit_twiddles::*;
 ///
 /// assert!(more_than_one(0b1111));
 ///
@@ -133,7 +133,7 @@ pub fn more_than_one(x: u64) -> bool {
 /// # Examples
 ///
 /// ```
-/// use pleco::bit_twiddles::*;
+/// use pleco::core::bit_twiddles::*;
 ///
 /// assert_eq!(lsb(0b1001), 0b0001);
 /// ```
@@ -142,7 +142,7 @@ pub fn lsb(bits: u64) -> u64 {
     (1 as u64).wrapping_shl(bits.trailing_zeros())
 }
 
-/// Counts the number of bits
+/// Counts the number of bits in a u64.
 #[inline(always)]
 fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
@@ -157,41 +157,113 @@ fn popcount_old(x: u64) -> u8 {
         POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]
 }
 
+// Returns the positive difference between two unsigned u8s.
+#[inline(always)]
+pub fn diff(x: u8, y: u8) -> u8 {
+    if x < y {
+        y - x
+    } else {
+        x - y
+    }
+}
+
+
+/// Reverses all the bytes in a u64.
+///
+/// # Examples
+///
+/// ```
+/// use pleco::core::bit_twiddles::*;
+///
+/// let x: u64 =  0b11001100_00000001;
+/// let reverse = 0b00110011_10000000;
+/// assert_eq!(reverse, reverse_bytes(x));
+/// ```
+pub fn reverse_bytes(b: u64) -> u64 {
+    let mut m: u64 = 0;
+    m |= (reverse_byte(((b >> 56) & 0xFF) as u8) as u64) << 56;
+    m |= (reverse_byte(((b >> 48) & 0xFF) as u8) as u64) << 48;
+    m |= (reverse_byte(((b >> 40) & 0xFF) as u8) as u64) << 40;
+    m |= (reverse_byte(((b >> 32) & 0xFF) as u8) as u64) << 32;
+    m |= (reverse_byte(((b >> 24) & 0xFF) as u8) as u64) << 24;
+    m |= (reverse_byte(((b >> 16) & 0xFF) as u8) as u64) << 16;
+    m |= (reverse_byte(((b >> 8) & 0xFF) as u8) as u64) << 8;
+    m |= reverse_byte((b & 0xFF) as u8) as u64;
+    m
+}
+
+/// Reverses all a byte.
+///
+/// # Examples
+///
+/// ```
+/// use pleco::core::bit_twiddles::*;
+///
+/// let x: u8 =  0b00000001;
+/// let reverse = 0b10000000;
+/// assert_eq!(reverse, reverse_byte(x));
+/// ```
+pub fn reverse_byte(b: u8) -> u8 {
+    let m: u8 = ((0b0000_0001 & b) << 7) | ((0b0000_0010 & b) << 5) | ((0b0000_0100 & b) << 3) |
+        ((0b0000_1000 & b) << 1) |
+        ((0b0001_0000 & b) >> 1) | ((0b0010_0000 & b) >> 3) |
+        ((0b0100_0000 & b) >> 5) | ((0b1000_0000 & b) >> 7);
+    m
+}
+
+/// Returns a String of the given u64, formatted in the order of where each bit maps to
+/// a specific square.
+pub fn string_u64(input: u64) -> String {
+    let mut s = String::new();
+    let format_in = format_u64(input);
+    for x in 0..8 {
+        let slice = &format_in[x * 8..(x * 8) + 8];
+        s += slice;
+        s += "\n";
+    }
+    s
+}
+
+/// Returns a stringified u64 with all 64 bits being represented.
+fn format_u64(input: u64) -> String {
+    format!("{:064b}", input)
+}
+
 #[cfg(test)]
 mod tests {
 
-    use bit_twiddles;
+    use super::*;
 
     #[test]
     fn test_bit_scan() {
-        assert_eq!(bit_twiddles::bit_scan_forward(2), 1);
-        assert_eq!(bit_twiddles::bit_scan_forward(4), 2);
-        assert_eq!(bit_twiddles::bit_scan_forward(8), 3);
-        assert_eq!(bit_twiddles::bit_scan_forward(16), 4);
-        assert_eq!(bit_twiddles::bit_scan_forward(32), 5);
-        assert_eq!(bit_twiddles::bit_scan_forward(31), 0);
-        assert_eq!(bit_twiddles::bit_scan_forward(0b000000000000001), 0);
-        assert_eq!(bit_twiddles::bit_scan_forward(0b000000000000010), 1);
-        assert_eq!(bit_twiddles::bit_scan_forward(0b110011100000010), 1);
-        assert_eq!(bit_twiddles::bit_scan_forward(0b110011100000010), 1);
+        assert_eq!(bit_scan_forward(2), 1);
+        assert_eq!(bit_scan_forward(4), 2);
+        assert_eq!(bit_scan_forward(8), 3);
+        assert_eq!(bit_scan_forward(16), 4);
+        assert_eq!(bit_scan_forward(32), 5);
+        assert_eq!(bit_scan_forward(31), 0);
+        assert_eq!(bit_scan_forward(0b000000000000001), 0);
+        assert_eq!(bit_scan_forward(0b000000000000010), 1);
+        assert_eq!(bit_scan_forward(0b110011100000010), 1);
+        assert_eq!(bit_scan_forward(0b110011100000010), 1);
     }
 
     #[test]
-    fn popcount() {
-        assert_eq!(bit_twiddles::popcount64(0b000000000000000), 0);
-        assert_eq!(bit_twiddles::popcount64(0b11111100000001), 7);
-        assert_eq!(bit_twiddles::popcount64(0b1000010000), 2);
-        assert_eq!(bit_twiddles::popcount64(0xFFFFFFFF), 32);
-        assert_eq!(bit_twiddles::popcount64(0x55555555), 16);
+    fn popcount_t() {
+        assert_eq!(popcount64(0b000000000000000), 0);
+        assert_eq!(popcount64(0b11111100000001), 7);
+        assert_eq!(popcount64(0b1000010000), 2);
+        assert_eq!(popcount64(0xFFFFFFFF), 32);
+        assert_eq!(popcount64(0x55555555), 16);
     }
 
     #[test]
-    fn lsb() {
-        assert_eq!(bit_twiddles::lsb(0b110011100000010), 0b10);
-        assert_eq!(bit_twiddles::lsb(0b1010000000000000), 0b10000000000000);
-        assert_eq!(bit_twiddles::lsb(0b11001110000), 0b10000);
-        assert_eq!(bit_twiddles::lsb(0b100001000000), 0b1000000);
-        assert_eq!(bit_twiddles::lsb(0b1), 0b1);
+    fn lsb_t() {
+        assert_eq!(lsb(0b110011100000010), 0b10);
+        assert_eq!(lsb(0b1010000000000000), 0b10000000000000);
+        assert_eq!(lsb(0b11001110000), 0b10000);
+        assert_eq!(lsb(0b100001000000), 0b1000000);
+        assert_eq!(lsb(0b1), 0b1);
     }
 
 }

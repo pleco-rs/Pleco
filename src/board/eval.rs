@@ -2,9 +2,10 @@
 
 use board::Board;
 use std::i16;
-use templates::*;
-use bit_twiddles::*;
-use templates::{PlayerTrait};
+use core::*;
+use core::masks::*;
+use core::bitboard::BitBoard;
+use core::mono_traits::*;
 
 lazy_static! {
     pub static ref BISHOP_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(BISHOP_POS_ARRAY)), flatten(BISHOP_POS_ARRAY) ];
@@ -120,13 +121,13 @@ impl Eval {
 
 
 fn eval_all<P: PlayerTrait>(board: &Board) -> i16 {
-    eval_piece_counts::<P>(&board) +
-    eval_castling::<P>(&board) +
-    eval_king_pos::<P>(&board) +
-    eval_bishop_pos::<P>(&board) +
-    eval_knight_pos::<P>(&board) +
-    eval_king_blockers_pinners::<P>(&board) +
-    eval_pawns::<P>(&board)
+    eval_piece_counts::<P>(board) +
+    eval_castling::<P>(board) +
+    eval_king_pos::<P>(board) +
+    eval_bishop_pos::<P>(board) +
+    eval_knight_pos::<P>(board) +
+    eval_king_blockers_pinners::<P>(board) +
+    eval_pawns::<P>(board)
 }
 
 
@@ -156,7 +157,7 @@ fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
     let us_ksq = board.king_sq(P::player());
-    if rank_of_sq(us_ksq) == Rank::R1 || rank_of_sq(us_ksq) == Rank::R8 {
+    if us_ksq.rank_of_sq() == Rank::R1 || us_ksq.rank_of_sq() == Rank::R8 {
         score += KING_BOTTOM
     }
 
@@ -164,8 +165,8 @@ fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
         score -= CHECK
     }
 
-    let bb_around_us = board.magic_helper.king_moves(us_ksq) & board.get_occupied_player(P::player());
-    score += popcount64(bb_around_us) as i16 * 9;
+    let bb_around_us: BitBoard = board.magic_helper.king_moves(us_ksq) & board.get_occupied_player(P::player());
+    score += bb_around_us.count_bits() as i16 * 9;
 
     score
 }
@@ -173,9 +174,9 @@ fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
     let mut us_b = board.piece_bb(P::player(), Piece::B);
-    while us_b != 0 {
-        let lsb = lsb(us_b);
-        score += BISHOP_POS[P::player() as usize][bb_to_sq(lsb) as usize];
+    while us_b.is_not_empty() {
+        let lsb = us_b.lsb();
+        score += BISHOP_POS[P::player() as usize][lsb.to_sq().0 as usize];
         us_b &= !lsb;
     }
 
@@ -190,9 +191,9 @@ fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_knight_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
     let mut us_b = board.piece_bb(P::player(), Piece::N);
-    while us_b != 0 {
-        let lsb = lsb(us_b);
-        score += KNIGHT_POS[P::player() as usize][bb_to_sq(lsb) as usize];
+    while us_b.is_not_empty() {
+        let lsb = us_b.lsb();
+        score += KNIGHT_POS[P::player() as usize][lsb.to_sq().0 as usize];
         us_b &= !lsb;
     }
 
@@ -204,14 +205,14 @@ fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i16 {
 
     let blockers: BitBoard = board.all_pinned_pieces(P::player());
 
-    let them_blockers = blockers & board.get_occupied_player(P::opp_player());
+    let them_blockers: BitBoard = blockers & board.get_occupied_player(P::opp_player());
 
     // Our pieces blocking a check on their king
-    let us_blockers = blockers & board.get_occupied_player(P::player());
+    let us_blockers: BitBoard = blockers & board.get_occupied_player(P::player());
 
-    score += 25 * popcount64(us_blockers) as i16;
+    score += 25 * us_blockers.count_bits() as i16;
 
-    score += 6 * popcount64(them_blockers) as i16;
+    score += 6 * them_blockers.count_bits() as i16;
 
     score
 }
@@ -219,27 +220,27 @@ fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_pawns<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
 
-    let pawns_bb = board.piece_bb(P::player(), Piece::P);
+    let pawns_bb: BitBoard = board.piece_bb(P::player(), Piece::P);
     let mut bb = pawns_bb;
     let mut file_counts: [u8; FILE_CNT] = [0; FILE_CNT];
 
-    let mut sqs_defended: BitBoard = 0;
+    let mut sqs_defended: BitBoard = BitBoard(0);
 
-    while bb != 0 {
-        let lsb = lsb(bb);
-        let sq = bb_to_sq(lsb);
+    while bb.is_not_empty() {
+        let lsb = bb.lsb();
+        let sq = lsb.to_sq();
         sqs_defended |= board.magic_helper.pawn_attacks_from(sq, P::player());
-        file_counts[(sq % 8) as usize] += 1;
-        score += PAWN_POS[P::player() as usize][sq as usize];
+        file_counts[(sq.0 % 8) as usize] += 1;
+        score += PAWN_POS[P::player() as usize][sq.0 as usize];
         bb &= !lsb;
     }
 
     // Add score for squares attacked by pawns
-    score += popcount64(sqs_defended) as i16;
+    score += sqs_defended.count_bits() as i16;
 
     // Add score for pawns defending other pawns
     sqs_defended &= pawns_bb;
-    score += 3 * popcount64(sqs_defended) as i16;
+    score += 3 * sqs_defended.count_bits() as i16;
 
     for i in 0..FILE_CNT {
         if file_counts[i] > 1 {

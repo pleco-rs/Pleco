@@ -6,17 +6,17 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 
-use pleco::board::Board;
 use pleco::engine::Searcher;
 use pleco::tools::*;
-use pleco::templates::GenTypes;
+use pleco::core::GenTypes;
+use pleco::{SQ,BitBoard,Player,Piece,Board};
 
 use test::{black_box, Bencher};
 
 lazy_static! {
     pub static ref RAND_BOARDS_NON_CHECKS: Vec<Board> = {
         let mut vec = Vec::new();
-        for x in 0..25 {
+        for _x in 0..25 {
             vec.push(gen_rand_no_check());
         }
         vec
@@ -24,7 +24,7 @@ lazy_static! {
 
     pub static ref RAND_BOARDS_CHECKS: Vec<Board> = {
         let mut vec = Vec::new();
-        for x in 0..30 {
+        for _x in 0..30 {
             vec.push(gen_rand_in_check());
         }
         vec
@@ -32,7 +32,7 @@ lazy_static! {
 
     pub static ref RAND_BOARDS_ANY: Vec<Board> = {
         let mut vec = Vec::new();
-        for x in 0..30 {
+        for _x in 0..30 {
             vec.push(gen_rand_legal_board());
         }
         vec

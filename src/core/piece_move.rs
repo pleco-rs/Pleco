@@ -1,5 +1,7 @@
 //! Module for the implementation and definition of a move to be played.
-use templates::*;
+
+use super::*;
+use super::sq::SQ;
 use std::fmt;
 
 // A move needs 16 bits to be stored
@@ -47,10 +49,10 @@ static SP_MASK: u16 = 0b0011_000000_000000;
 
 /// Represents a singular move. 
 ///
-/// A [BitMove] consists of 16 bits, all of which to include a source square, destination square,
+/// A `BitMove` consists of 16 bits, all of which to include a source square, destination square,
 /// and special move-flags to differentiate types of moves. 
 ///
-/// A [BitMove] should never be created directly, but rather instigated with a [PreMoveInfo]. This is because
+/// A `BitMove` should never be created directly, but rather instigated with a `PreMoveInfo`. This is because
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct BitMove {
@@ -67,7 +69,7 @@ pub enum MoveFlag {
     QuietMove,
 }
 
-/// A Subset of MoveFlag, used to determine the overall classfication of a move.
+/// A Subset of `MoveFlag`, used to determine the overall classification of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum MoveType {
     Promotion,
@@ -76,7 +78,7 @@ pub enum MoveType {
     Normal,
 }
 
-/// Useful pre-incoding of a move's information before it is compressed into a BitMove struct.
+/// Useful pre-incoding of a move's information before it is compressed into a `BitMove` struct.
 #[derive(Copy, Clone, PartialEq)]
 pub struct PreMoveInfo {
     pub src: SQ,
@@ -106,8 +108,8 @@ impl BitMove {
 
     /// Creates a BitMove from a [PreMoveInfo].
     pub fn init(info: PreMoveInfo) -> BitMove {
-        let src = info.src as u16;
-        let dst = (info.dst as u16) << 6;
+        let src = info.src.0 as u16;
+        let dst = (info.dst.0 as u16) << 6;
         let flags = info.flags;
         let flag_bits: u16 = match flags {
             MoveFlag::Promotion { capture, prom } => {
@@ -178,12 +180,24 @@ impl BitMove {
     /// Returns the destination of a [BitMove].
     #[inline(always)]
     pub fn get_dest(&self) -> SQ {
+        SQ(self.get_dest_u8())
+    }
+
+    /// Returns the destination of a [BitMove].
+    #[inline(always)]
+    pub fn get_dest_u8(&self) -> u8 {
         ((self.data & DST_MASK) >> 6) as u8
     }
 
     /// Returns the source square of a [BitMove].
     #[inline(always)]
     pub fn get_src(&self) -> SQ {
+        SQ(self.get_src_u8())
+    }
+
+    /// Returns the source square of a [BitMove].
+    #[inline(always)]
+    pub fn get_src_u8(&self) -> u8 {
         (self.data & SRC_MASK) as u8
     }
 
@@ -216,7 +230,7 @@ impl BitMove {
     pub fn is_double_push(&self) -> (bool, u8) {
         let is_double_push: u8 = ((self.data & FLAG_MASK) >> 12) as u8;
         match is_double_push {
-            1 => (true, self.get_dest() as u8),
+            1 => (true, self.get_dest().0 as u8),
             _ => (false, 64),
         }
     }
@@ -275,8 +289,8 @@ impl BitMove {
     /// will stringify to "a1b8". If there is a pawn promotion involved, the piece promoted to will be
     /// appended to the end of the string, alike "a7a8q" in the case of a queen promotion
     pub fn stringify(&self) -> String {
-        let src = parse_sq(self.get_src());
-        let dst = parse_sq(self.get_dest());
+        let src = self.get_src().to_string();
+        let dst = self.get_dest().to_string();
         let mut s = format!("{}{}", src, dst);
         if self.is_promo() {
             let char = match self.promo_piece() {
@@ -291,7 +305,7 @@ impl BitMove {
         s
     }
 
-    /// Returns the raw number represenation of the move.
+    /// Returns the raw number representation of the move.
     pub fn get_raw(&self) -> u16 {
         self.data
     }

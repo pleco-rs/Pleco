@@ -1,8 +1,8 @@
 use board::*;
 use timer::*;
-use piece_move::*;
+use core::piece_move::*;
 use engine::{Searcher,UCILimit};
-use eval::*;
+use board::eval::*;
 use rayon;
 
 #[allow(unused_imports)]
@@ -45,7 +45,7 @@ fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     }
 
     let moves = board.generate_moves();
-    if moves.len() == 0 {
+    if moves.is_empty() {
         if board.in_check() {
             BestMove::new(MATE + (board.depth() as i16))
         } else {

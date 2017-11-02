@@ -8,7 +8,7 @@
 use std::ptr::Unique;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
-use piece_move::BitMove;
+use core::piece_move::BitMove;
 
 
 /// Value used to retrieve and store Entries.
@@ -39,7 +39,7 @@ pub enum NodeBound {
     Exact = 3,
 }
 
-/// Abstraction for combining the 'time' a node was found alongside the [NodeType].
+/// Abstraction for combining the 'time' a node was found alongside the `NodeType`.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct NodeTypeTimeBound {
     data: u8
@@ -72,7 +72,7 @@ impl NodeTypeTimeBound {
 
 // 2 bytes + 2 bytes + 2 Byte + 2 byte + 1 + 1 = 10 Bytes
 
-/// Structure defining a singular Entry in a table, containing the BestMove found,
+/// Structure defining a singular Entry in a table, containing the `BestMove` found,
 /// the score of that node, the type of Node, depth found, as well as a key uniquely defining
 /// the node.
 #[derive(Clone,PartialEq)]
@@ -140,7 +140,7 @@ pub struct Cluster {
 // clusters -> Pointer to the clusters
 // cap -> n number of clusters (So n * CLUSTER_SIZE) number of entries
 // time age -> documenting when an entry was placed
-/// Structure for representing a TranspositionTable. A Transposition Table is a type
+/// Structure for representing a `TranspositionTable`. A Transposition Table is a type
 /// of HashTable that maps Zobrist Keys to information about that position, including the best move
 /// found, score, depth the move was found at, and other information.
 pub struct TT {
@@ -336,6 +336,9 @@ impl TT {
                          Layout::array::<Cluster>(self.cap).unwrap());
         }
     }
+
+    // TODO: Add Hash % generation.
+
 }
 
 impl Drop for TT {
@@ -364,6 +367,7 @@ fn alloc_room(size: usize) -> Unique<Cluster> {
     }
 
 }
+
 
 #[cfg(test)]
 mod tests {

@@ -2,10 +2,10 @@
 
 extern crate rand;
 
-use piece_move::BitMove;
+use core::piece_move::BitMove;
 use timer::Timer;
 use board::Board;
-use templates::Player;
+use core::Player;
 
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -69,7 +69,7 @@ impl UCILimit {
         if let UCILimit::Depth(depth) = *self {
             depth
         } else {
-            10000
+            10_000
         }
     }
 

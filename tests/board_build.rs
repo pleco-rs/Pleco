@@ -2,8 +2,9 @@ extern crate pleco;
 
 use pleco::board as board;
 use self::board::{Board as Board};
-use pleco::templates::*;
-use pleco::piece_move::*;
+use pleco::core::*;
+use pleco::core::piece_move;
+use pleco::core::piece_move::*;
 use pleco::*;
 
 
@@ -22,10 +23,10 @@ fn test_init_counts() {
     assert_eq!(board.count_piece(Player::Black, Piece::R), 2);
     assert_eq!(board.count_piece(Player::Black, Piece::K), 1);
     assert_eq!(board.count_piece(Player::Black, Piece::Q), 1);
-    assert_eq!(board.diagonal_piece_bb(Player::White),0b101100);
-    assert_eq!(board.sliding_piece_bb(Player::White),0b10001001);
+    assert_eq!(board.diagonal_piece_bb(Player::White).0,0b101100);
+    assert_eq!(board.sliding_piece_bb(Player::White).0,0b10001001);
     assert_eq!(board.count_pieces_player(Player::White),board.count_pieces_player(Player::Black));
-    assert_eq!(board.get_occupied(),0xFFFF00000000FFFF);
+    assert_eq!(board.get_occupied().0,0xFFFF00000000FFFF);
 }
 
 
@@ -33,22 +34,22 @@ fn test_init_counts() {
 fn basic_move_apply() {
     let mut b = Board::default();
     let p1 = PreMoveInfo {
-        src: 12,
-        dst: 28,
+        src: SQ(12),
+        dst: SQ(28),
         flags: MoveFlag::DoublePawnPush
     };
     let m = BitMove::init(p1);
     b.apply_move(m);
     let p2 = PreMoveInfo {
-        src: 51,
-        dst: 35,
+        src: SQ(51),
+        dst: SQ(35),
         flags: MoveFlag::DoublePawnPush
     };
     let m = BitMove::init(p2);
     b.apply_move(m);
     let p3 = PreMoveInfo {
-        src: 28,
-        dst: 35,
+        src: SQ(28),
+        dst: SQ(35),
         flags: MoveFlag::Capture {ep_capture: false}
     };
     let m = BitMove::init(p3);
@@ -65,66 +66,66 @@ fn basic_move_apply() {
 fn move_seq_1() {
     let mut b = board::Board::default();
     let p = PreMoveInfo {
-        src: 12,
-        dst: 28,
+        src: SQ(12),
+        dst: SQ(28),
         flags: MoveFlag::DoublePawnPush
     };
     let m = BitMove::init(p);
     b.apply_move(m);
     let p = PreMoveInfo {
-        src: 51,
-        dst: 35,
+        src: SQ(51),
+        dst: SQ(35),
         flags: MoveFlag::DoublePawnPush
     };
     let m = BitMove::init(p);
     b.apply_move(m);
     let p = PreMoveInfo {
-        src: 28,
-        dst: 35,
+        src: SQ(28),
+        dst: SQ(35),
         flags: MoveFlag::Capture {ep_capture: false}
     };
     let m = BitMove::init(p);
     b.apply_move(m);
 
     let p = PreMoveInfo {
-        src: 59,
-        dst: 35,
+        src: SQ(59),
+        dst: SQ(35),
         flags: MoveFlag::Capture {ep_capture: false}
     };
     let m = BitMove::init(p);
     b.apply_move(m);
     let p = PreMoveInfo {
-        src: 5,
-        dst: 12,
+        src: SQ(5),
+        dst: SQ(12),
         flags: MoveFlag::QuietMove,
     };
     let m = BitMove::init(p);
     b.apply_move(m);
     let p = PreMoveInfo {
-        src: 35,
-        dst: 8,
+        src: SQ(35),
+        dst: SQ(8),
         flags: MoveFlag::Capture {ep_capture: false}
     };
     let m = BitMove::init(p);
     b.apply_move(m);
     let p = PreMoveInfo {
-        src: 6,
-        dst: 21,
+        src: SQ(6),
+        dst: SQ(21),
         flags: MoveFlag::QuietMove
     };
     let m = BitMove::init(p);
     b.apply_move(m);
 
     let p = piece_move::PreMoveInfo {
-        src: 60,
-        dst: 59,
+        src: SQ(60),
+        dst: SQ(59),
         flags: piece_move::MoveFlag::QuietMove
     };
     let m = piece_move::BitMove::init(p);
     b.apply_move(m);
     let p = PreMoveInfo {
-        src: 4,
-        dst: 7,
+        src: SQ(4),
+        dst: SQ(7),
         flags: MoveFlag::Castle{king_side: true}
     };
     let m = BitMove::init(p);

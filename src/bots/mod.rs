@@ -5,7 +5,7 @@ pub mod basic;
 pub mod lazy_smp;
 
 
-use piece_move::BitMove;
+use core::piece_move::BitMove;
 
 pub struct BestMove {
     best_move: Option<BitMove>,

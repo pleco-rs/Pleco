@@ -1,7 +1,7 @@
 extern crate pleco;
 
 use pleco::board::Board;
-use pleco::piece_move::BitMove;
+use pleco::core::piece_move::BitMove;
 
 
 fn main() {

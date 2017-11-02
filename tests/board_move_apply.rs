@@ -2,8 +2,7 @@ extern crate pleco;
 extern crate rand;
 
 use pleco::board::Board;
-use pleco::piece_move::BitMove;
-use pleco::tools::gen_rand_legal_board;
+use pleco::core::piece_move::BitMove;
 use std::*;
 
 
