@@ -93,6 +93,7 @@ lazy_static! {
 //    }
 //}
 
+// TODO: make it use PseudoRandomNumGen
 
 fn gen_random_fens() {
     let mut b = Board::default();

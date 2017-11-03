@@ -441,7 +441,7 @@ impl<'a> MagicTable<'a> {
             // edges is the bitboard represenation of the edges s is not on.
             // e.g. sq A1 is on FileA and Rank1, so edges = bitboard of FileH and Rank8
             // mask = occupancy mask of square s
-            let edges: u64 = ((BitBoard::RANK_1 | BitBoard::RANK_8).0 & !rank_bb(s)) |
+            let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) |
                 ((FILE_A | FILE_H) & !file_bb(s));
             let mask: u64 = sliding_attack(deltas, s, 0) & !edges;
 

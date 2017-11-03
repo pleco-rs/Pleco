@@ -6,8 +6,7 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 
-use pleco::{SQ,BitBoard,Player,Piece,Board};
-use pleco::tools::*;
+use pleco::Board;
 use pleco::bot_prelude::*;
 
 

@@ -7,10 +7,10 @@ use super::*;
 use std::fmt;
 use std::ops::*;
 
-// TODO: Investigate possibility of using an Enum instead after 2.0 release.
+// TODO: Investigate possibility of using an Enum instead after 0.2.0 release.
 
 /// Represents a singular square of a chessboard.
-#[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, Default, Hash, PartialEq, PartialOrd, Eq, Debug)]
 pub struct SQ(pub u8);
 
 impl_bit_ops!(SQ, u8);
@@ -54,7 +54,7 @@ impl SQ {
     #[inline(always)]
     pub fn to_bb(self) -> BitBoard {
         assert!(self.is_okay());
-        BitBoard((1 as u64).wrapping_shl(self.0 as u32))
+        BitBoard(1) << self
     }
 
     /// Returns the `BitBoard` representation of a `Rank` that a `SQ` lies on.
@@ -254,3 +254,4 @@ impl fmt::Display for SQ {
         f.pad(&self.to_string())
     }
 }
+

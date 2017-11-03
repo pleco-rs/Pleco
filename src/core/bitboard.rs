@@ -139,6 +139,19 @@ impl BitBoard {
     }
 }
 
+//#[inline(always)]
+//pub fn to_bb(self) -> BitBoard {
+//    assert!(self.is_okay());
+//    BitBoard((1 as u64).wrapping_shl(self.0 as u32))
+//}
+
+impl Shl<SQ> for BitBoard {
+    type Output = BitBoard;
+
+    fn shl(self, rhs: SQ) -> BitBoard {
+        BitBoard((self.0).wrapping_shl(rhs.0 as u32))
+    }
+}
 
 
 impl fmt::Display for BitBoard {

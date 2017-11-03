@@ -1,29 +1,6 @@
 //! This module contains `Board`, the Object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
-//!
-//! # Examples
-//!
-//! Basic usage.
-//! ```
-//! let mut board = Board::default();  // create a board
-//!
-//! board.apply_uci_move("e2e4");  // apply a uci move
-//!
-//! assert_eq(board.moves_played(),1);
-//! board.undo_move(); // undo the last move played
-//!
-//! assert_eq(board.moves_played(),0);
-//! ```
-//!
-//! Generating and applying moves.
-//! ```
-//! let mut board = Board::default();
-//!
-//! let moves = board.generate_moves();
-//!
-//! board.apply_move(moves[0]);
-//! ```
 
 
 pub mod movegen;
@@ -812,7 +789,6 @@ impl Board {
         if undo_move.is_promo() {
             assert_eq!(piece_on.unwrap(), undo_move.promo_piece());
 
-            // Remove Promo piece and place Pawn in same square
             self.remove_piece_c(piece_on.unwrap(), to, us);
             self.put_piece_c(Piece::P, to, us);
             piece_on = Some(Piece::P);
@@ -1078,6 +1054,10 @@ impl Board {
         self.move_piece_c(piece, from, to, player);
     }
 
+    // TODO: investigate potention for SIMD in execution of this.
+    //
+    // Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
+
     /// Places a Piece on the board at a given square and player.
     ///
     /// # Safety
@@ -1146,7 +1126,7 @@ impl Board {
         r_src: &mut SQ,
         r_dst: &mut SQ,
     ) {
-        let king_side: bool = k_src.0 < to_r_orig.0;
+        let king_side: bool = k_src < *to_r_orig;
 
         *r_src = *to_r_orig;
         if king_side {
@@ -1169,7 +1149,7 @@ impl Board {
     /// Assumes the last move played was a castle for the given player.
     fn remove_castling(&mut self, player: Player, k_src: SQ, r_src: SQ) {
         let k_dst: SQ = self.king_sq(player);
-        let king_side: bool = k_src.0 < r_src.0;
+        let king_side: bool = k_src < r_src;
         let r_dst: SQ = if king_side {
             player.relative_square(SQ(5))
         } else {
@@ -1233,7 +1213,8 @@ impl Board {
             zob ^= self.magic_helper.z_piece_at_sq(piece.unwrap(), sq);
         }
         let ep = self.state.ep_square;
-        if ep != SQ(0) && ep.0 < 64 {
+        // TODO: EP - solidify the lack of a square
+        if ep != SQ(0) && ep.is_okay() {
             zob ^= self.magic_helper.z_ep_file(ep);
         }
 
@@ -1513,18 +1494,10 @@ impl Board {
         self.piece_locations.piece_at(sq)
     }
 
-    // TODO: Factor into PieceLocations
     /// Returns the Player, if any, occupying the square.
     pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
         assert!(sq.is_okay());
-        let bb: BitBoard = sq.to_bb();
-        if (bb & self.occupied_black()).is_not_empty() {
-            return Some(Player::Black);
-        }
-        if (bb & self.occupied_white()).is_not_empty() {
-            return Some(Player::White);
-        }
-        None
+        self.piece_locations.player_at(sq)
     }
 
     /// Returns the player, if any, at the square.
@@ -1759,8 +1732,8 @@ impl Board {
                 let k_from: SQ = src;
                 let r_from: SQ = dst;
 
-                let k_to: SQ = self.turn.relative_square( { if r_from.0 > k_from.0 { SQ(6) } else { SQ(2) } });
-                let r_to: SQ = self.turn.relative_square( { if r_from.0 > k_from.0 { SQ(5) } else { SQ(3) } });
+                let k_to: SQ = self.turn.relative_square( { if r_from > k_from { SQ(6) } else { SQ(2) } });
+                let r_to: SQ = self.turn.relative_square( { if r_from > k_from { SQ(5) } else { SQ(3) } });
 
                 let opp_k_bb = opp_king_sq.to_bb();
                 (self.magic_helper.rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty() &&
@@ -1817,6 +1790,10 @@ impl Board {
     /// Return the current ARC count of the board's BoardState
     pub fn get_arc_strong_count(&self) -> usize {
         Arc::strong_count(&self.state)
+    }
+
+    pub fn get_piece_locations(&self) -> PieceLocations {
+        self.piece_locations.clone()
     }
 
     /// Get Debug Information.
@@ -1923,7 +1900,8 @@ impl Board {
             ^ self.piece_bb(Player::White, Piece::R) ^ self.piece_bb(Player::Black, Piece::R)
             ^ self.piece_bb(Player::White, Piece::Q) ^ self.piece_bb(Player::Black, Piece::Q)
             ^ self.piece_bb(Player::White, Piece::K) ^ self.piece_bb(Player::Black, Piece::K);
-        assert_eq!(all.0, self.get_occupied().0);
+        // Note, this was once all.0, self.get_occupied.0
+        assert_eq!(all, self.get_occupied());
 
         true
     }

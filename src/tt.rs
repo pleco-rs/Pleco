@@ -8,8 +8,13 @@
 use std::ptr::Unique;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
+use std::cmp::max;
+
 use core::piece_move::BitMove;
 
+// TODO: investigate potention for SIMD in key lookup
+//
+// Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
 
 /// Value used to retrieve and store Entries.
 pub type Key = u64;
@@ -329,7 +334,7 @@ impl TT {
         self.clusters = alloc_room(size);
     }
 
-    /// de-allocates the current heap.
+    /// De-allocates the current heap.
     fn de_alloc(&self) {
         unsafe {
             Heap.dealloc(self.clusters.as_ptr() as *mut _,
@@ -337,8 +342,26 @@ impl TT {
         }
     }
 
-    // TODO: Add Hash % generation.
+    pub fn hash_percent(&self) -> f64 {
+        let clusters_scanned: u64 = max(self.cap as u64, 1024);
+        let mut hits = 0;
 
+        for i in 0..clusters_scanned {
+            let cluster = self.cluster(i);
+            unsafe {
+                let init_entry: *mut Entry = cluster_first_entry(cluster);
+                for e in 0..CLUSTER_SIZE {
+                    // get a pointer to the specified entry
+                    let entry_ptr: *mut Entry = init_entry.offset(e as isize);
+                    let entry: &Entry = & (*entry_ptr);
+                    if !entry.is_empty() {
+                        hits += 1;
+                    }
+                }
+            }
+        }
+        hits as f64 / (clusters_scanned * CLUSTER_SIZE as u64) as f64
+    }
 }
 
 impl Drop for TT {

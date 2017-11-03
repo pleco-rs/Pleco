@@ -24,6 +24,7 @@ use std::fmt;
 pub const ALL_PIECES: [Piece; PIECE_CNT] =
     [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
 
+
 /// Array of both players, indexed by their enum value.
 pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
 
