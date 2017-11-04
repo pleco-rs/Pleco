@@ -1,5 +1,6 @@
-/// Object for generating pseudo-random numbers.
+//! Contains the Pseduo-random number generator.
 
+/// Object for generating pseudo-random numbers.
 pub struct PRNG {
     seed: u64,
 }

@@ -1,17 +1,16 @@
 extern crate pleco;
 
 use pleco::SQ;
-use pleco::board::*;
 use pleco::core::*;
 use pleco::core::piece_move::*;
-use pleco::tools::gen_rand_legal_board;
+use pleco::board::{Board,RandBoard};
 
 
 #[test]
 fn test_movegen_captures() {
     let mut vec = Vec::new();
     for _i in 0..10 {
-        let mut b = gen_rand_legal_board();
+        let mut b  = RandBoard::default().one();
         if !b.in_check() {
             vec.push(b);
         }
@@ -31,7 +30,7 @@ fn test_movegen_captures() {
 fn test_movegen_quiets() {
     let mut vec = Vec::new();
     for _i in 0..10 {
-        let mut b = gen_rand_legal_board();
+        let mut b = RandBoard::default().one();
         if !b.in_check() {
             vec.push(b);
         }
