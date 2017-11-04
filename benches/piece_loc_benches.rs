@@ -2,7 +2,7 @@
 extern crate pleco;
 extern crate test;
 
-use pleco::{SQ,BitBoard,Player,Piece,Board};
+use pleco::{SQ,Player,Piece,Board};
 use pleco::core::*;
 use pleco::board::piece_locations::PieceLocations;
 

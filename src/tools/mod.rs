@@ -1,10 +1,9 @@
 //! Miscellaneous tools for debugging and generating output.
+
+pub mod prng;
+
 use board::Board;
 use engine::Searcher;
-use rand;
-
-use std::cmp;
-use core::piece_move::BitMove;
 
 use bot_prelude::{RandomBot,JamboreeSearcher,IterativeSearcher};
 
@@ -171,40 +170,40 @@ pub fn is_valid_fen(fen: &str) -> bool {
     // 8 ranks, so 8 parts
     if b_rep.len() != 8 { return false; }
 
-//    let mut piece_loc: PieceLocations = PieceLocations::blank();
-//    let mut piece_cnt: [[u8; PIECE_CNT]; PLAYER_CNT] = [[0; PIECE_CNT]; PLAYER_CNT];
+    //    let mut piece_loc: PieceLocations = PieceLocations::blank();
+    //    let mut piece_cnt: [[u8; PIECE_CNT]; PLAYER_CNT] = [[0; PIECE_CNT]; PLAYER_CNT];
 
-//    // TODO: Sum of Each Rank is 8
-//    for rank in b_rep {
-//        let mut sum: u32 = 0;
-//        for char_i in rank.chars() {
-//            let dig = char_i.to_digit(10);
-//            if dig.is_some() {
-//                sum += dig.unwrap();
-//            } else {
-//                let piece = match char_i {
-//                    'p' | 'P' => Piece::P,
-//                    'n' | 'N' => Piece::N,
-//                    'b' | 'B' => Piece::B,
-//                    'r' | 'R' => Piece::R,
-//                    'q' | 'Q' => Piece::Q,
-//                    'k' | 'K' => Piece::K,
-//                    _ => return false
-//                };
-//                let player: Player = if char.is_lowercase() {
-//                    Player::Black
-//                } else {
-//                    Player::White
-//                };
-//                piece_loc.place(idx as u8, player, piece);
-//                piece_cnt[player as usize][piece as usize] += 1;
-//                sum += 1;
-//            }
-//        }
-//        if sum != 8 {
-//            return false;
-//        }
-//    }
+    //    // TODO: Sum of Each Rank is 8
+    //    for rank in b_rep {
+    //        let mut sum: u32 = 0;
+    //        for char_i in rank.chars() {
+    //            let dig = char_i.to_digit(10);
+    //            if dig.is_some() {
+    //                sum += dig.unwrap();
+    //            } else {
+    //                let piece = match char_i {
+    //                    'p' | 'P' => Piece::P,
+    //                    'n' | 'N' => Piece::N,
+    //                    'b' | 'B' => Piece::B,
+    //                    'r' | 'R' => Piece::R,
+    //                    'q' | 'Q' => Piece::Q,
+    //                    'k' | 'K' => Piece::K,
+    //                    _ => return false
+    //                };
+    //                let player: Player = if char.is_lowercase() {
+    //                    Player::Black
+    //                } else {
+    //                    Player::White
+    //                };
+    //                piece_loc.place(idx as u8, player, piece);
+    //                piece_cnt[player as usize][piece as usize] += 1;
+    //                sum += 1;
+    //            }
+    //        }
+    //        if sum != 8 {
+    //            return false;
+    //        }
+    //    }
 
     // TODO: Board In Check 0, 1, or two times
     //      In Case of two times, never pawn+(pawn, bishop, knight), bishop+bishop, knight+knight
@@ -215,112 +214,5 @@ pub fn is_valid_fen(fen: &str) -> bool {
 
     // TODO: If EP square, check for legal EP square
 
-
-
-
-
-
-
     true
-}
-
-/// Generates a board with a Random Position
-pub fn gen_rand_legal_board() -> Board {
-    gen_rand_board(RandGen::All)
-}
-
-
-pub fn gen_rand_in_check() -> Board {
-    gen_rand_board(RandGen::InCheck)
-}
-
-
-pub fn gen_rand_no_check() -> Board {
-    gen_rand_board(RandGen::NoCheck)
-}
-
-#[derive(Eq, PartialEq)]
-enum RandGen {
-    InCheck,
-    NoCheck,
-    All
-}
-
-fn gen_rand_board(gen: RandGen) -> Board {
-    let side = rand::random::<i32>() % 2;
-    loop {
-        let mut board = Board::default();
-        let mut i = 0;
-        let mut moves = board.generate_moves();
-
-        while i < 100 && !moves.is_empty() {
-            if i > 4 {
-                let mut to_ret = rand::random::<i32>() % cmp::max(17, 100 - i) == 0;
-                if gen != RandGen::InCheck {
-                    to_ret |= rand::random::<usize>() % 70 == 0;
-                }
-                if i > 19 {
-                    to_ret |= rand::random::<usize>() % 79 == 0;
-                    if i > 34 {
-                        to_ret |= rand::random::<usize>() % 100 == 0;
-                    }
-                }
-
-                if to_ret {
-                    if gen == RandGen::All { return board; }
-                    if gen == RandGen::InCheck && board.in_check() { return board; }
-                    if gen == RandGen::NoCheck && !board.in_check() { return board; }
-                }
-            }
-            // apply random move
-            let best_move = if gen == RandGen::InCheck && side == i % 2{
-                create_rand_move(&board, true)
-            } else {
-                create_rand_move(&board, false)
-            };
-
-            board.apply_move(best_move);
-
-            moves = board.generate_moves();
-            i += 1;
-        }
-    }
-}
-
-fn create_rand_move(board: &Board, favorable: bool) -> BitMove {
-    let rand_num = if favorable {24} else {14};
-
-    if rand::random::<usize>() % rand_num == 0 {
-        RandomBot::best_move_depth(board.shallow_clone(), 1)
-    } else if rand::random::<usize>() % 6 == 0 {
-        IterativeSearcher::best_move_depth(board.shallow_clone(),3)
-    } else if rand::random::<usize>() % 3 == 0 {
-        JamboreeSearcher::best_move_depth(board.shallow_clone(),4)
-    } else if !favorable && rand::random::<usize>() % 4 < 3 {
-        JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
-    } else {
-        IterativeSearcher::best_move_depth(board.shallow_clone(),4)
-    }
-}
-
-fn apply_castling(board: &mut Board) -> bool {
-    let moves = board.generate_moves();
-    for mov in moves {
-        if mov.is_castle() {
-            board.apply_move(mov);
-            return true;
-        }
-    }
-    false
-}
-
-#[test]
-fn stress_test_rand_moves() {
-    let mut i = 0;
-    while i < 18 {
-        let mut board = gen_rand_legal_board();
-        let mov = IterativeSearcher::best_move_depth(board.shallow_clone(),4);
-        board.apply_move(mov);
-        i += 1;
-    }
 }

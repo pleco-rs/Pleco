@@ -34,10 +34,10 @@ extern crate rand;
 
 pub mod core;
 pub mod board;
+pub mod tools;
 
 pub mod timer;
 pub mod engine;
-pub mod tools;
 pub mod uci;
 pub mod tt;
 

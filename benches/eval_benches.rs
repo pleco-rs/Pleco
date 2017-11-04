@@ -6,20 +6,14 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 
-use pleco::{SQ,BitBoard,Player,Piece,Board};
-use pleco::tools::*;
 use pleco::board::eval::Eval;
+use pleco::board::{RandBoard,Board};
 
 use test::{black_box, Bencher};
 
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
-        let mut vec = Vec::new();
-        vec.push(Board::default());
-        for _x in 0..100 {
-            vec.push(gen_rand_no_check());
-        }
-        vec
+        RandBoard::default().no_check().pseudo_random(730315678).many(100)
     };
 }
 

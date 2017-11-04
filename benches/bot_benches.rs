@@ -16,12 +16,11 @@ lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         let mut vec = Vec::new();
         vec.push(Board::default());
-//        for x in 0..5 {
-//            vec.push(gen_rand_no_check());
-//        }
         vec
     };
 }
+
+
 
 
 #[bench]

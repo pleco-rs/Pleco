@@ -6,63 +6,34 @@ use pleco::core::bit_twiddles::*;
 
 use test::{black_box, Bencher};
 
-// 1, 2, 4, 8
-pub const BIT_SETS_SINGULAR_TEN: [u64; 10] =[
-    0x80_00_00_00_00_00_00_00,
-    0x00_80_00_00_00_00_00_00,
-    0x00_01_00_00_00_00_00_00,
-    0x00_00_08_00_00_00_00_00,
-    0x00_00_00_40_00_00_00_00,
-    0x00_00_00_00_20_00_00_00,
-    0x00_00_00_00_01_00_00_00,
-    0x00_00_00_00_00_04_00_00,
-    0x00_00_00_00_00_00_02_00,
-    0x00_00_00_00_00_00_00_02
-];
+#[macro_use]
+extern crate lazy_static;
 
-pub const BIT_SETS_PIECE_TEN: [u64; 10] =[
-    0xF0_00_00_00_00_00_00_00, // 4
-    0x00_80_21_00_00_00_00_00, // 3
-    0x00_00_00_00_01_00_00_00, // 1
-    0x00_00_08_00_00_10_00_00, // 2
-    0x00_02_00_00_00_00_00_08, // 2
-    0x00_00_00_00_20_00_00_30, // 3
-    0x00_30_00_34_01_10_00_08, // 8
-    0x00_00_00_00_00_06_00_00, // 2
-    0x01_00_00_00_00_00_00_00, // 1
-    0x00_00_00_00_01_00_00_12  // 3
-];
+use pleco::core::bitboard::{BitBoard,RandBitBoard};
 
-pub const BIT_SETS_DENSE_TEN: [u64; 10] =[
-    0x11_01_02_30_00_00_00_00, // 6
-    0x00_80_21_00_00_0E_10_00, // 7
-    0x00_00_05_30_90_05_11_00, // 10
-    0x00_00_0E_00_00_10_00_00, // 4
-    0x00_02_00_00_00_00_00_08, // 2
-    0x00_00_00_FE_00_10_00_30, // 9
-    0x00_20_00_30_01_10_00_08, // 6
-    0x01_00_00_00_00_06_00_00, // 3
-    0x33_01_00_00_00_00_00_00, // 5
-    0x00_80_00_01_00_03_00_12  // 7
-];
+lazy_static! {
+    pub static ref BIT_SETS_DENSE_1000: Vec<BitBoard> = {
+        RandBitBoard::default().pseudo_random(2661634).avg(6).max(11).many(1000)
+    };
+}
 
 #[bench]
-fn bench_popcount_10_rust(b: &mut Bencher) {
+fn bench_popcount_1000_rust(b: &mut Bencher) {
     b.iter(|| {
         black_box({
-            for bits in BIT_SETS_DENSE_TEN.iter() {
-                black_box({black_box(*bits).count_ones();})
+            for bits in BIT_SETS_DENSE_1000.iter() {
+                black_box({black_box((*bits).0).count_ones();})
             }
         })
     })
 }
 
 #[bench]
-fn bench_popcount_10_old(b: &mut Bencher) {
+fn bench_popcount_1000_old(b: &mut Bencher) {
     b.iter(|| {
         black_box({
-            for bits in BIT_SETS_DENSE_TEN.iter() {
-                black_box({popcount_old(black_box(*bits));})
+            for bits in BIT_SETS_DENSE_1000.iter() {
+                black_box({popcount_old(black_box((*bits).0));})
             }
         })
     })

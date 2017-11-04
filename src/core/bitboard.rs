@@ -1,8 +1,11 @@
 //! Module containing the `BitBoard` and associated functions / constants.
 
+extern crate rand;
+
 use super::sq::SQ;
 use super::bit_twiddles::*;
 use super::masks::*;
+use tools::prng::PRNG;
 
 use std::mem;
 use std::ops::*;
@@ -158,5 +161,117 @@ impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = &string_u64(reverse_bytes(self.0));
         f.pad(s)
+    }
+}
+
+#[derive(Eq, PartialEq)]
+enum RandAmount {
+    VeryDense, // Average 48 bits
+    Dense,    // Average 32 bits
+    Standard,  // Average 16 bits
+    Sparse,   // Average 8 bits
+    VerySparse, // Average 6 bits
+    ExtremelySparse, // Average 4 bits
+    Singular // One and only one bit set.
+}
+
+pub struct RandBitBoard {
+    prng: PRNG,
+    seed: u64,
+    rand: RandAmount,
+    max: u16,
+    min: u16
+}
+
+impl Default for RandBitBoard {
+    fn default() -> Self {
+        RandBitBoard {
+            prng: PRNG::init(1),
+            seed: 0,
+            rand: RandAmount::Standard,
+            max: 64,
+            min: 1
+        }
+    }
+}
+
+impl RandBitBoard {
+    pub fn many(mut self, amount: usize) -> Vec<BitBoard> {
+        let mut boards: Vec<BitBoard> = Vec::with_capacity(amount);
+        for _x in 0..amount {
+            boards.push(self.go());
+        };
+        boards
+    }
+
+    pub fn one(mut self) -> BitBoard {
+        self.go()
+    }
+
+    pub fn avg(mut self, bits: u8) -> Self {
+        self.rand = if bits >= 36 {
+            RandAmount::VeryDense
+        } else if bits >= 26 {
+            RandAmount::Dense
+        } else if bits >= 12 {
+            RandAmount::Standard
+        } else if bits >= 7 {
+            RandAmount::Sparse
+        } else if bits >= 5 {
+            RandAmount::VerySparse
+        } else {
+            RandAmount::ExtremelySparse
+        };
+        self
+    }
+
+    pub fn allow_empty(mut self) -> Self {
+        self.min = 0;
+        self
+    }
+
+    pub fn max(mut self, max: u16) -> Self {
+        self.max = max;
+        self
+    }
+
+    pub fn min(mut self, min: u16) -> Self {
+        self.min = min;
+        self
+    }
+
+    pub fn pseudo_random(mut self, seed: u64) -> Self {
+        self.seed = if seed == 0 {1} else {seed};
+        self.prng = PRNG::init(seed);
+        self
+    }
+
+    fn go(&mut self) -> BitBoard {
+        if self.rand == RandAmount::Singular {
+            return BitBoard(self.prng.singular_bit());
+        }
+
+        loop {
+            let num = match self.rand {
+                RandAmount::VeryDense => self.prng.rand() | self.prng.rand(), // Average 48 bits
+                RandAmount::Dense => self.prng.rand(),    // Average 32 bits
+                RandAmount::Standard => self.prng.rand() & self.prng.rand(),  // Average 16 bits
+                RandAmount::Sparse => self.prng.sparse_rand(),   // Average 8 bits
+                RandAmount::VerySparse => self.prng.sparse_rand() & (self.prng.rand() | self.prng.rand()), // Average 6 bits
+                RandAmount::ExtremelySparse => self.prng.sparse_rand() & self.prng.rand(),   // Average 4 bits
+                RandAmount::Singular => unreachable!()
+            };
+            let count = popcount64(num) as u16;
+            if count >= self.min && count <= self.max {
+                return BitBoard(num);
+            }
+        }
+    }
+
+    fn random(&mut self) -> usize {
+        if self.seed == 0 {
+            return rand::random::<usize>();
+        }
+        self.prng.rand() as usize
     }
 }

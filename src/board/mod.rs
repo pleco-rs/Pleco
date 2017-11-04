@@ -9,6 +9,8 @@ pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
 
+extern crate rand;
+
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
 use core::mono_traits::*;
@@ -16,6 +18,10 @@ use core::masks::*;
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
+
+use tools::prng::PRNG;
+use bot_prelude::{IterativeSearcher,JamboreeSearcher};
+use engine::Searcher;
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
@@ -25,7 +31,7 @@ use self::movegen::{MoveGen,Legal,PseudoLegal};
 use std::option::*;
 use std::sync::Arc;
 use std::{fmt, char};
-use std::cmp::PartialEq;
+use std::cmp::{PartialEq,max};
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
@@ -583,6 +589,10 @@ impl Board {
     /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
 
+        // TODO: investigate potention for SIMD in capturing moves
+        //
+        // Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
+
         // Check for stupidity
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
 
@@ -1053,10 +1063,6 @@ impl Board {
         let player = self.color_of_sq(from).unwrap();
         self.move_piece_c(piece, from, to, player);
     }
-
-    // TODO: investigate potention for SIMD in execution of this.
-    //
-    // Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
 
     /// Places a Piece on the board at a given square and player.
     ///
@@ -1918,6 +1924,146 @@ impl Board {
         true
     }
 }
+
+#[derive(Eq, PartialEq)]
+enum RandGen {
+    InCheck,
+    NoCheck,
+    All
+}
+
+pub struct RandBoard {
+    gen_type: RandGen,
+    minimum_move: u16,
+    favorable_player: Player,
+    prng: PRNG,
+    seed: u64
+}
+
+impl Default for RandBoard {
+    fn default() -> Self {
+        RandBoard {
+            gen_type: RandGen::All,
+            minimum_move: 2,
+            favorable_player: Player::Black,
+            prng: PRNG::init(1),
+            seed: 0
+        }
+    }
+}
+
+impl RandBoard {
+
+    pub fn many(mut self, size: usize) -> Vec<Board> {
+        let mut boards: Vec<Board> = Vec::with_capacity(size);
+        for _x in 0..size {
+            boards.push(self.go());
+        };
+        boards
+    }
+
+    pub fn one(mut self) -> Board {
+        self.go()
+    }
+
+    pub fn pseudo_random(mut self, seed: u64) -> Self {
+        self.seed = if seed == 0 {1} else {seed};
+        self.prng = PRNG::init(seed);
+        self
+    }
+
+    pub fn min_moves(mut self, moves: u16) -> Self {
+        self.minimum_move = moves;
+        self
+    }
+
+    pub fn in_check(mut self) -> Self {
+        self.gen_type = RandGen::InCheck;
+        self
+    }
+
+    pub fn no_check(mut self) -> Self {
+        self.gen_type = RandGen::NoCheck;
+        self
+    }
+
+    fn go(&mut self) -> Board {
+        self.favorable_player = if self.random() % 2 == 0 {
+            Player::White
+        } else {
+            Player::Black
+        };
+        loop {
+            let mut board = Board::default();
+            let mut iterations = 0;
+            let mut moves = board.generate_moves();
+
+            while iterations < 100 && !moves.is_empty() {
+                let mut rand = self.random() % max(90 - iterations, 13);
+                if iterations > 20 {
+                    rand %= 60;
+                    if iterations > 36 {
+                        rand >>= 1;
+                    }
+                }
+
+                if rand == 0 && self.to_ret(&board){
+                   return board;
+                }
+
+                self.apply_random_move(&mut board);
+                moves = board.generate_moves();
+                iterations += 1;
+            }
+        }
+
+    }
+
+    fn random(&mut self) -> usize {
+        if self.seed == 0 {
+            return rand::random::<usize>();
+        }
+        self.prng.rand() as usize
+    }
+
+    fn to_ret(&self, board: &Board) -> bool {
+        let gen: bool =match self.gen_type {
+            RandGen::All => true,
+            RandGen::InCheck => board.in_check(),
+            RandGen::NoCheck => !board.in_check()
+        };
+        gen && (board.moves_played() >= self.minimum_move)
+    }
+
+    fn apply_random_move(&mut self, board: &mut Board) {
+        let (rand_num, favorable): (usize, bool) =
+            if self.favorable(board.turn) {
+                (24, true)
+            } else {
+                (14, false)
+            };
+
+        let best_move = if self.random() % rand_num == 0 {
+            let moves = board.generate_moves();
+            moves[self.random() % moves.len()]
+        } else if self.random() % 5 == 0 {
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+        } else if self.random() % 3 == 0 {
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),4)
+        } else if !favorable && self.random() % 4 < 3 {
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+        } else {
+            IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+        };
+        board.apply_move(best_move);
+    }
+
+    fn favorable(&self, player: Player) -> bool {
+        self.gen_type == RandGen::InCheck
+            && self.favorable_player == player
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
