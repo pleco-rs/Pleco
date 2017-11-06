@@ -19,6 +19,8 @@ pub struct BitBoard(pub u64);
 
 impl_bit_ops!(BitBoard, u64);
 
+// TODO: Make riple carry
+
 impl BitBoard {
 
     pub const FILE_A: BitBoard = BitBoard(FILE_A);
@@ -175,6 +177,7 @@ enum RandAmount {
     Singular // One and only one bit set.
 }
 
+/// BitBoard generating structure.
 pub struct RandBitBoard {
     prng: PRNG,
     seed: u64,
@@ -196,6 +199,7 @@ impl Default for RandBitBoard {
 }
 
 impl RandBitBoard {
+    /// Returns a vector of "amount" BitBoards.
     pub fn many(mut self, amount: usize) -> Vec<BitBoard> {
         let mut boards: Vec<BitBoard> = Vec::with_capacity(amount);
         for _x in 0..amount {
@@ -204,10 +208,12 @@ impl RandBitBoard {
         boards
     }
 
+    /// Returns a singular random BitBoard.
     pub fn one(mut self) -> BitBoard {
         self.go()
     }
 
+    /// Sets the average number of bits in the resulting Bitboard.
     pub fn avg(mut self, bits: u8) -> Self {
         self.rand = if bits >= 36 {
             RandAmount::VeryDense
@@ -225,21 +231,27 @@ impl RandBitBoard {
         self
     }
 
+    /// Allows empty BitBoards to be returned.
     pub fn allow_empty(mut self) -> Self {
         self.min = 0;
         self
     }
 
+    /// Sets the maximum number of bits in a `BitBoard`.
     pub fn max(mut self, max: u16) -> Self {
         self.max = max;
         self
     }
 
+    /// Sets the minimum number of bits in a `BitBoard`.
     pub fn min(mut self, min: u16) -> Self {
         self.min = min;
         self
     }
 
+    /// Sets the generation to use pseudo-random numbers instead of random
+    /// numbers. The seed is a random number for the random numbers to be generated
+    /// off of.
     pub fn pseudo_random(mut self, seed: u64) -> Self {
         self.seed = if seed == 0 {1} else {seed};
         self.prng = PRNG::init(seed);

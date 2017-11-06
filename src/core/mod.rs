@@ -125,6 +125,8 @@ impl Player {
     pub fn relative_rank(&self, rank: Rank) -> Rank {
         ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
     }
+
+
 }
 
 
@@ -192,6 +194,32 @@ impl Piece {
             Piece::R => 5,
             Piece::Q => 8,
             Piece::K => 0,
+        }
+    }
+
+    /// Return the lowercase character of a `Piece`.
+    #[inline]
+    pub fn char_lower(&self) -> char {
+        match *self {
+            Piece::P => 'p',
+            Piece::N => 'n',
+            Piece::B => 'b',
+            Piece::R => 'r',
+            Piece::Q => 'q',
+            Piece::K => 'k',
+        }
+    }
+
+    /// Return the uppercase character of a `Piece`.
+    #[inline]
+    pub fn char_upper(&self) -> char {
+        match *self {
+            Piece::P => 'P',
+            Piece::N => 'N',
+            Piece::B => 'B',
+            Piece::R => 'R',
+            Piece::Q => 'Q',
+            Piece::K => 'K',
         }
     }
 

@@ -293,14 +293,8 @@ impl BitMove {
         let dst = self.get_dest().to_string();
         let mut s = format!("{}{}", src, dst);
         if self.is_promo() {
-            let char = match self.promo_piece() {
-                Piece::B => 'b',
-                Piece::N => 'n',
-                Piece::R => 'r',
-                Piece::Q => 'q',
-                _ => unreachable!(),
-            };
-            s.push(char);
+            let c = self.promo_piece().char_lower();
+            s.push(c);
         }
         s
     }

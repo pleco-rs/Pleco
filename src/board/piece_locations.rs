@@ -150,12 +150,14 @@ impl PieceLocations {
         }
     }
 
+    /// Returns if there is a `SQ` is occupied.
     pub fn at_square(&self, square: SQ) -> bool {
         assert!(square.is_okay());
         let byte: u8 = self.data[square.0 as usize];
         byte == 0b0111 || byte == 0b1111
     }
 
+    /// Returns the first square (if any) that a piece / player is at.
     pub fn first_square(&self, piece: Piece, player: Player) -> Option<SQ> {
         let target = self.create_sq(player, piece);
         for x in 0..64 {
@@ -166,6 +168,7 @@ impl PieceLocations {
         None
     }
 
+    /// Returns if the Board contains a particular piece / player.
     pub fn contains(&self, piece: Piece, player: Player) -> bool {
         self.first_square(piece,player).is_some()
     }

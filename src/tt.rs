@@ -13,10 +13,11 @@ use std::cmp::max;
 use core::piece_move::BitMove;
 
 // TODO: investigate potention for SIMD in key lookup
+// Currently, there is now way to do this right now in rust without it being extensive.
 //
-// Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
+//
 
-/// Value used to retrieve and store Entries.
+
 pub type Key = u64;
 
 /// BitMask for the [NodeTypeTimeBound]'s time data.

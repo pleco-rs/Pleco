@@ -32,6 +32,7 @@ extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
 
+
 pub mod core;
 pub mod board;
 pub mod tools;
@@ -42,7 +43,6 @@ pub mod uci;
 pub mod tt;
 
 pub mod bots;
-
 pub mod bot_prelude;
 
 #[doc(no_inline)]

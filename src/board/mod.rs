@@ -8,6 +8,7 @@ pub mod eval;
 pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
+mod pgn;
 
 extern crate rand;
 
@@ -253,6 +254,12 @@ impl Board {
             state: self.state.clone(),
             magic_helper: &MAGIC_HELPER,
         }
+    }
+
+    /// Creates a `RandBoard` (Random Board Generator) for generation of `Board`s with random
+    /// positions.
+    pub fn random() -> RandBoard {
+        RandBoard::default()
     }
 
     /// Helper method for setting the piece states on initialization.
@@ -1932,6 +1939,8 @@ enum RandGen {
     All
 }
 
+/// Random board generator. Creates either one or many random boards with optional
+/// parameters.
 pub struct RandBoard {
     gen_type: RandGen,
     minimum_move: u16,
@@ -1954,6 +1963,8 @@ impl Default for RandBoard {
 
 impl RandBoard {
 
+    /// Creates a `Vec<Board>` full of `Boards` containing random positions. The
+    /// `Vec` will be of size 'size'.
     pub fn many(mut self, size: usize) -> Vec<Board> {
         let mut boards: Vec<Board> = Vec::with_capacity(size);
         for _x in 0..size {
@@ -1962,31 +1973,38 @@ impl RandBoard {
         boards
     }
 
+    /// Creates a singular `Board` with a random position.
     pub fn one(mut self) -> Board {
         self.go()
     }
 
+    /// Turns PseudoRandom generation on. This allows for the same random `Board`s
+    /// to be created from the same seed.
     pub fn pseudo_random(mut self, seed: u64) -> Self {
         self.seed = if seed == 0 {1} else {seed};
         self.prng = PRNG::init(seed);
         self
     }
 
+    /// Sets the minimum moves a randomly generated `Board` must contain.
     pub fn min_moves(mut self, moves: u16) -> Self {
         self.minimum_move = moves;
         self
     }
 
+    /// Garuntees that the boards returned are only in check,
     pub fn in_check(mut self) -> Self {
         self.gen_type = RandGen::InCheck;
         self
     }
 
+    /// Garuntees that the boards returned are not in check.
     pub fn no_check(mut self) -> Self {
         self.gen_type = RandGen::NoCheck;
         self
     }
 
+    /// This makes a board.
     fn go(&mut self) -> Board {
         self.favorable_player = if self.random() % 2 == 0 {
             Player::White
@@ -2019,6 +2037,7 @@ impl RandBoard {
 
     }
 
+    /// Creates a random number.
     fn random(&mut self) -> usize {
         if self.seed == 0 {
             return rand::random::<usize>();
