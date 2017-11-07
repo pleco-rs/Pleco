@@ -109,6 +109,8 @@ impl BitBoard {
         lsb(self.0)
     }
 
+    /// Returns the index (as a square) of the least significant bit and removes
+    /// that bit from the `BitBoard`.
     #[inline(always)]
     pub fn pop_lsb(&mut self) -> SQ {
         let sq = self.bit_scan_forward();
@@ -116,6 +118,8 @@ impl BitBoard {
         sq
     }
 
+    /// Returns the index (as a square) and bit of the least significant bit and removes
+    /// that bit from the `BitBoard`.
     #[inline(always)]
     pub fn pop_lsb_and_bit(&mut self) -> (SQ, BitBoard) {
         let sq: SQ = self.bit_scan_forward();
@@ -166,6 +170,17 @@ impl Shl<SQ> for BitBoard {
     }
 }
 
+impl Iterator for BitBoard {
+    type Item = SQ;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self.pop_lsb())
+        }
+    }
+}
 
 impl fmt::Display for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -174,6 +189,7 @@ impl fmt::Display for BitBoard {
     }
 }
 
+/// Sets the Number of random bits on a randomly-generated `BitBoard`.
 #[derive(Eq, PartialEq)]
 enum RandAmount {
     VeryDense, // Average 48 bits
@@ -296,11 +312,6 @@ impl RandBitBoard {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub enum PGNError {
-    TagParse,
-    Length,
-}
 
 #[cfg(test)]
 mod tests {
