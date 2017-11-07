@@ -109,6 +109,20 @@ impl BitBoard {
         lsb(self.0)
     }
 
+    #[inline(always)]
+    pub fn pop_lsb(&mut self) -> SQ {
+        let sq = self.bit_scan_forward();
+        *self &= *self - 1;
+        sq
+    }
+
+    #[inline(always)]
+    pub fn pop_lsb_and_bit(&mut self) -> (SQ, BitBoard) {
+        let sq: SQ = self.bit_scan_forward();
+        *self &= *self - 1;
+        (sq, sq.to_bb())
+    }
+
     /// Array containing all the `BitBoards` for of the starting position, for each player and piece.
     pub fn start_bbs() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
         [[
@@ -143,12 +157,6 @@ impl BitBoard {
         new_bbs
     }
 }
-
-//#[inline(always)]
-//pub fn to_bb(self) -> BitBoard {
-//    assert!(self.is_okay());
-//    BitBoard((1 as u64).wrapping_shl(self.0 as u32))
-//}
 
 impl Shl<SQ> for BitBoard {
     type Output = BitBoard;
@@ -285,5 +293,37 @@ impl RandBitBoard {
             return rand::random::<usize>();
         }
         self.prng.rand() as usize
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum PGNError {
+    TagParse,
+    Length,
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn bb_pop_lsb() {
+        let mut bbs = RandBitBoard::default()
+            .pseudo_random(2264221)
+            .min(2)
+            .avg(5)
+            .max(15)
+            .many(100);
+
+        while !bbs.is_empty() {
+            let mut bb = bbs.pop().unwrap();
+            while bb.is_not_empty() {
+                let total_pre = bb.count_bits();
+                let lsb_sq = bb.pop_lsb();
+                assert_eq!(bb.count_bits() + 1, total_pre);
+            }
+        }
+
     }
 }
