@@ -1,8 +1,11 @@
 //! Contains the `BoardState` structure for the `Board`. Helps to preserve the previous state
 //! of the board without needing to re-compute information.
 //!
+//! As the `BoardState` is automatically created for each position of the `Board`, there is
+//! little need for interacting directly with this module.
+//!
 //! See [this blog post](https://sfleischman105.github.io/2017/10/26/creating-a-chess-engine.html) for
-//! more information about the design of this.
+//! more information about the design of the `BoardState`.
 
 use super::castle_rights::Castling;
 

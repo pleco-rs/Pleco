@@ -54,7 +54,7 @@ pub use core::sq::SQ;
 #[doc(no_inline)]
 pub use core::bitboard::BitBoard;
 #[doc(no_inline)]
-pub use core::{Player,Piece};
+pub use core::{Player,Piece,Rank,File};
 
 
 

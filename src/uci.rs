@@ -22,9 +22,6 @@ use std::io::{self};
 ///
 ///
 
-// TODO: switch to clap.rs
-//
-
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
 pub static VERSION: &str = "0.1.1";

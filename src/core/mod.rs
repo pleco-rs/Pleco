@@ -62,6 +62,15 @@ pub enum Player {
 
 impl Player {
     /// Returns the other player.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::core::Player;
+    ///
+    /// let b = Player::Black;
+    /// assert_eq!(b.other_player(), Player::White);
+    /// ```
     #[inline]
     pub fn other_player(&self) -> Player {
         match *self {
@@ -103,7 +112,7 @@ impl Player {
     /// ```
     #[inline]
     pub fn relative_rank_of_sq(&self, sq: SQ) -> Rank {
-        self.relative_rank(sq.rank_of_sq())
+        self.relative_rank(sq.rank())
     }
 
     /// Returns the relative rank of a rank in relation to a player.
@@ -144,16 +153,21 @@ impl fmt::Display for Player {
     }
 }
 
-/// Different types of move generating options.
+/// Types of move generating options.
 ///
 ///`GenTypes::All` -> All available moves.
+///
 ///`GenTypes::Captures` -> All captures and both capture/non-capture promotions.
+///
 ///`GenTypes::Quiets` -> All non captures and both capture/non-capture promotions.
+///
 ///`GenTypes::QuietChecks` -> Moves likely to give check.
+///
 ///`GenTypes::Evasions` -> Generates evasions for a board in check.
+///
 ///`GenTypes::NonEvasions` -> Generates all moves for a board not in check.
 ///
-///  # Safety
+/// # Safety
 ///
 /// `GenTypes::QuietChecks` and `GenTypes::NonEvasions` can only be used if the board
 /// if not in check, while `GenTypes::Evasions` can only be used if the the board is
@@ -168,9 +182,7 @@ pub enum GenTypes {
     NonEvasions
 }
 
-
-
-/// Enum for all the possible Pieces.
+/// All possible Pieces on a chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {

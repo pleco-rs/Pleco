@@ -1,45 +1,71 @@
 //! Module for the implementation and definition of a move to be played.
+//!
+//! We define a move as the struct `BitMove`. A move needs 16 bits to be stored, and
+//! they are used as such:
+//!
+//! ```md,ignore
+//! bits  0 - 5:  destination square (from 0 to 63)
+//! bits  6 - 11: origin square (from 0 to 63)
+//! bits 12 - 13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
+//! bits 14 - 15: special move flag: promotion (1), en passant (2), castling (3)
+//! ```
+//!
+//! # Special cases
+//!
+//! Special cases are MOVE_NONE and MOVE_NULL. We can sneak these in because in
+//! any normal move destination square is always different from origin square
+//! while MOVE_NONE and MOVE_NULL have the same origin and destination square.
+//!
+//! Another special case is where the move is a castling move. If the move is a
+//! castle, then the corresponding flags will be set and the origin square will be the
+//! square of the king, while the destination square will be the square of the rook to
+//! castle with.
+//!
+//! Lastly, the En-passant flag is only set if the move is a pawn double-push.
+//!
+//! # Bit Flags for a `BitMove`
+//!
+//! The flags for a move are set as such:
+//!
+//! ```md,ignore
+//! x??? --> Promotion bit
+//! ?x?? --> Capture bit
+//! ??xx --> flag Bit
+//! ```
+//!
+//! More specifically, the flags correspond to the following bit patterns:
+//!
+//! ```md,ignore
+//! 0000  ===> Quiet move
+//! 0001  ===> Double Pawn Push
+//! 0010  ===> King Castle
+//! 0011  ===> Queen Castle
+//! 0100  ===> Capture
+//! 0101  ===> EP Capture
+//! 0110  ===>
+//! 0111  ===>
+//! 1000  ===> Knight Promotion
+//! 1001  ===> Bishop Promo
+//! 1010  ===> Rook   Promo
+//! 1011  ===> Queen  Capture  Promo
+//! 1100  ===> Knight Capture  Promotion
+//! 1101  ===> Bishop Capture  Promo
+//! 1110  ===> Rook   Capture  Promo
+//! 1111  ===> Queen  Capture  Promo
+//! ```
+//!
+//! # Safety
+//!
+//! A `BitMove` is only guaranteed to be legal for a specific position. If a Board generates a
+//! list of moves, then only those moves are correct. It is not recommended to use `BitMove`s
+//! on a `Board` that didn't directly create them, unless it is otherwise known that move
+//! correlates to that specific board position.
 
 use super::*;
 use super::sq::SQ;
 use std::fmt;
 
-// A move needs 16 bits to be stored
-//
-// bit  0- 5: destination square (from 0 to 63)
-// bit  6-11: origin square (from 0 to 63)
-// bit 12-13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
-// bit 14-15: special move flag: promotion (1), en passant (2), castling (3)
-// NOTE: EN-PASSANT bit is set only when a pawn can be captured
-//
-// Special cases are MOVE_NONE and MOVE_NULL. We can sneak these in because in
-// any normal move destination square is always different from origin square
-// while MOVE_NONE and MOVE_NULL have the same origin and destination square.
-
-// x??? --> Promotion bit
-// ?x?? --> Capture bit
-// ??xx --> flaf Bit
-
-// 0000  ===> Quiet move
-// 0001  ===> Double Pawn Push
-// 0010  ===> King Castle
-// 0011  ===> Queen Castle
-// 0100  ===> Capture
-// 0101  ===> EP Capture
-// 0110  ===>
-// 0111  ===>
-// 1000  ===> Knight Promotion
-// 1001  ===> Bishop Promo
-// 1010  ===> Rook   Promo
-// 1011  ===> Queen  Capture  Promo
-// 1100  ===> Knight Capture  Promotion
-// 1101  ===> Bishop Capture  Promo
-// 1110  ===> Rook   Capture  Promo
-// 1111  ===> Queen  Capture  Promo
-
-
 // Castles have the src as the king bit and the dst as the rook
-
 static SRC_MASK: u16 = 0b0000_000000_111111;
 static DST_MASK: u16 = 0b0000_111111_000000;
 static PR_MASK: u16 = 0b1000_000000_000000;
@@ -78,7 +104,7 @@ pub enum MoveType {
     Normal,
 }
 
-/// Useful pre-incoding of a move's information before it is compressed into a `BitMove` struct.
+/// Useful pre-encoding of a move's information before it is compressed into a `BitMove` struct.
 #[derive(Copy, Clone, PartialEq)]
 pub struct PreMoveInfo {
     pub src: SQ,
@@ -100,13 +126,14 @@ impl BitMove {
     ///
     /// # Safety
     ///
-    /// Using this method cannot gaurntee that the move is legal. The input bits must be encoding a legal
+    /// Using this method cannot guarantee that the move is legal. The input bits must be encoding a legal
     /// move, or else there is Undefined Behavior if the resulting BitMove is used.
     pub fn new(input: u16) -> BitMove {
         BitMove { data: input }
     }
 
     /// Creates a BitMove from a [PreMoveInfo].
+    #[inline]
     pub fn init(info: PreMoveInfo) -> BitMove {
         let src = info.src.0 as u16;
         let dst = (info.dst.0 as u16) << 6;
@@ -235,19 +262,27 @@ impl BitMove {
         }
     }
 
+    /// Returns the `Rank` (otherwise known as row) that the destination square  of a `BitMove`
+    /// lies on.
     #[inline(always)]
     pub fn dest_row(&self) -> Rank {
         ALL_RANKS[(((self.data & DST_MASK) >> 6) as u8 / 8) as usize]
     }
 
+    /// Returns the `File` (otherwise known as column) that the destination square of a `BitMove`
+    /// lies on.
     #[inline(always)]
     pub fn dest_col(&self) -> File {
         ALL_FILES[(((self.data & DST_MASK) >> 6) as u8 % 8) as usize]
     }
+
+    /// Returns the `Rank` (otherwise known as row) that the from-square of a `BitMove` lies on.
     #[inline(always)]
     pub fn src_row(&self) -> Rank {
         ALL_RANKS[((self.data & SRC_MASK) as u8 / 8) as usize]
     }
+
+    /// Returns the `File` (otherwise known as column) that the from-square of a `BitMove` lies on.
     #[inline(always)]
     pub fn src_col(&self) -> File {
         ALL_FILES[((self.data & SRC_MASK) as u8 % 8) as usize]

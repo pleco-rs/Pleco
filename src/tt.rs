@@ -1,6 +1,5 @@
 //! Module for the TranspositionTable, a type of hashmap where Zobrist Keys map to information about a position.
 //!
-//!
 //! A Transposition Table is a structure to quickly lookup chess positions and determine information from them.
 //! It maps from Board positions to Information such as the evaluation of that position, the best move found so far,
 //! the depth that move was found at, etc.

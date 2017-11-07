@@ -1,7 +1,10 @@
 //! Module for the `Castling` structure, which helps provide an easy way for the
 //! `Board` to keep track of the various castling rights available for each player.
 //!
-//! Also keeps track of if a player has castled.
+//! Alongside keeping track of castling rights, it also keeps track of if a player has castled.
+//!
+//! At it's core, a `Castling` is a simple u8 which sets bits for each possible castling right.
+//! This is necessary to keep track of for a chess match due to determining future castlings.
 
 use core::*;
 use std::fmt;
@@ -15,10 +18,12 @@ bitflags! {
     /// For internal use by the Board only
     ///
     /// Keeps track two things for each player
+    ///
     /// 1) What sides are possible to castle from
+    ///
     /// 2) Has this player castled
     ///
-    /// Does not garauntee that the player containing a castling bit can castle at that
+    /// Does not guarantee that the player containing a castling bit can castle at that
     /// time. Rather marks that castling is a possibility, e.g. a Castling struct
     /// containing a bit marking WHITE_Q means that neither the White King or Queen-side
     /// rook has moved since the game started.

@@ -10,6 +10,7 @@ use core::Player;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+// TODO: clean this up
 
 /// Trait that defines an object that can play chess
 pub trait Searcher {

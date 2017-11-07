@@ -1,8 +1,8 @@
 //! Module for generating chess boards from PGN notation
 
-use super::Board;
+//use super::Board;
 use core::sq::SQ;
-use core::{Player,Piece,File,Rank};
+use core::{Piece,File,Rank};
 use std::fmt;
 
 

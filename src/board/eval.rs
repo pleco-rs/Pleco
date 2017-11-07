@@ -157,7 +157,7 @@ fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
     let us_ksq = board.king_sq(P::player());
-    if us_ksq.rank_of_sq() == Rank::R1 || us_ksq.rank_of_sq() == Rank::R8 {
+    if us_ksq.rank() == Rank::R1 || us_ksq.rank() == Rank::R8 {
         score += KING_BOTTOM
     }
 

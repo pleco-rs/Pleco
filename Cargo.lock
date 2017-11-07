@@ -149,7 +149,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "pleco"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.166 (registry+https://github.com/rust-lang/crates.io-index)",

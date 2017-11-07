@@ -154,7 +154,7 @@ impl PieceLocations {
     pub fn at_square(&self, square: SQ) -> bool {
         assert!(square.is_okay());
         let byte: u8 = self.data[square.0 as usize];
-        byte == 0b0111 || byte == 0b1111
+        byte != 0b0111 && byte != 0b1111
     }
 
     /// Returns the first square (if any) that a piece / player is at.
@@ -192,26 +192,6 @@ impl PieceLocations {
 }
 
 // TODO: Make iterator
-//#[derive(Clone)]
-//pub struct Iter<'a> {
-//    map: &'a PieceLocations,
-//    iter: Squares,
-//}
-//
-//impl<'a> Iterator for Iter<'a> {
-//    type Item = (Player,Piece)>;
-//
-//    #[inline]
-//    fn next(&mut self) -> Option<Self::Item> {
-//        self.count += 1;
-//
-//        if self.count < 6 {
-//            Some(self.count)
-//        } else {
-//            None
-//        }
-//    }
-//}
 
 
 impl Clone for PieceLocations {
@@ -229,5 +209,50 @@ impl PartialEq for PieceLocations {
             }
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PieceLocations;
+    use {SQ,Piece,Player};
+
+    #[test]
+    fn piece_loc_blank() {
+        let mut l = PieceLocations::blank();
+        for s in 0..64 {
+            assert!(l.piece_at(SQ(s)).is_none());
+        }
+        l.place(SQ(3),Player::White, Piece::P);
+        assert_eq!(l.piece_at(SQ(3)).unwrap(), Piece::P);
+        assert_eq!(l.player_at(SQ(3)).unwrap(), Player::White);
+        assert_eq!(l.player_piece_at(SQ(3)).unwrap(),(Player::White, Piece::P));
+        assert!(l.at_square(SQ(3)));
+        for s in 0..64 {
+            if s != 3 {
+                assert!(l.piece_at(SQ(s)).is_none());
+            }
+        }
+        l.place(SQ(3),Player::Black, Piece::K);
+        assert_eq!(l.piece_at(SQ(3)).unwrap(), Piece::K);
+        assert_eq!(l.player_at(SQ(3)).unwrap(), Player::Black);
+        assert_eq!(l.player_piece_at(SQ(3)).unwrap(),(Player::Black, Piece::K));
+        assert!(l.at_square(SQ(3)));
+        assert!(l.contains(Piece::K,Player::Black));
+        for s in 0..64 {
+            if s != 3 {
+                assert!(l.piece_at(SQ(s)).is_none());
+            }
+        }
+        l.remove(SQ(3));
+        for s in 0..64 {
+            assert!(l.piece_at(SQ(s)).is_none());
+        }
+        l.remove(SQ(3));
+        for s in 0..64 {
+            assert!(l.piece_at(SQ(s)).is_none());
+        }
+        let c = l.clone();
+        assert!(c == l);
     }
 }

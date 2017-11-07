@@ -208,7 +208,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     pub fn adjacent_file(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
         unsafe {
-            BitBoard(*self.adjacent_files_bb.get_unchecked(sq.file_of_sq() as usize))
+            BitBoard(*self.adjacent_files_bb.get_unchecked(sq.file() as usize))
         }
     }
 
@@ -471,7 +471,7 @@ impl<'a> MagicTable<'a> {
 
             }
             // Create our Random Number Generator with a seed
-            let mut rng = PRNG::init(SEEDS[1][SQ(s).rank_of_sq() as usize]);
+            let mut rng = PRNG::init(SEEDS[1][SQ(s).rank() as usize]);
 
             // Loop until we have found our magics!
             'outer: loop {

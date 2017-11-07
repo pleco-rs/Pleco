@@ -84,6 +84,7 @@ impl Legality for PseudoLegal {
 
 // Pieces to generate moves with inter-changably
 const STANDARD_PIECES: [Piece; 4] = [Piece::B, Piece::N, Piece::R, Piece::Q];
+const DEFAULT_MOVES_LENGTH: usize = 32;
 
 /// Structure to generate moves from. Stores the current state of the board, and other
 /// references to help generating all possible moves.
@@ -103,7 +104,7 @@ impl<'a> MoveGen<'a> {
     // Helper function to setup the MoveGen structure.
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
-            movelist: Vec::with_capacity(48),
+            movelist: Vec::with_capacity(DEFAULT_MOVES_LENGTH),
             board: &chessboard,
             magic: chessboard.magic_helper,
             occ: chessboard.get_occupied(),
@@ -464,7 +465,7 @@ impl<'a> MoveGen<'a> {
 
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
-                assert_eq!(ep_sq.rank_of_sq(), P::player().relative_rank( Rank::R6));
+                assert_eq!(ep_sq.rank(), P::player().relative_rank( Rank::R6));
                 if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).to_bb()).is_not_empty() {
                     left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
 
@@ -543,5 +544,28 @@ impl<'a> MoveGen<'a> {
         } else {
             self.movelist.push(b_move);
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use board::{Board};
+
+    #[test]
+    fn movegen_legal_pseudo() {
+        let boards = Board::random()
+            .pseudo_random(26272883000002)
+            .many(10);
+
+        boards.iter().for_each(|b| {
+            let b_legal = b.generate_moves();
+            let b_plegal = b.generate_pseudolegal_moves();
+            assert!(b_legal.len() <= b_plegal.len());
+            for mov in b_legal {
+                assert!(b_plegal.contains(&mov));
+            }
+        });
     }
 }

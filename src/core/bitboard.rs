@@ -1,5 +1,25 @@
 //! Module containing the `BitBoard` and associated functions / constants.
-
+//!
+//! A `BitBoard` is a set of bits, where the index of each bit represents a square on the
+//! Board. We use this to mark whether or not something is residing at a certain square. For
+//! example, if we are using it to map the positions of the white pawns, and there exists a
+//! pawn at square B9, the bit at index 9 will be set to '1'. The lack of a piece is marked
+//! with a '0' instead.
+//!
+//! Each bit's index of a `BitBoard` maps to the following squares:
+//!
+//! ```md,ignore
+//! 8 | 56 57 58 59 60 61 62 63
+//! 7 | 48 49 50 51 52 53 54 55
+//! 6 | 40 41 42 43 44 45 46 47
+//! 5 | 32 33 34 35 36 37 38 39
+//! 4 | 24 25 26 27 28 29 30 31
+//! 3 | 16 17 18 19 20 21 22 23
+//! 2 | 8  9  10 11 12 13 14 15
+//! 1 | 0  1  2  3  4  5  6  7
+//!   -------------------------
+//!      a  b  c  d  e  f  g  h
+//! ```
 extern crate rand;
 
 use super::sq::SQ;
@@ -335,6 +355,23 @@ mod tests {
                 assert_eq!(bb.count_bits() + 1, total_pre);
             }
         }
+    }
 
+    #[test]
+    fn rand_bb_gen_eq() {
+        let mut bbs_1 = RandBitBoard::default()
+            .pseudo_random(9010555142588)
+            .avg(16)
+            .many(1000);
+
+        let mut bbs_2 = RandBitBoard::default()
+            .pseudo_random(9010555142588)
+            .avg(16)
+            .many(1000);
+
+        assert_eq!(bbs_1.len(),bbs_2.len());
+        while !bbs_1.is_empty() {
+            assert_eq!(bbs_1.pop(), bbs_2.pop());
+        }
     }
 }

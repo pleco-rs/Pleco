@@ -1,4 +1,56 @@
 //! Contains the representation of a chessboard's square.
+//!
+//! Internally, a `SQ` is just a u8. The number of a `SQ` maps to the following
+//! squares of a chessboard:
+//!
+//! ```md,ignore
+//! 8 | 56 57 58 59 60 61 62 63
+//! 7 | 48 49 50 51 52 53 54 55
+//! 6 | 40 41 42 43 44 45 46 47
+//! 5 | 32 33 34 35 36 37 38 39
+//! 4 | 24 25 26 27 28 29 30 31
+//! 3 | 16 17 18 19 20 21 22 23
+//! 2 | 8  9  10 11 12 13 14 15
+//! 1 | 0  1  2  3  4  5  6  7
+//!   -------------------------
+//!      a  b  c  d  e  f  g  h
+//! ```
+//!
+//! # Examples
+//!
+//! ```rust
+//! use pleco::core::sq::*;
+//! let h1 = SQ::H1;
+//! let h2 = SQ::H2;
+//!
+//! let g2 = SQ(14);
+//!
+//! assert_eq!(h1.distance(h2), 1);
+//! assert_eq!(h1.file(), h2.file());
+//! assert_eq!(g2.rank(), h2.rank());
+//! ```
+//!
+//! # Use of `NO_SQ`
+//!
+//! `NO_SQ` is used to signify the lack of a legal square. Think about this as being a
+//! lazy version of `Option<SQ>` where the result is `None`. With normal operation, this
+//! shouldn't be a case worth considering.
+//!
+//! ```rust
+//! use pleco::core::sq::*;
+//! let no_sq: SQ = NO_SQ;
+//! let sq_64 = SQ(64);
+//!
+//! assert!(!no_sq.is_okay());
+//! assert!(!sq_64.is_okay());
+//! assert_eq!(no_sq, sq_64);
+//! ```
+//!
+//! # General Safety
+//!
+//! Generally, all of these methods for a `SQ` are safe to use. The exception to this is
+//! when a `SQ::is_okay()` returns false, meaning the square is outside the legal bounds.
+//! If methods are used on a square that is not legal, then undefined behavior will follow.
 
 use super::bitboard::BitBoard;
 use super::masks::*;
@@ -15,8 +67,8 @@ pub struct SQ(pub u8);
 
 impl_bit_ops!(SQ, u8);
 
-/// `SQ` representing no square available. Used internally to
-/// represent the lack of an available en-passant square.
+/// `SQ` representing no square available. Used internally to represent
+/// the lack of an available en-passant square.
 pub const NO_SQ: SQ = SQ(64);
 
 impl SQ {
@@ -26,13 +78,24 @@ impl SQ {
     pub fn to_string(self) -> String {
         assert!(self.is_okay());
         let mut str = String::default();
-        str.push(FILE_DISPLAYS[self.file_of_sq() as usize]);
-        str.push(RANK_DISPLAYS[self.rank_of_sq() as usize]);
+        str.push(FILE_DISPLAYS[self.file() as usize]);
+        str.push(RANK_DISPLAYS[self.rank() as usize]);
         str
     }
 
     /// Returns if a `SQ` is within the legal bounds of a square,
     /// which is inclusively between 0 - 63.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::SQ;
+    /// let sq_ok = SQ(5);
+    /// let no_sq = SQ(64);
+    ///
+    /// assert!(sq_ok.is_okay());
+    /// assert!(!no_sq.is_okay());
+    /// ```
     #[inline(always)]
     pub fn is_okay(self) -> bool {
         self.0 < 64
@@ -40,6 +103,20 @@ impl SQ {
 
     /// Returns distance between this square and another square. Distance is
     /// not in algebraic difference, but in squares away.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::SQ;
+    ///
+    /// let a1 = SQ::A1;
+    /// let b2 = SQ::B2;
+    /// let b3 = SQ::B3;
+    ///
+    /// assert_eq!(a1.distance(a1), 0);
+    /// assert_eq!(a1.distance(b2), 1);
+    /// assert_eq!(a1.distance(b3), 2);
+    /// ```
     pub fn distance(self, sq_other: SQ) -> u8 {
         let x = diff(self.rank_idx_of_sq(), sq_other.rank_idx_of_sq());
         let y = diff(self.file_idx_of_sq(), sq_other.file_idx_of_sq());
@@ -50,23 +127,49 @@ impl SQ {
         }
     }
 
-    /// Converts a `SQ` to it's `BitBoard` equivalent.
+    /// Converts a `SQ` to it's `BitBoard` equivalent. The resulting `BitBoard` will
+    /// have exactly 1 bit set at the index where the square is location on the
+    /// chessboard.
     #[inline(always)]
     pub fn to_bb(self) -> BitBoard {
         assert!(self.is_okay());
         BitBoard(1) << self
     }
 
+    /// Returns the `Rank` that a `SQ` lies on.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::{SQ,Rank};
+    ///
+    /// let sq_f2 = SQ::F2;
+    /// assert_eq!(sq_f2.rank(), Rank::R2);
+    /// ```
+    #[inline(always)]
+    pub fn rank(self) -> Rank {
+        ALL_RANKS[(self.0 >> 3) as usize]
+    }
+
     /// Returns the `BitBoard` representation of a `Rank` that a `SQ` lies on.
     #[inline(always)]
     pub fn rank_bb(self) -> BitBoard {
-        BitBoard(RANK_BB[self.rank_of_sq() as usize])
+        BitBoard(RANK_BB[self.rank() as usize])
     }
 
-    /// Returns the `Rank` that a `SQ` lies on.
+    /// Returns the `File` that a `SQ` lies on.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::{SQ,File};
+    ///
+    /// let sq_f2 = SQ::F2;
+    /// assert_eq!(sq_f2.file(), File::F);
+    /// ```
     #[inline(always)]
-    pub fn rank_of_sq(self) -> Rank {
-        ALL_RANKS[(self.0 >> 3) as usize]
+    pub fn file(self) -> File {
+        ALL_FILES[(self.0 & 0b0000_0111) as usize]
     }
 
     /// Returns the rank index (number) of a `SQ`.
@@ -78,13 +181,7 @@ impl SQ {
     /// Returns the `BitBoard` representation of a `File` that a `SQ` lies on.
     #[inline(always)]
     pub fn file_bb(self) -> BitBoard {
-        BitBoard(FILE_BB[self.file_of_sq() as usize])
-    }
-
-    /// Returns the `File` that a `SQ` lies on.
-    #[inline(always)]
-    pub fn file_of_sq(self) -> File {
-        ALL_FILES[(self.0 & 0b0000_0111) as usize]
+        BitBoard(FILE_BB[self.file() as usize])
     }
 
     /// Returns the file index (number) of a `SQ`.
@@ -109,6 +206,18 @@ impl SQ {
     }
 
     /// Creates a `SQ` from the designated File and Rank.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::{SQ,Rank,File};
+    ///
+    /// let file_f = File::F;
+    /// let rank_2 = Rank::R2;
+    /// let sq_f2 = SQ::F2;
+    ///
+    /// assert_eq!(sq_f2, SQ::make(file_f, rank_2));
+    /// ```
     #[inline]
     pub fn make(file: File, rank: Rank) -> SQ {
         SQ(((rank as u8).wrapping_shl(3) + (file as u8)) as u8)

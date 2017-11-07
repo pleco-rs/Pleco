@@ -102,12 +102,20 @@ pub struct Board {
     state: Arc<BoardState>,
 
     /// Reference to the pre-computed lookup tables.
+    #[doc(hidden)]
     pub magic_helper: &'static MAGIC_HELPER,
 }
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.pretty_string())
+    }
+}
+
+
+impl fmt::Debug for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Board: {}", &self.pretty_string())
     }
 }
 
@@ -257,7 +265,26 @@ impl Board {
     }
 
     /// Creates a `RandBoard` (Random Board Generator) for generation of `Board`s with random
-    /// positions.
+    /// positions. See the `RandBoard` structure for more information.
+    ///
+    /// # Examples
+    ///
+    /// Create one `Board` with at least 5 moves played that is created in a pseudo-random
+    /// fashion.
+    /// ```rust
+    /// let rand_boards: Board = Board::Random()
+    ///     .pseudo_random(12455)
+    ///     .min_moves(5)
+    ///     .one();
+    /// ```
+    ///
+    /// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
+    /// ```rust
+    /// let rand_boards: Vec<Board> = Board::random()
+    ///     .pseudo_random(12455)
+    ///     .no_check(5)
+    ///     .many(10);
+    /// ```
     pub fn random() -> RandBoard {
         RandBoard::default()
     }
@@ -529,7 +556,7 @@ impl Board {
         for idx in 0..SQ_CNT as u8 {
             // Cause of weird fen ordering, gotta do it this way
             let sq = SQ((idx % 8) + (8 * (7 - (idx / 8))));
-            if sq.file_of_sq() == File::A && sq.rank_of_sq() != Rank::R8 {
+            if sq.file() == File::A && sq.rank() != Rank::R8 {
                 if blanks != 0 {
                     // Only add a number if there is a space between pieces
                     s.push(char::from_digit(blanks, 10).unwrap());
@@ -579,10 +606,6 @@ impl Board {
         s
     }
 
-}
-
-// Public Move Gen & Mutation Functions
-impl Board {
     /// Applies a move to the Board.
     ///
     /// # Safety
@@ -670,7 +693,7 @@ impl Board {
                         Player::Black => cap_sq += SQ(8),
                     };
                     assert_eq!(piece, Piece::P);
-                    assert_eq!(us.relative_rank( Rank::R6), to.rank_of_sq());
+                    assert_eq!(us.relative_rank( Rank::R6), to.rank());
                     assert!(self.piece_at_sq(to).is_none());
                     assert_eq!(self.piece_at_sq(cap_sq).unwrap(), Piece::P);
                     assert_eq!(self.player_at_sq(cap_sq).unwrap(), them);
@@ -1002,10 +1025,9 @@ impl Board {
             GenTypes::NonEvasions => MoveGen::generate::<PseudoLegal,NonEvasionsGenType>(&self)
         }
     }
-}
 
-// Private Mutating Functions
-impl Board {
+    //  ------- PRIVATE MUTATING FUNCTIONS -------
+
     /// Helper method, used after a move is made, creates information concerning checking and
     /// possible checks.
     ///
@@ -1305,10 +1327,7 @@ impl Board {
     pub fn ep_square(&self) -> SQ {
         self.state.ep_square
     }
-}
 
-// Position Representation
-impl Board {
     /// Gets the BitBoard of all pieces.
     ///
     /// # Examples
@@ -1570,10 +1589,9 @@ impl Board {
     pub fn piece_last_captured(&self) -> Option<Piece> {
         self.state.captured_piece
     }
-}
 
-// Checking
-impl Board {
+    //  ------- CHECKING  -------
+
     /// Return if current side to move is in check
     pub fn in_check(&self) -> bool {
         self.state.checkers_bb.is_not_empty()
@@ -1622,11 +1640,9 @@ impl Board {
                 (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
             (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(Piece::K))
     }
-}
 
+//  ------- Move Testing -------
 
-// Move Testing
-impl Board {
     /// Tests if a given move is legal.
     pub fn legal_move(&self, m: BitMove) -> bool {
         if m.get_src() == m.get_dest() {
@@ -1669,12 +1685,11 @@ impl Board {
             self.magic_helper.aligned(src, dst, self.king_sq(self.turn))
     }
 
-    // Used to check for Hashing errors from TT Tables
-    //    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
-    //        let us = self.turn;
-    //        let them = other_player(us);
-    //
-    //    }
+    #[doc(hidden)]
+    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
+        unimplemented!()
+        // TODO: create pseduo-legal-move
+    }
 
     /// Returns if a move will give check to the opposing player's King.
     pub fn gives_check(&self, m: BitMove) -> bool {
@@ -1725,7 +1740,7 @@ impl Board {
             }
             MoveType::EnPassant => {
                 // Check for indirect check from the removal of the captured pawn
-                let captured_sq: SQ = SQ::make(dst.file_of_sq(), src.rank_of_sq());
+                let captured_sq: SQ = SQ::make(dst.file(), src.rank());
                 let b: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
 
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
@@ -1767,10 +1782,7 @@ impl Board {
         let dst = m.get_dest();
         self.piece_at_bb(dst.to_bb(), self.turn.other_player())
     }
-}
 
-// Printing and Debugging Functions
-impl Board {
     /// Returns a prettified String of the current board, for Quick Display.
     ///
     /// Capital Letters represent White pieces, while lower case represents Black pieces.
@@ -1794,11 +1806,12 @@ impl Board {
         s
     }
 
-    /// Return the current ARC count of the board's BoardState
+    /// Return the current ARC count of the board's BoardState.
     pub fn get_arc_strong_count(&self) -> usize {
         Arc::strong_count(&self.state)
     }
 
+    /// Returns a clone of the current `PieceLocations`.
     pub fn get_piece_locations(&self) -> PieceLocations {
         self.piece_locations.clone()
     }
@@ -1855,8 +1868,8 @@ impl Board {
 
 
     }
-    // Checks the current state of the Board
-    // yup
+
+    /// Checks if the current state of the Board is okay.
     pub fn is_okay(&self) -> bool {
         const QUICK_CHECK: bool = false;
 
@@ -1868,7 +1881,7 @@ impl Board {
     }
 }
 
-// TODO: Error Propigation
+// TODO: Error Propagation
 
 #[derive(Debug, Copy, Clone)]
 pub enum BoardCheckError {
@@ -1942,6 +1955,25 @@ enum RandGen {
 
 /// Random board generator. Creates either one or many random boards with optional
 /// parameters.
+///
+/// # Examples
+///
+/// Create one `Board` with at least 5 moves played that is created in a pseudo-random
+/// fashion.
+/// ```rust
+/// let rand_boards: Board = RandBoard::new()
+///     .pseudo_random(12455)
+///     .min_moves(5)
+///     .one();
+/// ```
+///
+/// Create a `Vec` of 10 random `Board`s that are guaranteedd to not be in check.
+/// ```rust
+/// let rand_boards: Vec<Board> = RandBoard::new()
+///     .pseudo_random(12455)
+///     .no_check(5)
+///     .many(10);
+/// ```
 pub struct RandBoard {
     gen_type: RandGen,
     minimum_move: u16,
@@ -1963,6 +1995,17 @@ impl Default for RandBoard {
 }
 
 impl RandBoard {
+
+    /// Create a new `RandBoard` object.
+    pub fn new() -> Self {
+        RandBoard {
+            gen_type: RandGen::All,
+            minimum_move: 1,
+            favorable_player: Player::Black,
+            prng: PRNG::init(1),
+            seed: 0
+        }
+    }
 
     /// Creates a `Vec<Board>` full of `Boards` containing random positions. The
     /// `Vec` will be of size 'size'.
@@ -2141,4 +2184,34 @@ mod tests {
         }
     }
 
+    #[test]
+    fn rand_board_gen_one() {
+        let boards_1 = Board::random()
+            .pseudo_random(550087423)
+            .min_moves(10)
+            .one();
+
+        let boards_2 = Board::random()
+            .pseudo_random(550087423)
+            .min_moves(10)
+            .one();
+
+        assert_eq!(boards_1, boards_2);
+    }
+
+    #[test]
+    fn rand_board_gen_many() {
+        let mut boards_1 = Board::random()
+            .pseudo_random(222227835)
+            .many(25);
+
+        let mut boards_2 = Board::random()
+            .pseudo_random(222227835)
+            .many(25);
+
+        assert_eq!(boards_1.len(),boards_2.len());
+        while !boards_1.is_empty() {
+            assert_eq!(boards_1.pop(), boards_2.pop());
+        }
+    }
 }
