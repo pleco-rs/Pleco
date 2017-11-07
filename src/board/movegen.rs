@@ -185,9 +185,7 @@ impl<'a> MoveGen<'a> {
         let mut disc_check: BitBoard = self.board.discovered_check_candidates();
 
         while disc_check.is_not_empty() {
-            let dc_lsb: BitBoard = disc_check.lsb();
-            let from: SQ = dc_lsb.to_sq();
-            disc_check &= !dc_lsb;
+            let from: SQ = disc_check.pop_lsb();
             let piece: Piece = self.board.piece_at_sq(from).unwrap();
             if piece != Piece::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
@@ -213,10 +211,8 @@ impl<'a> MoveGen<'a> {
 
         // This is getting all the squares that are attacked by sliders
         while sliders.is_not_empty() {
-            let check_sq_bb: BitBoard = sliders.lsb();
-            let check_sq: SQ = check_sq_bb.to_sq();
+            let (check_sq, check_sq_bb): (SQ, BitBoard) = sliders.pop_lsb_and_bit();
             slider_attacks |= self.magic.line_bb(check_sq, ksq) ^ check_sq_bb;
-            sliders &= !check_sq_bb;
         }
 
         // Possible king moves, Where the king cannot move into a slider / own pieces
@@ -314,8 +310,7 @@ impl<'a> MoveGen<'a> {
     fn moves_per_piece<L: Legality, PL: PlayerTrait, P: PieceTrait>(&mut self, target: BitBoard) {
         let mut piece_bb: BitBoard = self.board.piece_bb(PL::player(), P::piece_type());
         while piece_bb.is_not_empty() {
-            let b: BitBoard = piece_bb.lsb();
-            let src: SQ = b.to_sq();
+            let src: SQ = piece_bb.pop_lsb();
             let moves_bb: BitBoard = self.moves_bb(P::piece_type(), src) & !self.us_occ & target;
             let mut captures_bb: BitBoard = moves_bb & self.them_occ;
             let mut non_captures_bb: BitBoard = moves_bb & !self.them_occ;
@@ -325,7 +320,6 @@ impl<'a> MoveGen<'a> {
                 MoveFlag::Capture { ep_capture: false },
             );
             self.move_append_from_bb::<L>(&mut non_captures_bb, src, MoveFlag::QuietMove);
-            piece_bb &= !b;
         }
     }
 
@@ -390,27 +384,23 @@ impl<'a> MoveGen<'a> {
             }
 
             while push_one.is_not_empty() {
-                let bit: BitBoard = push_one.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = push_one.pop_lsb();
                 let src: SQ = P::down(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
                     flags: MoveFlag::QuietMove,
                 }));
-                push_one &= !bit;
             }
 
             while push_two.is_not_empty() {
-                let bit: BitBoard = push_two.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = push_two.pop_lsb();
                 let src: SQ = P::down(P::down(dst));
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
                     flags: MoveFlag::DoublePawnPush,
                 }));
-                push_two &= !bit;
             }
         }
 
@@ -428,24 +418,18 @@ impl<'a> MoveGen<'a> {
 
 
             while no_promo.is_not_empty() {
-                let bit = no_promo.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = no_promo.pop_lsb();
                 self.create_all_promotions::<L>(dst, P::down(dst), false);
-                no_promo &= !bit;
             }
 
             while left_cap_promo.is_not_empty() {
-                let bit = left_cap_promo.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = left_cap_promo.pop_lsb();
                 self.create_all_promotions::<L>(dst, P::down_right(dst), true);
-                left_cap_promo &= !bit;
             }
 
             while right_cap_promo.is_not_empty() {
-                let bit = right_cap_promo.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = right_cap_promo.pop_lsb();
                 self.create_all_promotions::<L>(dst, P::down_left(dst), true);
-                right_cap_promo &= !bit;
             }
 
         }
@@ -459,27 +443,23 @@ impl<'a> MoveGen<'a> {
             let mut right_cap: BitBoard = P::shift_up_right(pawns_not_rank_7) & enemies;
 
             while left_cap.is_not_empty() {
-                let bit = left_cap.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = left_cap.pop_lsb();
                 let src: SQ = P::down_right(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
                     flags: MoveFlag::Capture { ep_capture: false },
                 }));
-                left_cap &= !bit;
             }
 
             while right_cap.is_not_empty() {
-                let bit = right_cap.lsb();
-                let dst: SQ = bit.to_sq();
+                let dst: SQ = right_cap.pop_lsb();
                 let src: SQ = P::down_left(dst);
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: src,
                     dst: dst,
                     flags: MoveFlag::Capture { ep_capture: false },
                 }));
-                right_cap &= !bit;
             }
 
             if self.board.ep_square() != NO_SQ {
@@ -489,14 +469,12 @@ impl<'a> MoveGen<'a> {
                     left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
 
                     while left_cap.is_not_empty() {
-                        let bit = left_cap.lsb();
-                        let src: SQ = bit.to_sq();
+                        let src: SQ = left_cap.pop_lsb();
                         self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                             src: src,
                             dst: ep_sq,
                             flags: MoveFlag::Capture { ep_capture: true },
                         }));
-                        left_cap &= !bit;
                     }
                 }
             }
@@ -510,8 +488,7 @@ impl<'a> MoveGen<'a> {
         for piece in &prom_pieces {
             if is_capture {
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src: src,
-                    dst: dst,
+                    src, dst,
                     flags: MoveFlag::Promotion {
                         capture: true,
                         prom: *piece,
@@ -519,8 +496,7 @@ impl<'a> MoveGen<'a> {
                 }));
             } else {
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src: src,
-                    dst: dst,
+                    src, dst,
                     flags: MoveFlag::Promotion {
                         capture: false,
                         prom: *piece,
@@ -548,14 +524,12 @@ impl<'a> MoveGen<'a> {
     #[inline]
     fn move_append_from_bb<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, move_flag: MoveFlag) {
         while bits.is_not_empty() {
-            let bit: BitBoard = bits.lsb();
-            let b_move = BitMove::init(PreMoveInfo {
-                src: src,
-                dst: bit.to_sq(),
+            let dst = bits.pop_lsb();
+            let b_move = BitMove::init(
+                PreMoveInfo { src, dst,
                 flags: move_flag,
             });
             self.check_and_add::<L>(b_move);
-            *bits &= !bit;
         }
     }
 

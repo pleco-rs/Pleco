@@ -283,24 +283,18 @@ impl BitMove {
         MoveType::Normal
     }
 
-    /// Returns a String representation of a [BitMove]
+    /// Returns a String representation of a [BitMove].
     ///
     /// Format goes "Source Square, Destination Square, (Promo Piece)". Moving a Queen from A1 to B8
     /// will stringify to "a1b8". If there is a pawn promotion involved, the piece promoted to will be
-    /// appended to the end of the string, alike "a7a8q" in the case of a queen promotion
+    /// appended to the end of the string, alike "a7a8q" in the case of a queen promotion.
     pub fn stringify(&self) -> String {
         let src = self.get_src().to_string();
         let dst = self.get_dest().to_string();
         let mut s = format!("{}{}", src, dst);
         if self.is_promo() {
-            let char = match self.promo_piece() {
-                Piece::B => 'b',
-                Piece::N => 'n',
-                Piece::R => 'r',
-                Piece::Q => 'q',
-                _ => unreachable!(),
-            };
-            s.push(char);
+            let c = self.promo_piece().char_lower();
+            s.push(c);
         }
         s
     }

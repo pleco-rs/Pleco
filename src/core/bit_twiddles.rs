@@ -144,7 +144,7 @@ pub fn lsb(bits: u64) -> u64 {
 
 /// Counts the number of bits in a u64.
 #[inline(always)]
-fn popcount_old(x: u64) -> u8 {
+pub fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
     if x == 0 {
         return 0;
@@ -157,7 +157,7 @@ fn popcount_old(x: u64) -> u8 {
         POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]
 }
 
-// Returns the positive difference between two unsigned u8s.
+/// Returns the positive difference between two unsigned u8s.
 #[inline(always)]
 pub fn diff(x: u8, y: u8) -> u8 {
     if x < y {

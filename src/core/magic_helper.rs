@@ -7,6 +7,7 @@ use super::bit_twiddles::*;
 use super::masks::*;
 use super::sq::SQ;
 use super::bitboard::BitBoard;
+use tools::prng::PRNG;
 use std::{mem, slice};
 use super::*;
 
@@ -51,21 +52,21 @@ impl Zobrist {
 
         for i in 0..SQ_CNT {
             for j in 0..PIECE_CNT {
-                zob.sq_piece[i][j] = rng.rand_change();
+                zob.sq_piece[i][j] = rng.rand();
             }
         }
 
         for i in 0..FILE_CNT {
-            zob.en_p[i] = rng.rand_change()
+            zob.en_p[i] = rng.rand()
         }
 
         zob.castle[0] = 0;
 
         for i in 1..ALL_CASTLING_RIGHTS {
-            zob.castle[i] = rng.rand_change()
+            zob.castle[i] = rng.rand()
         }
 
-        zob.side = rng.rand_change();
+        zob.side = rng.rand();
         zob
     }
 }
@@ -142,7 +143,6 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn knight_moves(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-//        self.knight_table[square as usize]
         BitBoard(
             unsafe { *self.knight_table.get_unchecked(sq.0 as usize)}
         )
@@ -152,7 +152,6 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn king_moves(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-//        self.king_table[square as usize]
         BitBoard(
             unsafe { *self.king_table.get_unchecked(sq.0 as usize)}
         )
@@ -161,21 +160,21 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Generate Bishop Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         BitBoard(self.magic_bishop.attacks(occupied.0, sq.0))
     }
 
     /// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         BitBoard(self.magic_rook.attacks(occupied.0, sq.0))
     }
 
     /// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         BitBoard(self.magic_rook.attacks(occupied.0, sq.0) |
             self.magic_bishop.attacks(occupied.0, sq.0))
     }
@@ -183,32 +182,34 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Get the distance of two squares.
     #[inline(always)]
     pub fn distance_of_sqs(&self, sq_one: SQ, sq_two: SQ) -> u8 {
-        assert!(sq_one.is_okay());
-        assert!(sq_two.is_okay());
+        debug_assert!(sq_one.is_okay());
+        debug_assert!(sq_two.is_okay());
         self.dist_table[sq_one.0 as usize][sq_two.0 as usize]
     }
 
     /// Get the line (diagonal / file / rank) `BitBoard` that two squares both exist on, if it exists.
     #[inline(always)]
     pub fn line_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
-        assert!(sq_one.is_okay());
-        assert!(sq_two.is_okay());
+        debug_assert!(sq_one.is_okay());
+        debug_assert!(sq_two.is_okay());
         BitBoard(self.line_bitboard[sq_one.0 as usize][sq_two.0 as usize])
     }
 
     /// Get the line (diagonal / file / rank) `BitBoard` between two squares, not including the squares, if it exists.
     #[inline(always)]
     pub fn between_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
-        assert!(sq_one.is_okay());
-        assert!(sq_two.is_okay());
+        debug_assert!(sq_one.is_okay());
+        debug_assert!(sq_two.is_okay());
         BitBoard(self.between_sqs_bb[sq_one.0 as usize][sq_two.0 as usize])
     }
 
     /// Gets the adjacent files `BitBoard` of the square
     #[inline(always)]
     pub fn adjacent_file(&self, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
-        BitBoard(self.adjacent_files_bb[sq.file_of_sq() as usize])
+        debug_assert!(sq.is_okay());
+        unsafe {
+            BitBoard(*self.adjacent_files_bb.get_unchecked(sq.file_of_sq() as usize))
+        }
     }
 
     /// Pawn attacks `BitBoard` from a given square, per player.
@@ -441,7 +442,7 @@ impl<'a> MagicTable<'a> {
             // edges is the bitboard represenation of the edges s is not on.
             // e.g. sq A1 is on FileA and Rank1, so edges = bitboard of FileH and Rank8
             // mask = occupancy mask of square s
-            let edges: u64 = ((BitBoard::RANK_1 | BitBoard::RANK_8).0 & !rank_bb(s)) |
+            let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) |
                 ((FILE_A | FILE_H) & !file_bb(s));
             let mask: u64 = sliding_attack(deltas, s, 0) & !edges;
 
@@ -560,44 +561,6 @@ impl<'a> MagicTable<'a> {
     }
 }
 
-/// Object for generating pseudo-random numbers.
-pub struct PRNG {
-    seed: u64,
-}
-
-impl PRNG {
-    /// Creates PRNG from a seed.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the seed is zero.
-    pub fn init(s: u64) -> PRNG {
-        assert_ne!(s, 0);
-        PRNG { seed: s }
-    }
-
-    /// Returns a pseudo-random number.
-    #[allow(dead_code)]
-    pub fn rand(&mut self) -> u64 {
-        self.rand_change()
-    }
-
-    /// Returns a pseudo-random number with on average 8 bits being set.
-    pub fn sparse_rand(&mut self) -> u64 {
-        let mut s = self.rand_change();
-        s &= self.rand_change();
-        s &= self.rand_change();
-        s
-    }
-
-    /// Randomizes the current seed and returns a random value.
-    fn rand_change(&mut self) -> u64 {
-        self.seed ^= self.seed >> 12;
-        self.seed ^= self.seed << 25;
-        self.seed ^= self.seed >> 27;
-        self.seed.wrapping_mul(2685_8216_5773_6338_717)
-    }
-}
 
 /// Returns an array of king moves (bitboards) for each square.
 fn gen_king_moves() -> [u64; 64] {

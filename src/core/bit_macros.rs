@@ -29,7 +29,7 @@ macro_rules! impl_indv_shift_ops {
 /// Allows for bit operations to be applied to a struct consisting of a singular tuple
 /// containing a type that implements that bit operation.
 macro_rules! impl_indv_bit_ops {
-    ($t:ty, $tname:ident, $fname:ident, $w:ident, $ta_name:ident, $fa_name:ident) => (
+    ($t:ty, $b:ty, $tname:ident, $fname:ident, $w:ident, $ta_name:ident, $fa_name:ident) => (
 
         impl $tname for $t {
             type Output = $t;
@@ -45,6 +45,23 @@ macro_rules! impl_indv_bit_ops {
             #[inline]
             fn $fa_name(&mut self, rhs: $t) {
                 *self = Self::from((self.0).$w(rhs.0));
+            }
+        }
+
+        impl $tname<$b> for $t {
+            type Output = $t;
+
+            #[inline]
+            fn $fname(self, rhs: $b) -> $t {
+                Self::from((self.0).$w(rhs))
+            }
+        }
+
+        impl $ta_name<$b> for $t {
+
+            #[inline]
+            fn $fa_name(&mut self, rhs: $b) {
+                *self = Self::from((self.0).$w(rhs));
             }
         }
     )
@@ -68,18 +85,18 @@ macro_rules! impl_bit_ops {
             }
         }
 
-        impl_indv_bit_ops!( $t,  Rem,    rem,    rem,             RemAssign,    rem_assign);
-        impl_indv_bit_ops!( $t,  BitOr,  bitor,  bitor,           BitOrAssign,  bitor_assign);
-        impl_indv_bit_ops!( $t,  BitAnd, bitand, bitand,          BitAndAssign, bitand_assign);
-        impl_indv_bit_ops!( $t,  BitXor, bitxor, bitxor,          BitXorAssign, bitxor_assign);
+        impl_indv_bit_ops!( $t, $b,  Rem,    rem,    rem,             RemAssign,    rem_assign);
+        impl_indv_bit_ops!( $t, $b,  BitOr,  bitor,  bitor,           BitOrAssign,  bitor_assign);
+        impl_indv_bit_ops!( $t, $b,  BitAnd, bitand, bitand,          BitAndAssign, bitand_assign);
+        impl_indv_bit_ops!( $t, $b,  BitXor, bitxor, bitxor,          BitXorAssign, bitxor_assign);
 
-        impl_indv_bit_ops!( $t,  Add,    add,    wrapping_add,    AddAssign, add_assign);
-        impl_indv_bit_ops!( $t,  Div,    div,    wrapping_div,    DivAssign, div_assign);
-        impl_indv_bit_ops!( $t,  Mul,    mul,    wrapping_mul,    MulAssign, mul_assign);
-        impl_indv_bit_ops!( $t,  Sub,    sub,    wrapping_sub,    SubAssign, sub_assign);
+        impl_indv_bit_ops!( $t, $b,  Add,    add,    wrapping_add,    AddAssign, add_assign);
+        impl_indv_bit_ops!( $t, $b,  Div,    div,    wrapping_div,    DivAssign, div_assign);
+        impl_indv_bit_ops!( $t, $b,  Mul,    mul,    wrapping_mul,    MulAssign, mul_assign);
+        impl_indv_bit_ops!( $t, $b,  Sub,    sub,    wrapping_sub,    SubAssign, sub_assign);
 
-        impl_indv_shift_ops!($t, Shl,    shl,    wrapping_shl,    ShlAssign, shl_assign);
-        impl_indv_shift_ops!($t, Shr,    shr,    wrapping_shr,    ShrAssign, shr_assign);
+        impl_indv_shift_ops!($t, Shl, shl, wrapping_shl,    ShlAssign, shl_assign);
+        impl_indv_shift_ops!($t, Shr, shr, wrapping_shr,    ShrAssign, shr_assign);
 
         impl Not for $t {
             type Output = $t;
@@ -91,6 +108,16 @@ macro_rules! impl_bit_ops {
         }
     )
 }
+
+// TODO: impl add<type> for Tuple {..}
+
+//impl Add<u64> for BitBoard {
+//    type Output = BitBoard;
+//    fn add(self, other: u64) -> BitBoard {
+//        self + BitBoard(other)
+//    }
+//}
+
 
 
 #[cfg(test)]

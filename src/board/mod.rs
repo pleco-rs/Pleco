@@ -1,29 +1,6 @@
 //! This module contains `Board`, the Object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
-//!
-//! # Examples
-//!
-//! Basic usage.
-//! ```
-//! let mut board = Board::default();  // create a board
-//!
-//! board.apply_uci_move("e2e4");  // apply a uci move
-//!
-//! assert_eq(board.moves_played(),1);
-//! board.undo_move(); // undo the last move played
-//!
-//! assert_eq(board.moves_played(),0);
-//! ```
-//!
-//! Generating and applying moves.
-//! ```
-//! let mut board = Board::default();
-//!
-//! let moves = board.generate_moves();
-//!
-//! board.apply_move(moves[0]);
-//! ```
 
 
 pub mod movegen;
@@ -31,6 +8,9 @@ pub mod eval;
 pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
+mod pgn;
+
+extern crate rand;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
@@ -40,6 +20,10 @@ use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
 
+use tools::prng::PRNG;
+use bot_prelude::{IterativeSearcher,JamboreeSearcher};
+use engine::Searcher;
+
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
@@ -48,7 +32,7 @@ use self::movegen::{MoveGen,Legal,PseudoLegal};
 use std::option::*;
 use std::sync::Arc;
 use std::{fmt, char};
-use std::cmp::PartialEq;
+use std::cmp::{PartialEq,max};
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
@@ -270,6 +254,12 @@ impl Board {
             state: self.state.clone(),
             magic_helper: &MAGIC_HELPER,
         }
+    }
+
+    /// Creates a `RandBoard` (Random Board Generator) for generation of `Board`s with random
+    /// positions.
+    pub fn random() -> RandBoard {
+        RandBoard::default()
     }
 
     /// Helper method for setting the piece states on initialization.
@@ -606,6 +596,10 @@ impl Board {
     /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
 
+        // TODO: investigate potention for SIMD in capturing moves
+        //
+        // Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
+
         // Check for stupidity
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
 
@@ -812,7 +806,6 @@ impl Board {
         if undo_move.is_promo() {
             assert_eq!(piece_on.unwrap(), undo_move.promo_piece());
 
-            // Remove Promo piece and place Pawn in same square
             self.remove_piece_c(piece_on.unwrap(), to, us);
             self.put_piece_c(Piece::P, to, us);
             piece_on = Some(Piece::P);
@@ -1146,7 +1139,7 @@ impl Board {
         r_src: &mut SQ,
         r_dst: &mut SQ,
     ) {
-        let king_side: bool = k_src.0 < to_r_orig.0;
+        let king_side: bool = k_src < *to_r_orig;
 
         *r_src = *to_r_orig;
         if king_side {
@@ -1169,7 +1162,7 @@ impl Board {
     /// Assumes the last move played was a castle for the given player.
     fn remove_castling(&mut self, player: Player, k_src: SQ, r_src: SQ) {
         let k_dst: SQ = self.king_sq(player);
-        let king_side: bool = k_src.0 < r_src.0;
+        let king_side: bool = k_src < r_src;
         let r_dst: SQ = if king_side {
             player.relative_square(SQ(5))
         } else {
@@ -1194,11 +1187,8 @@ impl Board {
 
 
         while snipers.is_not_empty() {
-            let lsb: BitBoard = snipers.lsb();
-            let sniper_sq: SQ = lsb.to_sq();
-
+            let sniper_sq: SQ = snipers.pop_lsb();
             let b: BitBoard = self.magic_helper.between_bb(s, sniper_sq) & occupied;
-
             if !b.more_than_one() {
                 result |= b;
                 let other_occ = self.get_occupied_player(self.player_at_sq(s).unwrap());
@@ -1206,7 +1196,6 @@ impl Board {
                     *pinners |= sniper_sq.to_bb();
                 }
             }
-            snipers &= !lsb;
         }
 
         result
@@ -1226,14 +1215,13 @@ impl Board {
         let mut zob: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
         while b.is_not_empty() {
-            let sq: SQ = b.bit_scan_forward();
-            let lsb: BitBoard = b.lsb();
-            b &= !lsb;
-            let piece = self.piece_at_bb_all(lsb);
+            let sq: SQ = b.pop_lsb();
+            let piece = self.piece_at_sq(sq);
             zob ^= self.magic_helper.z_piece_at_sq(piece.unwrap(), sq);
         }
         let ep = self.state.ep_square;
-        if ep != SQ(0) && ep.0 < 64 {
+        // TODO: EP - solidify the lack of a square
+        if ep != SQ(0) && ep.is_okay() {
             zob ^= self.magic_helper.z_ep_file(ep);
         }
 
@@ -1513,18 +1501,10 @@ impl Board {
         self.piece_locations.piece_at(sq)
     }
 
-    // TODO: Factor into PieceLocations
     /// Returns the Player, if any, occupying the square.
     pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
         assert!(sq.is_okay());
-        let bb: BitBoard = sq.to_bb();
-        if (bb & self.occupied_black()).is_not_empty() {
-            return Some(Player::Black);
-        }
-        if (bb & self.occupied_white()).is_not_empty() {
-            return Some(Player::White);
-        }
-        None
+        self.piece_locations.player_at(sq)
     }
 
     /// Returns the player, if any, at the square.
@@ -1759,8 +1739,8 @@ impl Board {
                 let k_from: SQ = src;
                 let r_from: SQ = dst;
 
-                let k_to: SQ = self.turn.relative_square( { if r_from.0 > k_from.0 { SQ(6) } else { SQ(2) } });
-                let r_to: SQ = self.turn.relative_square( { if r_from.0 > k_from.0 { SQ(5) } else { SQ(3) } });
+                let k_to: SQ = self.turn.relative_square( { if r_from > k_from { SQ(6) } else { SQ(2) } });
+                let r_to: SQ = self.turn.relative_square( { if r_from > k_from { SQ(5) } else { SQ(3) } });
 
                 let opp_k_bb = opp_king_sq.to_bb();
                 (self.magic_helper.rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty() &&
@@ -1817,6 +1797,10 @@ impl Board {
     /// Return the current ARC count of the board's BoardState
     pub fn get_arc_strong_count(&self) -> usize {
         Arc::strong_count(&self.state)
+    }
+
+    pub fn get_piece_locations(&self) -> PieceLocations {
+        self.piece_locations.clone()
     }
 
     /// Get Debug Information.
@@ -1884,6 +1868,14 @@ impl Board {
     }
 }
 
+// TODO: Error Propigation
+
+#[derive(Debug, Copy, Clone)]
+pub enum BoardCheckError {
+    TagParse,
+    Length,
+}
+
 // Debugging helper Functions
 // Returns false if the board is not good
 impl Board {
@@ -1923,8 +1915,8 @@ impl Board {
             ^ self.piece_bb(Player::White, Piece::R) ^ self.piece_bb(Player::Black, Piece::R)
             ^ self.piece_bb(Player::White, Piece::Q) ^ self.piece_bb(Player::Black, Piece::Q)
             ^ self.piece_bb(Player::White, Piece::K) ^ self.piece_bb(Player::Black, Piece::K);
-        assert_eq!(all.0, self.get_occupied().0);
-
+        // Note, this was once all.0, self.get_occupied.0
+        assert_eq!(all, self.get_occupied());
         true
     }
 
@@ -1940,6 +1932,158 @@ impl Board {
         true
     }
 }
+
+#[derive(Eq, PartialEq)]
+enum RandGen {
+    InCheck,
+    NoCheck,
+    All
+}
+
+/// Random board generator. Creates either one or many random boards with optional
+/// parameters.
+pub struct RandBoard {
+    gen_type: RandGen,
+    minimum_move: u16,
+    favorable_player: Player,
+    prng: PRNG,
+    seed: u64
+}
+
+impl Default for RandBoard {
+    fn default() -> Self {
+        RandBoard {
+            gen_type: RandGen::All,
+            minimum_move: 2,
+            favorable_player: Player::Black,
+            prng: PRNG::init(1),
+            seed: 0
+        }
+    }
+}
+
+impl RandBoard {
+
+    /// Creates a `Vec<Board>` full of `Boards` containing random positions. The
+    /// `Vec` will be of size 'size'.
+    pub fn many(mut self, size: usize) -> Vec<Board> {
+        let mut boards: Vec<Board> = Vec::with_capacity(size);
+        for _x in 0..size {
+            boards.push(self.go());
+        };
+        boards
+    }
+
+    /// Creates a singular `Board` with a random position.
+    pub fn one(mut self) -> Board {
+        self.go()
+    }
+
+    /// Turns PseudoRandom generation on. This allows for the same random `Board`s
+    /// to be created from the same seed.
+    pub fn pseudo_random(mut self, seed: u64) -> Self {
+        self.seed = if seed == 0 {1} else {seed};
+        self.prng = PRNG::init(seed);
+        self
+    }
+
+    /// Sets the minimum moves a randomly generated `Board` must contain.
+    pub fn min_moves(mut self, moves: u16) -> Self {
+        self.minimum_move = moves;
+        self
+    }
+
+    /// Garuntees that the boards returned are only in check,
+    pub fn in_check(mut self) -> Self {
+        self.gen_type = RandGen::InCheck;
+        self
+    }
+
+    /// Garuntees that the boards returned are not in check.
+    pub fn no_check(mut self) -> Self {
+        self.gen_type = RandGen::NoCheck;
+        self
+    }
+
+    /// This makes a board.
+    fn go(&mut self) -> Board {
+        self.favorable_player = if self.random() % 2 == 0 {
+            Player::White
+        } else {
+            Player::Black
+        };
+        loop {
+            let mut board = Board::default();
+            let mut iterations = 0;
+            let mut moves = board.generate_moves();
+
+            while iterations < 100 && !moves.is_empty() {
+                let mut rand = self.random() % max(90 - max(iterations, 0), 13);
+                if iterations > 20 {
+                    rand %= 60;
+                    if iterations > 36 {
+                        rand >>= 1;
+                    }
+                }
+
+                if rand == 0 && self.to_ret(&board){
+                   return board;
+                }
+
+                self.apply_random_move(&mut board);
+                moves = board.generate_moves();
+                iterations += 1;
+            }
+        }
+
+    }
+
+    /// Creates a random number.
+    fn random(&mut self) -> usize {
+        if self.seed == 0 {
+            return rand::random::<usize>();
+        }
+        self.prng.rand() as usize
+    }
+
+    fn to_ret(&self, board: &Board) -> bool {
+        let gen: bool =match self.gen_type {
+            RandGen::All => true,
+            RandGen::InCheck => board.in_check(),
+            RandGen::NoCheck => !board.in_check()
+        };
+        gen && (board.moves_played() >= self.minimum_move)
+    }
+
+    fn apply_random_move(&mut self, board: &mut Board) {
+        let (rand_num, favorable): (usize, bool) =
+            if self.favorable(board.turn) {
+                (24, true)
+            } else {
+                (14, false)
+            };
+
+        let best_move = if self.random() % rand_num == 0 {
+            let moves = board.generate_moves();
+            moves[self.random() % moves.len()]
+        } else if self.random() % 5 == 0 {
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+        } else if self.random() % 3 == 0 {
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),4)
+        } else if !favorable && self.random() % 4 < 3 {
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+        } else {
+            IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+        };
+        board.apply_move(best_move);
+    }
+
+    fn favorable(&self, player: Player) -> bool {
+        self.gen_type == RandGen::InCheck
+            && self.favorable_player == player
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -18,8 +18,6 @@ const DIVISOR_SEQ: usize = 5;
 //                            0   1   2   3   4   5   6   7   8   9
 static PLYS_SEQ: [u16; 10] = [0, 1, 2, 2, 2, 2, 2, 3, 3, 3];
 
-
-
 pub struct IterativeSearcher {}
 
 impl Searcher for IterativeSearcher {

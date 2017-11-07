@@ -17,7 +17,7 @@ Planned & Implemented features
 -------
 
 
-The internal Board Implementation aims to have the following features upon completion
+The Library aims to have the following features upon completion
 - [x] Bitboard Representation of Piece Locations:
 - [x] Ability for concurrent Board State access, for use by parallel searchers
 - [x] Full Move-generation Capabilities
@@ -25,6 +25,7 @@ The internal Board Implementation aims to have the following features upon compl
 - [x] Zobrist Hashing
 - [ ] UCI protocol implementation
 - [ ] Allowing matches against Human Players
+- [ ] PGN Parsing
 
 
 
@@ -68,7 +69,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```
 [dependencies]
-pleco = "0.1.6"
+pleco = "0.1.7"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:
