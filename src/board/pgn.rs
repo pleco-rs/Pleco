@@ -3,9 +3,8 @@
 use super::Board;
 use core::sq::SQ;
 use core::{Player,Piece,File,Rank};
-use std::error::Error;
 use std::fmt;
-use std::str::*;
+
 
 //[Event "F/S Return Match"]
 //[Site "Belgrade, Serbia JUG"]
@@ -34,16 +33,80 @@ pub enum GameResult {
 
 pub enum ChessDate {
     Unknown,
-    Year(u8),
-    YearMonth(u8,u8),
-    Full(u8,u8,u8)
+    Year(u16),
+    YearMonth(u16,u8),
+    Full(u16,u8,u8)
 }
 
 impl ChessDate {
     pub fn parse_chess_date(date: &str) -> Self {
-        let args = date.split('.');
+        let mut args = date[1..(date.len() - 1)].split('.');
 
-        ChessDate::Unknown
+        let y = args.next().map(|m: &str| m.parse::<u16>());
+
+        if y.is_none() {
+            return ChessDate::Unknown;
+        }
+        let y_err = y.unwrap();
+        if y_err.is_err() {
+            return ChessDate::Unknown;
+        }
+        let year = y_err.unwrap();
+
+
+        let m = args.next().map(|m: &str| m.parse::<u8>());
+
+        if m.is_none() {
+            return ChessDate::Year(year);
+        }
+        let m_err = m.unwrap();
+        if m_err.is_err() {
+            return ChessDate::Year(year);
+        }
+        let month = m_err.unwrap();
+
+        let d = args.next().map(|m: &str| m.parse::<u8>());
+
+        if d.is_none() {
+            return ChessDate::YearMonth(year, month);
+        }
+
+        let d_err = d.unwrap();
+        if d_err.is_err() {
+            return ChessDate::YearMonth(year, month);
+        }
+        let day = d_err.unwrap();
+        ChessDate::Full(year,month,day)
+    }
+
+    pub fn to_string(&self) -> String {
+        match *self {
+            ChessDate::Unknown => {("\"??\"").to_owned()},
+            ChessDate::Year(y) => {
+                let mut s = ("\"").to_owned();
+                s.push_str(y.to_string().as_ref());
+                s.push_str(".??.??\"");
+                s
+            },
+            ChessDate::YearMonth(y,m) => {
+                let mut s = ("\"").to_owned();
+                s.push_str(y.to_string().as_ref());
+                s.push('.');
+                s.push_str(m.to_string().as_ref());
+                s.push_str(".??\"");
+                s
+            },
+            ChessDate::Full(y,m,d) => {
+                let mut s = ("\"").to_owned();
+                s.push_str(y.to_string().as_ref());
+                s.push('.');
+                s.push_str(m.to_string().as_ref());
+                s.push('.');
+                s.push_str(d.to_string().as_ref());
+                s.push('"');
+                s
+            },
+        }
     }
 }
 
@@ -63,7 +126,7 @@ impl Default for ChessRound {
 impl ChessRound {
     pub fn parse_chess_round(round: &str) -> ChessRound {
         let mut cr = ChessRound::default();
-        let args = round.split('.');
+        let args = round[1..(round.len() - 1)].split('.');
         args.for_each(|r: &str| {
             r.parse().map(|m: u32| cr.rounds.push(m));
         });
@@ -102,12 +165,12 @@ impl fmt::Display for PGNTags {
 
 impl PGNTags {
     pub fn to_string(&self) -> String {
-        let mut s: String = "[Result ".to_owned();
-        s.push_str(self.result.as_ref());
+        let mut s: String = "[Event ".to_owned();
+        s.push_str(self.event.as_ref());
         s.push_str("]\n[Site ");
         s.push_str(self.site.as_ref());
-        s.push_str("]\n[Data ");
-        s.push_str("?");
+        s.push_str("]\n[Date ");
+        s.push_str(self.date.to_string().as_ref());
         s.push_str("]\n[Round ");
         s.push_str(self.round.to_string().as_ref());
         s.push_str("]\n[White ");
@@ -121,34 +184,26 @@ impl PGNTags {
     }
 
     pub fn add(mut self, input: &str) -> Result<PGNTags,PGNError> {
-        println!("input {}", input);
         let first_char = input.chars().nth(0).ok_or(PGNError::TagParse)?;
-        println!("first char {}", first_char);
         let last_char = input.chars().last().ok_or(PGNError::TagParse)?;
-        println!("last char {}", last_char);
         if input.len() < 3 || first_char != '[' || last_char != ']' {
             return Err(PGNError::TagParse);
         }
         let r = &input[1..(input.len() - 1)];
-        println!("New str: {}", r);
         let quote_first = r.find('"')
             .ok_or(PGNError::TagParse)?;
         let quote_second = r.rfind('"')
             .ok_or(PGNError::TagParse)?;
-        println!("first {}, second {}", quote_first, quote_second);
         if quote_first >= quote_second - 2 {
             return Err(PGNError::TagParse)
         }
         let in_quote = r[(quote_first)..(quote_second + 1)].to_owned();
-        println!("in quote: {}", in_quote);
         let no_quote = r[..(quote_first - 1)]
             .trim()
             .split_whitespace()
             .next()
             .ok_or(PGNError::TagParse)?;
-        println!("no quote: {}", no_quote);
         self = self.parse_tag(no_quote, in_quote)?;
-        println!("good");
         Ok(self)
     }
 
@@ -234,6 +289,13 @@ pub struct PGNMove {
     tag: PGNMoveTag
 }
 
+impl PGNMove {
+    pub fn parse(input: &str) -> Result<PGNMove, PGNError> {
+
+        unimplemented!()
+    }
+}
+
 pub struct PGNRound {
     move_num: u32,
     white_move: PGNMove,
@@ -265,7 +327,6 @@ impl PGN {
             }
             line = line.trim();
             tags = tags.add(line)?;
-
         }
         Ok(PGN {
             tags: tags,
@@ -282,6 +343,7 @@ mod tests {
     static TEST_BLACK: &'static str = "[Black \"Grace Foo Bar\"]";
     static TEST_DATE: &'static str = "[Date \"2017.4.2\"]";
     static TEST_ROUND: &'static str = "[Round \"0.0\"]";
+    static TEST_RESULT: &'static str = "[Round \"1-0\"]";
 
     extern crate rand;
     use super::*;
@@ -293,7 +355,5 @@ mod tests {
         m = m.add(TEST_BLACK).unwrap();
         m = m.add(TEST_DATE).unwrap();
         m = m.add(TEST_ROUND).unwrap();
-        println!("{}",m);
-
     }
 }

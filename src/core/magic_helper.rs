@@ -143,7 +143,6 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn knight_moves(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-//        self.knight_table[square as usize]
         BitBoard(
             unsafe { *self.knight_table.get_unchecked(sq.0 as usize)}
         )
@@ -153,7 +152,6 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn king_moves(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-//        self.king_table[square as usize]
         BitBoard(
             unsafe { *self.king_table.get_unchecked(sq.0 as usize)}
         )
@@ -162,21 +160,21 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Generate Bishop Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         BitBoard(self.magic_bishop.attacks(occupied.0, sq.0))
     }
 
     /// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         BitBoard(self.magic_rook.attacks(occupied.0, sq.0))
     }
 
     /// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         BitBoard(self.magic_rook.attacks(occupied.0, sq.0) |
             self.magic_bishop.attacks(occupied.0, sq.0))
     }
@@ -184,32 +182,34 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Get the distance of two squares.
     #[inline(always)]
     pub fn distance_of_sqs(&self, sq_one: SQ, sq_two: SQ) -> u8 {
-        assert!(sq_one.is_okay());
-        assert!(sq_two.is_okay());
+        debug_assert!(sq_one.is_okay());
+        debug_assert!(sq_two.is_okay());
         self.dist_table[sq_one.0 as usize][sq_two.0 as usize]
     }
 
     /// Get the line (diagonal / file / rank) `BitBoard` that two squares both exist on, if it exists.
     #[inline(always)]
     pub fn line_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
-        assert!(sq_one.is_okay());
-        assert!(sq_two.is_okay());
+        debug_assert!(sq_one.is_okay());
+        debug_assert!(sq_two.is_okay());
         BitBoard(self.line_bitboard[sq_one.0 as usize][sq_two.0 as usize])
     }
 
     /// Get the line (diagonal / file / rank) `BitBoard` between two squares, not including the squares, if it exists.
     #[inline(always)]
     pub fn between_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
-        assert!(sq_one.is_okay());
-        assert!(sq_two.is_okay());
+        debug_assert!(sq_one.is_okay());
+        debug_assert!(sq_two.is_okay());
         BitBoard(self.between_sqs_bb[sq_one.0 as usize][sq_two.0 as usize])
     }
 
     /// Gets the adjacent files `BitBoard` of the square
     #[inline(always)]
     pub fn adjacent_file(&self, sq: SQ) -> BitBoard {
-        assert!(sq.is_okay());
-        BitBoard(self.adjacent_files_bb[sq.file_of_sq() as usize])
+        debug_assert!(sq.is_okay());
+        unsafe {
+            BitBoard(*self.adjacent_files_bb.get_unchecked(sq.file_of_sq() as usize))
+        }
     }
 
     /// Pawn attacks `BitBoard` from a given square, per player.

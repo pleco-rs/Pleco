@@ -1187,11 +1187,8 @@ impl Board {
 
 
         while snipers.is_not_empty() {
-            let lsb: BitBoard = snipers.lsb();
-            let sniper_sq: SQ = lsb.to_sq();
-
+            let sniper_sq: SQ = snipers.pop_lsb();
             let b: BitBoard = self.magic_helper.between_bb(s, sniper_sq) & occupied;
-
             if !b.more_than_one() {
                 result |= b;
                 let other_occ = self.get_occupied_player(self.player_at_sq(s).unwrap());
@@ -1199,7 +1196,6 @@ impl Board {
                     *pinners |= sniper_sq.to_bb();
                 }
             }
-            snipers &= !lsb;
         }
 
         result
@@ -1219,10 +1215,8 @@ impl Board {
         let mut zob: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
         while b.is_not_empty() {
-            let sq: SQ = b.bit_scan_forward();
-            let lsb: BitBoard = b.lsb();
-            b &= !lsb;
-            let piece = self.piece_at_bb_all(lsb);
+            let sq: SQ = b.pop_lsb();
+            let piece = self.piece_at_sq(sq);
             zob ^= self.magic_helper.z_piece_at_sq(piece.unwrap(), sq);
         }
         let ep = self.state.ep_square;
@@ -1874,6 +1868,14 @@ impl Board {
     }
 }
 
+// TODO: Error Propigation
+
+#[derive(Debug, Copy, Clone)]
+pub enum BoardCheckError {
+    TagParse,
+    Length,
+}
+
 // Debugging helper Functions
 // Returns false if the board is not good
 impl Board {
@@ -1915,7 +1917,6 @@ impl Board {
             ^ self.piece_bb(Player::White, Piece::K) ^ self.piece_bb(Player::Black, Piece::K);
         // Note, this was once all.0, self.get_occupied.0
         assert_eq!(all, self.get_occupied());
-
         true
     }
 
@@ -2017,7 +2018,7 @@ impl RandBoard {
             let mut moves = board.generate_moves();
 
             while iterations < 100 && !moves.is_empty() {
-                let mut rand = self.random() % max(90 - iterations, 13);
+                let mut rand = self.random() % max(90 - max(iterations, 0), 13);
                 if iterations > 20 {
                     rand %= 60;
                     if iterations > 36 {
