@@ -1,5 +1,5 @@
 use board::*;
-use timer::*;
+use tools::timer::Timer;
 use core::piece_move::*;
 use engine::{Searcher,UCILimit};
 use board::eval::*;

@@ -3,7 +3,7 @@
 extern crate rand;
 
 use core::piece_move::BitMove;
-use timer::Timer;
+use tools::timer::Timer;
 use board::Board;
 use core::Player;
 

@@ -34,78 +34,88 @@ bitflags! {
         const BLACK_Q      = C_BLACK_Q_MASK; // White has Queen-side Castling ability
         const WHITE_CASTLE = 0b0100_0000; // White has castled
         const BLACK_CASTLE = 0b0001_0000; // Black has castled
-        const WHITE_ALL    = WHITE_K.bits // White can castle for both sides
-                           | WHITE_Q.bits;
-        const BLACK_ALL    = BLACK_K.bits // Black can castle for both sides
-                           | BLACK_Q.bits;
+        const WHITE_ALL    = Self::WHITE_K.bits // White can castle for both sides
+                           | Self::WHITE_Q.bits;
+        const BLACK_ALL    = Self::BLACK_K.bits // Black can castle for both sides
+                           | Self::BLACK_Q.bits;
     }
 }
 
 impl Castling {
     /// Removes all castling possibility for a single player
+    #[inline]
     pub fn remove_player_castling(&mut self, player: Player) {
         match player {
-            Player::White => self.bits &= BLACK_ALL.bits,
-            Player::Black => self.bits &= WHITE_ALL.bits,
+            Player::White => self.bits &= Self::BLACK_ALL.bits,
+            Player::Black => self.bits &= Self::WHITE_ALL.bits,
         }
     }
 
     /// Removes King-Side castling possibility for a single player
+    #[inline]
     pub fn remove_king_side_castling(&mut self, player: Player) {
         match player {
-            Player::White => self.bits &= !WHITE_K.bits,
-            Player::Black => self.bits &= !BLACK_K.bits,
+            Player::White => self.bits &= !Self::WHITE_K.bits,
+            Player::Black => self.bits &= !Self::BLACK_K.bits,
         }
     }
 
     /// Removes Queen-Side castling possibility for a single player
+    #[inline]
     pub fn remove_queen_side_castling(&mut self, player: Player) {
         match player {
-            Player::White => self.bits &= !WHITE_Q.bits,
-            Player::Black => self.bits &= !BLACK_Q.bits,
+            Player::White => self.bits &= !Self::WHITE_Q.bits,
+            Player::Black => self.bits &= !Self::BLACK_Q.bits,
         }
     }
 
     /// Returns if a player can castle for a given side
+    #[inline]
     pub fn castle_rights(&self, player: Player, side: CastleType) -> bool {
         match player {
             Player::White => {
                 match side {
-                    CastleType::KingSide => self.contains(WHITE_K),
-                    CastleType::QueenSide => self.contains(WHITE_Q),
+                    CastleType::KingSide => self.contains(Self::WHITE_K),
+                    CastleType::QueenSide => self.contains(Self::WHITE_Q),
                 }
             }
             Player::Black => {
                 match side {
-                    CastleType::KingSide => self.contains(BLACK_K),
-                    CastleType::QueenSide => self.contains(BLACK_Q),
+                    CastleType::KingSide => self.contains(Self::BLACK_K),
+                    CastleType::QueenSide => self.contains(Self::BLACK_Q),
                 }
             }
         }
     }
 
     /// Sets the bits to represent a given player has castled
+    #[inline]
     pub fn set_castling(&mut self, player: Player) {
         match player {
-            Player::White => self.bits |= WHITE_CASTLE.bits,
-            Player::Black => self.bits |= BLACK_CASTLE.bits,
+            Player::White => self.bits |= Self::WHITE_CASTLE.bits,
+            Player::Black => self.bits |= Self::BLACK_CASTLE.bits,
         }
     }
 
     /// Returns if a given player has castled
+    #[inline]
     pub fn has_castled(&self, player: Player) -> bool {
         match player {
-            Player::White => self.contains(WHITE_CASTLE),
-            Player::Black => self.contains(BLACK_CASTLE),
+            Player::White => self.contains(Castling::WHITE_CASTLE),
+            Player::Black => self.contains(Castling::BLACK_CASTLE),
         }
     }
 
     /// Returns if both players have lost their ability to castle
+    #[inline]
     pub fn no_castling(&self) -> bool {
-        !self.contains(WHITE_K) && !self.contains(WHITE_Q) && !self.contains(BLACK_K) &&
-            !self.contains(BLACK_Q)
+        !self.contains(Castling::WHITE_K) &&
+            !self.contains(Castling::WHITE_Q) &&
+            !self.contains(Castling::BLACK_K) &&
+            !self.contains(Castling::BLACK_Q)
     }
 
+    #[inline]
     pub fn update_castling(&mut self, to: SQ, from: SQ) -> u8 {
         let mask_change: u8 = to.castle_rights_mask() | from.castle_rights_mask();
         let to_return: u8 = self.bits & mask_change;
@@ -115,10 +125,10 @@ impl Castling {
 
     pub fn add_castling_char(&mut self, c: char) {
         self.bits |= match c {
-            'K' => WHITE_K.bits,
-            'Q' => WHITE_Q.bits,
-            'k' => BLACK_K.bits,
-            'q' => BLACK_Q.bits,
+            'K' => Castling::WHITE_K.bits,
+            'Q' => Castling::WHITE_Q.bits,
+            'k' => Castling::BLACK_K.bits,
+            'q' => Castling::BLACK_Q.bits,
             '-' => {0}
             _ => panic!(),
         };
@@ -134,18 +144,18 @@ impl Castling {
             "-".to_owned()
         } else {
             let mut s = String::default();
-            if self.contains(WHITE_K) {
+            if self.contains(Castling::WHITE_K) {
                 s.push('K');
             }
-            if self.contains(WHITE_Q) {
+            if self.contains(Castling::WHITE_Q) {
                 s.push('Q');
             }
 
-            if self.contains(BLACK_K) {
+            if self.contains(Castling::BLACK_K) {
                 s.push('k');
             }
 
-            if self.contains(BLACK_Q) {
+            if self.contains(Castling::BLACK_Q) {
                 s.push('q');
             }
             assert!(!s.is_empty());

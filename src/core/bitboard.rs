@@ -352,6 +352,8 @@ mod tests {
             while bb.is_not_empty() {
                 let total_pre = bb.count_bits();
                 let lsb_sq = bb.pop_lsb();
+                assert!(lsb_sq.is_okay());
+                assert_eq!(lsb_sq.to_bb() & bb, BitBoard(0));
                 assert_eq!(bb.count_bits() + 1, total_pre);
             }
         }

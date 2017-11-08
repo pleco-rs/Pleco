@@ -125,9 +125,9 @@ We can revert to the previous chessboard state with a simple Board::undo_move()
 ```rust
 let mut board = Board::default();
 board.apply_uci_move("e2e4"); // A very good starting move, might I say
-assert_eq(board.moves_played(),1);
+assert_eq!(board.moves_played(),1);
 board.undo_move();
-assert_eq(board.moves_played(),0);
+assert_eq!(board.moves_played(),0);
 ```
 
 

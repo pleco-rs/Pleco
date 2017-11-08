@@ -31,14 +31,32 @@ use self::movegen::{MoveGen,Legal,PseudoLegal};
 
 use std::option::*;
 use std::sync::Arc;
-use std::{fmt, char};
-use std::cmp::{PartialEq,max};
+use std::{fmt, char,num};
+use std::cmp::{PartialEq,max,min};
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
     /// Nothing will ever be mutated in here, so it is safe to pass around.
     /// See `pleco::MagicHelper` for more information.
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
+}
+
+#[derive(Debug, Clone)]
+pub enum FenBuildError {
+    SquareSmallerRank,
+    SquareLargerRank,
+    UnrecognizedPiece,
+    NotEnoughSections,
+    IncorrectRankAmounts,
+    UnrecognizedTurn,
+    EPSquareUnreadable,
+    UnreadableMoves(num::ParseIntError),
+}
+
+impl From<num::ParseIntError> for FenBuildError {
+    fn from(err: num::ParseIntError) -> FenBuildError {
+        FenBuildError::UnreadableMoves(err)
+    }
 }
 
 /// Represents a Chessboard through a `Board`.
@@ -378,7 +396,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
     /// assert_eq!(board.count_all_pieces(),32);
     /// ```
     ///
@@ -389,65 +407,31 @@ impl Board {
     /// There is a possibility of the FEN string representing an unvalid position, with no panics resulting.
     /// The Constructed Board may have some Undefined Behavior as a result. It is up to the user to give a
     /// valid FEN string.
-    pub fn new_from_fen(fen: &str) -> Board {
-        // Create blank PieceLocations and PieceCount array
-        let mut piece_loc: PieceLocations = PieceLocations::blank();
-        let mut piece_cnt: [[u8; PIECE_CNT]; PLAYER_CNT] = [[0; PIECE_CNT]; PLAYER_CNT];
+    pub fn new_from_fen(fen: &str) -> Result<Board,FenBuildError> {
 
         // split the string by white space
         let det_split: Vec<&str> = fen.split_whitespace().collect();
 
         // must have 6 parts :
         // [ Piece Placement, Side to Move, Castling Ability, En Passant square, Half moves, full moves]
-        assert_eq!(det_split.len(), 6);
+        if det_split.len() != 6 {
+            return Err(FenBuildError::NotEnoughSections);
+        }
 
         // Split the first part by '/' for locations
         let b_rep: Vec<&str> = det_split[0].split('/').collect();
 
-        // 8 ranks, so 8 parts
-        assert_eq!(b_rep.len(), 8);
-
-        // Start with Piece Placement
-        for (i, file) in b_rep.iter().enumerate() {
-            // Index starts from A8, goes to H8, then A7, etc
-            // A8 is 56 in our BitBoards so we start there
-            let mut idx = (7 - i) * 8;
-
-            for char in file.chars() {
-                // must be a valid square
-                assert!(idx < 64);
-                // Count spaces
-                let dig = char.to_digit(10);
-                if dig.is_some() {
-                    idx += dig.unwrap() as usize;
-                } else {
-                    // if no space, then there is a piece here
-                    let piece = match char {
-                        'p' | 'P' => Piece::P,
-                        'n' | 'N' => Piece::N,
-                        'b' | 'B' => Piece::B,
-                        'r' | 'R' => Piece::R,
-                        'q' | 'Q' => Piece::Q,
-                        'k' | 'K' => Piece::K,
-                        _ => panic!(),
-                    };
-                    let player = if char.is_lowercase() {
-                        Player::Black
-                    } else {
-                        Player::White
-                    };
-                    piece_loc.place(SQ(idx as u8), player, piece);
-                    piece_cnt[player as usize][piece as usize] += 1;
-                    idx += 1;
-                }
-            }
+        if b_rep.len() != 8 {
+            return Err(FenBuildError::IncorrectRankAmounts);
         }
+
+        let (piece_loc, piece_cnt) = PieceLocations::from_partial_fen(b_rep.as_slice())?;
 
         // Side to Move
         let turn: Player = match det_split[1].chars().next().unwrap() {
             'b' => Player::Black,
             'w' => Player::White,
-            _ => panic!(),
+            _ => {return Err(FenBuildError::UnrecognizedTurn);},
         };
 
         // Castle Bytes
@@ -456,11 +440,9 @@ impl Board {
             castle_bytes.add_castling_char(char);
         }
 
-        // EP square
-        // TODO: It was NO_SQ before, not sure if this is right
         let mut ep_sq: SQ = SQ(0);
         for (i, char) in det_split[3].chars().enumerate() {
-            assert!(i < 2);
+            if i > 1 { return Err(FenBuildError::EPSquareUnreadable); }
             if i == 0 {
                 match char {
                     'a' => ep_sq += SQ(0),
@@ -472,22 +454,26 @@ impl Board {
                     'g' => ep_sq += SQ(6),
                     'h' => ep_sq += SQ(7),
                     '-' => {}
-                    _ => panic!(),
+                    _ => { return Err(FenBuildError::EPSquareUnreadable);},
                 }
             } else {
                 let digit = char.to_digit(10).unwrap() as u8;
                 // must be 3 or 6
-                assert!(digit == 3 || digit == 6);
+                if digit != 3 && digit != 6 {
+                    return Err(FenBuildError::EPSquareUnreadable);
+                }
                 ep_sq += SQ(8 * digit);
             }
         }
 
+        if ep_sq == SQ(0) {ep_sq = NO_SQ}
+
         // rule 50 counts
-        let rule_50 = det_split[4].parse::<i16>().unwrap();
+        let rule_50 = det_split[4].parse::<i16>()?;
 
         // Total Moves Played
         // Moves is defined as everyime White moves, so gotta translate to total moves
-        let mut total_moves = (det_split[5].parse::<u16>().unwrap() - 1) * 2;
+        let mut total_moves = (det_split[5].parse::<u16>()? - 1) * 2;
         if turn == Player::Black {
             total_moves += 1
         };
@@ -524,17 +510,15 @@ impl Board {
 
         // Set the BitBoards
         b.set_bitboards();
-        {
-            // Set Check info
+        { // Set Check info
             let state: &mut BoardState = Arc::get_mut(&mut board_s).unwrap();
             b.set_check_info(state);
         }
         b.state = board_s;
-        // Set Zobrist Hash
         b.set_zob_hash();
 
         // TODO: Check for a valid FEN String and /or resulting board
-        b
+        Ok(b)
     }
 
     /// Creates a FEN String of the Given Board.
@@ -1017,12 +1001,12 @@ impl Board {
     /// Panics if given [GenTypes::QuietChecks] while the current board is in check
     pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
         match gen_type {
-            GenTypes::All => MoveGen::generate::<PseudoLegal,AllGenType>(&self),
-            GenTypes::Captures => MoveGen::generate::<PseudoLegal,CapturesGenType>(&self),
-            GenTypes::Quiets => MoveGen::generate::<PseudoLegal,QuietsGenType>(&self),
-            GenTypes::QuietChecks => MoveGen::generate::<PseudoLegal,QuietChecksGenType>(&self),
-            GenTypes::Evasions => MoveGen::generate::<PseudoLegal,EvasionsGenType>(&self),
-            GenTypes::NonEvasions => MoveGen::generate::<PseudoLegal,NonEvasionsGenType>(&self)
+            GenTypes::All => MoveGen::generate::<PseudoLegal,AllGenType>(self),
+            GenTypes::Captures => MoveGen::generate::<PseudoLegal,CapturesGenType>(self),
+            GenTypes::Quiets => MoveGen::generate::<PseudoLegal,QuietsGenType>(self),
+            GenTypes::QuietChecks => MoveGen::generate::<PseudoLegal,QuietChecksGenType>(self),
+            GenTypes::Evasions => MoveGen::generate::<PseudoLegal,EvasionsGenType>(self),
+            GenTypes::NonEvasions => MoveGen::generate::<PseudoLegal,NonEvasionsGenType>(self)
         }
     }
 
@@ -2061,7 +2045,7 @@ impl RandBoard {
             let mut moves = board.generate_moves();
 
             while iterations < 100 && !moves.is_empty() {
-                let mut rand = self.random() % max(90 - max(iterations, 0), 13);
+                let mut rand = self.random() % max(90 - min(max(iterations, 0),90), 13);
                 if iterations > 20 {
                     rand %= 60;
                     if iterations > 36 {

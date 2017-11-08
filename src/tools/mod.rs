@@ -1,9 +1,12 @@
 //! Miscellaneous tools for debugging and generating output.
 
 pub mod prng;
+pub mod tt;
+pub mod timer;
 
 use board::Board;
 use engine::Searcher;
+
 
 use bot_prelude::{RandomBot,JamboreeSearcher,IterativeSearcher};
 

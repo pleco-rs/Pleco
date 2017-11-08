@@ -99,8 +99,6 @@ pub struct MoveGen<'a> {
 
 impl<'a> MoveGen<'a> {
 
-    // TODO: allow for different capacities based off legal vs pseudo legal & movetype
-
     // Helper function to setup the MoveGen structure.
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
@@ -129,16 +127,14 @@ impl<'a> MoveGen<'a> {
             movegen.generate_evasions::<L,P>();
         } else if gen_type == GenTypes::QuietChecks {
             movegen.generate_quiet_checks::<L,P>();
-        } else  {
-            if gen_type == GenTypes::All {
-                if movegen.board.in_check() {
-                    movegen.generate_evasions::<L,P>();
-                } else {
-                    movegen.generate_non_evasions::<L, NonEvasionsGenType,P>();
-                }
+        } else if gen_type == GenTypes::All {
+            if movegen.board.in_check() {
+                movegen.generate_evasions::<L,P>();
             } else {
-                movegen.generate_non_evasions::<L,G,P>();
+                movegen.generate_non_evasions::<L, NonEvasionsGenType,P>();
             }
+        } else {
+            movegen.generate_non_evasions::<L,G,P>();
         }
         movegen.movelist
     }

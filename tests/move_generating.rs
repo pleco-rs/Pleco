@@ -15,6 +15,7 @@ fn test_movegen_captures() {
             vec.push(b);
         }
     }
+    // TODO: This failed on a recent travis build.
     vec.iter().for_each(|b| {
         let moves = b.generate_moves_of_type(GenTypes::Captures);
         for m in moves {

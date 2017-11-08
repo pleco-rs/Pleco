@@ -3,7 +3,7 @@ extern crate pleco;
 extern crate test;
 extern crate rand;
 
-use self::pleco::tt::*;
+use self::pleco::tools::tt::*;
 use self::pleco::core::piece_move::BitMove;
 use self::test::{black_box, Bencher};
 use pleco::tools::prng::PRNG;

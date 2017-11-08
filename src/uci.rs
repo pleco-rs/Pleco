@@ -3,7 +3,7 @@
 use engine::{UCILimit,UCISearcher};
 use board::Board;
 use bots::lazy_smp::LazySMPSearcher;
-use timer::Timer;
+use tools::timer::Timer;
 use core::piece_move::BitMove;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -126,7 +126,7 @@ fn parse_board_position(tokens: Vec<String>) -> Board {
         Board::default()
     } else if start == "fen" {
         let fen_string: &str = &token_stack.pop().unwrap();
-        Board::new_from_fen(fen_string)
+        Board::new_from_fen(fen_string).unwrap()
     } else {
         panic!()
     };

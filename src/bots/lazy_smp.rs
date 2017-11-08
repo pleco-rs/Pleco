@@ -12,7 +12,7 @@ use board::*;
 use core::*;
 use board::eval::*;
 use core::piece_move::BitMove;
-use tt::*;
+use tools::tt::*;
 use engine::*;
 
 const MAX_PLY: u16 = 126;
@@ -454,7 +454,7 @@ impl LazySMPSearcher {
 
         // Find out if there is a better found move
         for thread_moves in self.all_moves.iter() {
-            let root_move: RootMove = thread_moves.read().unwrap().get(0).unwrap().clone();
+            let root_move: RootMove = *thread_moves.read().unwrap().get(0).unwrap();
             let depth_diff = root_move.depth_reached as i16 - best_root_move.depth_reached as i16;
             let value_diff = root_move.score as i16 - best_root_move.score as i16;
 

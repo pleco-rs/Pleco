@@ -3,6 +3,8 @@
 use core::*;
 use std::mem;
 use core::sq::SQ;
+use core::masks::{PLAYER_CNT,PIECE_CNT};
+use super::FenBuildError;
 
 /// Struct to allow fast lookups for any square. Given a square, allows for determining if there
 /// is a piece currently there, and if so, allows for determining it's color and type of piece.
@@ -171,6 +173,50 @@ impl PieceLocations {
     /// Returns if the Board contains a particular piece / player.
     pub fn contains(&self, piece: Piece, player: Player) -> bool {
         self.first_square(piece,player).is_some()
+    }
+
+    /// Generates a `PieceLocations` from a partial fen. A partial fen is defined as the first part of a
+    /// fen, where the piece positions are available.
+    pub fn from_partial_fen(ranks: &[&str]) -> Result<(PieceLocations,[[u8; PIECE_CNT]; PLAYER_CNT]), FenBuildError> {
+        let mut loc = PieceLocations::blank();
+        let mut piece_cnt: [[u8; PIECE_CNT]; PLAYER_CNT] = [[0; PIECE_CNT]; PLAYER_CNT];
+        for (i, rank) in ranks.iter().enumerate() {
+            let min_sq = (7 - i) * 8;
+            let max_sq = min_sq + 7;
+            let mut idx = min_sq;
+            for ch in rank.chars() {
+                if idx < min_sq {
+                    return Err(FenBuildError::SquareSmallerRank)
+                } else if idx > max_sq {
+                    return Err(FenBuildError::SquareLargerRank)
+                }
+
+                let dig = ch.to_digit(10);
+                if dig.is_some() {
+                    idx += dig.unwrap() as usize;
+                } else {
+                    // if no space, then there is a piece here
+                    let piece = match ch {
+                        'p' | 'P' => Piece::P,
+                        'n' | 'N' => Piece::N,
+                        'b' | 'B' => Piece::B,
+                        'r' | 'R' => Piece::R,
+                        'q' | 'Q' => Piece::Q,
+                        'k' | 'K' => Piece::K,
+                        _ => {return Err(FenBuildError::UnrecognizedPiece)},
+                    };
+                    let player = if ch.is_lowercase() {
+                        Player::Black
+                    } else {
+                        Player::White
+                    };
+                    loc.place(SQ(idx as u8), player, piece);
+                    piece_cnt[player as usize][piece as usize] += 1;
+                    idx += 1;
+                }
+            }
+        }
+        Ok((loc,piece_cnt))
     }
 
 

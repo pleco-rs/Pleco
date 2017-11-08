@@ -20,7 +20,6 @@
 #![feature(unique)]
 #![feature(allocator_api)]
 
-
 #[macro_use]
 extern crate bitflags;
 
@@ -37,10 +36,8 @@ pub mod core;
 pub mod board;
 pub mod tools;
 
-pub mod timer;
 pub mod engine;
 pub mod uci;
-pub mod tt;
 
 pub mod bots;
 pub mod bot_prelude;

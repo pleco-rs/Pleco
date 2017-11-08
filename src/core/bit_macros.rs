@@ -109,17 +109,6 @@ macro_rules! impl_bit_ops {
     )
 }
 
-// TODO: impl add<type> for Tuple {..}
-
-//impl Add<u64> for BitBoard {
-//    type Output = BitBoard;
-//    fn add(self, other: u64) -> BitBoard {
-//        self + BitBoard(other)
-//    }
-//}
-
-
-
 #[cfg(test)]
 mod tests {
 

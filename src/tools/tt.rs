@@ -131,7 +131,7 @@ impl Entry {
     /// Returns the value of the node in respect to the depth searched && when it was placed into the TranspositionTable.
     pub fn time_value(&self, curr_time: u8) -> u16 {
         let inner: u16 = ((259u16).wrapping_add(curr_time as u16)).wrapping_sub(self.time_node_bound.data as u16) & 0b1111_1100;
-        (self.depth as u16).wrapping_sub((inner).wrapping_mul(2 as u16))
+        u16::from(self.depth).wrapping_sub((inner).wrapping_mul(2 as u16))
     }
 }
 
@@ -396,7 +396,7 @@ fn alloc_room(size: usize) -> Unique<Cluster> {
 mod tests {
 
     extern crate rand;
-    use tt::*;
+    use super::*;
     use std::ptr::null;
 
 
