@@ -74,5 +74,5 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 }
 
 fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval_low(&board))
+    BestMove::new(Eval::eval_low(board))
 }

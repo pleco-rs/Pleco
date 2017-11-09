@@ -3,6 +3,10 @@
 //! A `MagicHelper` is computed at the beginning of execution using `lazy_static` inside
 //! [board/mod.rs].
 
+
+#![cfg_attr(feature="clippy", allow(invalid_ref))]
+#![cfg_attr(feature="clippy", allow(needless_range_loop))]
+
 use super::bit_twiddles::*;
 use super::masks::*;
 use super::sq::SQ;
@@ -116,10 +120,23 @@ unsafe impl<'a, 'b> Send for MagicHelper<'a, 'b> {}
 
 unsafe impl<'a, 'b> Sync for MagicHelper<'a, 'b> {}
 
+impl<'a, 'b> Default for MagicHelper<'a, 'b> {
+    fn default() -> MagicHelper<'a, 'b> {
+        MagicHelper::new()
+    }
+}
+
 impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Create a new Magic Helper.
     pub fn new() -> MagicHelper<'a, 'b> {
-        let mut mhelper = MagicHelper {
+        MagicHelper::init()
+            .gen_between_and_line_bbs()
+            .gen_adjacent_file_bbs()
+            .gen_pawn_attacks()
+    }
+
+    fn init() -> MagicHelper<'a, 'b> {
+        MagicHelper {
             magic_rook: MagicTable::init(ROOK_M_SIZE,&R_DELTAS),
             magic_bishop: MagicTable::init(BISHOP_M_SIZE,&B_DELTAS),
             knight_table: gen_knight_moves(),
@@ -130,11 +147,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             adjacent_files_bb: [0; 8],
             pawn_attacks_from: [[0; 64]; 2],
             zobrist: Zobrist::default(),
-        };
-        mhelper.gen_between_and_line_bbs();
-        mhelper.gen_adjacent_file_bbs();
-        mhelper.gen_pawn_attacks();
-        mhelper
+        }
     }
 
 
@@ -192,7 +205,9 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     pub fn line_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
         debug_assert!(sq_one.is_okay());
         debug_assert!(sq_two.is_okay());
-        BitBoard(self.line_bitboard[sq_one.0 as usize][sq_two.0 as usize])
+        unsafe {
+            BitBoard(*(self.line_bitboard.get_unchecked(sq_one.0 as usize)).get_unchecked(sq_two.0 as usize))
+        }
     }
 
     /// Get the line (diagonal / file / rank) `BitBoard` between two squares, not including the squares, if it exists.
@@ -200,7 +215,9 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     pub fn between_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
         debug_assert!(sq_one.is_okay());
         debug_assert!(sq_two.is_okay());
-        BitBoard(self.between_sqs_bb[sq_one.0 as usize][sq_two.0 as usize])
+        unsafe {
+            BitBoard(*(self.between_sqs_bb.get_unchecked(sq_one.0 as usize)).get_unchecked(sq_two.0 as usize))
+        }
     }
 
     /// Gets the adjacent files `BitBoard` of the square
@@ -235,21 +252,29 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
         assert!(square.is_okay());
-        self.zobrist.sq_piece[square.0 as usize][piece as usize]
+        unsafe {
+            *(self.zobrist.sq_piece.get_unchecked(square.0 as usize)).get_unchecked(piece as usize)
+        }
+//        self.zobrist.sq_piece[square.0 as usize][piece as usize]
     }
 
     /// Returns the zobrist hash for the given Square of Enpassant.
     /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
     #[inline(always)]
     pub fn z_ep_file(&self, square: SQ) -> u64 {
-        self.zobrist.en_p[file_of_sq(square.0) as usize]
+        unsafe {
+            *self.zobrist.en_p.get_unchecked(file_of_sq(square.0) as usize)
+        }
     }
 
     /// Returns a zobrast hash of the castling rights, as defined by the Board.
     #[inline(always)]
     pub fn z_castle_rights(&self, castle: u8) -> u64 {
         debug_assert!((castle as usize) < ALL_CASTLING_RIGHTS);
-        self.zobrist.castle[castle as usize]
+//        self.zobrist.castle[castle as usize]
+        unsafe {
+            *self.zobrist.en_p.get_unchecked(castle as usize)
+        }
     }
 
     /// Returns Zobrist Hash of flipping sides.
@@ -271,7 +296,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     }
 
 
-    fn gen_between_and_line_bbs(&mut self) {
+    fn gen_between_and_line_bbs(mut self) -> Self {
         for i in 0..64 as u8 {
             for j in 0..64 as u8 {
                 let i_bb: u64 = (1 as u64) << i;
@@ -292,12 +317,12 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
                 }
             }
         }
-
+        self
     }
 
     // Generates adjacent files of a given file
     // Files go from 0..7, representing files 1..8
-    fn gen_adjacent_file_bbs(&mut self) {
+    fn gen_adjacent_file_bbs(mut self) -> Self {
         for file in 0..8 as u8 {
             if file != 0 {
                 self.adjacent_files_bb[file as usize] |= file_bb(file - 1);
@@ -306,11 +331,12 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
                 self.adjacent_files_bb[file as usize] |= file_bb(file + 1);
             }
         }
+        self
     }
 
     /// Generate the pawn attacks table. Maps from a square to the bitboard of
     /// possible attacks from that square. This is done per player.
-    fn gen_pawn_attacks(&mut self) {
+    fn gen_pawn_attacks(mut self) -> Self {
         // gen white pawn attacks
         for i in 0..56 as u8 {
             let mut bb: u64 = 0;
@@ -334,6 +360,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             }
             self.pawn_attacks_from[1][i as usize] = bb;
         }
+        self
     }
 }
 
@@ -407,8 +434,8 @@ impl<'a> MagicTable<'a> {
         let mut pre_sq_table: [PreSMagic; 64] = unsafe { PreSMagic::init64() };
 
         // Initializes each PreSMagic
-        for i in 0..64 {
-            pre_sq_table[i] = PreSMagic::init();
+        for table in pre_sq_table.iter_mut() {
+            *table = PreSMagic::init();
         }
 
         // Creates Vector to hold attacks. Has capacity as we know the exact size of this.
@@ -610,7 +637,7 @@ fn gen_king_moves() -> [u64; 64] {
 // 8 static places no matter the square
 fn gen_knight_moves() -> [u64; 64] {
     let mut moves: [u64; 64] = [0; 64];
-    for index in 0..64 {
+    for (index, spot) in moves.iter_mut().enumerate() {
         let mut mask: u64 = 0;
         let file = index % 8;
 
@@ -646,7 +673,7 @@ fn gen_knight_moves() -> [u64; 64] {
         if file > 1 && index > 7 {
             mask |= 1 << (index - 10);
         }
-        moves[index] = mask;
+        *spot = mask;
     }
     moves
 }

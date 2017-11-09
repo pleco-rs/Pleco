@@ -106,7 +106,7 @@ fn jamboree(
 
     let amount_seq: usize = 1 + (moves.len() / DIVIDE_CUTOFF) as usize;
     if board.depth() < 5 {
-        mvv_lva_sort(&mut moves, &board);
+        mvv_lva_sort(&mut moves, board);
     }
 
     let (seq, non_seq) = moves.split_at_mut(amount_seq);
@@ -265,7 +265,7 @@ fn quiescence_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         board.generate_moves_of_type(GenTypes::Captures)
     };
 
-    if moves.len() == 0 {
+    if moves.is_empty() {
         if board.in_check() {
             return BestMove::new(MATE + (board.depth() as i16));
         }
@@ -328,7 +328,7 @@ fn mvv_lva_sort(moves: &mut [BitMove], board: &Board) {
 
 
 fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval_low(&board))
+    BestMove::new(Eval::eval_low(board))
 }
 
 

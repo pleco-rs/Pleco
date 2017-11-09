@@ -75,7 +75,6 @@ fn uci() {
     #[allow(unused_mut)]
     let mut _is_debug: bool = false;
     let mut board = Board::default();
-
     let stop_searching = Arc::new(AtomicBool::new(false));
 
     let mut args: Vec<String> = Vec::new();
@@ -86,21 +85,35 @@ fn uci() {
             args = input.split_whitespace().map(|str| str.to_owned()).collect();
         }
         let args_clone = args.clone();
-        let command: &str =   &args_clone.get(0).unwrap().clone();
+        let command: &str = &args_clone[0].clone();
 
-        if command == "isready" {
-            println!("readyok");
-        } else if command == "quit" {
-            break 'uci;
-        } else if command == "ucinewgame" {
-        } else if command == "position" {
-            board = parse_board_position(args_clone);
-        } else if command == "go" {
-            mid_search_loop(&mut board, parse_limit(args_clone), Arc::clone(&stop_searching));
-        } else if command == "stop" {
-            stop_searching.store(true, Ordering::Relaxed);
-        } else {
-            println!("command not recognized")
+        match command {
+            "isready" => {
+                println!("readyok");
+            },
+            "quit" => {
+                break 'uci;
+            },
+            "ucinewgame" => {
+                // clear hash table
+            },
+            "position" => {
+                board = parse_board_position(args_clone);
+            },
+            "go" => {
+                stop_searching.store(false, Ordering::Relaxed);
+                let limit = parse_limit(args_clone);
+                let mut searcher = LazySMPSearcher::setup(board.shallow_clone(), Arc::clone(&stop_searching));
+                thread::spawn(move || {
+                    searcher.uci_go(limit, true)
+                });
+            },
+            "stop" => {
+                stop_searching.store(true, Ordering::Relaxed);
+            },
+            _ => {
+                println!("command not recognized");
+            }
         }
         args.clear()
     }

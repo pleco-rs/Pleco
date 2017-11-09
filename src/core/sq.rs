@@ -157,6 +157,12 @@ impl SQ {
         BitBoard(RANK_BB[self.rank() as usize])
     }
 
+    /// Returns the rank index (number) of a `SQ`.
+    #[inline(always)]
+    pub fn rank_idx_of_sq(self) -> u8 {
+        (self.0 >> 3) as u8
+    }
+
     /// Returns the `File` that a `SQ` lies on.
     ///
     /// # Examples
@@ -169,13 +175,9 @@ impl SQ {
     /// ```
     #[inline(always)]
     pub fn file(self) -> File {
-        ALL_FILES[(self.0 & 0b0000_0111) as usize]
-    }
-
-    /// Returns the rank index (number) of a `SQ`.
-    #[inline(always)]
-    pub fn rank_idx_of_sq(self) -> u8 {
-        (self.0 >> 3) as u8
+        unsafe {
+            *ALL_FILES.get_unchecked((self.0 & 0b0000_0111) as usize)
+        }
     }
 
     /// Returns the `BitBoard` representation of a `File` that a `SQ` lies on.
@@ -218,7 +220,7 @@ impl SQ {
     ///
     /// assert_eq!(sq_f2, SQ::make(file_f, rank_2));
     /// ```
-    #[inline]
+    #[inline(always)]
     pub fn make(file: File, rank: Rank) -> SQ {
         SQ(((rank as u8).wrapping_shl(3) + (file as u8)) as u8)
     }

@@ -67,7 +67,7 @@ pub const RANK_8: u64 = 0xFF00_0000_0000_0000;
 
 /// Array of all files and their corresponding bits, indexed from
 /// file A to file H.
-pub const FILE_BB: [u64; FILE_CNT] = [
+pub static FILE_BB: [u64; FILE_CNT] = [
     FILE_A,
     FILE_B,
     FILE_C,
@@ -80,7 +80,7 @@ pub const FILE_BB: [u64; FILE_CNT] = [
 
 /// Array of all ranks and their corresponding bits, indexed from
 /// rank 1 to rank 8.
-pub const RANK_BB: [u64; RANK_CNT] = [
+pub static RANK_BB: [u64; RANK_CNT] = [
     RANK_1,
     RANK_2,
     RANK_3,

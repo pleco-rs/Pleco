@@ -10,6 +10,13 @@
 //!
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature="clippy", allow(inline_always))]
+#![cfg_attr(feature="clippy", allow(unreadable_literal))]
+#![cfg_attr(feature="clippy", allow(large_digit_groups))]
+#![cfg_attr(feature="clippy", allow(cast_lossless))]
+#![cfg_attr(feature="clippy", allow(doc_markdown))]
+#![cfg_attr(feature="clippy", allow(inconsistent_digit_grouping))]
+
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
@@ -19,6 +26,7 @@
 #![feature(integer_atomics)]
 #![feature(unique)]
 #![feature(allocator_api)]
+
 
 #[macro_use]
 extern crate bitflags;

@@ -223,7 +223,7 @@ impl TT {
     /// # Panic
     ///
     /// size must be greater then 0
-    pub fn resize_round_up(&mut self, size: usize) {
+    pub unsafe fn resize_round_up(&self, size: usize) {
         self.resize(size.next_power_of_two());
     }
 
@@ -233,7 +233,7 @@ impl TT {
     /// # Panic
     ///
     /// mb_size must be greater then 0
-    pub fn resize_to_megabytes(&mut self, mb_size: usize) -> usize {
+    pub unsafe fn resize_to_megabytes(&self, mb_size: usize) -> usize {
         let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
         num_clusters = num_clusters.next_power_of_two();
         self.resize(num_clusters);
@@ -241,7 +241,7 @@ impl TT {
     }
 
     // resizes the tt to a certain type
-    fn resize(&mut self, size: usize) {
+    unsafe fn resize(&self, size: usize) {
         assert_eq!(size.count_ones(), 1);
         assert!(size > 0);
         self.de_alloc();
@@ -249,14 +249,17 @@ impl TT {
     }
 
     /// Clears the entire TranspositionTable
-    pub fn clear(&mut self) {
+    pub unsafe fn clear(&mut self) {
         let size = self.cap;
         self.resize(size);
     }
 
     // Called each time a new position is searched
-    pub fn new_search(&mut self) {
-        self.time_age = (self.time_age).wrapping_add(4);
+    pub fn new_search(&self) {
+        unsafe {
+            let c = mem::transmute::<&u8,*mut u8>(&self.time_age);
+            *c = (self.time_age).wrapping_add(4);
+        }
     }
 
     /// Returns the current time age of a TT.
@@ -330,16 +333,16 @@ impl TT {
     }
 
     // Re-Allocates the current TT to a specified size.
-    fn re_alloc(&mut self, size: usize) {
-        self.clusters = alloc_room(size);
+    unsafe fn re_alloc(&self, size: usize) {
+        let c = mem::transmute::<&Unique<Cluster>,*mut Unique<Cluster>>(&self.clusters);
+//        let c = (&self.clusters) as *mut Unique<Cluster>;
+        *c = alloc_room(size);
     }
 
     /// De-allocates the current heap.
-    fn de_alloc(&self) {
-        unsafe {
-            Heap.dealloc(self.clusters.as_ptr() as *mut _,
-                         Layout::array::<Cluster>(self.cap).unwrap());
-        }
+    unsafe fn de_alloc(&self) {
+        Heap.dealloc(self.clusters.as_ptr() as *mut _,
+                     Layout::array::<Cluster>(self.cap).unwrap());
     }
 
     pub fn hash_percent(&self) -> f64 {
@@ -366,7 +369,7 @@ impl TT {
 
 impl Drop for TT {
     fn drop(&mut self) {
-        self.de_alloc();
+        unsafe {self.de_alloc();}
     }
 }
 
@@ -426,7 +429,7 @@ mod tests {
     #[test]
     fn tt_null_ptr() {
         let size: usize = 2 << 20;
-        let mut tt = TT::new_num_clusters(size);
+        let tt = TT::new_num_clusters(size);
 
         for x  in 0..1_000_000 as u64 {
             let key: u64 = rand::random::<u64>();

@@ -92,7 +92,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
 }
 
 fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval_low(&board))
+    BestMove::new(Eval::eval_low(board))
 }
 
 //

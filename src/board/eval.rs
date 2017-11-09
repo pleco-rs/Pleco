@@ -111,8 +111,8 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [
 impl Eval {
     pub fn eval_low(board: &Board) -> i16 {
         match board.turn() {
-            Player::White => eval_all::<WhiteType>(&board) - eval_all::<BlackType>(&board),
-            Player::Black => eval_all::<BlackType>(&board) - eval_all::<WhiteType>(&board)
+            Player::White => eval_all::<WhiteType>(board) - eval_all::<BlackType>(board),
+            Player::Black => eval_all::<BlackType>(board) - eval_all::<WhiteType>(board)
         }
     }
 }

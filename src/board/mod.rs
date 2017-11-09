@@ -256,7 +256,7 @@ impl Board {
             depth: self.depth,
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
-            state: self.state.clone(),
+            state: Arc::clone(&self.state),
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -277,7 +277,7 @@ impl Board {
             depth: self.depth,
             piece_counts: self.piece_counts.clone(),
             piece_locations: self.piece_locations.clone(),
-            state: self.state.clone(),
+            state: Arc::clone(&self.state),
             magic_helper: &MAGIC_HELPER,
         }
     }
@@ -946,7 +946,7 @@ impl Board {
     /// println!("There are {} possible legal moves.", moves.len());
     /// ```
     pub fn generate_moves(&self) -> Vec<BitMove> {
-        MoveGen::generate::<Legal, AllGenType>(&self)
+        MoveGen::generate::<Legal, AllGenType>(self)
     }
 
     /// Get a List of all PseudoLegal [BitMove]s for the player whose turn it is to move.
@@ -954,7 +954,7 @@ impl Board {
     /// the moves are legal for the current position. Moves need to be checked with a
     /// [Board::legal_move(move)] in order to be certain of a legal move.
     pub fn generate_pseudolegal_moves(&self) -> Vec<BitMove> {
-        MoveGen::generate::<PseudoLegal, AllGenType>(&self)
+        MoveGen::generate::<PseudoLegal, AllGenType>(self)
     }
 
     /// Get a List of legal [BitMove]s for the player whose turn it is to move or a certain type.
@@ -979,12 +979,12 @@ impl Board {
     /// ```
     pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
         match gen_type {
-            GenTypes::All => MoveGen::generate::<Legal,AllGenType>(&self),
-            GenTypes::Captures => MoveGen::generate::<Legal,CapturesGenType>(&self),
-            GenTypes::Quiets => MoveGen::generate::<Legal,QuietsGenType>(&self),
-            GenTypes::QuietChecks => MoveGen::generate::<Legal,QuietChecksGenType>(&self),
-            GenTypes::Evasions => MoveGen::generate::<Legal,EvasionsGenType>(&self),
-            GenTypes::NonEvasions => MoveGen::generate::<Legal,NonEvasionsGenType>(&self)
+            GenTypes::All => MoveGen::generate::<Legal,AllGenType>(self),
+            GenTypes::Captures => MoveGen::generate::<Legal,CapturesGenType>(self),
+            GenTypes::Quiets => MoveGen::generate::<Legal,QuietsGenType>(self),
+            GenTypes::QuietChecks => MoveGen::generate::<Legal,QuietChecksGenType>(self),
+            GenTypes::Evasions => MoveGen::generate::<Legal,EvasionsGenType>(self),
+            GenTypes::NonEvasions => MoveGen::generate::<Legal,NonEvasionsGenType>(self)
         }
     }
 
@@ -1020,6 +1020,7 @@ impl Board {
 
         // Set the Pinners and Blockers
         let mut white_pinners: BitBoard = BitBoard(0);
+        // TODO: NLL
         {
             board_state.blockers_king[Player::White as usize] = self.slider_blockers(
                 self.occupied_black(),
@@ -1030,6 +1031,7 @@ impl Board {
 
         board_state.pinners_king[Player::White as usize] = white_pinners;
 
+        // TODO: NLL
         let mut black_pinners: BitBoard = BitBoard(0);
         {
             board_state.blockers_king[Player::Black as usize] = self.slider_blockers(

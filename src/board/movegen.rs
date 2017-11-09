@@ -103,7 +103,7 @@ impl<'a> MoveGen<'a> {
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
             movelist: Vec::with_capacity(DEFAULT_MOVES_LENGTH),
-            board: &chessboard,
+            board: chessboard,
             magic: chessboard.magic_helper,
             occ: chessboard.get_occupied(),
             us_occ: chessboard.get_occupied_player(chessboard.turn()),
@@ -114,8 +114,8 @@ impl<'a> MoveGen<'a> {
     /// Returns vector of all moves for a given board, Legality & GenType.
     pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> Vec<BitMove> {
         match chessboard.turn() {
-            Player::White => MoveGen::generate_helper::<L,G, WhiteType>(&chessboard),
-            Player::Black => MoveGen::generate_helper::<L,G, BlackType>(&chessboard)
+            Player::White => MoveGen::generate_helper::<L,G, WhiteType>(chessboard),
+            Player::Black => MoveGen::generate_helper::<L,G, BlackType>(chessboard)
         }
     }
 

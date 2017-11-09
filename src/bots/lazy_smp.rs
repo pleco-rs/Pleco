@@ -87,7 +87,6 @@ impl PartialEq for RootMove {
 }
 
 
-
 impl RootMove {
     pub fn new(bit_move: BitMove) -> Self {
         RootMove {
@@ -353,7 +352,7 @@ impl LazySMPSearcher {
         let nodes = Arc::new(AtomicU64::new(0));
         let cond_var = Arc::new((Mutex::new(false), Condvar::new()));
 
-        let root_moves: Vec<RootMove> = board.generate_moves().into_iter().map(|m| RootMove::new(m)).collect();
+        let root_moves: Vec<RootMove> = board.generate_moves().into_iter().map( RootMove::new).collect();
 
 
         let mut all_moves = Vec::with_capacity(num_threads);
@@ -361,12 +360,12 @@ impl LazySMPSearcher {
         let mut threads = Vec::with_capacity(num_threads);
 
         let main_thread_moves = Arc::new(RwLock::new(root_moves.clone()));
-        all_moves.push(main_thread_moves.clone()); // index 0, aka the main thread
+        all_moves.push(Arc::clone(&main_thread_moves)); // index 0, aka the main thread
 
         for x in 1..num_threads {
             let builder = thread::Builder::new();
             let shared_moves = Arc::new(RwLock::new(root_moves.clone()));
-            all_moves.push(shared_moves.clone());
+            all_moves.push(Arc::clone(&shared_moves));
 
             let new_thread = Thread {
                 board: board.parallel_clone(),
@@ -401,15 +400,14 @@ impl LazySMPSearcher {
             limit: UCILimit::Infinite,
         };
 
-        let lazy_smp = LazySMPSearcher {
+        LazySMPSearcher {
             board: board,
             gui_stop: stop,
             cond_var: cond_var,
             all_moves: all_moves,
             threads: threads,
             main_thread: main_thread,
-        };
-        lazy_smp
+        }
     }
 
     pub fn start_searching(&mut self, limit: UCILimit, use_stdout: bool) -> BitMove {
@@ -430,7 +428,7 @@ impl LazySMPSearcher {
 
         // get cond_var and notify the threads to wake up
         {
-            let &(ref lock, ref cvar) = &*(self.cond_var.clone());
+            let &(ref lock, ref cvar) = &*(Arc::clone(&self.cond_var));
             let mut started = lock.lock().unwrap();
             *started = true;
             cvar.notify_all();
@@ -447,13 +445,13 @@ impl LazySMPSearcher {
         }
 
         let mut best_root_move: RootMove = {
-            self.main_thread.root_moves.read().unwrap().get(0).unwrap().clone()
+            *self.main_thread.root_moves.read().unwrap().get(0).unwrap()
         };
 
 
 
         // Find out if there is a better found move
-        for thread_moves in self.all_moves.iter() {
+        for thread_moves in &self.all_moves {
             let root_move: RootMove = *thread_moves.read().unwrap().get(0).unwrap();
             let depth_diff = root_move.depth_reached as i16 - best_root_move.depth_reached as i16;
             let value_diff = root_move.score as i16 - best_root_move.score as i16;

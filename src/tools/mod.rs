@@ -4,9 +4,6 @@ pub mod prng;
 pub mod tt;
 pub mod timer;
 
-use board::Board;
-use engine::Searcher;
-
 
 use bot_prelude::{RandomBot,JamboreeSearcher,IterativeSearcher};
 
@@ -73,12 +70,12 @@ pub static STANDARD_FEN_MATE_STALEMATE: [&'static str; 4] = [
 lazy_static! {
     pub static ref ALL_FENS: Vec<&'static str> = {
         let mut vec = Vec::new();
-        for fen in STANDARD_FENS_START_POS.iter() {vec.push(*fen); }
-        for fen in STANDARD_FENS_MIDDLE_POS.iter() {vec.push(*fen); }
-        for fen in STANDARD_FENS_5_PIECE_POS.iter() {vec.push(*fen); }
-        for fen in STANDARD_FENS_6_PIECE_POS.iter() {vec.push(*fen); }
-        for fen in STANDARD_FEN_7_PIECE_POS.iter() {vec.push(*fen); }
-        for fen in STANDARD_FEN_MATE_STALEMATE.iter() {vec.push(*fen); }
+        for fen in &STANDARD_FENS_START_POS {vec.push(*fen); }
+        for fen in &STANDARD_FENS_MIDDLE_POS {vec.push(*fen); }
+        for fen in &STANDARD_FENS_5_PIECE_POS {vec.push(*fen); }
+        for fen in &STANDARD_FENS_6_PIECE_POS {vec.push(*fen); }
+        for fen in &STANDARD_FEN_7_PIECE_POS {vec.push(*fen); }
+        for fen in &STANDARD_FEN_MATE_STALEMATE {vec.push(*fen); }
         vec
     };
 }
@@ -95,67 +92,7 @@ lazy_static! {
 //    }
 //}
 
-// TODO: make it use PseudoRandomNumGen
 
-fn gen_random_fens() {
-    let mut b = Board::default();
-    println!("[");
-    println!("\"{}\",", b.get_fen());
-
-    let quota = 4;
-
-    let max = 200;
-    let mut i = 0;
-
-    let beginning_count = 0;
-    let mut middle_count = 0;
-    let mut end_count = 0;
-
-    while beginning_count + middle_count + end_count <= (quota * 3) - 1 {
-        if i == 0 {
-            let mov = RandomBot::best_move_depth(b.shallow_clone(),  1);
-            b.apply_move(mov);
-            let mov = RandomBot::best_move_depth(b.shallow_clone(),  1);
-            b.apply_move(mov);
-        }
-        if b.checkmate() || i > max {
-            if beginning_count + middle_count + end_count > quota * 3 {
-                i = max;
-            } else {
-                i = 0;
-                b = Board::default();
-            }
-        } else {
-            if i % 11 == 9 {
-                let mov = RandomBot::best_move_depth(b.shallow_clone(),  1);
-                b.apply_move(mov);
-            } else if i % 2 == 0 {
-                let mov =
-                    JamboreeSearcher::best_move_depth(b.shallow_clone(),  5);
-                b.apply_move(mov);
-            } else {
-                let mov = IterativeSearcher::best_move_depth(b.shallow_clone(),  5);
-                b.apply_move(mov);
-            }
-            i += 1;
-        }
-
-        if b.zobrist() % 23 == 11 && b.moves_played() > 7 {
-            if b.count_all_pieces() < 13 && end_count < quota {
-                println!("\"{}\",", b.get_fen());
-                end_count += 1;
-            } else if b.count_all_pieces() < 24 && middle_count < quota {
-                println!("\"{}\",", b.get_fen());
-                middle_count += 1;
-            } else if beginning_count < quota {
-                println!("\"{}\",", b.get_fen());
-                middle_count += 1;
-            }
-        }
-    }
-
-    println!("]");
-}
 // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 // https://chess.stackexchange.com/questions/1482/how-to-know-when-a-fen-position-is-legal
 // TODO: Finish
