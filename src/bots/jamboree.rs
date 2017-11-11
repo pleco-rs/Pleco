@@ -1,24 +1,14 @@
 use board::*;
-use tools::timer::Timer;
 use core::piece_move::*;
-use engine::{Searcher,UCILimit};
 use board::eval::*;
+use super::{BestMove,eval_board};
+
 use rayon;
 
 #[allow(unused_imports)]
 use test::Bencher;
 #[allow(unused_imports)]
 use test;
-
-
-use super::super::BestMove;
-
-
-
-pub struct JamboreeSearcher {
-    board: Board,
-    timer: Timer,
-}
 
 
 const MAX_PLY: u16 = 5;
@@ -29,22 +19,7 @@ const DIVISOR_SEQ: usize = 4;
 // depth: depth from given
 // half_moves: total moves
 
-impl Searcher for JamboreeSearcher {
-    fn name() -> &'static str {
-        "Jamboree Searcher"
-    }
-
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        let alpha = NEG_INFINITY;
-        let beta = INFINITY;
-        jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)
-            .best_move
-            .unwrap()
-    }
-}
-
-fn jamboree(
+pub fn jamboree(
     board: &mut Board,
     mut alpha: i16,
     beta: i16,
@@ -196,66 +171,3 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         score: alpha,
     }
 }
-
-fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval_low(board))
-}
-
-
-
-//
-//
-//#[bench]
-//fn bench_bot_ply_3__jamboree_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}
-//
-//#[bench]
-//fn bench_bot_ply_4__jamboree_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),4);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}
-
-//
-//#[bench]
-//fn bench_bot_ply_5__jamboree_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = JamboreeSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),5);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}

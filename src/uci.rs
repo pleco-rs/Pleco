@@ -2,29 +2,19 @@
 
 use engine::{UCILimit,UCISearcher};
 use board::Board;
-use bots::lazy_smp::LazySMPSearcher;
+use pleco_searcher::lazy_smp::PlecoSearcher;
 use tools::timer::Timer;
 use core::piece_move::BitMove;
+
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-
 use std::thread;
-
 use std::io::{self};
-
-/// commands
-///
-/// uci
-///     -> Switches to UCI Mode
-///
-///
-///
-///
 
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
-pub static VERSION: &str = "0.1.1";
+pub static VERSION: &str = "0.1.8";
 
 pub static HELP_MSG: &str =
     "usage: arg_name
@@ -103,7 +93,7 @@ fn uci() {
             "go" => {
                 stop_searching.store(false, Ordering::Relaxed);
                 let limit = parse_limit(args_clone);
-                let mut searcher = LazySMPSearcher::setup(board.shallow_clone(), Arc::clone(&stop_searching));
+                let mut searcher = PlecoSearcher::setup(board.shallow_clone(), Arc::clone(&stop_searching));
                 thread::spawn(move || {
                     searcher.uci_go(limit, true)
                 });
@@ -118,15 +108,6 @@ fn uci() {
         args.clear()
     }
 }
-
-fn mid_search_loop(board: &mut Board, limit: UCILimit, stop: Arc<AtomicBool>) {
-    stop.store(false, Ordering::Relaxed);
-    let mut searcher = LazySMPSearcher::setup(board.shallow_clone(), Arc::clone(&stop));
-    thread::spawn(move || {
-        searcher.uci_go(limit, true)
-    });
-}
-
 
 fn parse_board_position(tokens: Vec<String>) -> Board {
     let mut token_stack = tokens.clone();

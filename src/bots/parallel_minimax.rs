@@ -1,8 +1,8 @@
 use board::*;
-use tools::timer::Timer;
 use core::piece_move::*;
-use engine::{Searcher,UCILimit};
 use board::eval::*;
+use super::{BestMove,eval_board};
+
 use rayon;
 
 #[allow(unused_imports)]
@@ -10,15 +10,6 @@ use test::Bencher;
 #[allow(unused_imports)]
 use test;
 
-use super::super::BestMove;
-
-
-
-
-pub struct ParallelSearcher {
-    board: Board,
-    timer: Timer,
-}
 
 const MAX_PLY: u16 = 5;
 const DIVIDE_CUTOFF: usize = 8;
@@ -26,20 +17,7 @@ const DIVIDE_CUTOFF: usize = 8;
 // depth: depth from given
 // half_moves: total moves
 
-impl Searcher for ParallelSearcher {
-    fn name() -> &'static str {
-        "Parallel Searcher"
-    }
-
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        parallel_minimax(&mut board.shallow_clone(),  max_depth)
-            .best_move
-            .unwrap()
-    }
-}
-
-fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
+pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     if board.depth() == max_depth {
         return eval_board(board);
     }
@@ -90,26 +68,3 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
         }
     }
 }
-
-fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval_low(board))
-}
-
-//
-//#[bench]
-//fn bench_bot_ply_3_parallel_bot(b: &mut Bencher) {
-//    use templates::TEST_FENS;
-//    b.iter(|| {
-//        let mut b: Board = test::black_box(Board::default());
-//        let iter = TEST_FENS.len();
-//        let mut i = 0;
-//        (0..iter).fold(0, |a: u64, c| {
-//            //            println!("{}",TEST_FENS[i]);
-//            let mut b: Board = test::black_box(Board::new_from_fen(TEST_FENS[i]));
-//            let mov = ParallelSearcher::best_move_depth(b.shallow_clone(),&timer::Timer::new(20),3);
-//            b.apply_move(mov);
-//            i += 1;
-//            a ^ (b.zobrist()) }
-//        )
-//    })
-//}

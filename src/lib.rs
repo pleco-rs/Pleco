@@ -49,6 +49,7 @@ pub mod uci;
 
 pub mod bots;
 pub mod bot_prelude;
+pub mod pleco_searcher;
 
 #[doc(no_inline)]
 pub use board::Board;

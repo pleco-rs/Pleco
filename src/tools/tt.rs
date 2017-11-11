@@ -16,6 +16,7 @@ use core::piece_move::BitMove;
 //
 //
 
+// TODO: tt_bench_single_thread_insert* had a significant slowdown in Travis #192
 
 pub type Key = u64;
 
@@ -157,13 +158,16 @@ pub struct TT {
 impl TT {
 
     /// Creates new with a size of around 'mb_size'. Actual size is the nearest power
-    /// of 2 times the size of a Cluster.
+    /// of 2 times the size of a Cluster rounded down.
     ///
     /// # Panics
     ///
     /// mb_size should be > 0, or else a panic will occur
     pub fn new(mb_size: usize) -> Self {
-        TT::new_num_clusters((mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>())
+        assert!(mb_size > 0);
+        let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
+        num_clusters = num_clusters.next_power_of_two() / 2;
+        TT::new_num_clusters(num_clusters)
     }
 
     /// Creates new TT rounded up to the nearest power of two number of entries.
@@ -227,15 +231,16 @@ impl TT {
         self.resize(size.next_power_of_two());
     }
 
-    /// Re-sizes to the the mb_size number of megabytes, rounded up for power of 2
+    /// Re-sizes to the the mb_size number of megabytes, rounded down for power of 2
     /// number of clusters. Returns the actual size.
     ///
     /// # Panic
     ///
     /// mb_size must be greater then 0
     pub unsafe fn resize_to_megabytes(&self, mb_size: usize) -> usize {
+        assert!(mb_size > 0);
         let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
-        num_clusters = num_clusters.next_power_of_two();
+        num_clusters = num_clusters.next_power_of_two() / 2;
         self.resize(num_clusters);
         self.size_megabytes()
     }
@@ -325,6 +330,7 @@ impl TT {
     }
 
     /// Returns the cluster of a given key.
+    #[inline]
     fn cluster(&self, key: Key) -> *mut Cluster {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
         unsafe {

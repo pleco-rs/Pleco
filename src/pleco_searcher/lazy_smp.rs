@@ -26,7 +26,7 @@ static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 static mut LIMIT: UCILimit = UCILimit::Infinite;
 
 lazy_static! {
-    pub static ref TT_TABLE: TT = TT::new(1000);
+    pub static ref TT_TABLE: TT = TT::new(256);
 }
 
 trait PVNode {
@@ -334,7 +334,7 @@ fn correct_bound(tt_value: i16, beta: i16, bound: NodeBound) -> bool {
 }
 
 
-pub struct LazySMPSearcher {
+pub struct PlecoSearcher {
     board: Board,
     gui_stop: Arc<AtomicBool>,
     cond_var: Arc<(Mutex<bool>,Condvar)>,
@@ -345,7 +345,7 @@ pub struct LazySMPSearcher {
 
 const DEFAULT_TT_CAP: usize = 100000000;
 
-impl LazySMPSearcher {
+impl PlecoSearcher {
     pub fn setup(board: Board, stop: Arc<AtomicBool>) -> Self {
         let num_threads = max(num_cpus::get(),1);
 
@@ -400,7 +400,7 @@ impl LazySMPSearcher {
             limit: UCILimit::Infinite,
         };
 
-        LazySMPSearcher {
+        PlecoSearcher {
             board: board,
             gui_stop: stop,
             cond_var: cond_var,
@@ -422,9 +422,7 @@ impl LazySMPSearcher {
         }
 
         // Set the global limit
-        unsafe {
-            LIMIT = limit;
-        }
+        unsafe { LIMIT = limit; }
 
         // get cond_var and notify the threads to wake up
         {
@@ -432,7 +430,6 @@ impl LazySMPSearcher {
             let mut started = lock.lock().unwrap();
             *started = true;
             cvar.notify_all();
-
         }
 
         // Main thread needs to start searching
@@ -474,7 +471,7 @@ impl LazySMPSearcher {
     }
 }
 
-impl Drop for LazySMPSearcher {
+impl Drop for PlecoSearcher {
     fn drop(&mut self) {
         while !self.threads.is_empty() {
             let thread_handle = self.threads.pop().unwrap();
@@ -486,13 +483,13 @@ impl Drop for LazySMPSearcher {
 
 
 
-impl Searcher for LazySMPSearcher {
+impl Searcher for PlecoSearcher {
     fn name() -> &'static str {
         "Lazy SMP Searcher"
     }
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let mut searcher = LazySMPSearcher::setup(board,Arc::new(AtomicBool::new(false)));
+        let mut searcher = PlecoSearcher::setup(board, Arc::new(AtomicBool::new(false)));
         searcher.start_searching(limit, false)
     }
 }
@@ -502,9 +499,9 @@ fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
     s
 }
 
-impl UCISearcher for LazySMPSearcher {
+impl UCISearcher for PlecoSearcher {
     fn uci_setup(board: Board, stop: Arc<AtomicBool>) -> Self {
-        LazySMPSearcher::setup(board,stop)
+        PlecoSearcher::setup(board, stop)
     }
 
     fn uci_go(&mut self, limits: UCILimit, _use_stdout: bool) -> BitMove {

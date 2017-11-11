@@ -1,7 +1,5 @@
 use board::*;
-use tools::timer::Timer;
 use core::piece_move::*;
-use engine::{Searcher,UCILimit};
 use board::eval::*;
 
 #[allow(unused_imports)]
@@ -9,33 +7,12 @@ use test::Bencher;
 #[allow(unused_imports)]
 use test;
 
-use super::super::BestMove;
+use super::{BestMove,eval_board};
 
 
 const MAX_PLY: u16 = 5;
 
-
-pub struct AlphaBetaBot {
-    board: Board,
-    timer: Timer,
-}
-
-impl Searcher for AlphaBetaBot {
-    fn name() -> &'static str {
-        "AlphaBeta Searcher"
-    }
-
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        let alpha = NEG_INFINITY;
-        let beta = INFINITY;
-        alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
-            .best_move
-            .unwrap()
-    }
-}
-
-fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
+pub fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
 
     if board.depth() == max_depth {
         return eval_board(board);
@@ -71,8 +48,4 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
         best_move: best_move,
         score: alpha,
     }
-}
-
-fn eval_board(board: &mut Board) -> BestMove {
-    BestMove::new(Eval::eval_low(board))
 }

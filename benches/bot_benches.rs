@@ -27,7 +27,7 @@ lazy_static! {
 fn _4_ply_minimax(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
-            black_box(SimpleBot::best_move_depth(board.shallow_clone(),4));
+            black_box(MiniMaxSearcher::best_move_depth(board.shallow_clone(), 4));
         }
     })
 }
@@ -36,7 +36,7 @@ fn _4_ply_minimax(b: &mut Bencher) {
 fn _4_ply_parallel_minimax(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
-            black_box(ParallelSearcher::best_move_depth(board.shallow_clone(),4));
+            black_box(ParallelMiniMaxSearcher::best_move_depth(board.shallow_clone(), 4));
         }
     })
 }
@@ -45,7 +45,7 @@ fn _4_ply_parallel_minimax(b: &mut Bencher) {
 fn _4_ply_alpha_beta(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
-            black_box(AlphaBetaBot::best_move_depth(board.shallow_clone(),4));
+            black_box(AlphaBetaSearcher::best_move_depth(board.shallow_clone(), 4));
         }
     })
 }

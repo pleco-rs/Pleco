@@ -4,10 +4,6 @@ pub mod prng;
 pub mod tt;
 pub mod timer;
 
-
-use bot_prelude::{RandomBot,JamboreeSearcher,IterativeSearcher};
-
-
 pub const OPENING_POS_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 pub static STANDARD_FENS_START_POS: [&'static str; 1] = [OPENING_POS_FEN];
