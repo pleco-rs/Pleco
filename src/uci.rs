@@ -1,6 +1,6 @@
 //! Module for defining and implenting the UCI (Universal Chess Interface) protocol.
 
-use engine::{UCILimit,UCISearcher};
+use engine::UCILimit;
 use board::Board;
 use pleco_searcher::lazy_smp::PlecoSearcher;
 use tools::timer::Timer;

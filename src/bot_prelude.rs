@@ -9,4 +9,4 @@ pub use bots::IterativeSearcher;
 
 pub use pleco_searcher::lazy_smp::PlecoSearcher;
 
-pub use engine::{Searcher,UCISearcher};
+pub use engine::Searcher;

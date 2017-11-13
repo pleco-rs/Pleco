@@ -10,22 +10,15 @@ use test::Bencher;
 #[allow(unused_imports)]
 use test;
 
-
-const MAX_PLY: u16 = 5;
-
 const DIVIDE_CUTOFF: usize = 5;
 const DIVISOR_SEQ: usize = 4;
 
 // depth: depth from given
 // half_moves: total moves
 
-pub fn jamboree(
-    board: &mut Board,
-    mut alpha: i16,
-    beta: i16,
-    max_depth: u16,
-    plys_seq: u16,
-) -> BestMove {
+pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
+                max_depth: u16, plys_seq: u16) -> BestMove
+{
     assert!(alpha <= beta);
     if board.depth() >= max_depth {
         return eval_board(board);

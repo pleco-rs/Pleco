@@ -7,9 +7,6 @@ use tools::timer::Timer;
 use board::Board;
 use core::Player;
 
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
-
 // TODO: clean this up
 
 /// Trait that defines an object that can play chess
@@ -25,14 +22,6 @@ pub trait Searcher {
         Self: Sized {
         Self::best_move(board, UCILimit::Depth(max_depth))
     }
-}
-
-/// Trait that defines an Object that can play chess and respond to the
-/// uci (Universal Chess Interface) protocol.
-pub trait UCISearcher: Searcher {
-    fn uci_setup(board: Board, stop: Arc<AtomicBool>) -> Self where Self: Sized;
-
-    fn uci_go(&mut self, limits: UCILimit, use_stdout: bool) -> BitMove;
 }
 
 

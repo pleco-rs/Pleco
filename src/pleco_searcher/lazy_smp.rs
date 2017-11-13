@@ -19,6 +19,9 @@ const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 const THREAD_DIST: usize = 20;
 
+// TODO: Allow setting of threads
+// TODO: allow setting of TTHash size
+
 //                                      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
 static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4];
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
@@ -441,11 +444,7 @@ impl PlecoSearcher {
             self.threads.pop().unwrap().join().unwrap();
         }
 
-        let mut best_root_move: RootMove = {
-            *self.main_thread.root_moves.read().unwrap().get(0).unwrap()
-        };
-
-
+        let mut best_root_move: RootMove = { *self.main_thread.root_moves.read().unwrap().get(0).unwrap() };
 
         // Find out if there is a better found move
         for thread_moves in &self.all_moves {
@@ -468,6 +467,16 @@ impl PlecoSearcher {
 
     pub fn perft(depth: u16) -> u64 {
         unimplemented!()
+    }
+}
+
+impl PlecoSearcher {
+    pub fn uci_setup(board: Board, stop: Arc<AtomicBool>) -> Self {
+        PlecoSearcher::setup(board, stop)
+    }
+
+    pub fn uci_go(&mut self, limits: UCILimit, _use_stdout: bool) -> BitMove {
+        self.start_searching(limits, true)
     }
 }
 
@@ -497,14 +506,4 @@ impl Searcher for PlecoSearcher {
 fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
     let s: [ThreadStack; THREAD_STACK_SIZE] = unsafe { mem::zeroed() };
     s
-}
-
-impl UCISearcher for PlecoSearcher {
-    fn uci_setup(board: Board, stop: Arc<AtomicBool>) -> Self {
-        PlecoSearcher::setup(board, stop)
-    }
-
-    fn uci_go(&mut self, limits: UCILimit, _use_stdout: bool) -> BitMove {
-        self.start_searching(limits, true)
-    }
 }
