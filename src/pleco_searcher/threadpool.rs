@@ -27,7 +27,9 @@ pub struct ThreadPool {
 }
 
 impl ThreadPool {
-    pub fn setup(board: Board, stop: Arc<AtomicBool>) -> Self {
+    pub fn setup(board: Board) -> (ThreadPool, Arc<AtomicBool>) {
+        let stop = Arc::new(AtomicBool::new(false));
+
         let num_threads = max(num_cpus::get(),1);
 
         let nodes = Arc::new(AtomicU64::new(0));
@@ -58,14 +60,15 @@ impl ThreadPool {
         }
 
         let main_thread = Thread::new(&board, main_thread_moves, 0, &nodes, &stop, &cond_var);
-        ThreadPool {
-            gui_stop: stop,
+        (ThreadPool {
+            gui_stop: Arc::clone(&stop),
             cond_var: cond_var,
             all_moves: all_moves,
             threads: threads,
-            main_thread: main_thread,
-        }
+            main_thread: main_thread, },
+         stop)
     }
+
 
     pub fn start_searching(&mut self, limit: UCILimit, use_stdout: bool) -> BitMove {
         // Make sure there is no stop command

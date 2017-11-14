@@ -246,6 +246,7 @@ impl TT {
     }
 
     // resizes the tt to a certain type
+    // TODO: Modify self.cap
     unsafe fn resize(&self, size: usize) {
         assert_eq!(size.count_ones(), 1);
         assert!(size > 0);
@@ -254,7 +255,7 @@ impl TT {
     }
 
     /// Clears the entire TranspositionTable
-    pub unsafe fn clear(&mut self) {
+    pub unsafe fn clear(&self) {
         let size = self.cap;
         self.resize(size);
     }
