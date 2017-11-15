@@ -70,7 +70,7 @@ impl ThreadPool {
     }
 
 
-    pub fn start_searching(&mut self, limit: UCILimit, use_stdout: bool) -> BitMove {
+    pub fn go(&mut self, limit: UCILimit, use_stdout: bool) -> BitMove {
         // Make sure there is no stop command
         assert!(!(self.gui_stop.load(Ordering::Relaxed)));
 

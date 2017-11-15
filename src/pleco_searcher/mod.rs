@@ -31,18 +31,12 @@ pub struct _PlecoSearcher {
 
 impl _PlecoSearcher {
 
-    pub fn tt_size(mb: usize) {
-        unimplemented!()
-    }
-
     pub fn clear_tt(&mut self) {
         unsafe {TT_TABLE.clear() };
     }
 
     pub fn apply_option(&mut self, name: &str) {
-
+        unimplemented!()
     }
-
-
 }
 
