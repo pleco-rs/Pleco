@@ -2,7 +2,7 @@
 
 use engine::UCILimit;
 use board::Board;
-use pleco_searcher::lazy_smp::PlecoSearcher;
+use pleco_searcher::threadpool::ThreadPool;
 use tools::timer::Timer;
 use core::piece_move::BitMove;
 
@@ -39,7 +39,7 @@ pub fn console_loop(mut args: Vec<String>) {
         let command: &str = args_clone.first().unwrap();
 
         if command == "uci" {
-            uci();
+//            uci();
             break 'main;
         } else if command == "q" || command == "quit" {
             break 'main
@@ -57,57 +57,57 @@ pub fn console_loop(mut args: Vec<String>) {
 
 
 
-fn uci() {
-    println!("id name {}",ID_NAME);
-    println!("id author {}",ID_AUTHORS);
-    println!("uciok");
-
-    #[allow(unused_mut)]
-    let mut _is_debug: bool = false;
-    let mut board = Board::default();
-    let stop_searching = Arc::new(AtomicBool::new(false));
-
-    let mut args: Vec<String> = Vec::new();
-    'uci: loop {
-        while args.is_empty() {
-            let mut input = String::new();
-            let _result = io::stdin().read_line(&mut input);
-            args = input.split_whitespace().map(|str| str.to_owned()).collect();
-        }
-        let args_clone = args.clone();
-        let command: &str = &args_clone[0].clone();
-
-        match command {
-            "isready" => {
-                println!("readyok");
-            },
-            "quit" => {
-                break 'uci;
-            },
-            "ucinewgame" => {
-                // clear hash table
-            },
-            "position" => {
-                board = parse_board_position(args_clone);
-            },
-            "go" => {
-                stop_searching.store(false, Ordering::Relaxed);
-                let limit = parse_limit(args_clone);
-                let mut searcher = PlecoSearcher::setup(board.shallow_clone(), Arc::clone(&stop_searching));
-                thread::spawn(move || {
-                    searcher.uci_go(limit, true)
-                });
-            },
-            "stop" => {
-                stop_searching.store(true, Ordering::Relaxed);
-            },
-            _ => {
-                println!("command not recognized");
-            }
-        }
-        args.clear()
-    }
-}
+//fn uci() {
+//    println!("id name {}",ID_NAME);
+//    println!("id author {}",ID_AUTHORS);
+//    println!("uciok");
+//
+//    #[allow(unused_mut)]
+//    let mut _is_debug: bool = false;
+//    let mut board = Board::default();
+//    let stop_searching = Arc::new(AtomicBool::new(false));
+//
+//    let mut args: Vec<String> = Vec::new();
+//    'uci: loop {
+//        while args.is_empty() {
+//            let mut input = String::new();
+//            let _result = io::stdin().read_line(&mut input);
+//            args = input.split_whitespace().map(|str| str.to_owned()).collect();
+//        }
+//        let args_clone = args.clone();
+//        let command: &str = &args_clone[0].clone();
+//
+//        match command {
+//            "isready" => {
+//                println!("readyok");
+//            },
+//            "quit" => {
+//                break 'uci;
+//            },
+//            "ucinewgame" => {
+//                // clear hash table
+//            },
+//            "position" => {
+//                board = parse_board_position(args_clone);
+//            },
+//            "go" => {
+//                stop_searching.store(false, Ordering::Relaxed);
+//                let limit = parse_limit(args_clone);
+//                let mut searcher = ThreadPool::setup(board.shallow_clone(), Arc::clone(&stop_searching));
+//                thread::spawn(move || {
+//                    searcher.uci_go(limit, true)
+//                });
+//            },
+//            "stop" => {
+//                stop_searching.store(true, Ordering::Relaxed);
+//            },
+//            _ => {
+//                println!("command not recognized");
+//            }
+//        }
+//        args.clear()
+//    }
+//}
 
 fn parse_board_position(tokens: Vec<String>) -> Board {
     let mut token_stack = tokens.clone();

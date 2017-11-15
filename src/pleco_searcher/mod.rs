@@ -1,4 +1,3 @@
-pub mod lazy_smp;
 pub mod search;
 pub mod threadpool;
 pub mod misc;
@@ -13,6 +12,7 @@ use self::options::{UciOption,AllOptions};
 
 const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
+pub const MAX_THREADS: usize = 256;
 
 lazy_static! {
     pub static ref TT_TABLE: TT = TT::new(256);
