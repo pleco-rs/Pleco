@@ -2,6 +2,7 @@ pub mod search;
 pub mod threadpool;
 pub mod misc;
 pub mod options;
+pub mod threads_test;
 
 use engine::UCILimit;
 use tools::tt::TT;

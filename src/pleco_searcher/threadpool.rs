@@ -18,38 +18,42 @@ const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 const THREAD_DIST: usize = 20;
 
+
+
 pub struct ThreadPool {
     gui_stop: Arc<AtomicBool>,
     cond_var: Arc<(Mutex<bool>,Condvar)>,
     all_moves: Vec<Arc<RwLock<Vec<RootMove>>>>,
     threads: Vec<JoinHandle<()>>,
-    main_thread: Thread,
+    board: Arc<RwLock<Option<Board>>>,
+    limit: Arc<RwLock<Option<UCILimit>>>,
+    main_thread: Thread
 }
 
 impl ThreadPool {
-    pub fn setup(board: Board) -> (ThreadPool, Arc<AtomicBool>) {
+    pub fn setup(num_threads: usize) -> (ThreadPool, Arc<AtomicBool>) {
         let stop = Arc::new(AtomicBool::new(false));
-
-        let num_threads = max(num_cpus::get(),1);
 
         let nodes = Arc::new(AtomicU64::new(0));
         let cond_var = Arc::new((Mutex::new(false), Condvar::new()));
 
-        let root_moves: Vec<RootMove> = board.generate_moves().into_iter().map( RootMove::new).collect();
-
+        let limit: Arc<RwLock<Option<UCILimit>>> = Arc::new(RwLock::new(None));
 
         let mut all_moves = Vec::with_capacity(num_threads);
         let mut threads = Vec::with_capacity(num_threads);
-
-        let main_thread_moves = Arc::new(RwLock::new(root_moves.clone()));
-        all_moves.push(Arc::clone(&main_thread_moves)); // index 0, aka the main thread
+        let self_board = Arc::new(RwLock::new(Option::None));
+        let main_thread_moves = Arc::new(RwLock::new(Vec::new()));
+        all_moves.push(Arc::clone(&main_thread_moves));
 
         for x in 1..num_threads {
             let builder = thread::Builder::new();
-            let shared_moves = Arc::new(RwLock::new(root_moves.clone()));
+            let shared_moves = Arc::new(RwLock::new(Vec::new()));
             all_moves.push(Arc::clone(&shared_moves));
 
-            let new_thread = Thread::new(&board, Arc::clone(&shared_moves), x, &nodes, &stop, &cond_var);
+            let new_thread = Thread::new(
+                Arc::clone(&self_board),
+                Arc::clone(&limit),
+            shared_moves, x, &nodes, &stop, &cond_var);
 
             let join_handle = builder.spawn(move || {
                 let mut current_thread = new_thread;
@@ -59,30 +63,44 @@ impl ThreadPool {
             threads.push(join_handle);
         }
 
-        let main_thread = Thread::new(&board, main_thread_moves, 0, &nodes, &stop, &cond_var);
+        let main_thread =  Thread::new(
+            Arc::clone(&self_board),
+            Arc::clone(&limit),
+            main_thread_moves, 0, &nodes, &stop, &cond_var);
+
+
         (ThreadPool {
             gui_stop: Arc::clone(&stop),
             cond_var: cond_var,
             all_moves: all_moves,
             threads: threads,
-            main_thread: main_thread, },
+            board: self_board,
+            limit: limit,
+            main_thread: main_thread},
          stop)
     }
 
 
-    pub fn go(&mut self, limit: UCILimit, use_stdout: bool) -> BitMove {
+    pub fn go(&mut self, board: Board, limit: UCILimit, use_stdout: bool) -> BitMove {
         // Make sure there is no stop command
         assert!(!(self.gui_stop.load(Ordering::Relaxed)));
 
-        // Check if Moves is empty
-        {
-            if self.main_thread.root_moves.read().unwrap().is_empty() {
-                return BitMove::null();
-            }
+        let root_moves: Vec<RootMove> = board.generate_moves().into_iter().map( RootMove::new).collect();
+        if root_moves.is_empty() {
+            return BitMove::null();
         }
 
-        // Set the global limit
-        unsafe { LIMIT = limit; }
+        for x in 0..self.all_moves.len() {
+            let mut m = self.all_moves[x].write().unwrap();
+            *m = root_moves.clone();
+        }
+
+        {
+            let mut b = self.board.write().unwrap();
+            *b = Some(board.shallow_clone());
+            let mut l = self.limit.write().unwrap();
+            *l = Some(limit);
+        }
 
         // get cond_var and notify the threads to wake up
         {
@@ -92,7 +110,6 @@ impl ThreadPool {
             cvar.notify_all();
         }
 
-        // Main thread needs to start searching
         self.main_thread.thread_search();
 
         // Make sure the remaining threads have finished.

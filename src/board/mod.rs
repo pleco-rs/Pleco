@@ -146,6 +146,12 @@ impl PartialEq for Board {
     }
 }
 
+impl Clone for Board {
+    fn clone(&self) -> Self {
+        self.shallow_clone()
+    }
+}
+
 impl Board {
     /// Constructs a board from the starting position
     ///

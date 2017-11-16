@@ -22,6 +22,8 @@ static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
 
 pub struct Thread {
+    pub board_ref: Arc<RwLock<Option<Board>>>,
+    pub limit_ref: Arc<RwLock<Option<UCILimit>>>,
     pub board: Board,
     pub root_moves: Arc<RwLock<Vec<RootMove>>>,
     pub id: usize,
@@ -34,11 +36,18 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn new(board: &Board, moves: Arc<RwLock<Vec<RootMove>>>, id: usize,
-    nodes: &Arc<AtomicU64>, stop: &Arc<AtomicBool>, cond_var: &Arc<(Mutex<bool>,Condvar)>)
+    pub fn new(board_ref: Arc<RwLock<Option<Board>>>,
+               limit_ref: Arc<RwLock<Option<UCILimit>>>,
+               moves: Arc<RwLock<Vec<RootMove>>>,
+               id: usize,
+               nodes: &Arc<AtomicU64>,
+               stop: &Arc<AtomicBool>,
+               cond_var: &Arc<(Mutex<bool>,Condvar)>)
         -> Thread {
         Thread {
-            board: board.parallel_clone(),
+            board_ref: board_ref,
+            limit_ref: limit_ref,
+            board: Board::default(),
             root_moves: moves,
             id: id,
             tt: &TT_TABLE,
@@ -68,9 +77,15 @@ impl Thread {
     }
 
     pub fn thread_search(&mut self) {
+        {
+            let l = self.limit_ref.read().unwrap().clone();
+            self.limit = l.unwrap();
+            let b = self.board_ref.read().unwrap().clone();
+            self.board = b.unwrap();
+        }
         self.shuffle_root_moves();
 
-        println!("info id {} start",self.id);
+        println!("info id {} start", self.id);
 
         let max_depth = if self.limit.is_depth() {
             self.limit.depth_limit()
