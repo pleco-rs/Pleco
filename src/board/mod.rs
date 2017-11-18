@@ -608,6 +608,11 @@ impl Board {
     /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
     /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
+        let gives_check: bool = self.gives_check(bit_move);
+        unsafe {self.apply_unknown_move(bit_move, gives_check)}
+    }
+
+    pub unsafe fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
 
         // TODO: investigate potention for SIMD in capturing moves
         //

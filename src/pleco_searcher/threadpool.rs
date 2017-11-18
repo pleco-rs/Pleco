@@ -20,7 +20,7 @@ const THREAD_DIST: usize = 20;
 
 
 
-pub struct ThreadPool {
+pub struct ThreadPoolOld {
     gui_stop: Arc<AtomicBool>,
     cond_var: Arc<(Mutex<bool>,Condvar)>,
     all_moves: Vec<Arc<RwLock<Vec<RootMove>>>>,
@@ -30,8 +30,8 @@ pub struct ThreadPool {
     main_thread: Thread
 }
 
-impl ThreadPool {
-    pub fn setup(num_threads: usize) -> (ThreadPool, Arc<AtomicBool>) {
+impl ThreadPoolOld {
+    pub fn setup(num_threads: usize) -> (ThreadPoolOld, Arc<AtomicBool>) {
         let stop = Arc::new(AtomicBool::new(false));
 
         let nodes = Arc::new(AtomicU64::new(0));
@@ -69,7 +69,7 @@ impl ThreadPool {
             main_thread_moves, 0, &nodes, &stop, &cond_var);
 
 
-        (ThreadPool {
+        (ThreadPoolOld {
             gui_stop: Arc::clone(&stop),
             cond_var: cond_var,
             all_moves: all_moves,
@@ -122,6 +122,7 @@ impl ThreadPool {
         // Find out if there is a better found move
         for thread_moves in &self.all_moves {
             let root_move: RootMove = *thread_moves.read().unwrap().get(0).unwrap();
+            println!("rootmove: val {} depth {}", root_move.score, root_move.depth_reached);
             let depth_diff = root_move.depth_reached as i16 - best_root_move.depth_reached as i16;
             let value_diff = root_move.score as i16 - best_root_move.score as i16;
 
@@ -144,7 +145,7 @@ impl ThreadPool {
 }
 
 
-impl Drop for ThreadPool {
+impl Drop for ThreadPoolOld {
     fn drop(&mut self) {
         while !self.threads.is_empty() {
             let thread_handle = self.threads.pop().unwrap();

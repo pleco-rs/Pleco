@@ -2,7 +2,7 @@
 
 use engine::UCILimit;
 use board::Board;
-use pleco_searcher::threadpool::ThreadPool;
+use pleco_searcher::threadpool::ThreadPoolOld;
 use tools::timer::Timer;
 use core::piece_move::BitMove;
 

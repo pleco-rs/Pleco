@@ -35,9 +35,9 @@ pub struct RootMove {
 // Moves with higher score for a higher depth are less
 impl Ord for RootMove {
     fn cmp(&self, other: &RootMove) -> CmpOrder {
-        let value_diff = self.score as i16 - other.score as i16;
+        let value_diff = self.score as i32 - other.score as i32;
         if value_diff > 0 {
-            let depth_diff = self.depth_reached as i16 - other.depth_reached as i16;
+            let depth_diff = self.depth_reached as i32 - other.depth_reached as i32;
             if depth_diff == 0 {
                 return CmpOrder::Equal;
             } else if depth_diff > 0 {
