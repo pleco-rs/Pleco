@@ -1,9 +1,7 @@
-pub mod search;
-pub mod threadpool;
 pub mod misc;
 pub mod options;
-pub mod threads_test;
-pub mod _thread_search;
+pub mod threads;
+pub mod thread_search;
 
 use engine::UCILimit;
 use tools::tt::TT;
@@ -12,7 +10,7 @@ use BitMove;
 use std::thread;
 
 use self::options::{UciOption,AllOptions};
-use self::threads_test::ThreadPool;
+use self::threads::ThreadPool;
 
 const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -65,14 +63,15 @@ impl _PlecoSearcher {
 mod tests {
 
     use super::*;
-    
+
+    #[test]
     pub fn testme() {
         {
             let mut s = _PlecoSearcher::init(true);
             let limit = UCILimit::Infinite;
             let board = Board::default();
             s.search(&board, &limit);
-            thread::sleep_ms(15000);
+            thread::sleep_ms(5000);
             s.stop_search();
         }
     }

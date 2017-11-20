@@ -1,6 +1,5 @@
 extern crate pleco;
 
-use pleco::uci::console_loop;
 use pleco::bot_prelude::{JamboreeSearcher,Searcher};
 use pleco::pleco_searcher::_PlecoSearcher;
 use pleco::{Board,BitMove};
@@ -29,7 +28,7 @@ fn main() {
             board.apply_move(mov);
         } else {
             s.search(&board, &UCILimit::Infinite);
-            thread::sleep_ms(10000);
+            thread::sleep_ms(7000);
             let mov = s.stop_search();
             board.apply_move(mov);
         }

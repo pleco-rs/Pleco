@@ -1,5 +1,5 @@
 use Board;
-use super::threads_test::Thread;
+use super::threads::Thread;
 use super::UCILimit;
 
 use rand::{Rng,self};
@@ -51,6 +51,8 @@ impl<'a> ThreadSearcher<'a> {
         let mut best_value: i16 = NEG_INFINITY;
         let mut alpha = NEG_INFINITY;
         let mut beta = INFINITY;
+
+        self.shuffle_root_moves();
 
         while !self.stop() && depth <= max_depth {
             if depth != start_ply {
@@ -120,7 +122,7 @@ impl<'a> ThreadSearcher<'a> {
 
         if !is_pv
             && tt_hit
-            && tt_entry.depth >= ply as u8 // TODO: Fix this hack
+            && tt_entry.depth >= max_depth as u8 // TODO: Fix this hack
             && tt_entry.best_move != BitMove::null()
             && tt_value != 0
             && correct_bound(tt_value, beta, tt_entry.node_type()) {
@@ -186,7 +188,12 @@ impl<'a> ThreadSearcher<'a> {
                 }
                 if at_root {
                     let mut moves = self.thread.root_moves.write().unwrap();
-                    moves.get_mut(i).unwrap().rollback_insert(value, max_depth);
+                    let rootmove: &mut RootMove = moves.get_mut(i).unwrap();
+                    if (i == 0 || value > alpha) {
+                        rootmove.rollback_insert(value, max_depth);
+                    } else {
+                        rootmove.score = NEG_INFINITY;
+                    }
                 }
 
                 if value > best_value {

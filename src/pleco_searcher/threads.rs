@@ -13,7 +13,7 @@ use core::piece_move::BitMove;
 use tools::tt::*;
 use engine::*;
 
-use super::_thread_search::ThreadSearcher;
+use super::thread_search::ThreadSearcher;
 use super::misc::*;
 use super::{LIMIT,TT_TABLE,THREAD_STACK_SIZE,MAX_PLY};
 
@@ -43,12 +43,14 @@ pub struct ThreadPool {
     all_thread_go: Arc<(Mutex<bool>,Condvar)>,
     thread_finished: Vec<Arc<AtomicBool>>,
     stop: Arc<AtomicBool>,
+    drop: Arc<AtomicBool>,
 }
 
 impl ThreadPool {
     pub fn setup(num_threads: usize, use_stdout: bool) -> Self {
         let pos_state: Arc<RwLock<Option<ThreadGo>>> = Arc::new(RwLock::new(None));
-        let stop= Arc::new(AtomicBool::new(false));
+        let stop = Arc::new(AtomicBool::new(false));
+        let drop = Arc::new(AtomicBool::new(false));
         let use_stdout = Arc::new(AtomicBool::new(use_stdout));
         let main_thread_go = Arc::new((Mutex::new(false), Condvar::new()));
         let all_thread_go = Arc::new((Mutex::new(false), Condvar::new()));
@@ -69,7 +71,9 @@ impl ThreadPool {
                             Arc::clone(&use_stdout),
                             Arc::clone(&stop),
                             Arc::clone(&thread_fin),
-                            Arc::clone(&pos_state), Arc::clone(&all_thread_go)
+                            Arc::clone(&drop),
+                            Arc::clone(&pos_state),
+                            Arc::clone(&all_thread_go)
             );
             let join_handle = builder.spawn(move || {
                 let mut current_thread = new_thread;
@@ -86,7 +90,10 @@ impl ThreadPool {
              0,
              Arc::clone(&use_stdout),
              Arc::clone(&stop),
-             Arc::clone(&main_thread_fin),Arc::clone(&pos_state), Arc::clone(&all_thread_go));
+             Arc::clone(&main_thread_fin),
+             Arc::clone(&drop),
+             Arc::clone(&pos_state),
+             Arc::clone(&all_thread_go));
 
         let builder = thread::Builder::new();
         let main_thread = MainThread {
@@ -112,7 +119,8 @@ impl ThreadPool {
             threads,
             all_thread_go,
             thread_finished: all_threads_finished,
-            stop
+            stop,
+            drop
         }
     }
 
@@ -162,14 +170,19 @@ pub struct MainThread {
 
 impl MainThread {
     pub fn main_idle_loop(&mut self) {
-        {
-            let &(ref lock, ref cvar) = &*(Arc::clone(&self.main_thread_go));
-            let mut started = lock.lock().unwrap();
-            while !*started {
-                started = cvar.wait(started).unwrap();
+        while(!self.thread.drop()) {
+            {
+                let &(ref lock, ref cvar) = &*(Arc::clone(&self.main_thread_go));
+                let mut started = lock.lock().unwrap();
+                while !*started {
+                    started = cvar.wait(started).unwrap();
+                }
+                if self.thread.drop() {
+                    return;
+                }
             }
+            self.go();
         }
-        self.go()
     }
 
     pub fn set_all_root_moves(&mut self, board: &Board) {
@@ -217,7 +230,6 @@ impl MainThread {
         for stop in self.all_stops.iter() {
             while(!stop.load(Ordering::Relaxed)) {}
         }
-        println!("Done waiting");
     }
 
     pub fn num_threads(&self) -> usize {
@@ -245,14 +257,14 @@ impl MainThread {
 
         // find best move
         let mut best_root_move: RootMove = self.thread_best_move(0);
-        println!("id: 0, value: {}, depth: {}", best_root_move.score, best_root_move.depth_reached);
+        println!("id: 0, value: {}, depth: {}, mov: {}", best_root_move.score, best_root_move.depth_reached, best_root_move.bit_move);
 
         for x in 1..self.num_threads() {
             let thread_move = self.thread_best_move(x);
             let depth_diff = thread_move.depth_reached as i16 - best_root_move.depth_reached as i16;
             let value_diff = thread_move.score as i16 - best_root_move.score as i16;
 
-            println!("id: {}, value: {}, depth: {}",x, thread_move.score, thread_move.depth_reached);
+            println!("id: {}, value: {}, depth: {}, mov: {}",x, thread_move.score, thread_move.depth_reached, thread_move.bit_move);
             // If it has a bigger value and greater or equal depth
             if value_diff > 0 && depth_diff >= 0 {
                 best_root_move = thread_move;
@@ -267,8 +279,6 @@ impl MainThread {
 
         // return to idle loop
         self.lock_self();
-
-        self.main_idle_loop();
     }
 }
 
@@ -279,6 +289,7 @@ pub struct Thread {
     pub use_stdout: Arc<AtomicBool>,
     pub stop: Arc<AtomicBool>,
     pub finished: Arc<AtomicBool>,
+    pub drop: Arc<AtomicBool>,
     pub pos_state: Arc<RwLock<Option<ThreadGo>>>,
     pub cond: Arc<(Mutex<bool>,Condvar)>,
     pub thread_stack: [ThreadStack; THREAD_STACK_SIZE],
@@ -290,6 +301,7 @@ impl Thread {
                use_stdout: Arc<AtomicBool>,
                stop: Arc<AtomicBool>,
                finished: Arc<AtomicBool>,
+               drop: Arc<AtomicBool>,
                pos_state: Arc<RwLock<Option<ThreadGo>>>,
                cond: Arc<(Mutex<bool>,Condvar)>, ) -> Self {
         Thread {
@@ -299,11 +311,16 @@ impl Thread {
             use_stdout,
             stop,
             finished,
+            drop,
             pos_state,
             cond,
             thread_stack:
             init_thread_stack()
         }
+    }
+
+    pub fn drop(&self) -> bool {
+        self.drop.load(Ordering::Relaxed)
     }
 
     pub fn retrieve_board(&self) -> Option<Board> {
@@ -319,14 +336,21 @@ impl Thread {
     }
 
     pub fn idle_loop(&mut self) {
-        {
-            let &(ref lock, ref cvar) = &*(Arc::clone(&self.cond));
-            let mut started = lock.lock().unwrap();
-            while !*started {
-                started = cvar.wait(started).unwrap();
+        while(!self.drop()){
+            {
+                println!("id {} idle loop", self.id);
+                let &(ref lock, ref cvar) = &*(Arc::clone(&self.cond));
+                let mut started = lock.lock().unwrap();
+                while !*started {
+                    started = cvar.wait(started).unwrap();
+                }
+                println!("id {} stop loop", self.id);
+                if self.drop() {
+                    return;
+                }
             }
+            self.go();
         }
-        self.go();
     }
 
     fn start_searching(&mut self, board: Board, limit: UCILimit) {
@@ -344,18 +368,35 @@ impl Thread {
         let limit = self.retrieve_limit().unwrap();
         self.start_searching(board, limit);
         self.finished.store(true, Ordering::Relaxed);
-        self.idle_loop();
     }
 }
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
+        // Store that we are dropping
+        self.drop.store(true, Ordering::Relaxed);
+
+        // Notify the main thread to wakeup and stop
+        {
+            let &(ref lock, ref cvar) = &*(Arc::clone(&self.main_thread_go));
+            let mut started = lock.lock().unwrap();
+            *started = true;
+            cvar.notify_all();
+        }
+
+        // Notify the other threads to wakeup and stop
+        {
+            let &(ref lock, ref cvar) = &*(Arc::clone(&self.all_thread_go));
+            let mut started = lock.lock().unwrap();
+            *started = true;
+            cvar.notify_all();
+        }
+
+        // Join all the handles
         while !self.threads.is_empty() {
             let thread_handle = self.threads.pop().unwrap();
             thread_handle.join().unwrap();
         }
-
-
         self.main_thread.take().unwrap().join().unwrap();
     }
 }
