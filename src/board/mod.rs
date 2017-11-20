@@ -2200,11 +2200,11 @@ mod tests {
     fn rand_board_gen_many() {
         let mut boards_1 = Board::random()
             .pseudo_random(222227835)
-            .many(25);
+            .many(5);
 
         let mut boards_2 = Board::random()
             .pseudo_random(222227835)
-            .many(25);
+            .many(5);
 
         assert_eq!(boards_1.len(),boards_2.len());
         while !boards_1.is_empty() {

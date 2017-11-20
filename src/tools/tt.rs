@@ -82,6 +82,7 @@ impl NodeTypeTimeBound {
 /// the score of that node, the type of Node, depth found, as well as a key uniquely defining
 /// the node.
 #[derive(Clone,PartialEq)]
+#[repr(C)]
 pub struct Entry {
     pub partial_key: u16,
     pub best_move: BitMove, // What was the best move found here?
@@ -138,6 +139,7 @@ impl Entry {
 
 // 30 bytes + 2 = 32 Bytes
 /// Structure containing multiple Entries all mapped to by the same zobrist key.
+#[repr(C)]
 pub struct Cluster {
     pub entry: [Entry; CLUSTER_SIZE],
     pub padding: [u8; 2],

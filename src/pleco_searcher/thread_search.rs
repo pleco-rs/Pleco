@@ -34,7 +34,9 @@ pub struct ThreadSearcher<'a> {
 
 impl<'a> ThreadSearcher<'a> {
     pub fn search_root(&mut self) {
-        println!("info id {} start", self.thread.id);
+        if self.use_stdout() {
+            println!("info id {} start", self.thread.id);
+        }
 
         let max_depth = if self.limit.is_depth() {
             self.limit.depth_limit()
@@ -45,29 +47,35 @@ impl<'a> ThreadSearcher<'a> {
         let start_ply: u16 = START_PLY[self.thread.id % THREAD_DIST];
         let skip_size: u16 = SKIP_SIZE[self.thread.id % THREAD_DIST];
         let mut depth: u16 = start_ply;
-        let mut delta = 31;
 
-        #[allow(unused_assignments)]
-        let mut best_value: i16 = NEG_INFINITY;
-        let mut alpha = NEG_INFINITY;
-        let mut beta = INFINITY;
+        let mut delta: i32 = NEG_INFINITY as i32;
+        let mut best_value: i32 = NEG_INFINITY as i32;
+        let mut alpha: i32 = NEG_INFINITY as i32;
+        let mut beta: i32 = INFINITY as i32;
 
         self.shuffle_root_moves();
 
         while !self.stop() && depth <= max_depth {
-            if depth != start_ply {
-                self.sort_root_moves();
-            }
+            self.roolback_root_moves();
 
             if depth >= 5 {
                 delta = 18;
-                alpha = best_value - delta;
-                beta = best_value + delta;
+                alpha = max(self.root_moves_prev_score() - delta, NEG_INFINITY as i32);
+                beta = min(self.root_moves_prev_score() + delta, INFINITY as i32);
             }
 
             'aspiration_window: loop {
+
                 best_value = self.search::<PV>(alpha, beta, depth);
+//                println!("Moves for alpha {} depth {}", alpha, depth);
+//                self.thread.root_moves.read().unwrap().iter().for_each(|m|
+//                    println!("Move: {} Score {} Prev {} Depth found {}", m.bit_move, m.score, m.prev_score, m.depth_reached));
+
                 self.sort_root_moves();
+
+//                println!("Sorted:");
+//                self.thread.root_moves.read().unwrap().iter().for_each(|m|
+//                    println!("Move: {} Score {} ", m.bit_move, m.score));
 
                 if self.stop() {
                     break 'aspiration_window;
@@ -75,35 +83,27 @@ impl<'a> ThreadSearcher<'a> {
 
                 if best_value <= alpha {
                     beta = (alpha + beta) / 2;
-                    if (best_value.wrapping_sub(delta)) > best_value {
-                        alpha = NEG_INFINITY;
-                    } else {
-                        alpha = max(best_value - delta, NEG_INFINITY);
-                    }
+                    alpha = max(best_value - delta, NEG_INFINITY as i32);
                 } else if best_value >= beta {
-                    if (best_value.wrapping_add(delta)) < best_value {
-                        beta = INFINITY;
-                    } else {
-                        beta = min(best_value + delta, INFINITY);
-                    }
+                    beta = min(best_value + delta, INFINITY as i32);
                 } else {
                     break 'aspiration_window;
                 }
+                delta += (delta / 4) + 5;
 
-                if delta.wrapping_add((delta / 4) + 5) > 0 {
-                    delta += (delta / 4) + 5;
-                }
+                assert!(alpha >= NEG_INFINITY as i32);
+                assert!(beta <= INFINITY as i32);
             }
 
             self.sort_root_moves();
-            if self.thread.use_stdout.load(Ordering::Relaxed) {
+            if self.use_stdout() {
                 println!("info id {} depth {} stop {}",self.thread.id, depth, self.stop());
             }
             depth += skip_size;
         }
     }
 
-    fn search<N: PVNode>(&mut self, mut alpha: i16, beta: i16, max_depth: u16) -> i16 {
+    fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
 
         let is_pv: bool = N::is_pv();
         let old_alpha = alpha;
@@ -114,42 +114,42 @@ impl<'a> ThreadSearcher<'a> {
         let in_check: bool = self.board.in_check();
         let ply = self.board.depth();
 
-        let mut pos_eval = 0;
+        let mut pos_eval: i32 = 0;
 
         if self.board.depth() == max_depth {
-            return Eval::eval_low(&self.board);
+            return Eval::eval_low(&self.board) as i32;
         }
 
         if !is_pv
             && tt_hit
-            && tt_entry.depth >= max_depth as u8 // TODO: Fix this hack
+            && tt_entry.depth as u16 >= max_depth // TODO: Fix this hack
             && tt_entry.best_move != BitMove::null()
             && tt_value != 0
             && correct_bound(tt_value, beta, tt_entry.node_type()) {
-            return tt_value;
+            return tt_value as i32;
         }
 
         if in_check {
             pos_eval = 0;
-            self.thread.thread_stack[ply as usize].pos_eval = pos_eval;
+            self.thread.thread_stack[ply as usize].pos_eval = 0;
         } else if tt_hit {
             // update Evaluation
             if tt_entry.eval == 0 {
-                pos_eval = Eval::eval_low(&self.board);
-                self.thread.thread_stack[ply as usize].pos_eval = pos_eval;
+                pos_eval = Eval::eval_low(&self.board) as i32;
+                self.thread.thread_stack[ply as usize].pos_eval = pos_eval as i16;
             } else {
-                pos_eval = tt_entry.eval;
-                self.thread.thread_stack[ply as usize].pos_eval = pos_eval;
+                pos_eval = tt_entry.eval as i32;
+                self.thread.thread_stack[ply as usize].pos_eval = pos_eval as i16;
             }
         } else {
-            pos_eval = Eval::eval_low(&self.board);
-            tt_entry.place(zob, BitMove::null(), 0, pos_eval, 0, NodeBound::NoBound);
+            pos_eval = Eval::eval_low(&self.board) as i32;
+            tt_entry.place(zob, BitMove::null(), 0, pos_eval as i16, 0, NodeBound::NoBound);
         }
 
         if !in_check {
 
             // futility pruning
-            if !at_root && ply < 7 && pos_eval - (150 * ply as i16) >= beta && pos_eval < 10000 {
+            if !at_root && ply < 7 && pos_eval - (150 * ply as i32) >= beta && pos_eval < 10000 {
                 return pos_eval;
             }
         }
@@ -161,21 +161,25 @@ impl<'a> ThreadSearcher<'a> {
             self.board.generate_pseudolegal_moves()
         };
 
+
+
         if moves.is_empty() {
             if self.board.in_check() {
-                return MATE + (self.board.depth() as i16);
+                return MATE as i32 + (self.board.depth() as i32);
             } else {
-                return -STALEMATE;
+                return -STALEMATE as i32;
             }
         }
 
         let mut best_move = BitMove::null();
 
-        let mut value = 0;
-        let mut best_value = NEG_INFINITY;
+        let mut value = NEG_INFINITY as i32;
+        let mut best_value = NEG_INFINITY as i32;
+        let mut moves_played = 0;
 
         for (i, mov) in moves.iter().enumerate() {
             if at_root || self.board.legal_move(*mov) {
+                moves_played += 1;
                 self.board.apply_move(*mov);
                 if is_pv && (i == 0 || (value > alpha && (at_root || value < beta))) {
                     value = -self.search::<PV>(-beta, -alpha,max_depth);
@@ -183,6 +187,8 @@ impl<'a> ThreadSearcher<'a> {
                     value = -self.search::<NonPV>(-beta, -alpha,max_depth);
                 }
                 self.board.undo_move();
+                assert!(value > i32::from(NEG_INFINITY) as i32);
+                assert!(value < i32::from(INFINITY) as i32);
                 if self.stop() {
                     return 0;
                 }
@@ -190,9 +196,9 @@ impl<'a> ThreadSearcher<'a> {
                     let mut moves = self.thread.root_moves.write().unwrap();
                     let rootmove: &mut RootMove = moves.get_mut(i).unwrap();
                     if (i == 0 || value > alpha) {
-                        rootmove.rollback_insert(value, max_depth);
+                        rootmove.insert(value, max_depth);
                     } else {
-                        rootmove.score = NEG_INFINITY;
+                        rootmove.insert(NEG_INFINITY as i32, max_depth);
                     }
                 }
 
@@ -211,10 +217,18 @@ impl<'a> ThreadSearcher<'a> {
             }
         }
 
+        if moves_played == 0 {
+            if self.board.in_check() {
+                return MATE as i32 + (self.board.depth() as i32);
+            } else {
+                return -STALEMATE as i32;
+            }
+        }
+
         let node_bound = if best_value >= beta {NodeBound::LowerBound}
             else if is_pv && !best_move.is_null() {NodeBound::Exact}
                 else {NodeBound::UpperBound};
-        tt_entry.place(zob,best_move,best_value, pos_eval,max_depth as u8 - ply as u8, node_bound);
+        tt_entry.place(zob,best_move,best_value as i16, pos_eval as i16,max_depth as u8 - ply as u8, node_bound);
 
         best_value
     }
@@ -228,14 +242,30 @@ impl<'a> ThreadSearcher<'a> {
     }
 
     pub fn print_startup(&self) {
-        if self.thread.use_stdout.load(Ordering::Relaxed) {
+        if self.use_stdout() {
             println!("info id {} start", self.thread.id);
         }
+    }
+
+    pub fn use_stdout(&self) -> bool {
+        self.thread.use_stdout.load(Ordering::Relaxed)
+    }
+
+    fn root_moves_prev_score(&self) -> i32 {
+        let moves = self.thread.root_moves.read().unwrap();
+        (*moves)[0].prev_score
     }
 
     fn sort_root_moves(&mut self) {
         let mut moves = self.thread.root_moves.write().unwrap();
         (*moves).sort();
+    }
+
+    fn roolback_root_moves(&mut self) {
+        let mut moves = self.thread.root_moves.write().unwrap();
+        for mov in (*moves).iter_mut() {
+            mov.rollback()
+        }
     }
 
     fn shuffle_root_moves(&mut self) {
@@ -265,8 +295,8 @@ impl<'a> ThreadSearcher<'a> {
 }
 
 
-fn correct_bound(tt_value: i16, beta: i16, bound: NodeBound) -> bool {
-    if tt_value >= beta {
+fn correct_bound(tt_value: i16, beta: i32, bound: NodeBound) -> bool {
+    if tt_value as i32 >= beta {
         bound as u8 & NodeBound::LowerBound as u8 != 0
     } else {
         bound as u8 & NodeBound::UpperBound as u8 != 0

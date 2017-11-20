@@ -36,7 +36,7 @@ impl _PlecoSearcher {
     pub fn init(use_stdout: bool) -> Self {
         _PlecoSearcher {
             options: AllOptions::default(),
-            thread_pool: ThreadPool::setup(8,true)
+            thread_pool: ThreadPool::setup(8,use_stdout)
         }
     }
 
@@ -64,10 +64,10 @@ mod tests {
 
     use super::*;
 
-    #[test]
+//    #[test]
     pub fn testme() {
         {
-            let mut s = _PlecoSearcher::init(true);
+            let mut s = _PlecoSearcher::init(false);
             let limit = UCILimit::Infinite;
             let board = Board::default();
             s.search(&board, &limit);

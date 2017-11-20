@@ -27,22 +27,24 @@ impl PVNode for NonPV {
 #[derive(Copy, Clone, Eq)]
 pub struct RootMove {
     pub bit_move: BitMove,
-    pub score: i16,
-    pub prev_score: i16,
+    pub score: i32,
+    pub prev_score: i32,
     pub depth_reached: u16
 }
 
 // Moves with higher score for a higher depth are less
 impl Ord for RootMove {
     fn cmp(&self, other: &RootMove) -> CmpOrder {
-        let value_diff = self.score as i32 - other.score as i32;
-        if value_diff > 0 {
-            let depth_diff = self.depth_reached as i32 - other.depth_reached as i32;
-            if depth_diff == 0 {
+        let value_diff = self.score - other.score;
+        if value_diff == 0 {
+            let prev_value_diff = self.prev_score as i32 - other.prev_score as i32;
+            if prev_value_diff == 0 {
                 return CmpOrder::Equal;
-            } else if depth_diff > 0 {
+            } else if prev_value_diff > 0 {
                 return CmpOrder::Less;
             }
+        } else if value_diff > 0 {
+            return CmpOrder::Less
         }
         CmpOrder::Greater
     }
@@ -66,16 +68,25 @@ impl RootMove {
     pub fn new(bit_move: BitMove) -> Self {
         RootMove {
             bit_move: bit_move,
-            score: NEG_INFINITY,
-            prev_score: NEG_INFINITY,
+            score: NEG_INFINITY as i32,
+            prev_score: NEG_INFINITY as i32,
             depth_reached: 0
         }
     }
 
-    pub fn rollback_insert(&mut self, score: i16, depth: u16) {
+    pub fn rollback_insert(&mut self, score: i32, depth: u16) {
         self.prev_score = self.score;
         self.score = score;
         self.depth_reached = depth;
+    }
+
+    pub fn insert(&mut self, score: i32, depth: u16) {
+        self.score = score;
+        self.depth_reached = depth;
+    }
+
+    pub fn rollback(&mut self) {
+        self.prev_score = self.score;
     }
 }
 

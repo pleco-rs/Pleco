@@ -5,6 +5,7 @@ use std::sync::mpsc::{channel,Receiver,Sender};
 
 use std::cmp::{min,max};
 use std::{mem,time};
+use std::time::Duration;
 
 use board::*;
 use core::*;
@@ -200,7 +201,7 @@ impl MainThread {
     }
 
     pub fn lock_threads(&mut self) {
-        let &(ref lock, ref cvar) = &*(Arc::clone(&self.thread.cond));
+        let &(ref lock, ref _cvar) = &*(Arc::clone(&self.thread.cond));
         let mut started = lock.lock().unwrap();
         *started = false;
     }
@@ -264,7 +265,10 @@ impl MainThread {
             let depth_diff = thread_move.depth_reached as i16 - best_root_move.depth_reached as i16;
             let value_diff = thread_move.score as i16 - best_root_move.score as i16;
 
-            println!("id: {}, value: {}, depth: {}, mov: {}",x, thread_move.score, thread_move.depth_reached, thread_move.bit_move);
+
+            if self.thread.use_stdout.load(Ordering::Relaxed) {
+                println!("id: {}, value: {}, depth: {}, mov: {}",x, thread_move.score, thread_move.depth_reached, thread_move.bit_move);
+            }
             // If it has a bigger value and greater or equal depth
             if value_diff > 0 && depth_diff >= 0 {
                 best_root_move = thread_move;
@@ -338,13 +342,11 @@ impl Thread {
     pub fn idle_loop(&mut self) {
         while(!self.drop()){
             {
-                println!("id {} idle loop", self.id);
                 let &(ref lock, ref cvar) = &*(Arc::clone(&self.cond));
                 let mut started = lock.lock().unwrap();
                 while !*started {
                     started = cvar.wait(started).unwrap();
                 }
-                println!("id {} stop loop", self.id);
                 if self.drop() {
                     return;
                 }
@@ -374,6 +376,7 @@ impl Thread {
 impl Drop for ThreadPool {
     fn drop(&mut self) {
         // Store that we are dropping
+        self.stop.store(true, Ordering::Relaxed);
         self.drop.store(true, Ordering::Relaxed);
 
         // Notify the main thread to wakeup and stop
