@@ -278,21 +278,22 @@ impl MainThread {
         // find best move
         let mut best_root_move: RootMove = self.thread_best_move(0);
         let mut depth_reached: i32 = self.all_depths[0].load(Ordering::Relaxed) as i32;
-        println!("id: 0, value: {}, depth: {}, mov: {}", best_root_move.score, best_root_move.depth_reached, best_root_move.bit_move);
+        println!("id: 0, value: {}, depth: {}, depth_comp: {}, mov: {}", best_root_move.score, best_root_move.depth_reached, depth_reached, best_root_move.bit_move);
 
         for x in 1..self.num_threads() {
             let thread_move = self.thread_best_move(x);
             let thread_depth = self.all_depths[x].load(Ordering::Relaxed);
-            let depth_diff = thread_depth as i32 - depth_reached as i32;
+            let depth_diff = thread_depth as i32 - depth_reached;
             let value_diff = thread_move.score as i16 - best_root_move.score as i16;
 
 
-            if self.thread.use_stdout.load(Ordering::Relaxed) {
+//            if self.thread.use_stdout.load(Ordering::Relaxed) {
                 println!("id: {}, value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
-            }
+//            }
             // If it has a bigger value and greater or equal depth
             if value_diff > 0 && depth_diff >= 0 {
                 best_root_move = thread_move;
+                depth_reached = thread_depth as i32;
             }
         }
 

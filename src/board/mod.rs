@@ -2107,9 +2107,9 @@ impl RandBoard {
             let moves = board.generate_moves();
             moves[self.random() % moves.len()]
         } else if self.random() % 5 == 0 {
-            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),2)
         } else if self.random() % 3 == 0 {
-            JamboreeSearcher::best_move_depth(board.shallow_clone(),4)
+            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
         } else if !favorable && self.random() % 4 < 3 {
             JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
         } else {

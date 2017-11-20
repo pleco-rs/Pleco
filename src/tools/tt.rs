@@ -8,6 +8,7 @@ use std::ptr::Unique;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
 use std::cmp::max;
+use std::cell::UnsafeCell;
 
 use core::piece_move::BitMove;
 
@@ -152,9 +153,9 @@ pub struct Cluster {
 /// of HashTable that maps Zobrist Keys to information about that position, including the best move
 /// found, score, depth the move was found at, and other information.
 pub struct TT {
-    clusters: Unique<Cluster>, // pointer to the heap
-    cap: usize, // number of clusters
-    time_age: u8, // documenting at whichh root position an entry was placed
+    clusters: UnsafeCell<Unique<Cluster>>, // pointer to the heap
+    cap: UnsafeCell<usize>, // number of clusters
+    time_age: UnsafeCell<u8>, // documenting at which root position an entry was placed
 }
 
 impl TT {
@@ -195,34 +196,39 @@ impl TT {
         assert_eq!(size.count_ones(), 1);
         assert!(size > 0);
         TT {
-            clusters: alloc_room(size),
-            cap: size,
-            time_age: 0,
+            clusters: UnsafeCell::new(alloc_room(size)),
+            cap: UnsafeCell::new(size),
+            time_age: UnsafeCell::new(0),
         }
     }
 
     /// Returns the size of the heap allocated portion of the TT in KiloBytes.
     pub fn size_kilobytes(&self) -> usize {
-        (mem::size_of::<Cluster>() * self.cap) / BYTES_PER_KB
+        (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_KB
     }
 
     /// Returns the size of the heap allocated portion of the TT in MegaBytes.
     pub fn size_megabytes(&self) -> usize {
-        (mem::size_of::<Cluster>() * self.cap) / BYTES_PER_MB
+        (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_MB
     }
 
     /// Returns the size of the heap allocated portion of the TT in GigaBytes.
     pub fn size_gigabytes(&self) -> usize {
-        (mem::size_of::<Cluster>() * self.cap) / BYTES_PER_GB
+        (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_GB
+
     }
 
     /// Returns the number of clusters the Transposition Table holds.
     pub fn num_clusters(&self) -> usize {
-        self.cap
+        unsafe {
+            *self.cap.get()
+        }
     }
 
     /// Returns the number of Entries the Transposition Table holds.
-    pub fn num_entries(&self) -> usize {self.cap * CLUSTER_SIZE}
+    pub fn num_entries(&self) -> usize {
+        self.num_clusters() * CLUSTER_SIZE
+    }
 
     /// Re-sizes to 'size' number of Clusters and deletes all data
     ///
@@ -258,27 +264,31 @@ impl TT {
 
     /// Clears the entire TranspositionTable
     pub unsafe fn clear(&self) {
-        let size = self.cap;
-        self.resize(size);
+        let size = self.cap.get();
+        self.resize(*size);
     }
 
     // Called each time a new position is searched
     pub fn new_search(&self) {
         unsafe {
-            let c = mem::transmute::<&u8,*mut u8>(&self.time_age);
-            *c = (self.time_age).wrapping_add(4);
+            let c = self.time_age.get();
+            *c = (*c).wrapping_add(4);
         }
     }
 
     /// Returns the current time age of a TT.
     pub fn time_age(&self) -> u8 {
-        self.time_age
+        unsafe {
+            *self.time_age.get()
+        }
     }
 
     /// Returns the current number of cycles a TT has gone through. Cycles is simply the
     /// number of times refresh has been called.
     pub fn time_age_cylces(&self) -> u8 {
-        (self.time_age).wrapping_shr(2)
+        unsafe {
+            (*self.time_age.get()).wrapping_shr(2)
+        }
     }
 
     /// Probes the Transposition Table for a specified Key. Returns (true, entry) if either (1) an
@@ -306,8 +316,8 @@ impl TT {
                 if entry.partial_key == 0 || entry.partial_key == partial_key {
 
                     // if age is incorrect, make it correct
-                    if entry.time() != self.time_age && entry.partial_key != 0 {
-                        entry.time_node_bound.update_time(self.time_age);
+                    if entry.time() != self.time_age() && entry.partial_key != 0 {
+                        entry.time_node_bound.update_time(self.time_age());
                     }
 
                     // Return the spot
@@ -316,12 +326,12 @@ impl TT {
             }
 
             let mut replacement: *mut Entry = init_entry;
-            let mut replacement_score: u16 = (&*replacement).time_value(self.time_age);
+            let mut replacement_score: u16 = (&*replacement).time_value(self.time_age());
 
             // Table is full, find the best replacement based on depth and time placed there
             for i in 1..CLUSTER_SIZE {
                 let entry_ptr: *mut Entry = init_entry.offset(i as isize);
-                let entry_score: u16 = (&*entry_ptr).time_value(self.time_age);
+                let entry_score: u16 = (&*entry_ptr).time_value(self.time_age());
                 if entry_score < replacement_score {
                     replacement = entry_ptr;
                     replacement_score = replacement_score;
@@ -337,44 +347,46 @@ impl TT {
     fn cluster(&self, key: Key) -> *mut Cluster {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
         unsafe {
-            self.clusters.as_ptr().offset(index as isize)
+            (*self.clusters.get()).as_ptr().offset(index as isize)
         }
     }
 
     // Re-Allocates the current TT to a specified size.
     unsafe fn re_alloc(&self, size: usize) {
-        let c = mem::transmute::<&Unique<Cluster>,*mut Unique<Cluster>>(&self.clusters);
-//        let c = (&self.clusters) as *mut Unique<Cluster>;
+        let c = self.clusters.get();
         *c = alloc_room(size);
     }
 
     /// De-allocates the current heap.
     unsafe fn de_alloc(&self) {
-        Heap.dealloc(self.clusters.as_ptr() as *mut _,
-                     Layout::array::<Cluster>(self.cap).unwrap());
+        Heap.dealloc((*self.clusters.get()).as_ptr() as *mut _,
+                     Layout::array::<Cluster>(*self.cap.get()).unwrap());
     }
 
     pub fn hash_percent(&self) -> f64 {
-        let clusters_scanned: u64 = max(self.cap as u64, 1024);
-        let mut hits = 0;
+        unsafe {
+            let clusters_scanned: u64 = max(*self.cap.get() as u64, 1024);
+            let mut hits: f64 = 0.0;
 
-        for i in 0..clusters_scanned {
-            let cluster = self.cluster(i);
-            unsafe {
+            for i in 0..clusters_scanned {
+                let cluster = self.cluster(i);
                 let init_entry: *mut Entry = cluster_first_entry(cluster);
                 for e in 0..CLUSTER_SIZE {
                     // get a pointer to the specified entry
                     let entry_ptr: *mut Entry = init_entry.offset(e as isize);
                     let entry: &Entry = & (*entry_ptr);
                     if !entry.is_empty() {
-                        hits += 1;
+                        hits += 1.0;
                     }
                 }
             }
+            hits / (clusters_scanned * CLUSTER_SIZE as u64) as f64
         }
-        hits as f64 / (clusters_scanned * CLUSTER_SIZE as u64) as f64
     }
 }
+
+unsafe impl Sync for TT {}
+
 
 impl Drop for TT {
     fn drop(&mut self) {
@@ -385,7 +397,7 @@ impl Drop for TT {
 
 #[inline]
 unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
-    mem::transmute::<*mut Cluster,*mut Entry>(cluster)
+    (*cluster).entry.get_unchecked_mut(0) as *mut Entry
 }
 
 // Return a Heap Allocation of Size number of Clusters.

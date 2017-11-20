@@ -236,8 +236,8 @@ impl<'a> ThreadSearcher<'a> {
             else if is_pv && !best_move.is_null() {NodeBound::Exact}
                 else {NodeBound::UpperBound};
 
-        let v_sign = if best_value >= 0 {best_value as i16 & 0x7FFF} else {best_value as i16 | 0x8000 };
-        let e_sign = if pos_eval >= 0 {pos_eval as i16 & 0x7FFF} else {pos_eval as i16 | 0x8000 };
+        let v_sign = if best_value >= 0 {best_value as i16 & 0x7FFF} else {(best_value as i16).abs() * -1 };
+        let e_sign = if pos_eval >= 0 {pos_eval as i16 & 0x7FFF} else {(pos_eval as i16).abs() * -1 };
         tt_entry.place(zob, best_move, v_sign, e_sign, max_depth as u8 - ply as u8, node_bound);
 
         best_value
