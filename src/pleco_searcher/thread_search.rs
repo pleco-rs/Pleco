@@ -99,6 +99,9 @@ impl<'a> ThreadSearcher<'a> {
             if self.use_stdout() {
                 println!("info id {} depth {} stop {}",self.thread.id, depth, self.stop());
             }
+            if !self.stop() {
+                self.thread.depth_completed.store(depth,Ordering::Relaxed);
+            }
             depth += skip_size;
         }
     }
@@ -116,13 +119,13 @@ impl<'a> ThreadSearcher<'a> {
 
         let mut pos_eval: i32 = 0;
 
-        if self.board.depth() == max_depth {
+        if ply == max_depth {
             return Eval::eval_low(&self.board) as i32;
         }
 
         if !is_pv
             && tt_hit
-            && tt_entry.depth as u16 >= max_depth // TODO: Fix this hack
+            && tt_entry.depth as u16 >= max_depth
             && tt_entry.best_move != BitMove::null()
             && tt_value != 0
             && correct_bound(tt_value, beta, tt_entry.node_type()) {
@@ -181,6 +184,10 @@ impl<'a> ThreadSearcher<'a> {
             if at_root || self.board.legal_move(*mov) {
                 moves_played += 1;
                 self.board.apply_move(*mov);
+                if is_pv {
+                    value = -self.search::<NonPV>(-(alpha + 1), -alpha, max_depth);
+                }
+
                 if is_pv && (i == 0 || (value > alpha && (at_root || value < beta))) {
                     value = -self.search::<PV>(-beta, -alpha,max_depth);
                 } else {
@@ -221,14 +228,17 @@ impl<'a> ThreadSearcher<'a> {
             if self.board.in_check() {
                 return MATE as i32 + (self.board.depth() as i32);
             } else {
-                return -STALEMATE as i32;
+                return STALEMATE as i32;
             }
         }
 
         let node_bound = if best_value >= beta {NodeBound::LowerBound}
             else if is_pv && !best_move.is_null() {NodeBound::Exact}
                 else {NodeBound::UpperBound};
-        tt_entry.place(zob,best_move,best_value as i16, pos_eval as i16,max_depth as u8 - ply as u8, node_bound);
+
+        let v_sign = if best_value >= 0 {best_value as i16 & 0x7FFF} else {best_value as i16 | 0x8000 };
+        let e_sign = if pos_eval >= 0 {pos_eval as i16 & 0x7FFF} else {pos_eval as i16 | 0x8000 };
+        tt_entry.place(zob, best_move, v_sign, e_sign, max_depth as u8 - ply as u8, node_bound);
 
         best_value
     }

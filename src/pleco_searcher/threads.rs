@@ -1,5 +1,5 @@
 use std::sync::{Arc,Mutex,Condvar,RwLock};
-use std::sync::atomic::{AtomicBool,AtomicU64,Ordering};
+use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
 
@@ -59,16 +59,27 @@ impl ThreadPool {
 
         let mut threads = Vec::new();
         let mut all_threads_finished = Vec::new();
+
         let mut all_moves = Vec::with_capacity(num_threads);
+        let mut depth_completed = Vec::with_capacity(num_threads);
+
         let main_thread_moves = Arc::new(RwLock::new(Vec::new()));
         all_moves.push(Arc::clone(&main_thread_moves));
+
+        let main_thread_depth = Arc::new(AtomicU16::new(0));
+        depth_completed.push(Arc::clone(&main_thread_depth));
+
         for x in 1..num_threads {
             let builder = thread::Builder::new();
             let thread_moves = Arc::new(RwLock::new(Vec::new()));
+            let thread_depth_completed = Arc::new(AtomicU16::new(0));
             let thread_fin = Arc::new(AtomicBool::new(false));
             all_moves.push(Arc::clone(&thread_moves));
+            depth_completed.push(Arc::clone(&thread_depth_completed));
             let new_thread =
-                Thread::new(thread_moves, x,
+                Thread::new(thread_moves,
+                            thread_depth_completed,
+                            x,
                             Arc::clone(&use_stdout),
                             Arc::clone(&stop),
                             Arc::clone(&thread_fin),
@@ -88,6 +99,7 @@ impl ThreadPool {
         let main_thread_fin = Arc::new(AtomicBool::new(false));
         let main_thread_inner = Thread::new
             (main_thread_moves,
+             Arc::clone(&main_thread_depth),
              0,
              Arc::clone(&use_stdout),
              Arc::clone(&stop),
@@ -100,6 +112,7 @@ impl ThreadPool {
         let main_thread = MainThread {
             all_moves: Arc::clone(&all_root_moves),
             all_stops: all_threads_finished.clone(),
+            all_depths: depth_completed,
             main_thread_go: Arc::clone(&main_thread_go),
             sender: tx,
             thread: main_thread_inner };
@@ -164,6 +177,7 @@ impl ThreadPool {
 pub struct MainThread {
     all_moves: AllRootMoves,
     all_stops: Vec<Arc<AtomicBool>>,
+    all_depths: Vec<Arc<AtomicU16>>,
     main_thread_go: Arc<(Mutex<bool>,Condvar)>,
     sender: Sender<SendData>,
     thread: Thread,
@@ -198,6 +212,10 @@ impl MainThread {
             let mut moves_lock = lock.write().unwrap();
             (*moves_lock) = base_moves.clone();
         }
+    }
+
+    pub fn set_all_depth_counts(&mut self) {
+        self.all_depths.iter_mut().for_each(|d| d.store(0, Ordering::Relaxed));
     }
 
     pub fn lock_threads(&mut self) {
@@ -240,6 +258,7 @@ impl MainThread {
     pub fn go(&mut self) {
         self.thread.finished.store(false, Ordering::Relaxed);
         self.thread.stop.store(true, Ordering::Relaxed);
+        self.set_all_depth_counts();
         let board = self.thread.retrieve_board().unwrap();
         self.set_all_root_moves(&board);
 
@@ -258,16 +277,18 @@ impl MainThread {
 
         // find best move
         let mut best_root_move: RootMove = self.thread_best_move(0);
+        let mut depth_reached: i32 = self.all_depths[0].load(Ordering::Relaxed) as i32;
         println!("id: 0, value: {}, depth: {}, mov: {}", best_root_move.score, best_root_move.depth_reached, best_root_move.bit_move);
 
         for x in 1..self.num_threads() {
             let thread_move = self.thread_best_move(x);
-            let depth_diff = thread_move.depth_reached as i16 - best_root_move.depth_reached as i16;
+            let thread_depth = self.all_depths[x].load(Ordering::Relaxed);
+            let depth_diff = thread_depth as i32 - depth_reached as i32;
             let value_diff = thread_move.score as i16 - best_root_move.score as i16;
 
 
             if self.thread.use_stdout.load(Ordering::Relaxed) {
-                println!("id: {}, value: {}, depth: {}, mov: {}",x, thread_move.score, thread_move.depth_reached, thread_move.bit_move);
+                println!("id: {}, value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
             }
             // If it has a bigger value and greater or equal depth
             if value_diff > 0 && depth_diff >= 0 {
@@ -288,6 +309,7 @@ impl MainThread {
 
 pub struct Thread {
     pub root_moves: RootMoves,
+    pub depth_completed: Arc<AtomicU16>,
     pub id: usize,
     pub tt: &'static TT,
     pub use_stdout: Arc<AtomicBool>,
@@ -301,6 +323,7 @@ pub struct Thread {
 
 impl Thread {
     pub fn new(root_moves: Arc<RwLock<Vec<RootMove>>>,
+               depth_completed: Arc<AtomicU16>,
                id: usize,
                use_stdout: Arc<AtomicBool>,
                stop: Arc<AtomicBool>,
@@ -310,6 +333,7 @@ impl Thread {
                cond: Arc<(Mutex<bool>,Condvar)>, ) -> Self {
         Thread {
             root_moves,
+            depth_completed,
             id,
             tt: &TT_TABLE,
             use_stdout,

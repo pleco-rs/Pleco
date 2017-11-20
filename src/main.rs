@@ -28,7 +28,7 @@ fn main() {
             board.apply_move(mov);
         } else {
             s.search(&board, &UCILimit::Infinite);
-            thread::sleep_ms(6000);
+            thread::sleep_ms(7400);
             let mov = s.stop_search();
             println!("Pleco searcher: {}",mov);
             board.apply_move(mov);

@@ -41,6 +41,7 @@ impl _PlecoSearcher {
     }
 
     pub fn search(&mut self, board: &Board, limit: &UCILimit) {
+        TT_TABLE.new_search();
         self.thread_pool.uci_search(&board, &limit);
     }
 
