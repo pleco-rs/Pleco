@@ -92,7 +92,7 @@ impl RootMove {
 
 
 pub struct ThreadStack {
-    pub pos_eval: i16,
+    pub pos_eval: i32,
 }
 
 impl ThreadStack {

@@ -334,7 +334,7 @@ impl TT {
                 let entry_score: u16 = (&*entry_ptr).time_value(self.time_age());
                 if entry_score < replacement_score {
                     replacement = entry_ptr;
-                    replacement_score = replacement_score;
+                    replacement_score = entry_score;
                 }
             }
             // return the best place to replace

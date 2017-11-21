@@ -15,12 +15,12 @@ use std::thread;
 
 
 fn main() {
-    let mut s = _PlecoSearcher::init(false);
+    let mut s = _PlecoSearcher::init(true);
     let mut board = Board::default();
 
     let mut i = 0;
 
-    while i < 100 && !board.checkmate() && !board.stalemate() {
+    while i < 125 && !board.checkmate() && !board.stalemate() {
         board.pretty_print();
         if i % 2 == 1 {
             let mov = JamboreeSearcher::best_move_depth(board.shallow_clone(),4);

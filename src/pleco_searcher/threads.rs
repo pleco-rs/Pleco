@@ -16,7 +16,7 @@ use engine::*;
 
 use super::thread_search::ThreadSearcher;
 use super::misc::*;
-use super::{LIMIT,TT_TABLE,THREAD_STACK_SIZE,MAX_PLY};
+use super::{TT_TABLE,THREAD_STACK_SIZE,MAX_PLY};
 
 pub struct ThreadGo {
     limit: UCILimit,
@@ -284,7 +284,7 @@ impl MainThread {
             let thread_move = self.thread_best_move(x);
             let thread_depth = self.all_depths[x].load(Ordering::Relaxed);
             let depth_diff = thread_depth as i32 - depth_reached;
-            let value_diff = thread_move.score as i16 - best_root_move.score as i16;
+            let value_diff = thread_move.score - best_root_move.score;
 
 
 //            if self.thread.use_stdout.load(Ordering::Relaxed) {
@@ -365,7 +365,7 @@ impl Thread {
     }
 
     pub fn idle_loop(&mut self) {
-        while(!self.drop()){
+        while !self.drop(){
             {
                 let &(ref lock, ref cvar) = &*(Arc::clone(&self.cond));
                 let mut started = lock.lock().unwrap();
@@ -432,4 +432,35 @@ impl Drop for ThreadPool {
 pub fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
     let s: [ThreadStack; THREAD_STACK_SIZE] = unsafe { mem::zeroed() };
     s
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+//    #[test]
+    pub fn test_searcher() {
+        let mut pool = ThreadPool::setup(1, true);
+        let mut board = Board::default();
+        let limits = UCILimit::Depth(3);
+        pool.search(&board, &limits);
+        thread::sleep_ms(3000);
+        let moves = pool.all_moves.clone();
+        let r = moves.read().unwrap();
+        for i in 0..(*r).len() {
+            println!("thread {}", i);
+            let m: Arc<RwLock<Vec<RootMove>>> = (*r).get(i).unwrap().clone();
+            let inner = m.read().unwrap();
+            for mov in (*inner).iter() {
+                println!("Move: {} score: {} prev_score {} depth {}", mov.bit_move, mov.score, mov.prev_score, mov.depth_reached);
+            }
+        }
+
+        pool.stop_searching();
+        let mov = pool.get_move();
+        println!("Bestmove {}", mov);
+    }
+
+
 }
