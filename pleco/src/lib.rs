@@ -44,7 +44,6 @@ pub mod board;
 pub mod tools;
 
 pub mod engine;
-pub mod uci;
 
 pub mod bots;
 pub mod bot_prelude;
