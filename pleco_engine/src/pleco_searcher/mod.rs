@@ -3,10 +3,11 @@ pub mod options;
 pub mod threads;
 pub mod thread_search;
 
-use engine::UCILimit;
-use tools::tt::TT;
-use Board;
-use BitMove;
+use pleco::engine::UCILimit;
+use pleco::tools::tt::TT;
+use pleco::Board;
+use pleco::BitMove;
+
 use std::thread;
 
 use self::options::{UciOption,AllOptions};

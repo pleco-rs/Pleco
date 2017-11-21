@@ -6,3 +6,6 @@ target/
 rusty_chess.iml
 Pleco.iml
 pleco.iml
+pleco/Cargo.lock
+pleco_engine/Cargo.lock
+

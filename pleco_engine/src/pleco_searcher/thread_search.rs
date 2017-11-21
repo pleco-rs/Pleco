@@ -1,4 +1,4 @@
-use Board;
+use pleco::Board;
 use super::threads::Thread;
 use super::UCILimit;
 
@@ -9,12 +9,12 @@ use rand::{Rng,self};
 use std::cmp::{min,max};
 use std::sync::atomic::Ordering;
 
-use board::*;
-use core::*;
-use board::eval::*;
-use core::piece_move::BitMove;
-use tools::tt::*;
-use engine::*;
+use pleco::board::*;
+use pleco::core::*;
+use pleco::board::eval::*;
+use pleco::core::piece_move::BitMove;
+use pleco::tools::tt::*;
+use pleco::engine::*;
 
 use super::misc::*;
 use super::{TT_TABLE,THREAD_STACK_SIZE,MAX_PLY};

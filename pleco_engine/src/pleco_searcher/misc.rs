@@ -1,6 +1,9 @@
+
+
 use super::THREAD_STACK_SIZE;
-use board::eval::*;
-use core::piece_move::BitMove;
+use pleco::board::eval::*;
+use pleco::core::piece_move::BitMove;
+
 use std::cmp::Ordering as CmpOrder;
 use std::mem;
 

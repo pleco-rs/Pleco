@@ -1,17 +1,13 @@
 extern crate pleco;
+extern crate pleco_engine;
 
 use pleco::bot_prelude::{JamboreeSearcher,Searcher};
-use pleco::pleco_searcher::_PlecoSearcher;
 use pleco::{Board,BitMove};
 use pleco::engine::UCILimit;
-use std::env;
+
+use pleco_engine::pleco_searcher::_PlecoSearcher;
 
 use std::thread;
-
-//fn main() {
-//    let args: Vec<String> = env::args().collect();
-//    console_loop(args);
-//}
 
 
 fn main() {

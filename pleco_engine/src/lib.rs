@@ -39,28 +39,8 @@ extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
 
+extern crate pleco;
 
-pub mod core;
-pub mod board;
-pub mod tools;
-
-pub mod engine;
-pub mod uci;
-
-pub mod bots;
-pub mod bot_prelude;
 pub mod pleco_searcher;
-
-#[doc(no_inline)]
-pub use board::Board;
-#[doc(no_inline)]
-pub use core::piece_move::BitMove;
-#[doc(no_inline)]
-pub use core::sq::SQ;
-#[doc(no_inline)]
-pub use core::bitboard::BitBoard;
-#[doc(no_inline)]
-pub use core::{Player,Piece,Rank,File};
-
 
 
