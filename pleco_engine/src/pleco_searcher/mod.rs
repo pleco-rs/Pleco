@@ -28,17 +28,17 @@ enum SearchType {
     Ponder,
 }
 
-pub struct _PlecoSearcher {
+pub struct PlecoSearcher {
     options: AllOptions,
     thread_pool: ThreadPool,
     search_mode: SearchType,
 }
 
 
-impl _PlecoSearcher {
+impl PlecoSearcher {
 
     pub fn init(use_stdout: bool) -> Self {
-        _PlecoSearcher {
+        PlecoSearcher {
             options: AllOptions::default(),
             thread_pool: ThreadPool::setup(8,use_stdout),
             search_mode: SearchType::None
@@ -83,7 +83,7 @@ mod tests {
 //    #[test]
     pub fn testme() {
         {
-            let mut s = _PlecoSearcher::init(false);
+            let mut s = PlecoSearcher::init(false);
             let limit = UCILimit::Infinite;
             let board = Board::default();
             s.search(&board, &limit);

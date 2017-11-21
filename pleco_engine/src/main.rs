@@ -5,13 +5,13 @@ use pleco::bot_prelude::{JamboreeSearcher,Searcher};
 use pleco::{Board,BitMove};
 use pleco::engine::UCILimit;
 
-use pleco_engine::pleco_searcher::_PlecoSearcher;
+use pleco_engine::pleco_searcher::PlecoSearcher;
 
 use std::thread;
 
 
 fn main() {
-    let mut s = _PlecoSearcher::init(true);
+    let mut s = PlecoSearcher::init(true);
     let mut board = Board::default();
 
     let mut i = 0;
@@ -24,7 +24,7 @@ fn main() {
             board.apply_move(mov);
         } else {
             s.search(&board, &UCILimit::Infinite);
-            thread::sleep_ms(7400);
+            thread::sleep_ms(10000);
             let mov = s.stop_search();
             println!("Pleco searcher: {}",mov);
             board.apply_move(mov);

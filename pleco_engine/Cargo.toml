@@ -6,7 +6,7 @@ authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
 documentation = "https://docs.rs/pleco_engine/"
-readme = "README.md"
+#readme = "README.md"
 keywords = ["chess","ai","engine","game","gaming"]
 license = "MIT"
 categories = ["games","game-engines"]
@@ -71,7 +71,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "0.1.7" }
+pleco = { path = "../pleco", version = "0.1.8" }
 clippy = {version = "0.0.169", optional = true}
 lazy_static = "0.2"
 bitflags = "1.0"

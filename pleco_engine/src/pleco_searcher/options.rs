@@ -1,14 +1,14 @@
-use super::_PlecoSearcher;
+use super::PlecoSearcher;
 
 use num_cpus;
 use std::cmp::{PartialOrd,PartialEq,Ord,Ordering};
 
 
-pub type ButtonMut = Box<Fn(&mut _PlecoSearcher)>;
-pub type CheckMut =  Box<Fn(&mut _PlecoSearcher, bool)>;
-pub type SpinMut =   Box<Fn(&mut _PlecoSearcher, i32)>;
-pub type ComboMut =  Box<Fn(&mut _PlecoSearcher, &str)>;
-pub type TextMut =   Box<Fn(&mut _PlecoSearcher, &str)>;
+pub type ButtonMut = Box<Fn(&mut PlecoSearcher)>;
+pub type CheckMut =  Box<Fn(&mut PlecoSearcher, bool)>;
+pub type SpinMut =   Box<Fn(&mut PlecoSearcher, i32)>;
+pub type ComboMut =  Box<Fn(&mut PlecoSearcher, &str)>;
+pub type TextMut =   Box<Fn(&mut PlecoSearcher, &str)>;
 
 pub struct Button{on_change: ButtonMut}
 pub struct Check{ on_change: CheckMut, default: bool, val: bool}
@@ -18,25 +18,25 @@ pub struct Text{  on_change: TextMut,  default: &'static str, val: String}
 
 impl Button {
     pub fn blank_mut() -> ButtonMut {
-        Box::new(|_p: &mut _PlecoSearcher| {})
+        Box::new(|_p: &mut PlecoSearcher| {})
     }
 }
 
 impl Check {
     pub fn blank_mut() -> CheckMut {
-        Box::new(|_p: &mut _PlecoSearcher, _c: bool| {})
+        Box::new(|_p: &mut PlecoSearcher, _c: bool| {})
     }
 }
 
 impl Spin {
     pub fn blank_mut() -> SpinMut {
-        Box::new(|_p: &mut _PlecoSearcher, _c: i32| {})
+        Box::new(|_p: &mut PlecoSearcher, _c: i32| {})
     }
 }
 
 impl Combo {
     pub fn blank_mut() -> ComboMut {
-        Box::new(|_p: &mut _PlecoSearcher, _c: &str| {})
+        Box::new(|_p: &mut PlecoSearcher, _c: &str| {})
     }
 
     pub fn combo_contains(&self, s: &str) -> Option<&'static str> {
@@ -51,7 +51,7 @@ impl Combo {
 
 impl Text {
     pub fn blank_mut() -> TextMut {
-        Box::new(|_p: &mut _PlecoSearcher, _c: &str| {})
+        Box::new(|_p: &mut PlecoSearcher, _c: &str| {})
     }
 }
 
@@ -207,7 +207,7 @@ pub struct AllOptions {
 }
 
 impl AllOptions {
-    pub fn apply_option(&mut self, option: &str, searcher: &mut _PlecoSearcher) {
+    pub fn apply_option(&mut self, option: &str, searcher: &mut PlecoSearcher) {
         let option_str = option.to_lowercase();
         for op in self.ops.iter_mut() {
             if option.starts_with(op.name) {
@@ -282,7 +282,7 @@ impl Default for AllOptions {
 
 fn c_tt_clear() -> UciOption {
     let c: ButtonMut = Box::new(
-        |p: &mut _PlecoSearcher|
+        |p: &mut PlecoSearcher|
             p.clear_tt()
     );
     UciOption::make_button("clear tt", c)
