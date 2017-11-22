@@ -1,0 +1,89 @@
+[package]
+name = "pleco"
+# REMINDER TO CHANGE IN README
+version = "0.1.8"
+authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
+description = "A blazingly-fast chess engine and Chess AI."
+homepage = "https://github.com/sfleischman105/Pleco"
+documentation = "https://docs.rs/pleco/"
+readme = "README.md"
+keywords = ["chess","ai","engine","game","gaming"]
+license = "MIT"
+categories = ["games","game-engines"]
+repository = "https://github.com/sfleischman105/Pleco"
+
+
+include = [
+    "src/*",
+    "tests/*.rs",
+    "Cargo.toml",
+    ".gitignore",
+    "README.md",
+]
+
+[badges]
+travis-ci = { repository = "sfleischman105/Pleco", branch = "master" }
+coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = "github" }
+
+[profile.dev]
+opt-level = 3
+debug = true
+
+[profile.release]
+opt-level = 3
+debug = true
+debug-assertions = false
+panic = "panic"
+lto = true
+
+[profile.bench]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "panic"
+
+[profile.test]
+opt-level = 2
+debug = true
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 4
+panic = 'unwind'
+
+[profile.doc]
+opt-level = 0
+debug = 2
+rpath = false
+lto = false
+debug-assertions = true
+codegen-units = 1
+panic = 'unwind'
+
+[lib]
+name = "pleco"
+bench = true
+path = "src/lib.rs"
+doctest = true
+
+[dependencies]
+clippy = {version = "0.0.169", optional = true}
+lazy_static = "0.2"
+bitflags = "1.0"
+rand = "0.3"
+rayon = "0.8.2"
+num_cpus = "1.0"
+
+
+[features]
+default = []
+dev = ["clippy"]
+
+
+#
+#[[bench]]
+#path = "benches/bench.rs"
+#name = "integration_benches"
