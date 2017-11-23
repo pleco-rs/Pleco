@@ -235,6 +235,12 @@ impl TT {
     /// # Panic
     ///
     /// size must be greater then 0
+    ///
+    /// # Safety
+    ///
+    /// This is function is unsafe to use if the TT is currently being accessed, Or any thread of
+    /// structure contains a current reference to a `TTEntry`. Otherwise, using this function will
+    /// absolutely lead to Segmentation Fault.
     pub unsafe fn resize_round_up(&self, size: usize) {
         self.resize(size.next_power_of_two());
     }
@@ -245,6 +251,12 @@ impl TT {
     /// # Panic
     ///
     /// mb_size must be greater then 0
+    ///
+    /// # Safety
+    ///
+    /// This is function is unsafe to use if the TT is currently being accessed, Or any thread of
+    /// structure contains a current reference to a `TTEntry`. Otherwise, using this function will
+    /// absolutely lead to Segmentation Fault.
     pub unsafe fn resize_to_megabytes(&self, mb_size: usize) -> usize {
         assert!(mb_size > 0);
         let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
@@ -263,6 +275,12 @@ impl TT {
     }
 
     /// Clears the entire TranspositionTable
+    ///
+    /// # Safety
+    ///
+    /// This is function is unsafe to use if the TT is currently being accessed, Or any thread of
+    /// structure contains a current reference to a `TTEntry`. Otherwise, using this function will
+    /// absolutely lead to Segmentation Fault.
     pub unsafe fn clear(&self) {
         let size = self.cap.get();
         self.resize(*size);

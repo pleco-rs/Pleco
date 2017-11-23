@@ -1,17 +1,21 @@
 # Pleco
 
-Pleco is a chess Engine inspired by Stockfish, written entirely in Rust.
-
-This project aims to utilize the efficiency of Rust to create a Chess Bot with the speed of modern chess engines.
-
+Pleco is a chess Engine & Library inspired by Stockfish, written entirely in Rust.
 
 [![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
+[![Pleco crate](https://img.shields.io/crates/v/pleco_engine.svg)](https://crates.io/crates/pleco_engine)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
 [![Coverage Status](https://coveralls.io/repos/github/sfleischman105/Pleco/badge.svg?branch=master)](https://coveralls.io/github/sfleischman105/Pleco?branch=master)
 
-- [Documentation](https://docs.rs/pleco)
-- [crates.io](https://crates.io/crates/pleco)
+
+This project is split into two crates, `pleco`, which contains the library functionality, and `pleco_engine`, which contains the
+UCI (Universal Chess Interface) compatible Engine & AI. 
+
+The overall goal for this project is to utilize the efficiency of Rust to create a Chess AI matching the speed of modern chess engines.
+
+- [Documentation](https://docs.rs/pleco), [crates.io](https://crates.io/crates/pleco) for library functionality
+- [Documentation](https://docs.rs/pleco_engine), [crates.io](https://crates.io/crates/pleco_engine) for UCI Engine and Advanced Searching functionality.
 
 Planned & Implemented features
 -------
@@ -23,11 +27,7 @@ The Library aims to have the following features upon completion
 - [x] Full Move-generation Capabilities
 - [x] Statically computed information (including Magic-Bitboards)
 - [x] Zobrist Hashing
-- [ ] UCI protocol implementation
-- [ ] Allowing matches against Human Players
 - [ ] PGN Parsing
-
-
 
 The AI Bot aims to have the following features:
 - [x] Alpha-Beta pruning
@@ -44,22 +44,7 @@ The AI Bot aims to have the following features:
 Standalone Installation and Use
 -------
 
-Currently, Pleco's use as a standalone program is limited in functionality. A UCI client is needed to properly interact with the program. As a recommendation, check out [Arena](http://www.playwitharena.com/).
-
-Firstly, clone the repo and navigate into the created folder with the following commands:
-
-```
-$ git clone https://github.com/sfleischman105/Pleco --branch master
-$ cd Pleco/
-```
-Once inside the pleco directory, build the binaries using `cargo`:
-```
-$ cargo build --release
-```
-
-The compiled program will appear in `./target/release/`.
-
-Pleco can now be run with a `./Pleco` on Linux or a `./Pleco.exe` on Windows.
+To use pleco as an executable, please [navigate to here](https://github.com/sfleischman105/Pleco/tree/master/pleco_engine) and read the `README.md`. 
 
 
 Using Pleco as a Library
@@ -69,7 +54,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```
 [dependencies]
-pleco = "0.1.8"
+pleco = "0.2.0"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:
@@ -130,8 +115,8 @@ board.undo_move();
 assert_eq!(board.moves_played(),0);
 ```
 
+For more informaton about `pleco` as a library, see the [pleco README.md](https://github.com/sfleischman105/Pleco/tree/master/pleco).
 
-  
 Contributing
 -------
 

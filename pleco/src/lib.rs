@@ -1,7 +1,7 @@
-//! A blazingly fast Chess Engine and Chess AI.
+//! A blazingly fast Chess Library.
 //!
-//! This package is seperated into two parts. Firstly, the board representation & associated functions. and Secondly,
-//! the AI implementations.
+//! This package is seperated into two parts. Firstly, the board representation & associated functions (the current crate, `pleco`), And Secondly,
+//! the AI implementations (`pleco_engine`).
 //!
 //! # Usage
 //!

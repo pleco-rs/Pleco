@@ -155,7 +155,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "pleco"
-version = "0.1.8"
+version = "0.2.0"
 dependencies = [
  "bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.169 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -167,13 +167,13 @@ dependencies = [
 
 [[package]]
 name = "pleco_engine"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "bitflags 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clippy 0.0.169 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pleco 0.1.8",
+ "pleco 0.2.0",
  "rand 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "rayon 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
