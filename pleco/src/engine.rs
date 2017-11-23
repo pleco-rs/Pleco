@@ -1,4 +1,4 @@
-//! This module contains an engine for actually playing chess.
+//! This module contains functions and traits useful for actually playing a game of chess.
 
 extern crate rand;
 
@@ -9,7 +9,7 @@ use core::Player;
 
 // TODO: clean this up
 
-/// Trait that defines an object that can play chess
+/// Trait that defines an object that can play chess.
 pub trait Searcher {
     fn name() -> &'static str where Self: Sized;
 
