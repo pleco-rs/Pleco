@@ -6,7 +6,7 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 
-use pleco::{Player,Board,BitMove};
+use pleco::{Player,Board,BitMove,MoveList};
 use pleco::board::RandBoard;
 use pleco::tools::prng::PRNG;
 
@@ -48,7 +48,7 @@ fn bench_apply_100_move(b: &mut Bencher) {
     let mut board_move: Vec<(Board, BitMove)> = Vec::with_capacity(100);
 
     for board in RAND_BOARDS.iter() {
-        let moves: Vec<BitMove> = board.generate_moves();
+        let moves: Vec<BitMove> = MoveList::into(board.generate_moves());
         let bit_move = *moves.get(prng.rand() as usize % moves.len()).unwrap();
         board_move.push((board.parallel_clone(),bit_move));
     }

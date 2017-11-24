@@ -27,7 +27,7 @@ use engine::Searcher;
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
-use self::movegen::{MoveGen,Legal,PseudoLegal};
+use self::movegen::{MoveGen,Legal,PseudoLegal,MoveList};
 
 use std::option::*;
 use std::sync::Arc;
@@ -772,7 +772,7 @@ impl Board {
     /// assert!(success);
     /// ```
     pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
-        let all_moves: Vec<BitMove> = self.generate_moves();
+        let all_moves: MoveList = self.generate_moves();
         let bit_move: Option<BitMove> = all_moves.iter()
                                                  .find(|m| m.stringify() == uci_move)
                                                  .cloned();
@@ -956,7 +956,7 @@ impl Board {
     ///
     /// println!("There are {} possible legal moves.", moves.len());
     /// ```
-    pub fn generate_moves(&self) -> Vec<BitMove> {
+    pub fn generate_moves(&self) -> MoveList {
         MoveGen::generate::<Legal, AllGenType>(self)
     }
 
@@ -964,7 +964,7 @@ impl Board {
     /// Works exactly the same as [Board::generate_moves()], but doesn't guarantee that all
     /// the moves are legal for the current position. Moves need to be checked with a
     /// [Board::legal_move(move)] in order to be certain of a legal move.
-    pub fn generate_pseudolegal_moves(&self) -> Vec<BitMove> {
+    pub fn generate_pseudolegal_moves(&self) -> MoveList {
         MoveGen::generate::<PseudoLegal, AllGenType>(self)
     }
 
@@ -988,7 +988,7 @@ impl Board {
     ///
     /// assert_eq!(capturing_moves.len(), 0); // no possible captures for the starting position
     /// ```
-    pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
+    pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> MoveList {
         match gen_type {
             GenTypes::All => MoveGen::generate::<Legal,AllGenType>(self),
             GenTypes::Captures => MoveGen::generate::<Legal,CapturesGenType>(self),
@@ -1010,7 +1010,7 @@ impl Board {
     /// # Panics
     ///
     /// Panics if given [GenTypes::QuietChecks] while the current board is in check
-    pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
+    pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> MoveList {
         match gen_type {
             GenTypes::All => MoveGen::generate::<PseudoLegal,AllGenType>(self),
             GenTypes::Captures => MoveGen::generate::<PseudoLegal,CapturesGenType>(self),
@@ -1699,7 +1699,6 @@ impl Board {
 
         // Stupidity Checks
         assert_ne!(src, dst);
-
         assert_eq!(self.color_of_sq(src).unwrap(), self.turn);
 
         // Searches for direct checks from the pre-computed array

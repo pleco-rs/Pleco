@@ -21,6 +21,8 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![feature(integer_atomics)]
+#![feature(fused)]
+#![feature(trusted_len)]
 #![feature(test)]
 #![allow(dead_code)]
 #![feature(integer_atomics)]
@@ -52,6 +54,8 @@ pub mod bot_prelude;
 pub use board::Board;
 #[doc(no_inline)]
 pub use core::piece_move::BitMove;
+#[doc(no_inline)]
+pub use board::movegen::MoveList;
 #[doc(no_inline)]
 pub use core::sq::SQ;
 #[doc(no_inline)]

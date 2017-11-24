@@ -10,6 +10,7 @@ use std::cmp::{min,max};
 use std::sync::atomic::Ordering;
 
 use pleco::board::*;
+use pleco::board::movegen::MoveList;
 use pleco::core::*;
 use pleco::board::eval::*;
 use pleco::core::piece_move::BitMove;
@@ -156,8 +157,9 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         #[allow(unused_mut)]
-        let mut moves: Vec<BitMove> = if at_root {
-            self.thread.root_moves.read().unwrap().iter().map(|m| m.bit_move).collect()
+        let mut moves: MoveList = if at_root {
+            let vec: Vec<BitMove> = self.thread.root_moves.read().unwrap().iter().map(|m| m.bit_move).collect();
+            MoveList::from(vec)
         } else {
             self.board.generate_pseudolegal_moves()
         };
