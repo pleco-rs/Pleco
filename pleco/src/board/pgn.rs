@@ -290,7 +290,7 @@ pub struct PGNMove {
 }
 
 impl PGNMove {
-    pub fn parse(input: &str) -> Result<PGNMove, PGNError> {
+    pub fn parse(_input: &str) -> Result<PGNMove, PGNError> {
 
         unimplemented!()
     }

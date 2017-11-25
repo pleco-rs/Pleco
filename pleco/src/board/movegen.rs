@@ -32,6 +32,7 @@ use core::mono_traits::*;
 use core::sq::SQ;
 use core::bitboard::BitBoard;
 
+
 //                   Legal    PseudoLegal
 //         All:  10,172 ns  |  9,636 ns
 // NonEvasions:   8,381 ns  |  4,179 ns
@@ -89,7 +90,7 @@ const DEFAULT_MOVES_LENGTH: usize = 32;
 /// Structure to generate moves from. Stores the current state of the board, and other
 /// references to help generating all possible moves.
 pub struct MoveGen<'a> {
-    movelist: Vec<BitMove>,
+    movelist: MoveList,
     board: &'a Board,
     magic: &'static MagicHelper<'static, 'static>,
     occ: BitBoard, // Squares occupied by all
@@ -102,7 +103,7 @@ impl<'a> MoveGen<'a> {
     // Helper function to setup the MoveGen structure.
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
-            movelist: Vec::with_capacity(DEFAULT_MOVES_LENGTH),
+            movelist: MoveList::default(),
             board: chessboard,
             magic: chessboard.magic_helper,
             occ: chessboard.get_occupied(),
@@ -112,7 +113,7 @@ impl<'a> MoveGen<'a> {
     }
 
     /// Returns vector of all moves for a given board, Legality & GenType.
-    pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> Vec<BitMove> {
+    pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> MoveList {
         match chessboard.turn() {
             Player::White => MoveGen::generate_helper::<L,G, WhiteType>(chessboard),
             Player::Black => MoveGen::generate_helper::<L,G, BlackType>(chessboard)
@@ -120,7 +121,7 @@ impl<'a> MoveGen<'a> {
     }
 
     /// Directly generates the moves.
-    fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board) -> Vec<BitMove> {
+    fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board) -> MoveList {
         let mut movegen = MoveGen::get_self(&chessboard);
         let gen_type = G::gen_type();
         if gen_type == GenTypes::Evasions {
@@ -552,7 +553,7 @@ mod tests {
     #[test]
     fn movegen_legal_pseudo() {
         let boards = Board::random()
-            .pseudo_random(26272883000002)
+            .pseudo_random(2627288300002)
             .many(10);
 
         boards.iter().for_each(|b| {
@@ -563,5 +564,26 @@ mod tests {
                 assert!(b_plegal.contains(&mov));
             }
         });
+    }
+
+    #[test]
+    fn movelist() {
+        let b = Board::default();
+        let mut m = b.generate_moves();
+        let mut i = 0;
+        for d in m.iter() {
+            i+= 1;
+        }
+        {
+            let borrow = &m;
+            assert_eq!(i,borrow.len());
+        }
+        {
+            let borrow_mut = &mut m;
+            assert_eq!(i,borrow_mut.len());
+        }
+
+        let m2 = m.to_vec();
+        assert_eq!(m2.len(),m.len());
     }
 }

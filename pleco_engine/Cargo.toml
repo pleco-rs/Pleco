@@ -1,12 +1,11 @@
 [package]
 name = "pleco_engine"
-# REMINDER TO CHANGE IN README
 version = "0.0.2"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
 documentation = "https://docs.rs/pleco_engine/"
-#readme = "README.md"
+readme = "README.md"
 keywords = ["chess","ai","engine","game","gaming"]
 license = "MIT"
 categories = ["games","game-engines"]

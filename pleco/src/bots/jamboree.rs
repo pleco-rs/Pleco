@@ -41,21 +41,28 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     let (seq, non_seq) = moves.split_at(amount_seq);
 
     let mut best_move: Option<BitMove> = None;
+    let mut best_value: i16 = NEG_INFINITY;
     for mov in seq {
         board.apply_move(*mov);
         let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
         board.undo_move();
 
-        if return_move.score > alpha {
-            alpha = return_move.score;
-            best_move = Some(*mov);
-        }
 
-        if alpha >= beta {
-            return BestMove {
-                best_move: Some(*mov),
-                score: alpha,
-            };
+        if return_move.score > best_value {
+            best_move = Some(*mov);
+            best_value = return_move.score;
+
+            if return_move.score > alpha {
+                alpha = return_move.score;
+                best_move = Some(*mov);
+            }
+
+            if alpha >= beta {
+                return BestMove {
+                    best_move: Some(*mov),
+                    score: alpha,
+                };
+            }
         }
     }
 
@@ -66,7 +73,7 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     } else {
         BestMove {
             best_move: best_move,
-            score: alpha,
+            score: best_value,
         }
     }
 }

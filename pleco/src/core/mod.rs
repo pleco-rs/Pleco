@@ -3,7 +3,7 @@
 //! the statically created `MagicHelper`, which at runtime creates various lookup tables.
 
 #[macro_use]
-mod bit_macros;
+mod macros;
 
 pub mod bit_twiddles;
 pub mod piece_move;
@@ -12,6 +12,7 @@ pub mod masks;
 pub mod mono_traits;
 pub mod sq;
 pub mod bitboard;
+pub mod move_list;
 
 use self::bit_twiddles::*;
 use self::masks::*;

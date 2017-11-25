@@ -14,6 +14,7 @@ extern crate rand;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
+use core::move_list::MoveList;
 use core::mono_traits::*;
 use core::masks::*;
 use core::sq::{SQ,NO_SQ};
@@ -600,7 +601,7 @@ impl Board {
     ///
     /// # Safety
     ///
-    /// The passed in [BitMove] must be
+    /// The passed in [BitMove] must be a legal move for the current position.
     ///
     /// # Panics
     ///
@@ -609,10 +610,27 @@ impl Board {
     /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
         let gives_check: bool = self.gives_check(bit_move);
-        unsafe {self.apply_unknown_move(bit_move, gives_check)}
+        self.apply_unknown_move(bit_move, gives_check);
     }
 
-    pub unsafe fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
+    /// Applies a move to the Board. This method is only useful if before a move is applied to
+    /// a board, the ability of the move to give check is applied. If it is not needed to know
+    /// if the move gives check or not, consider using `Board::apply_move` instead.
+    ///
+    /// # Safety
+    ///
+    /// The passed in [BitMove] must be a legal move for the current position.
+    ///
+    /// # Panics
+    ///
+    /// The supplied BitMove must be both a valid move for that position, as well as a
+    /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
+    /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
+    ///
+    /// The second parameter, `gives_check`, must be true if the move gives check, or false
+    /// if the move doesn't give check. If an incorrect `gives_check` is supplied, undefined
+    /// behavior will follow.
+    pub fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
 
         // TODO: investigate potention for SIMD in capturing moves
         //
@@ -620,9 +638,6 @@ impl Board {
 
         // Check for stupidity
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
-
-        // Does this move give check?
-        let gives_check: bool = self.gives_check(bit_move);
 
         // Zobrist Hash
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
@@ -772,7 +787,7 @@ impl Board {
     /// assert!(success);
     /// ```
     pub fn apply_uci_move(&mut self, uci_move: &str) -> bool {
-        let all_moves: Vec<BitMove> = self.generate_moves();
+        let all_moves: MoveList = self.generate_moves();
         let bit_move: Option<BitMove> = all_moves.iter()
                                                  .find(|m| m.stringify() == uci_move)
                                                  .cloned();
@@ -956,7 +971,7 @@ impl Board {
     ///
     /// println!("There are {} possible legal moves.", moves.len());
     /// ```
-    pub fn generate_moves(&self) -> Vec<BitMove> {
+    pub fn generate_moves(&self) -> MoveList {
         MoveGen::generate::<Legal, AllGenType>(self)
     }
 
@@ -964,7 +979,7 @@ impl Board {
     /// Works exactly the same as [Board::generate_moves()], but doesn't guarantee that all
     /// the moves are legal for the current position. Moves need to be checked with a
     /// [Board::legal_move(move)] in order to be certain of a legal move.
-    pub fn generate_pseudolegal_moves(&self) -> Vec<BitMove> {
+    pub fn generate_pseudolegal_moves(&self) -> MoveList {
         MoveGen::generate::<PseudoLegal, AllGenType>(self)
     }
 
@@ -988,7 +1003,7 @@ impl Board {
     ///
     /// assert_eq!(capturing_moves.len(), 0); // no possible captures for the starting position
     /// ```
-    pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
+    pub fn generate_moves_of_type(&self, gen_type: GenTypes) -> MoveList {
         match gen_type {
             GenTypes::All => MoveGen::generate::<Legal,AllGenType>(self),
             GenTypes::Captures => MoveGen::generate::<Legal,CapturesGenType>(self),
@@ -1010,7 +1025,7 @@ impl Board {
     /// # Panics
     ///
     /// Panics if given [GenTypes::QuietChecks] while the current board is in check
-    pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> Vec<BitMove> {
+    pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> MoveList {
         match gen_type {
             GenTypes::All => MoveGen::generate::<PseudoLegal,AllGenType>(self),
             GenTypes::Captures => MoveGen::generate::<PseudoLegal,CapturesGenType>(self),
@@ -1699,7 +1714,6 @@ impl Board {
 
         // Stupidity Checks
         assert_ne!(src, dst);
-
         assert_eq!(self.color_of_sq(src).unwrap(), self.turn);
 
         // Searches for direct checks from the pre-computed array
