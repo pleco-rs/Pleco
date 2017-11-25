@@ -93,26 +93,6 @@ fn jamboree(
 
     let amount_seq: usize = 1 + (moves.len() / DIVIDE_CUTOFF) as usize;
 
-    let mut i3 = 0;
-    for f in moves.iter() {
-        i3 +=1;
-//        println!("Move: {}", *f);
-    }
-
-    let mut i2 = 0;
-    if board.depth() < 5 {
-        mvv_lva_sort(&mut moves, board);
-    }
-
-
-    for f in moves.iter() {
-        i2 += 1;
-//        println!("Move: {}", *f);
-    }
-
-    assert_eq!(i3, i2);
-
-
     let (seq, non_seq) = moves.split_at_mut(amount_seq);
 
 
@@ -125,7 +105,7 @@ fn jamboree(
 
 
         if return_move.score > best_value {
-            best_move = Some(*mov);
+                best_move = Some(*mov);
             best_value = return_move.score;
 
             if return_move.score > alpha {

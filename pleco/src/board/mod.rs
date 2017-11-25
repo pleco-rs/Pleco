@@ -601,7 +601,7 @@ impl Board {
     ///
     /// # Safety
     ///
-    /// The passed in [BitMove] must be
+    /// The passed in [BitMove] must be a legal move for the current position.
     ///
     /// # Panics
     ///
@@ -610,10 +610,27 @@ impl Board {
     /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
         let gives_check: bool = self.gives_check(bit_move);
-        unsafe {self.apply_unknown_move(bit_move, gives_check)}
+        self.apply_unknown_move(bit_move, gives_check);
     }
 
-    pub unsafe fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
+    /// Applies a move to the Board. This method is only useful if before a move is applied to
+    /// a board, the ability of the move to give check is applied. If it is not needed to know
+    /// if the move gives check or not, consider using `Board::apply_move` instead.
+    ///
+    /// # Safety
+    ///
+    /// The passed in [BitMove] must be a legal move for the current position.
+    ///
+    /// # Panics
+    ///
+    /// The supplied BitMove must be both a valid move for that position, as well as a
+    /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
+    /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
+    ///
+    /// The second parameter, `gives_check`, must be true if the move gives check, or false
+    /// if the move doesn't give check. If an incorrect `gives_check` is supplied, undefined
+    /// behavior will follow.
+    pub fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
 
         // TODO: investigate potention for SIMD in capturing moves
         //
@@ -621,9 +638,6 @@ impl Board {
 
         // Check for stupidity
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
-
-        // Does this move give check?
-        let gives_check: bool = self.gives_check(bit_move);
 
         // Zobrist Hash
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;

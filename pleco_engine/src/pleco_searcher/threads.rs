@@ -30,23 +30,62 @@ pub type RootMoves = Arc<RwLock<Vec<RootMove>>>;
 pub type AllRootMoves = Arc<RwLock<Vec<RootMoves>>>;
 
 pub struct ThreadPool {
+    // This is the position information we send to each thread upon
+    // starting. Contains stuff like the Board, and the Limit to search
+    // to.
     pos_state: Arc<RwLock<Option<ThreadGo>>>,
 
+    // This is all rootmoves for all treads.
     all_moves: AllRootMoves,
+
+    // Join handle for the main thread.
     main_thread: Option<JoinHandle<()>>,
 
+    // The mainthread will send us information through this! Such as
+    // the best move available.
     receiver: Receiver<SendData>,
+
+    // CondVar that the mainthread blocks on. We will notif the main thread
+    // to awaken through this.
     main_thread_go: Arc<(Mutex<bool>,Condvar)>,
 
+    // Vector of all non-main threads
     threads: Vec<JoinHandle<()>>,
+
+    // Tells all threads to go. This is mostly used by the MainThread, we
+    // don't really touch this at all.
     all_thread_go: Arc<(Mutex<bool>,Condvar)>,
+
+    // For each thread (including the mainthread), is it finished?
     thread_finished: Vec<Arc<AtomicBool>>,
+
+    // Tells all threads to stop and return the ebstmove found
     stop: Arc<AtomicBool>,
+
+    // Tells the threads to drop.
     drop: Arc<AtomicBool>,
 }
 
+// Okay, this all looks like madness, but there is some reason to it all.
+// Basically, Threadpool manages spawning and despawning threads, as well
+// as passing state to / from those threads, telling them to stop, go, drop,
+// and lastly determining the "best move" from all the threads.
+
+// While we spawn all the other threads, We mostly communicate with the
+// MainThread to do anything useful. We let the mainthread handle anything fun.
+// The goal of the ThreadPool is to be NON BLOCKING, unless we want to await a
+// result.
+
 impl ThreadPool {
     pub fn setup(num_threads: usize, use_stdout: bool) -> Self {
+        // Turn back, ye wary traveler!
+        // The road ahead is perilous and unreadable!
+        // Arrrrrrrggggg!!!!
+        // (Or should I say Aaaaaaaarrrcccc!!!?)
+        // (Get it?)
+        // (Cause this code is littered with Arc's.
+        // (Ha. ha.)
+
         let pos_state: Arc<RwLock<Option<ThreadGo>>> = Arc::new(RwLock::new(None));
         let stop = Arc::new(AtomicBool::new(false));
         let drop = Arc::new(AtomicBool::new(false));

@@ -189,7 +189,7 @@ impl<'a> ThreadSearcher<'a> {
                 }
 
                 if is_pv && (i == 0 || (value > alpha && (at_root || value < beta))) {
-                    value = -self.search::<PV>(-beta, -alpha,max_depth);
+                    value = -self.search::<PV>(-beta, -alpha, max_depth);
                 } else {
                     value = -self.search::<NonPV>(-beta, -alpha,max_depth);
                 }
