@@ -14,6 +14,7 @@ extern crate rand;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
+use core::move_list::MoveList;
 use core::mono_traits::*;
 use core::masks::*;
 use core::sq::{SQ,NO_SQ};
@@ -27,7 +28,7 @@ use engine::Searcher;
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
-use self::movegen::{MoveGen,Legal,PseudoLegal,MoveList};
+use self::movegen::{MoveGen,Legal,PseudoLegal};
 
 use std::option::*;
 use std::sync::Arc;

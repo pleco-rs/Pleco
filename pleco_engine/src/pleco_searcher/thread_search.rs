@@ -10,7 +10,7 @@ use std::cmp::{min,max};
 use std::sync::atomic::Ordering;
 
 use pleco::board::*;
-use pleco::board::movegen::MoveList;
+use pleco::MoveList;
 use pleco::core::*;
 use pleco::board::eval::*;
 use pleco::core::piece_move::BitMove;

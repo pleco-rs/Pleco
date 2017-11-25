@@ -3,9 +3,7 @@ use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
 
-use std::cmp::{min,max};
 use std::{mem,time};
-use std::time::Duration;
 
 use pleco::board::*;
 use pleco::core::*;

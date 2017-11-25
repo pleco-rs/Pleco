@@ -12,6 +12,7 @@ pub mod masks;
 pub mod mono_traits;
 pub mod sq;
 pub mod bitboard;
+pub mod move_list;
 
 use self::bit_twiddles::*;
 use self::masks::*;

@@ -2,7 +2,6 @@ use board::*;
 use core::piece_move::*;
 use board::eval::*;
 use super::{BestMove,eval_board};
-use MoveList;
 
 use rayon;
 

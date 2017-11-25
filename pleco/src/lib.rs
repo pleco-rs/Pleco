@@ -55,7 +55,7 @@ pub use board::Board;
 #[doc(no_inline)]
 pub use core::piece_move::BitMove;
 #[doc(no_inline)]
-pub use board::movegen::MoveList;
+pub use core::move_list::MoveList;
 #[doc(no_inline)]
 pub use core::sq::SQ;
 #[doc(no_inline)]
