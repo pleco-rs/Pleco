@@ -64,6 +64,10 @@ impl PlecoSearcher {
         true
     }
 
+    pub fn hash_percent(&self) -> f64 {
+        TT_TABLE.hash_percent()
+    }
+
     pub fn clear_tt(&mut self) {
         unsafe {TT_TABLE.clear() };
     }

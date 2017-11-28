@@ -37,10 +37,11 @@ pub struct RootMove {
 
 // Moves with higher score for a higher depth are less
 impl Ord for RootMove {
+    #[inline]
     fn cmp(&self, other: &RootMove) -> CmpOrder {
         let value_diff = self.score - other.score;
         if value_diff == 0 {
-            let prev_value_diff = self.prev_score as i32 - other.prev_score as i32;
+            let prev_value_diff = self.prev_score - other.prev_score;
             if prev_value_diff == 0 {
                 return CmpOrder::Equal;
             } else if prev_value_diff > 0 {
@@ -68,6 +69,7 @@ impl PartialEq for RootMove {
 
 
 impl RootMove {
+    #[inline]
     pub fn new(bit_move: BitMove) -> Self {
         RootMove {
             bit_move: bit_move,
@@ -77,17 +79,20 @@ impl RootMove {
         }
     }
 
+    #[inline]
     pub fn rollback_insert(&mut self, score: i32, depth: u16) {
         self.prev_score = self.score;
         self.score = score;
         self.depth_reached = depth;
     }
 
+    #[inline]
     pub fn insert(&mut self, score: i32, depth: u16) {
         self.score = score;
         self.depth_reached = depth;
     }
 
+    #[inline]
     pub fn rollback(&mut self) {
         self.prev_score = self.score;
     }

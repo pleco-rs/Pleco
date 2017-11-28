@@ -1,6 +1,11 @@
 //! This module contains `Board`, the Object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
+//!
+//! This module also contains structures used by the board, such as `castling_rights` for
+//! determining castling rights throughout a game. Other utilities that may be of use
+//! are `eval`, which takes a board and evaluates it, and `PGN`, which parses a PGN File into
+//! a board.
 
 
 pub mod movegen;
@@ -38,10 +43,11 @@ use std::cmp::{PartialEq,max,min};
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
     /// Nothing will ever be mutated in here, so it is safe to pass around.
-    /// See `pleco::MagicHelper` for more information.
+    /// See `core::magic_helper::MagicHelper` for more information.
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
+/// Represents possible Errors encountered while building a `Board` from a fen string.
 #[derive(Debug, Clone)]
 pub enum FenBuildError {
     SquareSmallerRank,
@@ -975,22 +981,22 @@ impl Board {
         MoveGen::generate::<Legal, AllGenType>(self)
     }
 
-    /// Get a List of all PseudoLegal [BitMove]s for the player whose turn it is to move.
-    /// Works exactly the same as [Board::generate_moves()], but doesn't guarantee that all
+    /// Get a List of all PseudoLegal `BitMove`s for the player whose turn it is to move.
+    /// Works exactly the same as `Board::generate_moves()`, but doesn't guarantee that all
     /// the moves are legal for the current position. Moves need to be checked with a
-    /// [Board::legal_move(move)] in order to be certain of a legal move.
+    /// `Board::legal_move(move)` in order to be certain of a legal move.
     pub fn generate_pseudolegal_moves(&self) -> MoveList {
         MoveGen::generate::<PseudoLegal, AllGenType>(self)
     }
 
-    /// Get a List of legal [BitMove]s for the player whose turn it is to move or a certain type.
+    /// Get a List of legal `BitMove`s for the player whose turn it is to move or a certain type.
     ///
     /// This method already takes into account if the Board is currently in check, and will return
     /// legal moves only. If a non-ALL GenType is supplied, only a subset of the total moves will be given.
     ///
     /// # Panics
     ///
-    /// Panics if given [GenTypes::QuietChecks] while the current board is in check
+    /// Panics if given `GenTypes::QuietChecks` while the current board is in check
     ///
     /// # Examples
     ///
@@ -1014,17 +1020,17 @@ impl Board {
         }
     }
 
-    /// Get a List of all PseudoLegal [BitMove]s for the player whose turn it is to move.
-    /// Works exactly the same as [Board::generate_moves()], but doesn't guarantee that all
+    /// Get a List of all PseudoLegal `BitMove`s for the player whose turn it is to move.
+    /// Works exactly the same as `Board::generate_moves()`, but doesn't guarantee that all
     /// the moves are legal for the current position. Moves need to be checked with a
-    /// [Board::legal_move(move)] in order to be certain of a legal move.
+    /// `Board::legal_move(move)` in order to be certain of a legal move.
     ///
     /// This method already takes into account if the Board is currently in check.
     /// If a non-ALL GenType is supplied, only a subset of the total moves will be given.
     ///
     /// # Panics
     ///
-    /// Panics if given [GenTypes::QuietChecks] while the current board is in check
+    /// Panics if given `GenTypes::QuietChecks` while the current board is in check
     pub fn generate_pseudolegal_moves_of_type(&self, gen_type: GenTypes) -> MoveList {
         match gen_type {
             GenTypes::All => MoveGen::generate::<PseudoLegal,AllGenType>(self),
@@ -1604,12 +1610,12 @@ impl Board {
 
     //  ------- CHECKING  -------
 
-    /// Return if current side to move is in check
+    /// Return if current side to move is in check.
     pub fn in_check(&self) -> bool {
         self.state.checkers_bb.is_not_empty()
     }
 
-    /// Return if the current side to move is in check_mate.
+    /// Return if the current side to move is in check mate.
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn checkmate(&self) -> bool {
@@ -1620,7 +1626,7 @@ impl Board {
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
-        !self.in_check() && self.generate_moves().is_empty()
+        !self.in_check() && (self.generate_moves().is_empty() || self.state.rule_50 >= 50)
     }
 
     /// Return the BitBoard of Checks on the current player's king.
@@ -1971,15 +1977,15 @@ enum RandGen {
 ///
 /// Create one `Board` with at least 5 moves played that is created in a pseudo-random
 /// fashion.
-/// ```rust
+/// ```
 /// let rand_boards: Board = RandBoard::new()
 ///     .pseudo_random(12455)
 ///     .min_moves(5)
 ///     .one();
 /// ```
 ///
-/// Create a `Vec` of 10 random `Board`s that are guaranteedd to not be in check.
-/// ```rust
+/// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
+/// ```
 /// let rand_boards: Vec<Board> = RandBoard::new()
 ///     .pseudo_random(12455)
 ///     .no_check(5)
