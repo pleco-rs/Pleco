@@ -54,7 +54,7 @@ fn run_one() {
 }
 
 fn run_many() {
-    let mut j = 100;
+    let mut j = 1000;
     let mut wins = 0;
     let mut loses = 0;
     let mut draws = 0;
@@ -71,7 +71,7 @@ fn run_many() {
         while i > 0 && !board.checkmate() && !board.stalemate() {
             if i % 2 == 1 {
                 local = Duration::span(|| {
-                    let mov = if i < max_moves - 70 {
+                    let mov = if i < max_moves - 40 {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
                     } else {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 4)
@@ -109,7 +109,7 @@ fn run_many() {
         j -= 1;
         println!("rounds = {}, Hash {}",max_moves - i,s.hash_percent());
 
-        if j % 5 == 3 {
+        if j % 6 == 3 {
             println!("W/L/D {}-{}-{}",wins,loses,draws);
         }
     }
