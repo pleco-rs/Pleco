@@ -60,7 +60,7 @@ impl<'a> ThreadSearcher<'a> {
             self.roolback_root_moves();
 
             if depth >= 5 {
-                delta = 18;
+                delta = 20;
                 alpha = max(self.root_moves_prev_score() - delta, NEG_INFINITY as i32);
                 beta = min(self.root_moves_prev_score() + delta, INFINITY as i32);
             }
