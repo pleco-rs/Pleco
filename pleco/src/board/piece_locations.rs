@@ -49,6 +49,7 @@ impl PieceLocations {
     /// # Panics
     ///
     /// Panics if Square is of index higher than 63.
+    #[inline]
     pub fn place(&mut self, square: SQ, player: Player, piece: Piece) {
         assert!(square.is_okay());
         self.data[square.0 as usize] = self.create_sq(player, piece);
@@ -59,6 +60,7 @@ impl PieceLocations {
     /// # Panics
     ///
     /// Panics if Square is of index higher than 63.
+    #[inline]
     pub fn remove(&mut self, square: SQ) {
         assert!(square.is_okay());
         self.data[square.0 as usize] = 0b0111
@@ -69,6 +71,7 @@ impl PieceLocations {
     /// # Panics
     ///
     /// Panics if square is of index higher than 63.
+    #[inline]
     pub fn piece_at(&self, square: SQ) -> Option<Piece> {
         assert!(square.is_okay());
         let byte: u8 = self.data[square.0 as usize] & 0b0111;
@@ -93,6 +96,7 @@ impl PieceLocations {
     /// # Panics
     ///
     /// Panics if Square is of index higher than 63.
+    #[inline]
     pub fn piece_at_for_player(&self, square: SQ, player: Player) -> Option<Piece> {
         let op = self.player_piece_at(square);
         if op.is_some() {
@@ -112,6 +116,7 @@ impl PieceLocations {
     /// # Panics
     ///
     /// Panics if Square is of index higher than 63.
+    #[inline]
     pub fn player_at(&self, square: SQ) -> Option<Player> {
         let byte: u8 = self.data[square.0 as usize];
         if byte == 0b0111 || byte == 0b1111 {
@@ -130,6 +135,7 @@ impl PieceLocations {
     /// # Panics
     ///
     /// Panics if Square is of index higher than 63.
+    #[inline]
     pub fn player_piece_at(&self, square: SQ) -> Option<(Player, Piece)> {
         let byte: u8 = self.data[square.0 as usize];
         match byte {
@@ -153,6 +159,7 @@ impl PieceLocations {
     }
 
     /// Returns if there is a `SQ` is occupied.
+    #[inline]
     pub fn at_square(&self, square: SQ) -> bool {
         assert!(square.is_okay());
         let byte: u8 = self.data[square.0 as usize];
@@ -160,6 +167,7 @@ impl PieceLocations {
     }
 
     /// Returns the first square (if any) that a piece / player is at.
+    #[inline]
     pub fn first_square(&self, piece: Piece, player: Player) -> Option<SQ> {
         let target = self.create_sq(player, piece);
         for x in 0..64 {
@@ -171,6 +179,7 @@ impl PieceLocations {
     }
 
     /// Returns if the Board contains a particular piece / player.
+    #[inline]
     pub fn contains(&self, piece: Piece, player: Player) -> bool {
         self.first_square(piece,player).is_some()
     }
@@ -221,6 +230,7 @@ impl PieceLocations {
 
 
     /// Helper method to return the bit representation of a given piece and player.
+    #[inline]
     fn create_sq(&self, player: Player, piece: Piece) -> u8 {
         let mut loc: u8 = match piece {
             Piece::P => 0b0000,

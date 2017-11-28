@@ -1620,7 +1620,7 @@ impl Board {
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
-        !self.in_check() && self.generate_moves().is_empty()
+        !self.in_check() && (self.generate_moves().is_empty() || self.state.rule_50 >= 50)
     }
 
     /// Return the BitBoard of Checks on the current player's king.
