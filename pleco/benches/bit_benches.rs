@@ -22,7 +22,7 @@ fn bench_popcount_1000_rust(b: &mut Bencher) {
     b.iter(|| {
         black_box({
             for bits in BIT_SETS_DENSE_1000.iter() {
-                black_box({black_box(black_box((*bits).0)).count_ones();})
+                black_box({black_box((*bits).0).count_ones();})
             }
         })
     })

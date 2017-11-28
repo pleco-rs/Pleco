@@ -79,131 +79,95 @@ pub struct WhiteType {}
 pub struct BlackType {}
 
 impl PlayerTrait for WhiteType {
-    #[inline(always)]
     fn player() -> Player {
         Player::White
     }
-    #[inline(always)]
     fn opp_player() -> Player {
         Player::Black
     }
 
-    #[inline(always)]
     fn down(sq: SQ) -> SQ { sq - SQ(8) }
 
-    #[inline(always)]
     fn up(sq: SQ) -> SQ { sq + SQ(8) }
 
-    #[inline(always)]
     fn left(sq: SQ) -> SQ { sq - SQ(1) }
 
-    #[inline(always)]
     fn right(sq: SQ) -> SQ { sq + SQ(1) }
 
-    #[inline(always)]
     fn down_left(sq: SQ) -> SQ { sq - SQ(9) }
 
-    #[inline(always)]
     fn down_right(sq: SQ) -> SQ { sq - SQ(7) }
 
-    #[inline(always)]
     fn up_left(sq: SQ) -> SQ { sq + SQ(7) }
 
-    #[inline(always)]
     fn up_right(sq: SQ) -> SQ { sq + SQ(9) }
 
-    #[inline(always)]
     fn shift_down(bb: BitBoard) -> BitBoard { bb >> 8 }
 
-    #[inline(always)]
     fn shift_up(bb: BitBoard) -> BitBoard { bb << 8 }
 
-    #[inline(always)]
     fn shift_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) >> 1 }
 
-    #[inline(always)]
     fn shift_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) << 1 }
 
-    #[inline(always)]
     fn shift_down_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) >> 9 }
 
-    #[inline(always)]
     fn shift_down_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) >> 7 }
 
-    #[inline(always)]
     fn shift_up_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) << 7 }
 
-    #[inline(always)]
     fn shift_up_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) << 9 }
 }
 
 impl PlayerTrait for BlackType {
-    #[inline(always)]
     fn player() -> Player {
         Player::Black
     }
 
-    #[inline(always)]
     fn opp_player() -> Player {
         Player::White
     }
 
-    #[inline(always)]
     fn down(sq: SQ) -> SQ { sq + SQ(8) }
 
-    #[inline(always)]
     fn up(sq: SQ) -> SQ { sq - SQ(8) }
 
-    #[inline(always)]
     fn left(sq: SQ) -> SQ { sq + SQ(1) }
 
-    #[inline(always)]
     fn right(sq: SQ) -> SQ { sq - SQ(1) }
 
-    #[inline(always)]
     fn down_left(sq: SQ) -> SQ { sq + SQ(9) }
 
-    #[inline(always)]
     fn down_right(sq: SQ) -> SQ { sq + SQ(7) }
 
-    #[inline(always)]
     fn up_left(sq: SQ) -> SQ { sq - SQ(7) }
 
-    #[inline(always)]
     fn up_right(sq: SQ) -> SQ { sq - SQ(9) }
 
-    #[inline(always)]
     fn shift_down(bb: BitBoard) -> BitBoard { bb << (8) }
 
-    #[inline(always)]
     fn shift_up(bb: BitBoard) -> BitBoard { bb >> (8) }
 
-    #[inline(always)]
     fn shift_left(bb: BitBoard) -> BitBoard {
         (bb & !BitBoard::FILE_H) << (1)
     }
 
-    #[inline(always)]
     fn shift_right(bb: BitBoard) -> BitBoard {
         (bb & !BitBoard::FILE_A) >> (1)
     }
 
-    #[inline(always)]
     fn shift_down_left(bb: BitBoard) -> BitBoard {
         (bb & !BitBoard::FILE_H) << (9)
     }
 
-    #[inline(always)]
     fn shift_down_right(bb: BitBoard) -> BitBoard {
         (bb & !BitBoard::FILE_A) << (7)
     }
 
-    #[inline(always)]
     fn shift_up_left(bb: BitBoard) -> BitBoard {
         (bb & !BitBoard::FILE_H) >> (7)
     }
 
-    #[inline(always)]
     fn shift_up_right(bb: BitBoard) -> BitBoard {
         (bb & !BitBoard::FILE_A) >> (9)
     }
@@ -234,42 +198,36 @@ pub struct EvasionsGenType {}
 pub struct NonEvasionsGenType {}
 
 impl GenTypeTrait for AllGenType {
-    #[inline(always)]
     fn gen_type() -> GenTypes {
         GenTypes::All
     }
 }
 
 impl GenTypeTrait for CapturesGenType {
-    #[inline(always)]
     fn gen_type() -> GenTypes {
         GenTypes::Captures
     }
 }
 
 impl GenTypeTrait for QuietsGenType {
-    #[inline(always)]
     fn gen_type() -> GenTypes {
         GenTypes::Quiets
     }
 }
 
 impl GenTypeTrait for QuietChecksGenType {
-    #[inline(always)]
     fn gen_type() -> GenTypes {
         GenTypes::QuietChecks
     }
 }
 
 impl GenTypeTrait for EvasionsGenType {
-    #[inline(always)]
     fn gen_type() -> GenTypes {
         GenTypes::Evasions
     }
 }
 
 impl GenTypeTrait for NonEvasionsGenType {
-    #[inline(always)]
     fn gen_type() -> GenTypes {
         GenTypes::NonEvasions
     }
@@ -300,42 +258,36 @@ pub struct QueenType {}
 pub struct KingType {}
 
 impl PieceTrait for PawnType {
-    #[inline(always)]
     fn piece_type() -> Piece {
         Piece::P
     }
 }
 
 impl PieceTrait for KnightType {
-    #[inline(always)]
     fn piece_type() -> Piece {
         Piece::N
     }
 }
 
 impl PieceTrait for BishopType {
-    #[inline(always)]
     fn piece_type() -> Piece {
         Piece::B
     }
 }
 
 impl PieceTrait for RookType {
-    #[inline(always)]
     fn piece_type() -> Piece {
         Piece::R
     }
 }
 
 impl PieceTrait for QueenType {
-    #[inline(always)]
     fn piece_type() -> Piece {
         Piece::Q
     }
 }
 
 impl PieceTrait for KingType {
-    #[inline(always)]
     fn piece_type() -> Piece {
         Piece::K
     }

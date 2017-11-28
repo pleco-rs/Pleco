@@ -8,10 +8,14 @@ use test::Bencher;
 #[allow(unused_imports)]
 use test;
 
+
+
 // depth: depth from given
 // half_moves: total moves
 
+
 pub fn minimax(board: &mut Board, max_depth: u16) -> BestMove {
+    //    println!("depth = {}", bot.board.depth());
     if board.depth() == max_depth {
 
         return eval_board(board);
@@ -40,4 +44,5 @@ pub fn minimax(board: &mut Board, max_depth: u16) -> BestMove {
         best_move: best_move,
         score: best_value,
     }
+
 }
