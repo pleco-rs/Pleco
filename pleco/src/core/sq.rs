@@ -117,6 +117,7 @@ impl SQ {
     /// assert_eq!(a1.distance(b2), 1);
     /// assert_eq!(a1.distance(b3), 2);
     /// ```
+    #[inline]
     pub fn distance(self, sq_other: SQ) -> u8 {
         let x = diff(self.rank_idx_of_sq(), sq_other.rank_idx_of_sq());
         let y = diff(self.file_idx_of_sq(), sq_other.file_idx_of_sq());
