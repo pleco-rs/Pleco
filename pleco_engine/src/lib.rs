@@ -41,6 +41,7 @@ extern crate test;
 extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
+
 extern crate pleco;
 
 pub mod pleco_searcher;

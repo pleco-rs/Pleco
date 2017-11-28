@@ -23,7 +23,6 @@ pub struct MoveList {
 }
 
 impl Default for MoveList {
-    #[inline]
     fn default() -> Self {
         MoveList {
             inner: [BitMove::null(); 256],
@@ -151,7 +150,6 @@ impl<'a> IntoIterator for &'a MoveList {
     type Item = BitMove;
     type IntoIter = MoveIter<'a>;
 
-    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         MoveIter {
             movelist: &self,
@@ -204,7 +202,6 @@ impl IntoIterator for MoveList {
     type Item = BitMove;
     type IntoIter = MoveIntoIter;
 
-    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         MoveIntoIter {
             movelist: self,

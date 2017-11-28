@@ -287,7 +287,6 @@ impl TT {
     }
 
     // Called each time a new position is searched
-    #[inline]
     pub fn new_search(&self) {
         unsafe {
             let c = self.time_age.get();
@@ -296,7 +295,6 @@ impl TT {
     }
 
     /// Returns the current time age of a TT.
-    #[inline]
     pub fn time_age(&self) -> u8 {
         unsafe {
             *self.time_age.get()
@@ -305,7 +303,6 @@ impl TT {
 
     /// Returns the current number of cycles a TT has gone through. Cycles is simply the
     /// number of times refresh has been called.
-    #[inline]
     pub fn time_age_cylces(&self) -> u8 {
         unsafe {
             (*self.time_age.get()).wrapping_shr(2)
@@ -386,11 +383,11 @@ impl TT {
 
     pub fn hash_percent(&self) -> f64 {
         unsafe {
-            let clusters_scanned: u64 = max((*self.cap.get() - 1) as u64, 2018);
+            let clusters_scanned: u64 = max(*self.cap.get() as u64, 1024);
             let mut hits: f64 = 0.0;
 
             for i in 0..clusters_scanned {
-                let cluster = self.cluster(i + 1);
+                let cluster = self.cluster(i);
                 let init_entry: *mut Entry = cluster_first_entry(cluster);
                 for e in 0..CLUSTER_SIZE {
                     // get a pointer to the specified entry
@@ -401,7 +398,7 @@ impl TT {
                     }
                 }
             }
-            (hits * 100.0) / (clusters_scanned * CLUSTER_SIZE as u64) as f64
+            hits / (clusters_scanned * CLUSTER_SIZE as u64) as f64
         }
     }
 }
