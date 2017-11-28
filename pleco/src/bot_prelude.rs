@@ -7,6 +7,4 @@ pub use bots::AlphaBetaSearcher;
 pub use bots::JamboreeSearcher;
 pub use bots::IterativeSearcher;
 
-
-
 pub use engine::Searcher;

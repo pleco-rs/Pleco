@@ -1,6 +1,7 @@
 //! Timer for keeping track of the time for both sides of the a chess game.
 use std::time::Instant;
 
+// TODO: Clean this up.
 // Structure to keep track of time for two players.
 #[derive(Clone, Copy)]
 pub struct Timer {

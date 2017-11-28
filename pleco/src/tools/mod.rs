@@ -1,4 +1,6 @@
-//! Miscellaneous tools for debugging and generating output.
+//! Miscellaneous tools for used for Searching. Most notably this module
+//! contains the 'TranspositionTable', a fast lookup table able to be accessed by
+//! multiple threads.
 
 pub mod prng;
 pub mod tt;
@@ -75,18 +77,6 @@ lazy_static! {
         vec
     };
 }
-
-//#[test]
-//fn print_fens() {
-//    for fen in ALL_FENS.iter() {
-//        print!("{} ",fen);
-//        let board = Board::new_from_fen(fen);
-//        if board.in_check() {
-//            print!(" In check");
-//        }
-//        println!();
-//    }
-//}
 
 
 // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");

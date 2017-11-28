@@ -1,4 +1,5 @@
-//! Contains the Pseduo-random number generator.
+//! Contains the Pseudo-random number generator. Used for generating random `Board`s and
+//! `BitBoard`s.
 
 /// Object for generating pseudo-random numbers.
 pub struct PRNG {
