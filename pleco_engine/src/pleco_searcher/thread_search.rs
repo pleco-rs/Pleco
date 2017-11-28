@@ -185,9 +185,10 @@ impl<'a> ThreadSearcher<'a> {
         for (i, mov) in moves.iter().enumerate() {
             if at_root || self.board.legal_move(*mov) {
                 moves_played += 1;
-                self.board.apply_move(*mov);
+                let gives_check: bool = self.board.gives_check(*mov);
+                self.board.apply_unknown_move(*mov, gives_check);
                 let do_full_depth: bool = if max_depth >= 3 && moves_played > 1 && ply >= 2 {
-                    if in_check {
+                    if in_check || gives_check {
                         value = -self.search::<NonPV>(-(alpha+1), -alpha, max_depth - 1);
                     } else {
                         value = -self.search::<NonPV>(-(alpha+1), -alpha, max_depth - 2);
@@ -250,6 +251,10 @@ impl<'a> ThreadSearcher<'a> {
         tt_entry.place(zob, best_move, best_value as i16, pos_eval as i16, ply as u8, node_bound);
 
         best_value
+    }
+
+    fn qsearch<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: i32) -> i32 {
+        unimplemented!()
     }
 
     fn main_thread(&self) -> bool {

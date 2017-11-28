@@ -128,6 +128,7 @@ impl BitMove {
     ///
     /// Using this method cannot guarantee that the move is legal. The input bits must be encoding a legal
     /// move, or else there is Undefined Behavior if the resulting BitMove is used.
+    #[inline]
     pub fn new(input: u16) -> BitMove {
         BitMove { data: input }
     }
@@ -174,7 +175,8 @@ impl BitMove {
     /// # Safety
     ///
     /// A Null move is never a valid move to play. Using a Null move should onl be used for search and
-    /// evaluation purposes. 
+    /// evaluation purposes.
+    #[inline]
     pub fn null() -> Self {
         BitMove { data: 0 }
     }
@@ -182,6 +184,7 @@ impl BitMove {
     /// Returns if a [BitMove] is a Null Move.
     ///
     /// See [BitMove::null()] for more information on Null moves.
+    #[inline]
     pub fn is_null(&self) -> bool {
         self.data == 0
     }
@@ -336,6 +339,7 @@ impl BitMove {
     }
 
     /// Returns the raw number representation of the move.
+    #[inline]
     pub fn get_raw(&self) -> u16 {
         self.data
     }

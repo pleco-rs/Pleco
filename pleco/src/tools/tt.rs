@@ -287,6 +287,7 @@ impl TT {
     }
 
     // Called each time a new position is searched
+    #[inline]
     pub fn new_search(&self) {
         unsafe {
             let c = self.time_age.get();
@@ -295,6 +296,7 @@ impl TT {
     }
 
     /// Returns the current time age of a TT.
+    #[inline]
     pub fn time_age(&self) -> u8 {
         unsafe {
             *self.time_age.get()
@@ -303,6 +305,7 @@ impl TT {
 
     /// Returns the current number of cycles a TT has gone through. Cycles is simply the
     /// number of times refresh has been called.
+    #[inline]
     pub fn time_age_cylces(&self) -> u8 {
         unsafe {
             (*self.time_age.get()).wrapping_shr(2)
