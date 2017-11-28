@@ -185,7 +185,6 @@ impl BitBoard {
 impl Shl<SQ> for BitBoard {
     type Output = BitBoard;
 
-    #[inline(always)]
     fn shl(self, rhs: SQ) -> BitBoard {
         BitBoard((self.0).wrapping_shl(rhs.0 as u32))
     }
@@ -194,7 +193,6 @@ impl Shl<SQ> for BitBoard {
 impl Iterator for BitBoard {
     type Item = SQ;
 
-    #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         if self.is_empty() {
             None

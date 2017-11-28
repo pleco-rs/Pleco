@@ -1,47 +1,37 @@
 extern crate pleco;
-extern crate chrono;
 extern crate pleco_engine;
 
-use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
+use pleco::bot_prelude::{JamboreeSearcher,Searcher};
 use pleco::{Board,BitMove};
 use pleco::engine::UCILimit;
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
 
 use std::thread;
-use chrono::*;
 
 
 fn main() {
-    run_many();
-}
-
-fn run_one() {
     let mut s = PlecoSearcher::init(true);
     let mut board = Board::default();
 
-    let mut local: Duration = Duration::seconds(2);
-
     let mut i = 0;
 
-    while i < 700 && !board.checkmate() && !board.stalemate() {
+    while i < 125 && !board.checkmate() && !board.stalemate() {
         board.pretty_print();
-
         if i % 2 == 1 {
-            local = Duration::span(|| {
-                let mov = JamboreeSearcher::best_move_depth(board.shallow_clone(), 5);
-                println!("Jamboree searcher: {}", mov);
-                board.apply_move(mov);
-            });
+            let mov = JamboreeSearcher::best_move_depth(board.shallow_clone(),4);
+            println!("Jamboree searcher: {}",mov);
+            board.apply_move(mov);
         } else {
             s.search(&board, &UCILimit::Infinite);
-            thread::sleep_ms(local.num_milliseconds() as u32);
+            thread::sleep_ms(10000);
             let mov = s.stop_search();
             println!("Pleco searcher: {}",mov);
             board.apply_move(mov);
         }
         i += 1;
     }
+
 
     println!("i = {}",i);
     board.pretty_print();
@@ -114,5 +104,4 @@ fn run_many() {
         }
     }
     println!("W/L/D {}-{}-{}",wins,loses,draws);
-
 }

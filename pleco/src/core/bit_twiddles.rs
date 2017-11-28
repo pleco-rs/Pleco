@@ -203,7 +203,6 @@ pub fn reverse_bytes(b: u64) -> u64 {
 /// let reverse = 0b10000000;
 /// assert_eq!(reverse, reverse_byte(x));
 /// ```
-#[inline]
 pub fn reverse_byte(b: u8) -> u8 {
     let m: u8 = ((0b0000_0001 & b) << 7) | ((0b0000_0010 & b) << 5) | ((0b0000_0100 & b) << 3) |
         ((0b0000_1000 & b) << 1) |
