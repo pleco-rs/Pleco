@@ -40,7 +40,7 @@ impl Ord for RootMove {
     fn cmp(&self, other: &RootMove) -> CmpOrder {
         let value_diff = self.score - other.score;
         if value_diff == 0 {
-            let prev_value_diff = self.prev_score as i32 - other.prev_score as i32;
+            let prev_value_diff = self.prev_score - other.prev_score;
             if prev_value_diff == 0 {
                 return CmpOrder::Equal;
             } else if prev_value_diff > 0 {

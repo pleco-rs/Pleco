@@ -110,7 +110,7 @@ impl ThreadPool {
             let builder = thread::Builder::new();
             let thread_moves = Arc::new(RwLock::new(Vec::new()));
             let thread_depth_completed = Arc::new(AtomicU16::new(0));
-            let thread_fin = Arc::new(AtomicBool::new(false));
+            let thread_fin = Arc::new(AtomicBool::new(true));
             all_moves.push(Arc::clone(&thread_moves));
             depth_completed.push(Arc::clone(&thread_depth_completed));
             let new_thread =
@@ -133,7 +133,7 @@ impl ThreadPool {
         }
 
         let all_root_moves = Arc::new(RwLock::new(all_moves));
-        let main_thread_fin = Arc::new(AtomicBool::new(false));
+        let main_thread_fin = Arc::new(AtomicBool::new(true));
         let main_thread_inner = Thread::new
             (main_thread_moves,
              Arc::clone(&main_thread_depth),
@@ -148,7 +148,7 @@ impl ThreadPool {
         let builder = thread::Builder::new();
         let main_thread = MainThread {
             all_moves: Arc::clone(&all_root_moves),
-            all_stops: all_threads_finished.clone(),
+            all_finished: all_threads_finished.clone(),
             all_depths: depth_completed,
             main_thread_go: Arc::clone(&main_thread_go),
             sender: tx,
@@ -213,7 +213,7 @@ impl ThreadPool {
 
 pub struct MainThread {
     all_moves: AllRootMoves,
-    all_stops: Vec<Arc<AtomicBool>>,
+    all_finished: Vec<Arc<AtomicBool>>,
     all_depths: Vec<Arc<AtomicU16>>,
     main_thread_go: Arc<(Mutex<bool>,Condvar)>,
     sender: Sender<SendData>,
@@ -283,8 +283,14 @@ impl MainThread {
     }
 
     pub fn wait_for_finish(&self) {
-        for stop in self.all_stops.iter() {
-            while(!stop.load(Ordering::Relaxed)) {}
+        for finished in self.all_finished.iter() {
+            while(!finished.load(Ordering::Relaxed)) {}
+        }
+    }
+
+    pub fn wait_for_start(&self) {
+        for started in self.all_finished.iter() {
+            while(started.load(Ordering::Relaxed)) {}
         }
     }
 
@@ -299,23 +305,28 @@ impl MainThread {
         let board = self.thread.retrieve_board().unwrap();
         self.set_all_root_moves(&board);
 
+        // turn stop searching off
         self.thread.stop.store(false, Ordering::Relaxed);
         // wakeup all threads
         self.start_threads();
 
         let limit = self.thread.retrieve_limit().unwrap();
-        thread::sleep_ms(1);
+        self.wait_for_start();
         self.lock_threads();
 
         // start searching
         self.thread.start_searching(board, limit);
         self.thread.finished.store(true, Ordering::Relaxed);
+        self.thread.stop.store(true, Ordering::Relaxed);
         self.wait_for_finish();
 
         // find best move
         let mut best_root_move: RootMove = self.thread_best_move(0);
         let mut depth_reached: i32 = self.all_depths[0].load(Ordering::Relaxed) as i32;
-        println!("id: 0, value: {}, depth: {}, depth_comp: {}, mov: {}", best_root_move.score, best_root_move.depth_reached, depth_reached, best_root_move.bit_move);
+        if self.thread.use_stdout.load(Ordering::Relaxed) {
+            println!("id: 0, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}", best_root_move.score, best_root_move.prev_score, best_root_move.depth_reached, depth_reached, best_root_move.bit_move);
+        }
+
 
         for x in 1..self.num_threads() {
             let thread_move = self.thread_best_move(x);
@@ -324,9 +335,9 @@ impl MainThread {
             let value_diff = thread_move.score - best_root_move.score;
 
 
-//            if self.thread.use_stdout.load(Ordering::Relaxed) {
-                println!("id: {}, value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
-//            }
+            if self.thread.use_stdout.load(Ordering::Relaxed) {
+                println!("id: {}, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, best_root_move.prev_score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
+            }
             // If it has a bigger value and greater or equal depth
             if value_diff > 0 && depth_diff >= 0 {
                 best_root_move = thread_move;
@@ -438,8 +449,9 @@ impl Thread {
 impl Drop for ThreadPool {
     fn drop(&mut self) {
         // Store that we are dropping
-        self.stop.store(true, Ordering::Relaxed);
         self.drop.store(true, Ordering::Relaxed);
+        thread::sleep(time::Duration::new(0,100));
+        self.stop.store(true, Ordering::Relaxed);
 
         // Notify the main thread to wakeup and stop
         {

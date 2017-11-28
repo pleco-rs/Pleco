@@ -31,7 +31,7 @@ debug = true
 
 [profile.release]
 opt-level = 3
-debug = true
+debug = false
 debug-assertions = false
 panic = "panic"
 lto = true
@@ -73,6 +73,7 @@ doctest = true
 pleco = { path = "../pleco", version = "0.2.0" }
 clippy = {version = "0.0.169", optional = true}
 lazy_static = "0.2"
+chrono = "0.4.0"
 bitflags = "1.0"
 rand = "0.3"
 rayon = "0.8.2"
