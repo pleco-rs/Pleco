@@ -3,3 +3,7 @@ members = [
     "pleco",
     "pleco_engine",
 ]
+
+
+[dependencies]
+clippy = {version = "0.0.174", optional = true}

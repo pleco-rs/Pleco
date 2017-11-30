@@ -31,7 +31,7 @@ debug = true
 
 [profile.release]
 opt-level = 3
-debug = true
+debug = false
 debug-assertions = false
 panic = "panic"
 lto = true
@@ -70,7 +70,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-clippy = {version = "0.0.169", optional = true}
+clippy = {version = "0.0.174", optional = true}
 lazy_static = "0.2"
 bitflags = "1.0"
 rand = "0.3"
