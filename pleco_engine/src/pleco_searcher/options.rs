@@ -10,33 +10,40 @@ pub type SpinMut =   Box<Fn(&mut PlecoSearcher, i32)>;
 pub type ComboMut =  Box<Fn(&mut PlecoSearcher, &str)>;
 pub type TextMut =   Box<Fn(&mut PlecoSearcher, &str)>;
 
-pub struct Button{on_change: ButtonMut}
-pub struct Check{ on_change: CheckMut, default: bool, val: bool}
-pub struct Spin{  on_change: SpinMut,  default: i32, min: i32, max: i32, val: i32}
-pub struct Combo{ on_change: ComboMut, default: &'static str, possibles: Vec<&'static str>, val: &'static str}
-pub struct Text{  on_change: TextMut,  default: &'static str, val: String}
+
+pub type ButtonMutGenerator = Box<Fn() -> ButtonMut>;
+pub type CheckMutGenerator =  Box<Fn() -> CheckMut>;
+pub type SpinMutGenerator =   Box<Fn() -> SpinMut>;
+pub type ComboMutGenerator =  Box<Fn() -> ComboMut>;
+pub type TextMutGenerator =   Box<Fn() -> TextMut>;
+
+pub struct Button{on_change: ButtonMutGenerator }
+pub struct Check{ on_change: CheckMutGenerator, default: bool, val: bool}
+pub struct Spin{  on_change: SpinMutGenerator,  default: i32, min: i32, max: i32, val: i32}
+pub struct Combo{ on_change: ComboMutGenerator, default: &'static str, possibles: Vec<&'static str>, val: &'static str}
+pub struct Text{  on_change: TextMutGenerator,  default: &'static str, val: String}
 
 impl Button {
-    pub fn blank_mut() -> ButtonMut {
-        Box::new(|_p: &mut PlecoSearcher| {})
+    pub fn blank_mut() -> ButtonMutGenerator {
+        Box::new( || Box::new(|_p: &mut PlecoSearcher| {}))
     }
 }
 
 impl Check {
-    pub fn blank_mut() -> CheckMut {
-        Box::new(|_p: &mut PlecoSearcher, _c: bool| {})
+    pub fn blank_mut() -> CheckMutGenerator {
+        Box::new( || Box::new(|_p: &mut PlecoSearcher, _c: bool| {}))
     }
 }
 
 impl Spin {
-    pub fn blank_mut() -> SpinMut {
-        Box::new(|_p: &mut PlecoSearcher, _c: i32| {})
+    pub fn blank_mut() -> SpinMutGenerator {
+        Box::new( || Box::new(|_p: &mut PlecoSearcher, _c: i32| {}))
     }
 }
 
 impl Combo {
-    pub fn blank_mut() -> ComboMut {
-        Box::new(|_p: &mut PlecoSearcher, _c: &str| {})
+    pub fn blank_mut() -> ComboMutGenerator {
+        Box::new( || Box::new(|_p: &mut PlecoSearcher, _c: &str| {}))
     }
 
     pub fn combo_contains(&self, s: &str) -> Option<&'static str> {
@@ -50,8 +57,8 @@ impl Combo {
 }
 
 impl Text {
-    pub fn blank_mut() -> TextMut {
-        Box::new(|_p: &mut PlecoSearcher, _c: &str| {})
+    pub fn blank_mut() -> TextMutGenerator {
+        Box::new( || Box::new(|_p: &mut PlecoSearcher, _c: &str| {}))
     }
 }
 
@@ -61,6 +68,15 @@ pub enum UciOptionType {
     Spin(Spin),
     Combo(Combo),
     Text(Text),
+}
+
+pub enum UciOptionMut<'a> {
+    Button(ButtonMut),
+    Check(CheckMut, bool),
+    Spin(SpinMut, i32),
+    Combo(ComboMut, &'a str),
+    Text(TextMut, &'a str),
+    None
 }
 
 impl UciOptionType {
@@ -88,14 +104,14 @@ pub struct UciOption {
 }
 
 impl UciOption {
-    pub fn make_button(name: &'static str, on_change: ButtonMut) -> Self {
+    pub fn make_button(name: &'static str, on_change: ButtonMutGenerator) -> Self {
         UciOption {
             name: name,
             optype: UciOptionType::Button(Button{on_change})
         }
     }
 
-    pub fn make_check(name: &'static str, default: bool, on_change: CheckMut) -> Self {
+    pub fn make_check(name: &'static str, default: bool, on_change: CheckMutGenerator) -> Self {
         UciOption {
             name: name,
             optype: UciOptionType::Check(
@@ -105,7 +121,7 @@ impl UciOption {
         }
     }
 
-    pub fn make_spin(name: &'static str, default: i32, max: i32, min: i32, on_change: SpinMut) -> Self {
+    pub fn make_spin(name: &'static str, default: i32, max: i32, min: i32, on_change: SpinMutGenerator) -> Self {
         UciOption {
             name: name,
             optype: UciOptionType::Spin(
@@ -116,7 +132,7 @@ impl UciOption {
         }
     }
 
-    pub fn make_combo(name: &'static str, default: &'static str, possibles: Vec<&'static str>, on_change: ComboMut) -> Self {
+    pub fn make_combo(name: &'static str, default: &'static str, possibles: Vec<&'static str>, on_change: ComboMutGenerator) -> Self {
         UciOption {
             name: name,
             optype: UciOptionType::Combo(Combo{
@@ -128,7 +144,7 @@ impl UciOption {
         }
     }
 
-    pub fn make_text(name: &'static str, default: &'static str, on_change: TextMut) -> Self {
+    pub fn make_text(name: &'static str, default: &'static str, on_change: TextMutGenerator) -> Self {
         UciOption {
             name: name,
             optype: UciOptionType::Text(Text {
@@ -180,6 +196,34 @@ impl UciOption {
         }
         s
     }
+
+    pub fn display_curr(&self) -> String {
+        let mut s = String::with_capacity(100);
+        s.push_str("option name ");
+        s.push_str(self.name);
+        s.push_str(" type ");
+        s.push_str(self.optype.type_display());
+        match self.optype {
+            UciOptionType::Button(_) => {},
+            UciOptionType::Check(ref c)  => {
+                s.push_str(" value ");
+                s.push_str(bool_str(c.val));
+            },
+            UciOptionType::Spin(ref c)   => {
+                s.push_str(" value ");
+                s.push_str(&c.val.to_string());
+            },
+            UciOptionType::Combo(ref c)  => {
+                s.push_str(" value ");
+                s.push_str(&c.val.to_string());
+            },
+            UciOptionType::Text(ref c) => {
+                s.push_str(" value ");
+                s.push_str(&c.val.to_string());
+            },
+        }
+        s
+    }
 }
 
 impl Eq for UciOption {}
@@ -207,15 +251,28 @@ pub struct AllOptions {
 }
 
 impl AllOptions {
-    pub fn apply_option(&mut self, option: &str, searcher: &mut PlecoSearcher) {
+
+    pub fn print_all(&self) {
+        for o in self.ops.iter(){
+            println!("{}", o.display_op());
+        }
+    }
+
+    pub fn print_curr(&self) {
+        for o in self.ops.iter(){
+            println!("{}", o.display_curr());
+        }
+    }
+
+    pub fn apply_option<'a>(&mut self, option: &'a str) -> UciOptionMut<'a> {
         let option_str = option.to_lowercase();
         for op in self.ops.iter_mut() {
             if option.starts_with(op.name) {
                 if op.optype.is_button() {
                     match op.optype {
                         UciOptionType::Button(ref c) => {
-                            (c.on_change)(searcher);
-                            return;
+                            let ret_mut: ButtonMut = (c.on_change)();
+                            return UciOptionMut::Button(ret_mut);
                         },
                         _ => unreachable!()
                     }
@@ -224,7 +281,7 @@ impl AllOptions {
                 let (_, val) = option.split_at(op.name.len());
                 let white_split = val.split_whitespace().collect::<Vec<&str>>();
                 if white_split.len() <= 1 || white_split[0] != "value" {
-                    return;
+                    return UciOptionMut::None;
                 }
                 let (_, mut arg) = val.split_at(white_split[0].len());
                 arg = arg.trim();
@@ -234,35 +291,40 @@ impl AllOptions {
                         c.val = match arg {
                             "true" => true,
                             "false" => false,
-                            _ => {return;}
+                            _ => {return UciOptionMut::None;}
                         };
-                        (c.on_change)(searcher, c.val);
+                        let ret_mut: CheckMut = (c.on_change)();
+                        UciOptionMut::Check(ret_mut, c.val);
                     },
                     UciOptionType::Spin(ref mut c) =>  {
                         let mut var_err = arg.parse::<i32>();
                         if var_err.is_err() {
-                            return;
+                            return UciOptionMut::None;
                         }
                         let var = var_err.unwrap();
                         if var < c.min || var > c.max {
-                            return;
+                            return UciOptionMut::None;
                         }
                         c.val = var;
-                        (c.on_change)(searcher, var);
+                        let ret_mut: SpinMut = (c.on_change)();
+                        UciOptionMut::Spin(ret_mut, var);
                     },
                     UciOptionType::Combo(ref mut c) => {
                         let s = c.combo_contains(arg);
-                        if s.is_none() { return; }
+                        if s.is_none() { return UciOptionMut::None; }
                         c.val = s.unwrap();
-                        (c.on_change)(searcher, c.val);
+                        let ret_mut: ComboMut = (c.on_change)();
+                        UciOptionMut::Combo(ret_mut, c.val);
                     },
                     UciOptionType::Text(ref mut c) => {
                         c.val = arg.to_string();
-                        (c.on_change)(searcher, arg);
+                        let ret_mut: TextMut = (c.on_change)();
+                        UciOptionMut::Text(ret_mut, arg);
                     } ,
                 }
             }
         }
+        UciOptionMut::None
     }
 }
 
@@ -281,20 +343,20 @@ impl Default for AllOptions {
 // ----- THESE ARE ALL THE CONFIGURABLE OPTIONS -----
 
 fn c_tt_clear() -> UciOption {
-    let c: ButtonMut = Box::new(
+    let c: ButtonMutGenerator =  Box::new(|| Box::new(
         |p: &mut PlecoSearcher|
-            p.clear_tt()
+            p.clear_tt())
     );
     UciOption::make_button("clear tt", c)
 }
 
 fn c_debug() -> UciOption {
-    let c: CheckMut = Check::blank_mut();
+    let c: CheckMutGenerator = Check::blank_mut();
     UciOption::make_check("debug", false,c)
 }
 
 fn c_threads() -> UciOption {
-    let c: SpinMut = Spin::blank_mut();
+    let c: SpinMutGenerator =  Spin::blank_mut();
     UciOption::make_spin("threads",
                          num_cpus::get() as i32,
                          super::MAX_THREADS as i32,

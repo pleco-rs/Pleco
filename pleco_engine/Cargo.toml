@@ -60,7 +60,7 @@ debug = 2
 rpath = false
 lto = false
 debug-assertions = true
-codegen-units = 1
+codegen-units = 4
 panic = 'unwind'
 
 [lib]
@@ -76,7 +76,7 @@ lazy_static = "0.2"
 chrono = "0.4.0"
 bitflags = "1.0"
 rand = "0.3"
-rayon = "0.8.2"
+rayon = "0.9.0"
 num_cpus = "1.0"
 
 
