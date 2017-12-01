@@ -39,3 +39,10 @@ fn multiple_fens() {
     assert_eq!(board.count_piece(Player::Black, Piece::Q), 0);
     assert_eq!(board.count_piece(Player::Black, Piece::K), 1);
 }
+
+#[test]
+fn all_fens() {
+    for fen in pleco::tools::ALL_FENS.iter() {
+        Board::new_from_fen(*fen).unwrap();
+    }
+}

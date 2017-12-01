@@ -491,7 +491,7 @@ mod tests {
 //    #[test]
     pub fn test_searcher() {
         let mut pool = ThreadPool::setup(1, true);
-        let mut board = Board::default();
+        let board = Board::default();
         let limits = UCILimit::Depth(3);
         pool.search(&board, &limits);
         thread::sleep_ms(3000);

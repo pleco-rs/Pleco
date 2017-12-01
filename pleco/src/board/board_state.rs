@@ -142,8 +142,8 @@ impl BoardState {
 
     pub fn print_info(&self) {
         print!("ply: {}, move played: {} ",self.ply, self.prev_move);
-        if self.captured_piece.is_some() {
-            print!("cap {}", self.captured_piece.unwrap());
+        if let Some(piece) = self.captured_piece {
+            print!("cap {}", piece);
         }
         if !self.checkers_bb.is_empty() {
             print!("in check {}", self.checkers_bb.to_sq());

@@ -69,6 +69,7 @@ bench = true
 path = "src/lib.rs"
 doctest = true
 
+
 [dependencies]
 clippy = {version = "0.0.174", optional = true}
 lazy_static = "0.2"
@@ -76,6 +77,8 @@ bitflags = "1.0"
 rand = "0.3"
 rayon = "0.8.2"
 num_cpus = "1.0"
+failure = "0.1.1"
+failure_derive = "0.1.1"
 
 
 [features]

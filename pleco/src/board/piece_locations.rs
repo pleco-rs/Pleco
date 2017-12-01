@@ -29,6 +29,7 @@ pub struct PieceLocations {
 }
 
 
+
 impl PieceLocations {
     /// Constructs a new `PieceLocations` with a default of no pieces on the board.
     pub fn blank() -> PieceLocations {
@@ -184,6 +185,8 @@ impl PieceLocations {
         self.first_square(piece,player).is_some()
     }
 
+
+
     /// Generates a `PieceLocations` from a partial fen. A partial fen is defined as the first part of a
     /// fen, where the piece positions are available.
     pub fn from_partial_fen(ranks: &[&str]) -> Result<(PieceLocations,[[u8; PIECE_CNT]; PLAYER_CNT]), FenBuildError> {
@@ -195,14 +198,14 @@ impl PieceLocations {
             let mut idx = min_sq;
             for ch in rank.chars() {
                 if idx < min_sq {
-                    return Err(FenBuildError::SquareSmallerRank)
+                    return Err(FenBuildError::SquareSmallerRank{rank: i, square: SQ(idx as u8).to_string()})
                 } else if idx > max_sq {
-                    return Err(FenBuildError::SquareLargerRank)
+                    return Err(FenBuildError::SquareLargerRank{rank: i, square: SQ(idx as u8).to_string()})
                 }
 
                 let dig = ch.to_digit(10);
-                if dig.is_some() {
-                    idx += dig.unwrap() as usize;
+                if let Some(digit) = dig {
+                    idx += digit as usize;
                 } else {
                     // if no space, then there is a piece here
                     let piece = match ch {
@@ -212,7 +215,7 @@ impl PieceLocations {
                         'r' | 'R' => Piece::R,
                         'q' | 'Q' => Piece::Q,
                         'k' | 'K' => Piece::K,
-                        _ => {return Err(FenBuildError::UnrecognizedPiece)},
+                        _ => {return Err(FenBuildError::UnrecognizedPiece{piece: ch})},
                     };
                     let player = if ch.is_lowercase() {
                         Player::Black

@@ -32,10 +32,11 @@
 
 #[macro_use]
 extern crate bitflags;
-
 #[macro_use]
 extern crate lazy_static;
-
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
 extern crate test;
 extern crate rayon;
 extern crate num_cpus;
@@ -44,9 +45,7 @@ extern crate rand;
 pub mod core;
 pub mod board;
 pub mod tools;
-
 pub mod engine;
-
 pub mod bots;
 pub mod bot_prelude;
 
@@ -62,6 +61,3 @@ pub use core::sq::SQ;
 pub use core::bitboard::BitBoard;
 #[doc(no_inline)]
 pub use core::{Player,Piece,Rank,File};
-
-
-

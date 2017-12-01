@@ -55,9 +55,8 @@ impl PlecoSearcher {
         let mut full_command = String::new();
         'main: loop {
             full_command.clear();
-            let mut args: Vec<&str> = Vec::new();
             io::stdin().read_line(&mut full_command).ok().unwrap();
-            args = full_command.split_whitespace().collect();
+            let mut args: Vec<&str> = full_command.split_whitespace().collect();
             let command: &str = args.first().unwrap_or(&"");
             match command {
                 "" => continue,
