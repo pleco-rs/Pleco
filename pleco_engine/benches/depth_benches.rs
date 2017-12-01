@@ -4,7 +4,7 @@ extern crate test;
 extern crate pleco_engine;
 
 use pleco::Board;
-use pleco::engine::UCILimit;
+use pleco::tools::UCILimit;
 use pleco_engine::pleco_searcher::PlecoSearcher;
 
 

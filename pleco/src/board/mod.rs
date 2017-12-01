@@ -32,7 +32,7 @@ use core::*;
 
 use tools::prng::PRNG;
 use bot_prelude::{IterativeSearcher,JamboreeSearcher};
-use engine::Searcher;
+use tools::Searcher;
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
@@ -53,11 +53,6 @@ lazy_static! {
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
-#[derive(Debug, Fail)]
-#[fail(display = "An error occurred.")]
-pub struct ErrorTest {
-    err: String
-}
 /// Represents possible Errors encountered while building a `Board` from a fen string.
 #[derive(Fail, Debug)]
 pub enum FenBuildError {

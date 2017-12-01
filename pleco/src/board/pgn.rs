@@ -1,4 +1,4 @@
-//! Module for generating chess boards from PGN notation
+//! Module for generating chess boards from PGN notation.
 
 //use super::Board;
 use core::sq::SQ;

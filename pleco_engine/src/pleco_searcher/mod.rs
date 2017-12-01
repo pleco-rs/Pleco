@@ -3,7 +3,7 @@ pub mod options;
 pub mod threads;
 pub mod thread_search;
 
-use pleco::engine::UCILimit;
+use pleco::tools::UCILimit;
 use pleco::tools::tt::TT;
 use pleco::Board;
 use pleco::BitMove;

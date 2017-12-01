@@ -1,7 +1,7 @@
 extern crate pleco;
 
 
-use pleco::engine::Searcher;
+use pleco::tools::Searcher;
 use pleco::bot_prelude::*;
 use pleco::board::{Board,RandBoard};
 

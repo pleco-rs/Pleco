@@ -135,8 +135,8 @@ impl BoardState {
     /// Used primarily for debugging.
     pub fn backtrace(&self) {
         self.print_info();
-        if self.prev.is_some() {
-            self.get_prev().unwrap().backtrace();
+        if let Some(ref prev) = self.prev {
+            prev.backtrace();
         }
     }
 

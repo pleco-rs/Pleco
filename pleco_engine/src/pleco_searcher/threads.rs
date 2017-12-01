@@ -10,7 +10,7 @@ use pleco::core::*;
 use pleco::board::eval::*;
 use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
-use pleco::engine::*;
+use pleco::tools::*;
 
 use super::thread_search::ThreadSearcher;
 use super::misc::*;

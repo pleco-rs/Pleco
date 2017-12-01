@@ -42,7 +42,7 @@ fn multiple_fens() {
 
 #[test]
 fn all_fens() {
-    for fen in pleco::tools::ALL_FENS.iter() {
+    for fen in pleco::board::fen::ALL_FENS.iter() {
         Board::new_from_fen(*fen).unwrap();
     }
 }

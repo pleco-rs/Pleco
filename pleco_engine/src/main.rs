@@ -3,8 +3,8 @@ extern crate chrono;
 extern crate pleco_engine;
 
 use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
-use pleco::{Board,BitMove};
-use pleco::engine::UCILimit;
+use pleco::Board;
+use pleco::tools::UCILimit;
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
 

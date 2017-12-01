@@ -1,3 +1,4 @@
+//! The alpha-beta algorithm.
 use board::*;
 use core::piece_move::*;
 use board::eval::*;

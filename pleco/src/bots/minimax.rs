@@ -1,3 +1,4 @@
+//! The minimax algorithm.
 use board::*;
 use core::piece_move::*;
 use board::eval::*;

@@ -1,3 +1,4 @@
+//! The iterative jamboree algorithm.
 use board::*;
 use core::*;
 use core::piece_move::BitMove;

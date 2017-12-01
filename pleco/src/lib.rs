@@ -45,7 +45,6 @@ extern crate rand;
 pub mod core;
 pub mod board;
 pub mod tools;
-pub mod engine;
 pub mod bots;
 pub mod bot_prelude;
 
