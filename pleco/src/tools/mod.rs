@@ -1,6 +1,6 @@
 //! Miscellaneous tools for used for Searching. Most notably this module
-//! contains the 'TranspositionTable', a fast lookup table able to be accessed by
-//! multiple threads. Other useful Structs is the 'UciLimit' and 'Searcher' trait
+//! contains the `TranspositionTable`, a fast lookup table able to be accessed by
+//! multiple threads. Other useful objects are the `UciLimit` enum and `Searcher` trait
 //! for building bots.
 
 pub mod prng;
@@ -10,9 +10,8 @@ pub mod timer;
 use core::piece_move::BitMove;
 use tools::timer::Timer;
 use board::Board;
-use core::Player;
 
-/// Trait that defines an object that can play chess.
+/// Defines an object that can play chess.
 pub trait Searcher {
     fn name() -> &'static str where Self: Sized;
 

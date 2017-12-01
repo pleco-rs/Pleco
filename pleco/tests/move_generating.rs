@@ -47,6 +47,25 @@ fn test_movegen_quiets() {
     })
 }
 
+#[test]
+fn test_movegen_quiet_checks() {
+    let mut vec = Vec::new();
+    for _i in 0..10 {
+        let mut b = RandBoard::default().no_check().one();
+        if !b.in_check() {
+            vec.push(b);
+        }
+    }
+    vec.iter().for_each(|b| {
+        let moves = b.generate_moves_of_type(GenTypes::QuietChecks);
+        for m in moves {
+            if !m.is_promo() {
+                assert!(!m.is_capture());
+                assert!(b.captured_piece(m).is_none());
+            }
+        }
+    })
+}
 
 // Testing with no flags and bit input
 #[test]

@@ -1,7 +1,7 @@
 //! This module contains useful pre-computed lookup tables involving `BitBoard`s.
 //!
 //! A `MagicHelper` is computed at the beginning of execution using `lazy_static` inside
-//! [board/mod.rs].
+//! `board/mod.rs`.
 
 
 #![cfg_attr(feature="clippy", allow(invalid_ref))]

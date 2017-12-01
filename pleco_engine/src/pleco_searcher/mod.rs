@@ -4,7 +4,7 @@ pub mod threads;
 pub mod thread_search;
 
 use pleco::tools::UCILimit;
-use pleco::tools::tt::TT;
+use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
 
@@ -20,7 +20,7 @@ const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 pub const MAX_THREADS: usize = 256;
 
 lazy_static! {
-    pub static ref TT_TABLE: TT = TT::new(256);
+    pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(256);
 }
 
 pub static ID_NAME: &str = "Pleco";

@@ -1,4 +1,9 @@
-//! Contains a structure that maps from squares of a board to a player / piece at that square.
+//! Contains the `PieceLocations` structure that maps from squares of a board to a player / piece at that square.
+//!
+//! This is useful mainly for the [`Board`] to use internally for fast square lookups.
+//!
+//! [`Board`]: ../struct.Board.html
+//! [`PieceLocations`]: struct.PieceLocations.html
 
 use core::*;
 use std::mem;

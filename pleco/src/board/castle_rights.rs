@@ -3,8 +3,10 @@
 //!
 //! Alongside keeping track of castling rights, it also keeps track of if a player has castled.
 //!
-//! At it's core, a `Castling` is a simple u8 which sets bits for each possible castling right.
+//! At it's core, a [`Castling`] is a simple u8 which sets bits for each possible castling right.
 //! This is necessary to keep track of for a chess match due to determining future castlings.
+//!
+//! [`Castling`]: struct.Castling.html
 
 use core::*;
 use std::fmt;
@@ -13,20 +15,21 @@ use core::masks::*;
 use core::sq::SQ;
 
 bitflags! {
-    /// Structure to help with recognizing the various possibilities of castling/
+    /// Structure to help with recognizing the various possibilities of castling.
     ///
-    /// For internal use by the Board only
+    /// For internal use by the [`Board`] only.
     ///
-    /// Keeps track two things for each player
+    /// Keeps track two things for each player:
     ///
-    /// 1) What sides are possible to castle from
-    ///
-    /// 2) Has this player castled
+    /// 1. What sides are possible to castle from?
+    /// 2. Has this player castled?
     ///
     /// Does not guarantee that the player containing a castling bit can castle at that
     /// time. Rather marks that castling is a possibility, e.g. a Castling struct
     /// containing a bit marking WHITE_Q means that neither the White King or Queen-side
     /// rook has moved since the game started.
+    ///
+    /// [`Board`]: ../struct.Board.html
     pub struct Castling: u8 {
         const WHITE_K      = C_WHITE_K_MASK; // White has King-side Castling ability
         const WHITE_Q      = C_WHITE_Q_MASK; // White has Queen-side Castling ability

@@ -31,6 +31,13 @@ fn apply_null_moves() {
             chess_board.apply_move(moves[rand::random::<usize>() % moves.len()]);
             moves = chess_board.generate_moves();
             assert!(!chess_board.legal_move(null_move));
+            unsafe {
+                if !chess_board.in_check() {
+                    chess_board.apply_null_move();
+                    chess_board.undo_null_move();
+                }
+            }
+
             i += 1;
         }
         trials += 1;

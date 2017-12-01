@@ -6,15 +6,13 @@ use std::sync::mpsc::{channel,Receiver,Sender};
 use std::{mem,time};
 
 use pleco::board::*;
-use pleco::core::*;
-use pleco::board::eval::*;
 use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
 use pleco::tools::*;
 
 use super::thread_search::ThreadSearcher;
 use super::misc::*;
-use super::{TT_TABLE,THREAD_STACK_SIZE,MAX_PLY};
+use super::{TT_TABLE,THREAD_STACK_SIZE};
 
 pub struct ThreadGo {
     limit: UCILimit,
@@ -360,7 +358,7 @@ pub struct Thread {
     pub root_moves: RootMoves,
     pub depth_completed: Arc<AtomicU16>,
     pub id: usize,
-    pub tt: &'static TT,
+    pub tt: &'static TranspositionTable,
     pub use_stdout: Arc<AtomicBool>,
     pub stop: Arc<AtomicBool>,
     pub finished: Arc<AtomicBool>,

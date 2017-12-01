@@ -1,12 +1,14 @@
 //! Contains the `MoveList` structure, akin to a `Vec<BitMove>` but faster for our purposes.
 //!
-//! A `MoveList` structure is guaranteed to be exactly 512 bytes long, containing a maximum of 256
+//! A [`MoveList`] structure is guaranteed to be exactly 512 bytes long, containing a maximum of 256
 //! moves. This number was chosen as no possible chess position has been found to contain more than
 //! 232 possible moves.
 //!
 //! This structure is intended to mainly be used for generation of moves for a certain position. If
 //! you need to a more versatile collection of moves to manipulate, considering using a `Vec<BitMove>`
 //! instead.
+//!
+//! [`MoveList`]: struct.MoveList.html
 
 use super::piece_move::BitMove;
 

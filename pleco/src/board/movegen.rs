@@ -1,11 +1,13 @@
-//! Module for generating moves from a [Board]. Allow for generating Legal and Pseudo-Legal moves
+//! Module for generating moves from a `Board`. Allow for generating Legal and Pseudo-Legal moves
 //! of various types.
 //!
 //! # Generation Types
 //!
-//! The Types of moves that can be generated are:
+//! The Types of moves that can be generated from a [`Board`] are:
 //!
 //! `All`, `Captures`, `Quiets`, `QuietChecks`, `Evasions`, `NonEvasions`
+//!
+//! There are all derived from the [`GenTypes`] enum.
 //!
 //! Generating all moves is legal to do no matter the position. However, `Captures`, `Quiets`,
 //! `QuietChecks`, and `NonEvasions` can only be done if the board is in NOT in check. Likewise,
@@ -21,7 +23,31 @@
 //! Why would someone ever want to generate moves that might not be legal? Performance. Based on
 //! some benchmarking, generating all Pseudo-Legal moves is around twice as fast as generating all
 //! Legal moves. So, if you are fine with generating moves and then checking them post-generation
-//! with a `Board::is_legal(m: BitMove)`, then the performance boost is potentially worth it.
+//! with a [`Board::legal_move`], then the performance boost is potentially worth it.
+//!
+//! # Examples
+//!
+//! Generating all legal moves:
+//!
+//! ```ignore
+//! let moves: MoveList = board.generate_moves();
+//! ```
+//!
+//! Generating all pseudo-legal moves:
+//!
+//! ```ignore
+//! let moves: MoveList = board.generate_pseudolegal_moves();
+//! ```
+//!
+//! Generating all pseudo-legal captures:
+//!
+//! ```ignore
+//! let moves: MoveList = board.generate_moves_of_type(GenTypes::Captures);
+//! ```
+//!
+//! [`GenTypes`]: ../../core/enum.GenTypes.html
+//! [`Board`]: ../struct.Board.html
+//! [`Board::legal_move`]: ../struct.Board.html#method.legal_move
 
 use board::*;
 

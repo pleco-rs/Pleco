@@ -98,7 +98,7 @@ impl Player {
 
     /// Returns the relative rank of a square in relation to a player.
     ///
-    ///  # Examples
+    /// # Examples
     ///
     /// ```rust
     /// use pleco::core::{Player,Rank};
@@ -118,7 +118,7 @@ impl Player {
 
     /// Returns the relative rank of a rank in relation to a player.
     ///
-    ///  # Examples
+    /// # Examples
     ///
     /// ```rust
     /// use pleco::core::{Player,Rank};
@@ -156,17 +156,17 @@ impl fmt::Display for Player {
 
 /// Types of move generating options.
 ///
-///`GenTypes::All` -> All available moves.
+/// `GenTypes::All` -> All available moves.
 ///
-///`GenTypes::Captures` -> All captures and both capture/non-capture promotions.
+/// `GenTypes::Captures` -> All captures and both capture/non-capture promotions.
 ///
-///`GenTypes::Quiets` -> All non captures and both capture/non-capture promotions.
+/// `GenTypes::Quiets` -> All non captures and both capture/non-capture promotions.
 ///
-///`GenTypes::QuietChecks` -> Moves likely to give check.
+/// `GenTypes::QuietChecks` -> Moves likely to give check.
 ///
-///`GenTypes::Evasions` -> Generates evasions for a board in check.
+/// `GenTypes::Evasions` -> Generates evasions for a board in check.
 ///
-///`GenTypes::NonEvasions` -> Generates all moves for a board not in check.
+/// `GenTypes::NonEvasions` -> Generates all moves for a board not in check.
 ///
 /// # Safety
 ///

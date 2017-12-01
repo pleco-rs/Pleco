@@ -1,11 +1,15 @@
-//! This module contains `Board`, the Object representing the current state of a chessboard.
+//! This module contains [`Board`], the object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
 //!
-//! This module also contains structures used by the board, such as `castling_rights` for
+//! This module also contains structures used by the board, such as [`CastlingRights`] for
 //! determining castling rights throughout a game. Other utilities that may be of use
-//! are `eval`, which takes a board and evaluates it, and `PGN`, which parses a PGN File into
-//! a board.
+//! are [`Eval`], which takes a board and evaluates it, and `PGN` (unstable as of now), which
+//! parses a PGN File into a [`Board`].
+//!
+//! [`Board`]: struct.Board.html
+//! [`CastlingRights`]: castle_rights/struct.Castling.html
+//! [`Eval`]: eval/struct.Eval.html
 
 
 use failure;
@@ -49,7 +53,9 @@ pub type Error = failure::Error;
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
     /// Nothing will ever be mutated in here, so it is safe to pass around.
-    /// See `core::magic_helper::MagicHelper` for more information.
+    /// See [`MagicHelper`] for more information.
+    ///
+    /// [`MagicHelper`]: ../core/magic_helper/struct.MagicHelper.html
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
@@ -298,27 +304,6 @@ impl Board {
         }
     }
 
-    /// Returns an exact clone of the current board.
-    ///
-    /// # Safety
-    ///
-    /// This method is unsafe as it can give the impression of owning and operating a board
-    /// structure, rather than just being provided shallow clones.
-    pub unsafe fn deep_clone(&self) -> Board {
-        Board {
-            turn: self.turn,
-            bit_boards: BitBoard::clone_all_occ(&self.bit_boards),
-            occ: BitBoard::clone_occ_bbs(&self.occ),
-            occ_all: self.occ_all,
-            half_moves: self.half_moves,
-            depth: self.depth,
-            piece_counts: self.piece_counts.clone(),
-            piece_locations: self.piece_locations.clone(),
-            state: Arc::clone(&self.state),
-            magic_helper: &MAGIC_HELPER,
-        }
-    }
-
     /// Creates a `RandBoard` (Random Board Generator) for generation of `Board`s with random
     /// positions. See the `RandBoard` structure for more information.
     ///
@@ -326,18 +311,23 @@ impl Board {
     ///
     /// Create one `Board` with at least 5 moves played that is created in a pseudo-random
     /// fashion.
-    /// ```rust
-    /// let rand_boards: Board = Board::Random()
+    ///
+    /// ```
+    /// use pleco::Board;
+    /// let rand_boards: Board = Board::random()
     ///     .pseudo_random(12455)
     ///     .min_moves(5)
     ///     .one();
     /// ```
     ///
     /// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
-    /// ```rust
+    ///
+    /// ```
+    /// use pleco::board::{Board,RandBoard};
+    ///
     /// let rand_boards: Vec<Board> = Board::random()
     ///     .pseudo_random(12455)
-    ///     .no_check(5)
+    ///     .no_check()
     ///     .many(10);
     /// ```
     pub fn random() -> RandBoard {
@@ -983,15 +973,15 @@ impl Board {
         self.state = self.state.get_prev().unwrap();
     }
 
-    /// Get a List of legal [BitMove]s for the player whose turn it is to move.
+    /// Get a List of legal `BitMove`s for the player whose turn it is to move.
     ///
     /// This method already takes into account if the Board is currently in check, and will return
     /// legal moves only.
     ///
-    ///  # Examples
+    /// # Examples
     ///
-    /// ```rust
-    /// use pleco::board::*;
+    /// ```
+    /// use pleco::Board;
     ///
     /// let chessboard = Board::default();
     /// let moves = chessboard.generate_moves();
@@ -1821,9 +1811,9 @@ impl Board {
         self.piece_at_bb(dst.to_bb(), self.turn.other_player())
     }
 
-    /// Returns a prettified String of the current board, for Quick Display.
+    /// Returns a prettified String of the current `Board`, for easy command line displaying.
     ///
-    /// Capital Letters represent White pieces, while lower case represents Black pieces.
+    /// Capital Letters represent white pieces, while lower case represents black pieces.
     pub fn pretty_string(&self) -> String {
         let mut s = String::with_capacity(SQ_CNT * 2 + 8);
         for sq in SQ_DISPLAY_ORDER.iter() {
@@ -1909,7 +1899,7 @@ impl Board {
 
     /// Checks if the current state of the Board is okay.
     pub fn is_okay(&self) -> bool {
-        const QUICK_CHECK: bool = false;
+        const QUICK_CHECK: bool = true;
 
         if QUICK_CHECK {
             return self.check_basic();
@@ -1991,27 +1981,35 @@ enum RandGen {
     All
 }
 
-/// Random board generator. Creates either one or many random boards with optional
+/// Random [`Board`] generator. Creates either one or many random boards with optional
 /// parameters.
 ///
 /// # Examples
 ///
-/// Create one `Board` with at least 5 moves played that is created in a pseudo-random
+/// Create one [`Board`] with at least 5 moves played that is created in a pseudo-random
 /// fashion.
+///
 /// ```
+/// use pleco::board::{Board,RandBoard};
+///
 /// let rand_boards: Board = RandBoard::new()
 ///     .pseudo_random(12455)
 ///     .min_moves(5)
 ///     .one();
 /// ```
 ///
-/// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
+/// Create a `Vec` of 10 random [`Board`]s that are guaranteed to not be in check.
+///
 /// ```
+/// use pleco::board::{Board,RandBoard};
+///
 /// let rand_boards: Vec<Board> = RandBoard::new()
 ///     .pseudo_random(12455)
-///     .no_check(5)
+///     .no_check()
 ///     .many(10);
 /// ```
+///
+/// [`Board`]: struct.Board.html
 pub struct RandBoard {
     gen_type: RandGen,
     minimum_move: u16,
@@ -2033,7 +2031,6 @@ impl Default for RandBoard {
 }
 
 impl RandBoard {
-
     /// Create a new `RandBoard` object.
     pub fn new() -> Self {
         RandBoard {
@@ -2226,12 +2223,12 @@ mod tests {
     fn rand_board_gen_one() {
         let boards_1 = Board::random()
             .pseudo_random(550087423)
-            .min_moves(10)
+            .min_moves(3)
             .one();
 
         let boards_2 = Board::random()
             .pseudo_random(550087423)
-            .min_moves(10)
+            .min_moves(3)
             .one();
 
         assert_eq!(boards_1, boards_2);

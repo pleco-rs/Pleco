@@ -84,6 +84,14 @@ lazy_static! {
 
 // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 // https://chess.stackexchange.com/questions/1482/how-to-know-when-a-fen-position-is-legal
+
+/// Returns if a [`Board`] generated from a fen string is a legal position.
+///
+/// This is called automatically by [`Board::new_from_fen`] after a [`Board`] is created, so
+/// this method doesn't have great individual use.
+///
+/// [`Board`]: ../struct.Board.html
+/// [`Board::new_from_fen`]: ../struct.Board.html#method.new_from_fen
 pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
     let checks = board.checkers();
     let num_checks = checks.count_bits();

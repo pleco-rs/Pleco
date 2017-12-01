@@ -8,6 +8,45 @@
 //! This crate is [on crates.io](https://crates.io/crates/pleco) and can be
 //! used by adding `pleco` to the dependencies in your project's `Cargo.toml`.
 //!
+//! `pleco` requires nightly rust currently, so make sure your toolchain is a nightly version.
+//!
+//! # Examples
+//!
+//! You can create a [`Board`] with the starting position like so:
+//!
+//! ```ignore
+//! use pleco::Board;
+//! let board = Board::default();
+//! ```
+//!
+//! Generating a list of moves (Contained inside a [`MoveList`]) can be done with:
+//!
+//! ```ignore
+//! let list = board.generate_moves();
+//! ```
+//!
+//! Applying and undoing moves is simple:
+//!
+//! ```ignore
+//! let mut board = Board::default();
+//! let list = board.generate_moves();
+//!
+//! for mov in list.iter() {
+//!     board.apply_move(*mov);
+//!     println!("{}",board.get_fen());
+//!     board.undo_move();
+//! }
+//! ```
+//!
+//! Using fen strings is also supported:
+//!
+//! ```ignore
+//! let start_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+//! let board = Board::new_from_fen(start_position);
+//! ```
+//!
+//! [`MoveList`]: core/move_list/struct.MoveList.html
+//! [`Board`]: board/struct.Board.html
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", allow(inline_always))]
@@ -30,6 +69,12 @@
 #![feature(allocator_api)]
 
 
+// [`Vec<T>`]: ../../std/vec/struct.Vec.html
+// [`new`]: ../../std/vec/struct.Vec.html#method.new
+// [`push`]: ../../std/vec/struct.Vec.html#method.push
+// [`Index`]: ../../std/ops/trait.Index.html
+// [`IndexMut`]: ../../std/ops/trait.IndexMut.html
+// [`vec!`]: ../../std/macro.vec.html
 #[macro_use]
 extern crate bitflags;
 #[macro_use]

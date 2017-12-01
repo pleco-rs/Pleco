@@ -1,12 +1,12 @@
 //! Module containing the `BitBoard` and associated functions / constants.
 //!
-//! A `BitBoard` is a set of bits, where the index of each bit represents a square on the
+//! A [`BitBoard`] is a set of bits, where the index of each bit represents a square on the
 //! Board. We use this to mark whether or not something is residing at a certain square. For
 //! example, if we are using it to map the positions of the white pawns, and there exists a
 //! pawn at square B9, the bit at index 9 will be set to '1'. The lack of a piece is marked
 //! with a '0' instead.
 //!
-//! Each bit's index of a `BitBoard` maps to the following squares:
+//! Each bit's index of a [`BitBoard`] maps to the following squares:
 //!
 //! ```md,ignore
 //! 8 | 56 57 58 59 60 61 62 63
@@ -20,6 +20,9 @@
 //!   -------------------------
 //!      a  b  c  d  e  f  g  h
 //! ```
+//!
+//! [`BitBoard`]: struct.BitBoard.html
+
 extern crate rand;
 
 use super::sq::SQ;
@@ -31,7 +34,7 @@ use std::mem;
 use std::ops::*;
 use std::fmt;
 
-/// Defines an object to define a bitboard. a `BitBoard` is simply a u64 where each
+/// Defines an object to define a bitboard. A `BitBoard` is simply a u64 where each
 /// bit maps to a specific square. Used for mapping occupancy, where '1' represents
 /// a piece being at that index's square, and a '0' represents a lack of a piece.
 #[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]
