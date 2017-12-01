@@ -23,10 +23,10 @@ Planned & Implemented features
 -------
 
 
-The AI Bot aims to have the following features:
+The AI  aims to have the following features:
 - [x] Alpha-Beta pruning
 - [x] Multi-threaded search with rayon.rs
-- [x] Queiscience-search
+- [ ] Queiscience-search
 - [x] MVV-LVA sorting
 - [x] Iterative Deepening
 - [x] Aspiration Windows

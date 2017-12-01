@@ -3,8 +3,8 @@ extern crate chrono;
 extern crate pleco_engine;
 
 use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
-use pleco::{Board,BitMove};
-use pleco::engine::UCILimit;
+use pleco::Board;
+use pleco::tools::UCILimit;
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
 
@@ -13,7 +13,12 @@ use chrono::*;
 
 
 fn main() {
-    run_many();
+    uciloop();
+}
+
+fn uciloop() {
+    let mut s = PlecoSearcher::init(true);
+    s.uci();
 }
 
 fn run_one() {
@@ -36,7 +41,7 @@ fn run_one() {
         } else {
             s.search(&board, &UCILimit::Infinite);
             thread::sleep_ms(local.num_milliseconds() as u32);
-            let mov = s.stop_search();
+            let mov = s.stop_search_get_move();
             println!("Pleco searcher: {}",mov);
             board.apply_move(mov);
         }
@@ -91,7 +96,7 @@ fn run_many() {
             } else {
                 s.search(&board, &UCILimit::Infinite);
                 thread::sleep(local.to_std().unwrap());
-                let mov = s.stop_search();
+                let mov = s.stop_search_get_move();
                 board.apply_move(mov);
             }
             i -= 1;

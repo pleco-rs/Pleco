@@ -265,14 +265,3 @@ fn eval_pawns<P: PlayerTrait>(board: &Board) -> i16 {
 
 }
 
-// Without MonoMorphization 100 times
-//  9,145 ns
-//  9,192 ns
-//  9,047 ns
-
-// With MonoMorphizing 100 times
-//  8,645 ns
-//  8,438 ns
-
-
-// TODO Mobility Bonus

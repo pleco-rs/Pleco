@@ -4,7 +4,7 @@ extern crate test;
 extern crate pleco_engine;
 
 use pleco::Board;
-use pleco::engine::UCILimit;
+use pleco::tools::UCILimit;
 use pleco_engine::pleco_searcher::PlecoSearcher;
 
 
@@ -20,7 +20,7 @@ fn bench_4_ply(b: &mut Bencher) {
     b.iter(|| {
         let mut s = PlecoSearcher::init(false);
         black_box(s.search(&board, &limit));
-        black_box(s.stop_search());
+        black_box(s.stop_search_get_move());
     })
 }
 
@@ -32,7 +32,7 @@ fn bench_5_ply(b: &mut Bencher) {
     b.iter(|| {
         let mut s = PlecoSearcher::init(false);
         black_box(s.search(&board, &limit));
-        black_box(s.stop_search());
+        black_box(s.stop_search_get_move());
     })
 }
 
@@ -43,6 +43,6 @@ fn bench_6_ply(b: &mut Bencher) {
     b.iter(|| {
         let mut s = PlecoSearcher::init(false);
         black_box(s.search(&board, &limit));
-        black_box(s.stop_search());
+        black_box(s.stop_search_get_move());
     })
 }

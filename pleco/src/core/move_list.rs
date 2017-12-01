@@ -1,12 +1,14 @@
 //! Contains the `MoveList` structure, akin to a `Vec<BitMove>` but faster for our purposes.
 //!
-//! A `MoveList` structure is guaranteed to be exactly 512 bytes long, containing a maximum of 256
+//! A [`MoveList`] structure is guaranteed to be exactly 512 bytes long, containing a maximum of 256
 //! moves. This number was chosen as no possible chess position has been found to contain more than
 //! 232 possible moves.
 //!
-//! This structure is intended to mainly be used for generaion of moves for a certain position. If
-//! you need to a more versaitille collection of moves to manipulate, considering using a `Vec<BitMove>`
+//! This structure is intended to mainly be used for generation of moves for a certain position. If
+//! you need to a more versatile collection of moves to manipulate, considering using a `Vec<BitMove>`
 //! instead.
+//!
+//! [`MoveList`]: struct.MoveList.html
 
 use super::piece_move::BitMove;
 
@@ -14,9 +16,11 @@ use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
 
+
 const MAX_MOVES: usize = 256;
 
-/// This is our list of Moves for a current position.
+/// This is the list of possible moves for a current position. Think of it alike a faster
+/// version of 'Vec<BitMove>'.
 pub struct MoveList {
     inner: [BitMove; 256],
     len: usize,
@@ -48,7 +52,7 @@ impl Into<Vec<BitMove>> for MoveList {
 }
 
 impl MoveList {
-    /// Adds a `BitMove` to the list.
+    /// Adds a `BitMove` to the end of the list.
     #[inline]
     pub fn push(&mut self, mov: BitMove) {
         unsafe {
@@ -166,6 +170,7 @@ impl<'a> FusedIterator for MoveIter<'a> {}
 
 unsafe impl<'a> TrustedLen for MoveIter<'a> {}
 
+// Iterator for the `MoveList`.
 pub struct MoveIntoIter {
     movelist: MoveList,
     idx: usize

@@ -15,7 +15,7 @@ use pleco::core::*;
 use pleco::board::eval::*;
 use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
-use pleco::engine::*;
+use pleco::tools::*;
 
 use super::misc::*;
 use super::{TT_TABLE,THREAD_STACK_SIZE,MAX_PLY};

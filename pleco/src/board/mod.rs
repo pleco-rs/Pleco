@@ -1,21 +1,29 @@
-//! This module contains `Board`, the Object representing the current state of a chessboard.
+//! This module contains [`Board`], the object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
 //!
-//! This module also contains structures used by the board, such as `castling_rights` for
+//! This module also contains structures used by the board, such as [`CastlingRights`] for
 //! determining castling rights throughout a game. Other utilities that may be of use
-//! are `eval`, which takes a board and evaluates it, and `PGN`, which parses a PGN File into
-//! a board.
+//! are [`Eval`], which takes a board and evaluates it, and `PGN` (unstable as of now), which
+//! parses a PGN File into a [`Board`].
+//!
+//! [`Board`]: struct.Board.html
+//! [`CastlingRights`]: castle_rights/struct.Castling.html
+//! [`Eval`]: eval/struct.Eval.html
 
 
+use failure;
 pub mod movegen;
 pub mod eval;
 pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
+pub mod fen;
 mod pgn;
 
 extern crate rand;
+
+
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
@@ -28,7 +36,7 @@ use core::*;
 
 use tools::prng::PRNG;
 use bot_prelude::{IterativeSearcher,JamboreeSearcher};
-use engine::Searcher;
+use tools::Searcher;
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
@@ -40,24 +48,46 @@ use std::sync::Arc;
 use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
+pub type Error = failure::Error;
+
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
     /// Nothing will ever be mutated in here, so it is safe to pass around.
-    /// See `core::magic_helper::MagicHelper` for more information.
+    /// See [`MagicHelper`] for more information.
+    ///
+    /// [`MagicHelper`]: ../core/magic_helper/struct.MagicHelper.html
     pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
 }
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
-#[derive(Debug, Clone)]
+#[derive(Fail, Debug)]
 pub enum FenBuildError {
-    SquareSmallerRank,
-    SquareLargerRank,
-    UnrecognizedPiece,
-    NotEnoughSections,
-    IncorrectRankAmounts,
-    UnrecognizedTurn,
-    EPSquareUnreadable,
+    #[fail(display = "invalid number of fen sections: {}, expected 6", sections)]
+    NotEnoughSections {sections: usize},
+    #[fail(display = "invalid number of ranks: {}, expected 8", ranks)]
+    IncorrectRankAmounts {ranks: usize},
+    #[fail(display = "invalid turn: {}, expected 'w' or 'b'", turn)]
+    UnrecognizedTurn {turn: String},
+    #[fail(display = "unreadable En-passant square: {}", ep)]
+    EPSquareUnreadable {ep: String},
+    #[fail(display = "invalid En-passant square: {}", ep)]
+    EPSquareInvalid {ep: String},
+    #[fail(display = "square number too small for rank, rank: {} square: {},", rank, square)]
+    SquareSmallerRank {rank: usize, square: String},
+    #[fail(display = "square number too large for rank, rank: {} square: {},", rank, square)]
+    SquareLargerRank {rank: usize, square: String},
+    #[fail(display = "unrecognized piece: {}", piece)]
+    UnrecognizedPiece {piece: char},
+    #[fail(display = "An unknown error has occurred.")]
     UnreadableMoves(num::ParseIntError),
+    #[fail(display = "too many checking piece: {}",num)]
+    IllegalNumCheckingPieces{num: u8},
+    #[fail(display = "these two pieces cannot check the king at the same time: {}, {}",piece_1, piece_2)]
+    IllegalCheckState{piece_1: Piece, piece_2: Piece},
+    #[fail(display = "Too many pawns for player: player: {}, # pawns {}",player, num)]
+    TooManyPawns{player: Player, num: u8},
+    #[fail(display = "Pawn on first or last row")]
+    PawnOnLastRow,
 }
 
 impl From<num::ParseIntError> for FenBuildError {
@@ -274,27 +304,6 @@ impl Board {
         }
     }
 
-    /// Returns an exact clone of the current board.
-    ///
-    /// # Safety
-    ///
-    /// This method is unsafe as it can give the impression of owning and operating a board
-    /// structure, rather than just being provided shallow clones.
-    pub unsafe fn deep_clone(&self) -> Board {
-        Board {
-            turn: self.turn,
-            bit_boards: BitBoard::clone_all_occ(&self.bit_boards),
-            occ: BitBoard::clone_occ_bbs(&self.occ),
-            occ_all: self.occ_all,
-            half_moves: self.half_moves,
-            depth: self.depth,
-            piece_counts: self.piece_counts.clone(),
-            piece_locations: self.piece_locations.clone(),
-            state: Arc::clone(&self.state),
-            magic_helper: &MAGIC_HELPER,
-        }
-    }
-
     /// Creates a `RandBoard` (Random Board Generator) for generation of `Board`s with random
     /// positions. See the `RandBoard` structure for more information.
     ///
@@ -302,18 +311,23 @@ impl Board {
     ///
     /// Create one `Board` with at least 5 moves played that is created in a pseudo-random
     /// fashion.
-    /// ```rust
-    /// let rand_boards: Board = Board::Random()
+    ///
+    /// ```
+    /// use pleco::Board;
+    /// let rand_boards: Board = Board::random()
     ///     .pseudo_random(12455)
     ///     .min_moves(5)
     ///     .one();
     /// ```
     ///
     /// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
-    /// ```rust
+    ///
+    /// ```
+    /// use pleco::board::{Board,RandBoard};
+    ///
     /// let rand_boards: Vec<Board> = Board::random()
     ///     .pseudo_random(12455)
-    ///     .no_check(5)
+    ///     .no_check()
     ///     .many(10);
     /// ```
     pub fn random() -> RandBoard {
@@ -381,10 +395,7 @@ impl Board {
     /// Assumes that the Board has its PieceLocations completely set.
     fn set_bitboards(&mut self) {
         for sq in 0..SQ_CNT as u8 {
-            let player_piece = self.piece_locations.player_piece_at(SQ(sq));
-            if player_piece.is_some() {
-                let player: Player = player_piece.unwrap().0;
-                let piece = player_piece.unwrap().1;
+            if let Some((player, piece)) = self.piece_locations.player_piece_at(SQ(sq)) {
                 let bb = SQ(sq).to_bb();
                 self.bit_boards[player as usize][piece as usize] |= bb;
                 self.occ[player as usize] |= bb;
@@ -398,6 +409,7 @@ impl Board {
             }
         }
     }
+
 
     /// Constructs a board from a FEN String.
     ///
@@ -428,14 +440,14 @@ impl Board {
         // must have 6 parts :
         // [ Piece Placement, Side to Move, Castling Ability, En Passant square, Half moves, full moves]
         if det_split.len() != 6 {
-            return Err(FenBuildError::NotEnoughSections);
+            return Err(FenBuildError::NotEnoughSections{sections: det_split.len()});
         }
 
         // Split the first part by '/' for locations
         let b_rep: Vec<&str> = det_split[0].split('/').collect();
 
         if b_rep.len() != 8 {
-            return Err(FenBuildError::IncorrectRankAmounts);
+            return Err(FenBuildError::IncorrectRankAmounts{ranks: b_rep.len()});
         }
 
         let (piece_loc, piece_cnt) = PieceLocations::from_partial_fen(b_rep.as_slice())?;
@@ -444,7 +456,7 @@ impl Board {
         let turn: Player = match det_split[1].chars().next().unwrap() {
             'b' => Player::Black,
             'w' => Player::White,
-            _ => {return Err(FenBuildError::UnrecognizedTurn);},
+            _ => {return Err(FenBuildError::UnrecognizedTurn{turn: det_split[1].to_string()});},
         };
 
         // Castle Bytes
@@ -455,7 +467,7 @@ impl Board {
 
         let mut ep_sq: SQ = SQ(0);
         for (i, char) in det_split[3].chars().enumerate() {
-            if i > 1 { return Err(FenBuildError::EPSquareUnreadable); }
+            if i > 1 { return Err(FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()}); }
             if i == 0 {
                 match char {
                     'a' => ep_sq += SQ(0),
@@ -467,13 +479,14 @@ impl Board {
                     'g' => ep_sq += SQ(6),
                     'h' => ep_sq += SQ(7),
                     '-' => {}
-                    _ => { return Err(FenBuildError::EPSquareUnreadable);},
+                    _ => { return Err(FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()}); }
                 }
             } else {
+                // TODO: Should return error on unreadable
                 let digit = char.to_digit(10).unwrap() as u8;
                 // must be 3 or 6
                 if digit != 3 && digit != 6 {
-                    return Err(FenBuildError::EPSquareUnreadable);
+                    return Err(FenBuildError::EPSquareInvalid{ep: det_split[3].to_string()});
                 }
                 ep_sq += SQ(8 * digit);
             }
@@ -530,8 +543,7 @@ impl Board {
         b.state = board_s;
         b.set_zob_hash();
 
-        // TODO: Check for a valid FEN String and /or resulting board
-        Ok(b)
+        fen::is_valid_fen(b)
     }
 
     /// Creates a FEN String of the Given Board.
@@ -699,9 +711,8 @@ impl Board {
                     self.magic_helper.z_piece_at_sq(Piece::R, r_dst);
                 new_state.captured_piece = None;
                 new_state.castling.set_castling(us);
-            } else if captured.is_some() {
+            } else if let Some(cap_p) = captured {
                 let mut cap_sq: SQ = to;
-                let cap_p: Piece = captured.unwrap(); // This shouldn't panic unless move is void
                 if cap_p == Piece::P && bit_move.is_en_passant() {
                     assert_eq!(cap_sq, self.state.ep_square);
                     match us {
@@ -797,8 +808,8 @@ impl Board {
         let bit_move: Option<BitMove> = all_moves.iter()
                                                  .find(|m| m.stringify() == uci_move)
                                                  .cloned();
-        if bit_move.is_some() {
-            self.apply_move(bit_move.unwrap());
+        if let Some(mov) = bit_move {
+            self.apply_move(mov);
             return true;
         }
         false
@@ -962,15 +973,15 @@ impl Board {
         self.state = self.state.get_prev().unwrap();
     }
 
-    /// Get a List of legal [BitMove]s for the player whose turn it is to move.
+    /// Get a List of legal `BitMove`s for the player whose turn it is to move.
     ///
     /// This method already takes into account if the Board is currently in check, and will return
     /// legal moves only.
     ///
-    ///  # Examples
+    /// # Examples
     ///
-    /// ```rust
-    /// use pleco::board::*;
+    /// ```
+    /// use pleco::Board;
     ///
     /// let chessboard = Board::default();
     /// let moves = chessboard.generate_moves();
@@ -1800,9 +1811,9 @@ impl Board {
         self.piece_at_bb(dst.to_bb(), self.turn.other_player())
     }
 
-    /// Returns a prettified String of the current board, for Quick Display.
+    /// Returns a prettified String of the current `Board`, for easy command line displaying.
     ///
-    /// Capital Letters represent White pieces, while lower case represents Black pieces.
+    /// Capital Letters represent white pieces, while lower case represents black pieces.
     pub fn pretty_string(&self) -> String {
         let mut s = String::with_capacity(SQ_CNT * 2 + 8);
         for sq in SQ_DISPLAY_ORDER.iter() {
@@ -1888,7 +1899,7 @@ impl Board {
 
     /// Checks if the current state of the Board is okay.
     pub fn is_okay(&self) -> bool {
-        const QUICK_CHECK: bool = false;
+        const QUICK_CHECK: bool = true;
 
         if QUICK_CHECK {
             return self.check_basic();
@@ -1970,27 +1981,35 @@ enum RandGen {
     All
 }
 
-/// Random board generator. Creates either one or many random boards with optional
+/// Random [`Board`] generator. Creates either one or many random boards with optional
 /// parameters.
 ///
 /// # Examples
 ///
-/// Create one `Board` with at least 5 moves played that is created in a pseudo-random
+/// Create one [`Board`] with at least 5 moves played that is created in a pseudo-random
 /// fashion.
+///
 /// ```
+/// use pleco::board::{Board,RandBoard};
+///
 /// let rand_boards: Board = RandBoard::new()
 ///     .pseudo_random(12455)
 ///     .min_moves(5)
 ///     .one();
 /// ```
 ///
-/// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
+/// Create a `Vec` of 10 random [`Board`]s that are guaranteed to not be in check.
+///
 /// ```
+/// use pleco::board::{Board,RandBoard};
+///
 /// let rand_boards: Vec<Board> = RandBoard::new()
 ///     .pseudo_random(12455)
-///     .no_check(5)
+///     .no_check()
 ///     .many(10);
 /// ```
+///
+/// [`Board`]: struct.Board.html
 pub struct RandBoard {
     gen_type: RandGen,
     minimum_move: u16,
@@ -2012,7 +2031,6 @@ impl Default for RandBoard {
 }
 
 impl RandBoard {
-
     /// Create a new `RandBoard` object.
     pub fn new() -> Self {
         RandBoard {
@@ -2205,12 +2223,12 @@ mod tests {
     fn rand_board_gen_one() {
         let boards_1 = Board::random()
             .pseudo_random(550087423)
-            .min_moves(10)
+            .min_moves(3)
             .one();
 
         let boards_2 = Board::random()
             .pseudo_random(550087423)
-            .min_moves(10)
+            .min_moves(3)
             .one();
 
         assert_eq!(boards_1, boards_2);

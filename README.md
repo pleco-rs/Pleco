@@ -24,15 +24,15 @@ Planned & Implemented features
 The Library aims to have the following features upon completion
 - [x] Bitboard Representation of Piece Locations:
 - [x] Ability for concurrent Board State access, for use by parallel searchers
-- [x] Full Move-generation Capabilities
-- [x] Statically computed information (including Magic-Bitboards)
+- [x] Full Move-generation Capabilities, including generation of pseudo-legal moves
+- [x] Statically computed lookup-tables (including Magic Bitboards)
 - [x] Zobrist Hashing
 - [ ] PGN Parsing
 
 The AI Bot aims to have the following features:
 - [x] Alpha-Beta pruning
 - [x] Multi-threaded search with rayon.rs
-- [x] Queiscience-search
+- [ ] Queiscience-search
 - [x] MVV-LVA sorting
 - [x] Iterative Deepening
 - [x] Aspiration Windows

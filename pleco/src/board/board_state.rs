@@ -1,11 +1,14 @@
 //! Contains the `BoardState` structure for the `Board`. Helps to preserve the previous state
 //! of the board without needing to re-compute information.
 //!
-//! As the `BoardState` is automatically created for each position of the `Board`, there is
+//! As the [`BoardState`] is automatically created for each position of the [`Board`], there is
 //! little need for interacting directly with this module.
 //!
 //! See [this blog post](https://sfleischman105.github.io/2017/10/26/creating-a-chess-engine.html) for
-//! more information about the design of the `BoardState`.
+//! more information about the design of the [`BoardState`].
+//!
+//! [`BoardState`]: struct.BoardState.html
+//! [`Board`]: ../struct.Board.html
 
 use super::castle_rights::Castling;
 
@@ -17,14 +20,16 @@ use core::masks::*;
 
 use std::sync::Arc;
 
-/// Holds useful information concerning the current state of the board.
+/// Holds useful information concerning the current state of the [`Board`].
 ///
 /// This is information that is computed upon making a move, and requires expensive computation to do so as well.
-/// It is stored in the Heap by 'Board' as an Arc<BoardState>, as cloning the board can lead to multiple
+/// It is stored in the Heap by [`Board`] as an `Arc<BoardState>`, as cloning the board can lead to multiple
 /// references to the same `BoardState`.
 ///
 /// Allows for easy undo-ing of moves as these keep track of their previous board state, forming a
 /// Tree-like persistent Stack.
+///
+/// [`Board`]: ../struct.Board.html
 #[derive(Clone)]
 pub struct BoardState {
     // The Following Fields are easily copied from the previous version and possbily modified
@@ -135,15 +140,15 @@ impl BoardState {
     /// Used primarily for debugging.
     pub fn backtrace(&self) {
         self.print_info();
-        if self.prev.is_some() {
-            self.get_prev().unwrap().backtrace();
+        if let Some(ref prev) = self.prev {
+            prev.backtrace();
         }
     }
 
     pub fn print_info(&self) {
         print!("ply: {}, move played: {} ",self.ply, self.prev_move);
-        if self.captured_piece.is_some() {
-            print!("cap {}", self.captured_piece.unwrap());
+        if let Some(piece) = self.captured_piece {
+            print!("cap {}", piece);
         }
         if !self.checkers_bb.is_empty() {
             print!("in check {}", self.checkers_bb.to_sq());

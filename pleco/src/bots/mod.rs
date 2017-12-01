@@ -1,4 +1,6 @@
-//! Contains all of the currently completed and experimental bots.
+//! Contains all of the currently completed standard bots/searchers/AIs.
+//!
+//! These are mostly for example purposes, to see how one can create a chess AI.
 
 extern crate rand;
 
@@ -9,18 +11,27 @@ pub mod jamboree;
 pub mod iterative_parallel_mvv_lva;
 
 use core::piece_move::BitMove;
-use engine::{Searcher,UCILimit};
+use tools::{Searcher,UCILimit};
 use board::Board;
 use board::eval::*;
 
 const MAX_PLY: u16 = 4;
 
-pub struct AlphaBetaSearcher {}
-pub struct IterativeSearcher {}
-pub struct JamboreeSearcher {}
-pub struct MiniMaxSearcher {}
-pub struct ParallelMiniMaxSearcher {}
+/// Searcher that randomly chooses a move. The fastest, yet dumbest, searcher we have to offer.
 pub struct RandomBot {}
+
+/// Searcher that uses a MiniMax algorithm to search for a best move.
+pub struct MiniMaxSearcher {}
+/// Searcher that uses a MiniMax algorithm to search for a best move, but does so in parallel.
+pub struct ParallelMiniMaxSearcher {}
+/// Searcher that uses an alpha-beta algorithm to search for a best move.
+pub struct AlphaBetaSearcher {}
+/// Searcher that uses a modified alpha-beta algorithm to search for a best move, but does so in parallel.
+/// The specific name of this algorithm is called "jamboree".
+pub struct JamboreeSearcher {}
+/// Modified `JamboreeSearcher` that uses the parallel alpha-beta algorithm. Improves upon `JamboreeSearcher` by
+/// adding iterative deepening with an aspiration window, MVV-LVA move ordering, as well as a qscience search.
+pub struct IterativeSearcher {}
 
 impl Searcher for RandomBot {
     fn name() -> &'static str {
@@ -99,7 +110,7 @@ impl Searcher for ParallelMiniMaxSearcher {
     }
 }
 
-
+/// Used by the Searchers to keep track of a move's strength.
 pub struct BestMove {
     best_move: Option<BitMove>,
     score: i16,
@@ -119,6 +130,7 @@ impl BestMove {
     }
 }
 
+#[doc(hidden)]
 pub fn eval_board(board: &Board) -> BestMove {
     BestMove::new(Eval::eval_low(board))
 }

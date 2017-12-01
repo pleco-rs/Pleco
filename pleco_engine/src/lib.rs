@@ -1,4 +1,4 @@
-//! A blazingly fast Chess Engine and Chess AI.
+//! A rust-based UCI compatible chess AI.
 //!
 //! This crate is not intended to be used by other crates as a dependency, as it's a mostly useful as a direct
 //! executable.
@@ -32,10 +32,8 @@
 
 
 #[macro_use]
-extern crate bitflags;
-
-#[macro_use]
 extern crate lazy_static;
+
 
 extern crate test;
 extern crate rayon;

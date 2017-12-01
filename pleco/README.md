@@ -25,10 +25,9 @@ Planned & Implemented features
 The Library aims to have the following features upon completion
 - [x] Bitboard Representation of Piece Locations:
 - [x] Ability for concurrent Board State access, for use by parallel searchers
-- [x] Full Move-generation Capabilities
-- [x] Statically computed information (including Magic-Bitboards)
+- [x] Full Move-generation Capabilities, including generation of pseudo-legal moves
+- [x] Statically computed lookup-tables (including Magic Bitboards)
 - [x] Zobrist Hashing
-- [ ] Allowing matches against Human Players
 - [ ] PGN Parsing
 
 
@@ -39,7 +38,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```
 [dependencies]
-pleco = "0.2.1"
+pleco = "0.2.2"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:

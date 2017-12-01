@@ -10,7 +10,7 @@ use pleco::tools::prng::PRNG;
 
 #[bench]
 fn tt_bench_single_thread_insert_empty(b: &mut Bencher) {
-    let tt = TT::new_num_entries(400_000);
+    let tt = TranspositionTable::new_num_entries(400_000);
     let mut prng = PRNG::init(1120246457);
     b.iter(|| {
         let key = prng.rand();
@@ -21,7 +21,7 @@ fn tt_bench_single_thread_insert_empty(b: &mut Bencher) {
 
 #[bench]
 fn tt_bench_single_thread_insert_full(b: &mut Bencher) {
-    let tt = TT::new_num_entries(400_000);
+    let tt = TranspositionTable::new_num_entries(400_000);
     let mut prng = PRNG::init(2500123475);
 
     for x in 0..1_600_000 {
@@ -53,7 +53,7 @@ fn tt_bench_single_thread_lookup_dense(b: &mut Bencher) {
 
 #[inline]
 fn tt_single_thread_lookup(b: &mut Bencher, num_entries: usize, placements: u64, seed: u64) {
-    let tt = TT::new_num_entries(num_entries);
+    let tt = TranspositionTable::new_num_entries(num_entries);
     let mut prng = PRNG::init(seed);
 
     for x in 0..placements {
