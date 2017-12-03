@@ -7,6 +7,7 @@ use pleco::tools::UCILimit;
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
+use pleco::tools::timer::Timer;
 
 use std::thread;
 use std::io;
@@ -18,9 +19,10 @@ use self::threads::ThreadPool;
 const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 pub const MAX_THREADS: usize = 256;
+pub const DEFAULT_TT_SIZE: usize = 256;
 
 lazy_static! {
-    pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(256);
+    pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
 }
 
 pub static ID_NAME: &str = "Pleco";
@@ -38,16 +40,23 @@ pub struct PlecoSearcher {
     options: AllOptions,
     thread_pool: ThreadPool,
     search_mode: SearchType,
+    board: Option<Board>,
+    limit: Option<UCILimit>
 }
 
 
 impl PlecoSearcher {
 
     pub fn init(use_stdout: bool) -> Self {
+        let mut pool = ThreadPool::new();
+        pool.stdout(true);
+        pool.set_thread_count(8);
         PlecoSearcher {
             options: AllOptions::default(),
-            thread_pool: ThreadPool::setup(8,use_stdout),
-            search_mode: SearchType::None
+            thread_pool: pool,
+            search_mode: SearchType::None,
+            board: None,
+            limit: None,
         }
     }
 
@@ -63,6 +72,10 @@ impl PlecoSearcher {
                 "uci" => self.uci_startup(),
                 "setoption" => self.apply_option(&full_command),
                 "options" | "alloptions" => self.options.print_curr(),
+                "ucinewgame" => self.clear_search(),
+                "isready" => println!("readyok"),
+                "position" => self.parse_position(&args[1..]),
+                "go" => self.uci_go(&args[1..]),
                 "quit" | "stop" => {
                     self.halt();
                     break;
@@ -71,6 +84,51 @@ impl PlecoSearcher {
             }
 
         }
+    }
+
+    pub fn clear_search(&mut self) {
+
+    }
+
+    fn parse_position(&mut self, args: &[&str]) {
+        let mut moves_start: usize = 1;
+        let start: &str = args[0];
+        self.board = if start == "startpos" {
+            Some(Board::default())
+        } else if start == "fen" {
+            let mut fen_string: String = args[1..].iter()
+                .take_while(|p: &&&str| **p != "moves")
+                .map(|p| (*p).to_string())
+                .collect::<Vec<String>>()
+                .connect(" ");
+            Board::new_from_fen(&fen_string).ok()
+        } else {
+            None
+        };
+
+        let mut moves_start: Option<usize> =  None;
+        for (i, mov) in args.iter().enumerate() {
+            if *mov == "moves" {
+                moves_start = Some(i);
+            }
+        };
+
+        if let Some(start) = moves_start {
+            if let Some(ref mut board) = self.board {
+                args[start..]
+                    .iter()
+                    .for_each(|p| {
+                        board.apply_uci_move(*p);
+                    })
+            }
+        }
+    }
+
+    fn uci_go(&mut self, args: &[&str]) {
+        let mut token_idx: usize = 1;
+//        while let Some(token) = *args[token_idx] {
+//
+//        }
     }
 
     fn apply_option(&mut self, option: &str) {
@@ -128,8 +186,92 @@ impl PlecoSearcher {
         unsafe {TT_TABLE.clear() };
     }
 
+    pub fn resize_tt(&mut self, mb: usize) {
+        unsafe {TT_TABLE.resize_to_megabytes(mb)};
+    }
+
+    pub fn use_stdout(&mut self, stdout: bool) {
+        self.thread_pool.stdout(stdout);
+    }
+
 
 }
+
+//fn parse_board_position(tokens: Vec<String>) -> Board {
+//    let mut token_stack = tokens.clone();
+//    token_stack.reverse();
+//    token_stack.pop();
+//
+//    let start_str = token_stack.pop().unwrap();
+//    let start = &start_str;
+//    let mut board = if start == "startpos" {
+//        Some(Board::default())
+//    } else if start == "fen" {
+//        let fen_string: &str = &token_stack.pop().unwrap();
+//        Board::new_from_fen(fen_string).ok()
+//    } else {
+//        panic!()
+//    };
+//
+//    if !token_stack.is_empty() {
+//        let next = &token_stack.pop().unwrap();
+//        if next == "moves" {
+//            while !token_stack.is_empty() {
+//                let bit_move = &token_stack.pop().unwrap();
+//                let mut all_moves: Vec<BitMove> = board.generate_moves();
+//                'check_legality: loop {
+//                    if all_moves.is_empty() {
+//                        panic!();
+//                    }
+//                    let curr_move: BitMove = all_moves.pop().unwrap();
+//                    if &curr_move.stringify() == bit_move {
+//                        board.apply_move(curr_move);
+//                        break 'check_legality
+//                    }
+//                }
+//            }
+//        }
+//    }
+//    board
+//}
+//
+//fn parse_limit(tokens: Vec<String>) -> UCILimit {
+//    let mut token_stack = tokens.clone();
+//    token_stack.reverse();
+//
+//    let mut white_time: i64 = i64::max_value();
+//    let mut black_time: i64 = i64::max_value();
+//    let mut white_inc: i64 = i64::max_value();
+//    let mut black_inc: i64 = i64::max_value();
+//
+//    while !token_stack.is_empty() {
+//        let token = token_stack.pop().unwrap();
+//        if token == "inf" {
+//            return UCILimit::Infinite;
+//        } else if token == "wtime" {
+//            white_time = unwrap_val_or(&mut token_stack, i64::max_value());
+//        } else if token == "btime" {
+//            black_time = unwrap_val_or(&mut token_stack, i64::max_value());
+//        } else if token == "winc" {
+//            white_inc = unwrap_val_or(&mut token_stack, 0);
+//        } else if token == "binc" {
+//            black_inc = unwrap_val_or(&mut token_stack, 0);
+//        } else if token == "depth" {
+//            return UCILimit::Depth(token_stack.pop().unwrap().parse::<u16>().unwrap());
+//        } else if token == "mate" {
+//            unimplemented!()
+//        } else if token == "nodes" {
+//            unimplemented!()
+//        } else if token == "movestogo" {
+//            unimplemented!()
+//        } else if token == "movetime" {
+//            unimplemented!()
+//        }
+//    }
+//    UCILimit::Time(
+//        Timer::new(white_time, black_time, white_inc, black_inc)
+//    )
+//}
 
 
 #[cfg(test)]

@@ -13,7 +13,7 @@ use chrono::*;
 
 
 fn main() {
-    uciloop();
+    run_many();
 }
 
 fn uciloop() {
@@ -41,6 +41,7 @@ fn run_one() {
         } else {
             s.search(&board, &UCILimit::Infinite);
             thread::sleep_ms(local.num_milliseconds() as u32);
+            println!("Stop!");
             let mov = s.stop_search_get_move();
             println!("Pleco searcher: {}",mov);
             board.apply_move(mov);
@@ -74,6 +75,7 @@ fn run_many() {
     let mut draws = 0;
     while j > 0 {
         let mut s = PlecoSearcher::init(false);
+        s.use_stdout(false);
         s.clear_tt();
         let mut board = Board::default();
 
@@ -88,7 +90,7 @@ fn run_many() {
                     let mov = if i < max_moves - 40 {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
                     } else {
-                        JamboreeSearcher::best_move_depth(board.shallow_clone(), 4)
+                        JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
                     };
                     board.apply_move(mov);
                 });
@@ -123,7 +125,7 @@ fn run_many() {
         j -= 1;
         println!("rounds = {}, Hash {}",max_moves - i,s.hash_percent());
 
-        if j % 6 == 3 {
+        if j % 3 == 2 {
             println!("W/L/D {}-{}-{}",wins,loses,draws);
         }
     }

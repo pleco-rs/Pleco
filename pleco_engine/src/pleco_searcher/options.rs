@@ -1,4 +1,5 @@
 use super::PlecoSearcher;
+use pleco::tools::tt::TranspositionTable;
 
 use num_cpus;
 use std::cmp::{PartialOrd,PartialEq,Ord,Ordering};
@@ -333,7 +334,8 @@ impl Default for AllOptions {
         let mut v: Vec<UciOption> = vec![
             c_tt_clear(),
             c_debug(),
-            c_threads()
+            c_threads(),
+            c_tt_resize()
         ];
         v.sort();
         AllOptions {ops: v}
@@ -347,7 +349,19 @@ fn c_tt_clear() -> UciOption {
         |p: &mut PlecoSearcher|
             p.clear_tt())
     );
-    UciOption::make_button("clear tt", c)
+    UciOption::make_button("clear_tt", c)
+}
+
+fn c_tt_resize() -> UciOption {
+    let c: SpinMutGenerator =  Box::new(||
+        Box::new(|p: &mut PlecoSearcher, mb: i32|
+            p.resize_tt(mb as usize))
+    );
+    UciOption::make_spin("Hash",
+                         super::DEFAULT_TT_SIZE as i32,
+                         TranspositionTable::MAX_SIZE_MB as i32,
+                         1,
+                         c)
 }
 
 fn c_debug() -> UciOption {
@@ -365,6 +379,8 @@ fn c_threads() -> UciOption {
 
 
 
+
+// ----- MISC FUNCTIONS -----
 
 fn bool_str(b: bool) -> &'static str {
     if b {

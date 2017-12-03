@@ -1,4 +1,4 @@
-//! Module for the [`TranspositionTable`], a type of hash-map where Zobrist Keys map to information about a position.
+//! Module for the `TranspositionTable`, a type of hash-map where Zobrist Keys map to information about a position.
 //!
 //! A [`TranspositionTable`] is a structure to quickly lookup chess positions and determine information from them.
 //! It maps from Board positions to information such as the evaluation of that position, the best move found so far,
@@ -178,16 +178,18 @@ pub struct Cluster {
 // clusters -> Pointer to the clusters
 // cap -> n number of clusters (So n * CLUSTER_SIZE) number of entries
 // time age -> documenting when an entry was placed
+
 /// Structure for representing a `TranspositionTable`. A Transposition Table is a type
 /// of HashTable that maps Zobrist Keys to information about that position, including the best move
 /// found, score, depth the move was found at, and other information.
 pub struct TranspositionTable {
     clusters: UnsafeCell<Unique<Cluster>>, // pointer to the heap
-    cap: UnsafeCell<usize>, // number of clusters
+    cap: UnsafeCell<usize>, // number of clusters, so (So n * CLUSTER_SIZE) number of entries
     time_age: UnsafeCell<u8>, // documenting at which root position an entry was placed
 }
 
 impl TranspositionTable {
+    pub const MAX_SIZE_MB: usize = 100000;
 
     /// Creates new with a size of around 'mb_size'. Actual size is the nearest power
     /// of 2 times the size of a Cluster rounded down.

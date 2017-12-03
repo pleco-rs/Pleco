@@ -97,11 +97,12 @@ pub enum MoveFlag {
 
 /// A Subset of `MoveFlag`, used to determine the overall classification of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
+#[repr(u8)]
 pub enum MoveType {
+    Normal,
     Promotion,
     Castle,
     EnPassant,
-    Normal,
 }
 
 /// Useful pre-encoding of a move's information before it is compressed into a `BitMove` struct.
@@ -307,6 +308,8 @@ impl BitMove {
         }
     }
 
+
+    // TODO: Simply with (m >> 4) & 3
     /// Returns the [MoveType] of a [BitMove].
     #[inline(always)]
     pub fn move_type(&self) -> MoveType {

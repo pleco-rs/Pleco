@@ -49,7 +49,7 @@ script:
 
 after_success:
   - |
-    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]
+    if [[ "$TRAVIS_BRANCH" != "Beta-Branch" ]]
     then
       cargo install cargo-travis || echo "cargo-travis has been already installed"
       export PATH=$HOME/.cargo/bin:$PATH
