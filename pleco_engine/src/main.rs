@@ -90,7 +90,7 @@ fn run_many() {
                     let mov = if i < max_moves - 40 {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
                     } else {
-                        JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
+                        JamboreeSearcher::best_move_depth(board.shallow_clone(), 4)
                     };
                     board.apply_move(mov);
                 });
@@ -125,7 +125,7 @@ fn run_many() {
         j -= 1;
         println!("rounds = {}, Hash {}",max_moves - i,s.hash_percent());
 
-        if j % 3 == 2 {
+        if j % 2 == 1 {
             println!("W/L/D {}-{}-{}",wins,loses,draws);
         }
     }

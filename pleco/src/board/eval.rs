@@ -77,7 +77,7 @@ trait EvalRuns {
 }
 
 
-pub const INFINITY: i16 = 30_002;
+pub const INFINITY: i16 = 30_001;
 pub const NEG_INFINITY: i16 = -30_001;
 pub const STALEMATE: i16 = 0;
 
@@ -91,10 +91,10 @@ pub const KING_VALUE: i16 = 350;
 pub const CASTLE_ABILITY: i16 = 7;
 pub const CASTLE_BONUS: i16 = 20;
 
-pub const KING_BOTTOM: i16 = 11;
+pub const KING_BOTTOM: i16 = 8;
 
 pub const MATE: i16 = -25_000;
-pub const CHECK: i16 = 20;
+pub const CHECK: i16 = 14;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
 pub const PIECE_VALS: [i16; PIECE_CNT] = [
@@ -121,6 +121,9 @@ impl Eval {
 
 
 fn eval_all<P: PlayerTrait>(board: &Board) -> i16 {
+    if board.rule_50() >= 50 {
+        return MATE;
+    }
     eval_piece_counts::<P>(board) +
     eval_castling::<P>(board) +
     eval_king_pos::<P>(board) +
@@ -210,7 +213,7 @@ fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i16 {
     // Our pieces blocking a check on their king
     let us_blockers: BitBoard = blockers & board.get_occupied_player(P::player());
 
-    score += 25 * us_blockers.count_bits() as i16;
+    score += 18 * us_blockers.count_bits() as i16;
 
     score += 6 * them_blockers.count_bits() as i16;
 
