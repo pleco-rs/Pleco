@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
 
+
 use std::{mem,time};
 
 use pleco::board::*;
@@ -13,6 +14,7 @@ use pleco::tools::*;
 use super::thread_search::ThreadSearcher;
 use super::misc::*;
 use super::{TT_TABLE,THREAD_STACK_SIZE};
+use super::root_moves::*;
 
 /// A Latch starts as false and eventually becomes true. You can block
 /// until it becomes true.
@@ -63,15 +65,6 @@ pub enum SendData {
     BestMove(RootMove)
 }
 
-pub type RootMoves = Arc<RwLock<Vec<RootMove>>>;
-pub type AllRootMoves = Arc<RwLock<Vec<RootMoves>>>;
-
-pub struct PerThread {
-    moves: RootMoves,
-    finished: Arc<AtomicBool>,
-    depth_completed: Arc<AtomicU16>,
-}
-
 pub struct ThreadPool {
     // This is the position information we send to each thread upon
     // starting. Contains stuff like the Board, and the Limit to search
@@ -79,7 +72,7 @@ pub struct ThreadPool {
     pos_state: Arc<RwLock<Option<ThreadGo>>>,
 
     // This is all rootmoves for all treads.
-    thread_info: Arc<RwLock<Vec<PerThread>>>,
+    all_thread_info: AllThreadInfo,
 
     // Join handle for the main thread.
     main_thread: Option<JoinHandle<()>>,
@@ -124,7 +117,7 @@ impl ThreadPool {
     fn init(rx: Receiver<SendData>) -> Self {
         ThreadPool {
             pos_state: Arc::new(RwLock::new(None)),
-            thread_info: Arc::new(RwLock::new(Vec::with_capacity(8))),
+            all_thread_info: AllThreadInfo::new(),
             main_thread: None,
             receiver: rx,
             main_thread_go: Arc::new(LockLatch::new()),
@@ -138,7 +131,7 @@ impl ThreadPool {
 
     fn create_thread(&self, id: usize) -> Thread {
         Thread {
-            root_moves: Arc::new(RwLock::new(Vec::new())),
+            root_moves: RootMoves::new(),
             depth_completed: Arc::new(AtomicU16::new(0)),
             id: id,
             tt: &super::TT_TABLE,
@@ -153,19 +146,15 @@ impl ThreadPool {
     }
 
     fn attach_thread(&mut self, thread: &Thread) {
-        let info = PerThread {
-            moves: Arc::clone(&thread.root_moves),
-            finished: Arc::clone(&thread.finished),
-            depth_completed: Arc::clone(&thread.depth_completed)
-        };
-        (*self.thread_info.write().unwrap()).push(info)
+        let info = ThreadInfo::new(&thread);
+        self.all_thread_info.add(info);
     }
 
     fn spawn_main_thread(&mut self, tx: Sender<SendData>) {
         let mut thread = self.create_thread(0);
         self.attach_thread(&thread);
         let main_thread = MainThread {
-            per_thread: Arc::clone(&self.thread_info),
+            per_thread: self.all_thread_info.clone(),
             main_thread_go: Arc::clone(&self.main_thread_go),
             sender: tx,
             thread
@@ -192,12 +181,10 @@ impl ThreadPool {
 
     pub fn set_thread_count(&mut self, num: usize) {
         // TODO: Check for overflow
-        let curr_num: usize = {
-            (*self.thread_info.read().unwrap()).len()
-        };
+        let curr_num: usize = self.all_thread_info.size();
 
-        let mut i: usize = curr_num + 1;
-        while i <= num {
+        let mut i: usize = curr_num;
+        while i < num {
             let mut thread = self.create_thread(i);
             self.attach_thread(&thread);
             let builder = thread::Builder::new();
@@ -205,109 +192,9 @@ impl ThreadPool {
                 let mut current_thread = thread;
                 current_thread.idle_loop()
             }).unwrap());
-//            println!("created thread {} ",i);
             i += 1;
         }
     }
-
-
-//    pub fn setup(num_threads: usize, use_stdout: bool) -> Self {
-//        // Turn back, ye wary traveler!
-//        // The road ahead is perilous and unreadable!
-//        // Arrrrrrrggggg!!!!
-//        // (Or should I say Aaaaaaaarrrcccc!!!?)
-//        // (Get it?)
-//        // (Cause this code is littered with Arc's.
-//        // (Ha. ha.)
-//
-//        let pos_state: Arc<RwLock<Option<ThreadGo>>> = Arc::new(RwLock::new(None));
-//        let stop = Arc::new(AtomicBool::new(false));
-//        let drop = Arc::new(AtomicBool::new(false));
-//        let use_stdout = Arc::new(AtomicBool::new(use_stdout));
-//        let main_thread_go = Arc::new(LockLatch::new());
-//        let all_thread_go = Arc::new(LockLatch::new());
-//        let (tx, rx) = channel();
-//
-//        let mut threads = Vec::new();
-//        let mut all_threads_finished = Vec::new();
-//
-//        let mut all_moves = Vec::with_capacity(num_threads);
-//        let mut depth_completed = Vec::with_capacity(num_threads);
-//
-//        let main_thread_moves = Arc::new(RwLock::new(Vec::new()));
-//        all_moves.push(Arc::clone(&main_thread_moves));
-//
-//        let main_thread_depth = Arc::new(AtomicU16::new(0));
-//        depth_completed.push(Arc::clone(&main_thread_depth));
-//
-//        for x in 1..num_threads {
-//            let builder = thread::Builder::new();
-//            let thread_moves = Arc::new(RwLock::new(Vec::new()));
-//            let thread_depth_completed = Arc::new(AtomicU16::new(0));
-//            let thread_fin = Arc::new(AtomicBool::new(true));
-//            all_moves.push(Arc::clone(&thread_moves));
-//            depth_completed.push(Arc::clone(&thread_depth_completed));
-//            let new_thread =
-//                Thread::new(thread_moves,
-//                            thread_depth_completed,
-//                            x,
-//                            Arc::clone(&use_stdout),
-//                            Arc::clone(&stop),
-//                            Arc::clone(&thread_fin),
-//                            Arc::clone(&drop),
-//                            Arc::clone(&pos_state),
-//                            Arc::clone(&all_thread_go)
-//            );
-//            let join_handle = builder.spawn(move || {
-//                let mut current_thread = new_thread;
-//                current_thread.idle_loop()
-//            }).unwrap();
-//            all_threads_finished.push(thread_fin);
-//            threads.push(join_handle);
-//        }
-//
-//        let all_root_moves = Arc::new(RwLock::new(all_moves));
-//        let main_thread_fin = Arc::new(AtomicBool::new(true));
-//        let main_thread_inner = Thread::new
-//            (main_thread_moves,
-//             Arc::clone(&main_thread_depth),
-//             0,
-//             Arc::clone(&use_stdout),
-//             Arc::clone(&stop),
-//             Arc::clone(&main_thread_fin),
-//             Arc::clone(&drop),
-//             Arc::clone(&pos_state),
-//             Arc::clone(&all_thread_go));
-//
-//        let builder = thread::Builder::new();
-//        let main_thread = MainThread {
-//            all_moves: Arc::clone(&all_root_moves),
-//            all_finished: all_threads_finished.clone(),
-//            all_depths: depth_completed,
-//            main_thread_go: Arc::clone(&main_thread_go),
-//            sender: tx,
-//            thread: main_thread_inner };
-//
-//        all_threads_finished.push(main_thread_fin);
-//
-//        let join_handle = builder.spawn(move || {
-//            let mut main_thread = main_thread;
-//            main_thread.main_idle_loop()
-//        }).unwrap();
-//
-//        ThreadPool {
-//            pos_state,
-//            all_moves: all_root_moves,
-//            main_thread: Some(join_handle),
-//            receiver: rx,
-//            main_thread_go,
-//            threads,
-//            all_thread_go,
-//            thread_finished: all_threads_finished,
-//            stop,
-//            drop
-//        }
-//    }
 
     pub fn uci_search(&mut self, board: &Board, limits: &UCILimit) {
         {
@@ -341,7 +228,7 @@ impl ThreadPool {
 }
 
 pub struct MainThread {
-    per_thread: Arc<RwLock<Vec<PerThread>>>,
+    per_thread: AllThreadInfo,
     main_thread_go: Arc<LockLatch>,
     sender: Sender<SendData>,
     thread: Thread,
@@ -358,26 +245,6 @@ impl MainThread {
         }
     }
 
-    pub fn set_all_root_moves(&mut self, board: &Board) {
-        let base_moves: Vec<RootMove> = board.generate_moves()
-            .iter()
-            .map(|b| RootMove::new(*b))
-            .collect();
-        let all_moves_lock = self.per_thread.write().unwrap();
-        let all_moves = &*all_moves_lock;
-
-        for lock in all_moves.iter() {
-            let mut moves_lock = lock.moves.write().unwrap();
-            (*moves_lock) = base_moves.clone();
-        }
-    }
-
-    pub fn set_all_depth_counts(&mut self) {
-        (*self.per_thread.write().unwrap())
-            .iter_mut()
-            .for_each(|d| d.depth_completed.store(0, Ordering::Relaxed));
-    }
-
     pub fn lock_threads(&mut self) {
         self.thread.cond.lock();
     }
@@ -386,39 +253,16 @@ impl MainThread {
         self.thread.cond.set();
     }
 
-    pub fn thread_best_move(&mut self, thread: usize) -> RootMove {
-        let root_moves: RootMoves = Arc::clone(&(*self.per_thread.read().unwrap()).get(thread).unwrap().moves);
-        let lock = root_moves.read().unwrap();
-        let root_move: &RootMove = (*lock).get(0).unwrap();
-        root_move.clone()
-    }
-
     pub fn lock_self(&mut self) {
         self.main_thread_go.lock();
-    }
-
-    pub fn wait_for_finish(&self) {
-        for per_thread in (*self.per_thread.read().unwrap()).iter() {
-            while(!per_thread.finished.load(Ordering::Relaxed)) {}
-        }
-    }
-
-    pub fn wait_for_start(&self) {
-        for per_thread in (*self.per_thread.read().unwrap()).iter() {
-            while(per_thread.finished.load(Ordering::Relaxed)) {}
-        }
-    }
-
-    pub fn num_threads(&self) -> usize {
-        (*self.per_thread.read().unwrap()).len()
     }
 
     pub fn go(&mut self) {
         self.thread.finished.store(false, Ordering::Relaxed);
         self.thread.stop.store(true, Ordering::Relaxed);
-        self.set_all_depth_counts();
+        self.per_thread.reset_depths();
         let board = self.thread.retrieve_board().unwrap();
-        self.set_all_root_moves(&board);
+        self.per_thread.set_rootmoves(&board);
 
         // turn stop searching off
         self.thread.stop.store(false, Ordering::Relaxed);
@@ -426,45 +270,17 @@ impl MainThread {
         self.start_threads();
 
         let limit = self.thread.retrieve_limit().unwrap();
-        self.wait_for_start();
+        self.per_thread.wait_for_start();
         self.lock_threads();
 
         // start searching
         self.thread.start_searching(board, limit);
         self.thread.finished.store(true, Ordering::Relaxed);
         self.thread.stop.store(true, Ordering::Relaxed);
-        self.wait_for_finish();
+        self.per_thread.wait_for_finish();
 
         // find best move
-        let mut best_root_move: RootMove = self.thread_best_move(0);
-        let mut depth_reached: i32 = {
-            (*self.per_thread.read().unwrap())[0].depth_completed.load(Ordering::Relaxed) as i32
-        };
-
-        {
-            let per_thread = self.per_thread.read().unwrap();
-
-
-            for (x, thread_info) in (*per_thread).iter().enumerate() {
-                let thread_move = (*thread_info.moves.read().unwrap()).get(0).unwrap().clone();
-                let thread_depth = thread_info.depth_completed.load(Ordering::Relaxed);
-                let depth_diff = thread_depth as i32 - depth_reached;
-                let value_diff = thread_move.score - best_root_move.score;
-
-                if x != 0 {
-                    // If it has a bigger value and greater or equal depth
-                    if value_diff > 0 && depth_diff >= 0 {
-                        best_root_move = thread_move;
-                        depth_reached = thread_depth as i32;
-//                        println!("Found better!")
-                    }
-                }
-
-                if self.thread.use_stdout.load(Ordering::Relaxed) {
-                    println!("id: {}, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, best_root_move.prev_score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
-                }
-            }
-        }
+        let mut best_root_move: RootMove = self.per_thread.best_rootmove(self.thread.use_stdout.load(Ordering::Relaxed));
 
         self.sender.send(SendData::BestMove(best_root_move)).unwrap();
 
@@ -492,30 +308,6 @@ pub struct Thread {
 }
 
 impl Thread {
-    pub fn new(root_moves: Arc<RwLock<Vec<RootMove>>>,
-               depth_completed: Arc<AtomicU16>,
-               id: usize,
-               use_stdout: Arc<AtomicBool>,
-               stop: Arc<AtomicBool>,
-               finished: Arc<AtomicBool>,
-               drop: Arc<AtomicBool>,
-               pos_state: Arc<RwLock<Option<ThreadGo>>>,
-               cond: Arc<LockLatch>, ) -> Self {
-        Thread {
-            root_moves,
-            depth_completed,
-            id,
-            tt: &TT_TABLE,
-            use_stdout,
-            stop,
-            finished,
-            drop,
-            pos_state,
-            cond,
-            thread_stack:
-            init_thread_stack()
-        }
-    }
 
     pub fn drop(&self) -> bool {
         self.drop.load(Ordering::Relaxed)
@@ -592,29 +384,6 @@ pub fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-//    #[test]
-    pub fn test_searcher() {
-        let mut pool = ThreadPool::new();
-        let board = Board::default();
-        let limits = UCILimit::Depth(3);
-        pool.search(&board, &limits);
-        thread::sleep_ms(3000);
-        let moves = pool.all_moves.clone();
-        let r = moves.read().unwrap();
-        for i in 0..(*r).len() {
-            println!("thread {}", i);
-            let m: Arc<RwLock<Vec<RootMove>>> = (*r).get(i).unwrap().clone();
-            let inner = m.read().unwrap();
-            for mov in (*inner).iter() {
-                println!("Move: {} score: {} prev_score {} depth {}", mov.bit_move, mov.score, mov.prev_score, mov.depth_reached);
-            }
-        }
-
-        pool.stop_searching();
-        let mov = pool.get_move();
-        println!("Bestmove {}", mov);
-    }
 
 
 }

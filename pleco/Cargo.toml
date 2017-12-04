@@ -34,6 +34,7 @@ opt-level = 3
 debug = false
 debug-assertions = false
 panic = "panic"
+codegen-units = 1
 lto = true
 
 [profile.bench]
@@ -75,7 +76,7 @@ clippy = {version = "0.0.174", optional = true}
 lazy_static = "0.2"
 bitflags = "1.0"
 rand = "0.3"
-rayon = "0.8.2"
+rayon = "0.9.0"
 num_cpus = "1.0"
 failure = "0.1.1"
 failure_derive = "0.1.1"

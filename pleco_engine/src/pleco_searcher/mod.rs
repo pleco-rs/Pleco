@@ -2,12 +2,14 @@ pub mod misc;
 pub mod options;
 pub mod threads;
 pub mod thread_search;
+pub mod root_moves;
 
 use pleco::tools::UCILimit;
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
 use pleco::tools::timer::Timer;
+use pleco::board::eval::*;
 
 use std::thread;
 use std::io;
@@ -49,7 +51,7 @@ impl PlecoSearcher {
 
     pub fn init(use_stdout: bool) -> Self {
         let mut pool = ThreadPool::new();
-        pool.stdout(true);
+        pool.stdout(use_stdout);
         pool.set_thread_count(8);
         PlecoSearcher {
             options: AllOptions::default(),
