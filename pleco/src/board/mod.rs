@@ -1521,28 +1521,6 @@ impl Board {
         self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
     }
 
-    /// Returns the piece (if any) at the given BitBoard for a given player.
-    ///
-    /// # Safety
-    ///
-    /// Number of bits must be equal to 1, or else a panic will occur.
-    pub fn piece_at_bb(&self, src_bit: BitBoard, player: Player) -> Option<Piece> {
-        let sq: SQ = src_bit.to_sq();
-        assert!(sq.is_okay());
-        self.piece_locations.piece_at_for_player(sq, player)
-    }
-
-    /// Returns the piece (if any) at the given BitBoard for either player.
-    ///
-    /// # Safety
-    ///
-    /// Number of bits must be equal to 1, or else a panic will occur.
-    pub fn piece_at_bb_all(&self, src_bit: BitBoard) -> Option<Piece> {
-        let square: SQ = src_bit.to_sq();
-        assert!(square.is_okay());
-        self.piece_locations.piece_at(square)
-    }
-
     /// Returns the Piece, if any, at the square.
     pub fn piece_at_sq(&self, sq: SQ) -> Option<Piece> {
         assert!(sq.is_okay());
@@ -1696,8 +1674,7 @@ impl Board {
         }
 
         // If Moving the king, check if the square moved to is not being attacked
-        // Castles are checking during move gen for check, so we goo dthere
-//        println!("GUCCI");
+        // Castles are checked during move gen for check, so we're good there.
         let piece = self.piece_at_sq(src);
         if piece.is_none() {
             return false;
@@ -1707,7 +1684,6 @@ impl Board {
             return m.move_type() == MoveType::Castle ||
                 (self.attackers_to(dst, self.get_occupied()) & self.get_occupied_player(them)).is_empty();
         }
-//        println!("GUCCI2");
 
         // Making sure not moving a pinned piece
         (self.pinned_pieces(self.turn) & src_bb).is_empty() ||
@@ -1808,7 +1784,7 @@ impl Board {
             return Some(Piece::P);
         }
         let dst = m.get_dest();
-        self.piece_at_bb(dst.to_bb(), self.turn.other_player())
+        self.piece_at_sq(dst)
     }
 
     /// Returns a prettified String of the current `Board`, for easy command line displaying.

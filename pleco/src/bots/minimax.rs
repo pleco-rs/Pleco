@@ -14,7 +14,6 @@ use test;
 
 pub fn minimax(board: &mut Board, max_depth: u16) -> BestMove {
     if board.depth() == max_depth {
-
         return eval_board(board);
     }
 
