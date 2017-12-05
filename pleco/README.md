@@ -38,7 +38,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```
 [dependencies]
-pleco = "0.2.2"
+pleco = "0.2.3"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:

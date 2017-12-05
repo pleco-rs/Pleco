@@ -33,6 +33,9 @@ pub struct ThreadSearcher<'a> {
 impl<'a> ThreadSearcher<'a> {
     pub fn search_root(&mut self) {
         assert!(self.board.depth() == 0);
+        if self.stop() {
+            return;
+        }
         if self.use_stdout() {
             println!("info id {} start", self.thread.id);
         }
@@ -121,6 +124,8 @@ impl<'a> ThreadSearcher<'a> {
             return Eval::eval_low(&self.board) as i32;
         }
 
+        let plys_to_zero = max_depth - ply;
+
         if !at_root {
             if alpha >= beta {
                 return alpha
@@ -129,7 +134,7 @@ impl<'a> ThreadSearcher<'a> {
 
         if !is_pv
             && tt_hit
-            && tt_entry.depth as u16 >= max_depth
+            && tt_entry.depth as u16 >= plys_to_zero
             && tt_value != 0
             && correct_bound_eq(tt_value, beta, tt_entry.node_type()) {
             return tt_value;
@@ -153,7 +158,7 @@ impl<'a> ThreadSearcher<'a> {
 
         if !in_check {
 
-            if !at_root
+            if ply > 3
                 && ply < 7
                 && pos_eval - futility_margin(ply) >= beta && pos_eval < 10000 {
                 return pos_eval;
@@ -221,7 +226,6 @@ impl<'a> ThreadSearcher<'a> {
                     if value > alpha {
                         best_move = *mov;
                         if is_pv && value < beta {
-//                        if value < beta {
                             alpha = value;
                         } else {
 //                            assert!(value >= beta);
@@ -244,7 +248,7 @@ impl<'a> ThreadSearcher<'a> {
             else if is_pv && !best_move.is_null() {NodeBound::Exact}
                 else {NodeBound::UpperBound};
 
-        tt_entry.place(zob, best_move, best_value as i16, pos_eval as i16, ply as u8, node_bound);
+        tt_entry.place(zob, best_move, best_value as i16, pos_eval as i16, plys_to_zero as u8, node_bound);
 
         best_value
     }

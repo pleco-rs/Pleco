@@ -29,7 +29,7 @@ lazy_static! {
 
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
-pub static VERSION: &str = "0.0.2";
+pub static VERSION: &str = "0.0.3";
 
 #[derive(PartialEq)]
 enum SearchType {
@@ -50,6 +50,9 @@ pub struct PlecoSearcher {
 impl PlecoSearcher {
 
     pub fn init(use_stdout: bool) -> Self {
+        unsafe {
+            TT_TABLE.clear();
+        }
         let mut pool = ThreadPool::new();
         pool.stdout(use_stdout);
         pool.set_thread_count(8);
@@ -67,7 +70,7 @@ impl PlecoSearcher {
         'main: loop {
             full_command.clear();
             io::stdin().read_line(&mut full_command).ok().unwrap();
-            let mut args: Vec<&str> = full_command.split_whitespace().collect();
+            let args: Vec<&str> = full_command.split_whitespace().collect();
             let command: &str = args.first().unwrap_or(&"");
             match command {
                 "" => continue,
@@ -93,12 +96,11 @@ impl PlecoSearcher {
     }
 
     fn parse_position(&mut self, args: &[&str]) {
-        let mut moves_start: usize = 1;
         let start: &str = args[0];
         self.board = if start == "startpos" {
             Some(Board::default())
         } else if start == "fen" {
-            let mut fen_string: String = args[1..].iter()
+            let fen_string: String = args[1..].iter()
                 .take_while(|p: &&&str| **p != "moves")
                 .map(|p| (*p).to_string())
                 .collect::<Vec<String>>()

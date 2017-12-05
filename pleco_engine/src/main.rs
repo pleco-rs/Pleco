@@ -13,7 +13,8 @@ use chrono::*;
 
 
 fn main() {
-    run_many();
+//    run_many();
+    run_one();
 }
 
 fn uciloop() {
@@ -76,7 +77,6 @@ fn run_many() {
     while j > 0 {
         let mut s = PlecoSearcher::init(false);
         s.use_stdout(false);
-        s.clear_tt();
         let mut board = Board::default();
 
         let mut local: Duration = Duration::seconds(1);
@@ -87,7 +87,7 @@ fn run_many() {
         while i > 0 && !board.checkmate() && !board.stalemate() {
             if i % 2 == 1 {
                 local = Duration::span(|| {
-                    let mov = if i < max_moves - 40 {
+                    let mov = if i < max_moves - 60 {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
                     } else {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 4)

@@ -284,6 +284,9 @@ impl AllThreadInfo {
 
     pub fn best_rootmove(&self, use_stdout: bool) -> RootMove {
         let (mut best_root_move, mut depth_reached): (RootMove, u16) = self.thread_best_move_and_depth(0);
+        if use_stdout {
+            println!("id: 0, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}", best_root_move.score, best_root_move.prev_score, best_root_move.depth_reached,depth_reached, best_root_move.bit_move);
+        }
 
         for x in 1..self.size() {
             let (thread_move, thread_depth): (RootMove, u16)  = self.thread_best_move_and_depth(x);
@@ -298,7 +301,7 @@ impl AllThreadInfo {
             }
 
             if use_stdout {
-                println!("id: {}, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, best_root_move.prev_score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
+                println!("id: {}, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, thread_move.prev_score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
             }
         }
         best_root_move
