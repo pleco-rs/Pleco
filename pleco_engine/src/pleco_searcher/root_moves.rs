@@ -1,23 +1,16 @@
 use std::sync::{Arc,RwLock};
 use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
-use std::thread::{JoinHandle,self};
-use std::sync::mpsc::{channel,Receiver,Sender};
 
 use rand::{self,Rng};
 
-use std::{mem,time};
 use std::cmp::Ordering as CmpOrder;
 
 use pleco::board::eval::*;
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
-use pleco::tools::tt::*;
-use pleco::tools::*;
+
 use pleco::{MoveList,Piece};
 
-use super::thread_search::ThreadSearcher;
-use super::misc::*;
-use super::{TT_TABLE,THREAD_STACK_SIZE};
 use super::threads::Thread;
 
 #[derive(Copy, Clone, Eq)]
@@ -162,15 +155,17 @@ impl RootMoves {
                 let piece = board.piece_at_sq((a).get_src()).unwrap();
 
                 if a.is_capture() {
-                    board.captured_piece(a).unwrap().value() - piece.value()
+                    piece.value() - board.captured_piece(a).unwrap().value()
+                } else if a.is_castle() {
+                    1
                 } else if piece == Piece::P {
                     if a.is_double_push().0 {
-                        -2
+                        2
                     } else {
-                        -3
+                        3
                     }
                 } else {
-                    -4
+                    4
                 }
             })
         } else {

@@ -4,8 +4,9 @@ extern crate test;
 extern crate pleco_engine;
 
 use pleco::Board;
-use pleco::tools::UCILimit;
+
 use pleco_engine::pleco_searcher::PlecoSearcher;
+use pleco_engine::pleco_searcher::misc::PreLimits;
 
 
 use test::{black_box, Bencher};
@@ -15,7 +16,8 @@ use test::{black_box, Bencher};
 
 #[bench]
 fn bench_4_ply(b: &mut Bencher) {
-    let limit = UCILimit::Depth(4);
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(4);
     let board = Board::default();
     b.iter(|| {
         let mut s = PlecoSearcher::init(false);
@@ -27,7 +29,8 @@ fn bench_4_ply(b: &mut Bencher) {
 
 #[bench]
 fn bench_5_ply(b: &mut Bencher) {
-    let limit = UCILimit::Depth(5);
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(5);
     let board = Board::default();
     b.iter(|| {
         let mut s = PlecoSearcher::init(false);
@@ -38,7 +41,8 @@ fn bench_5_ply(b: &mut Bencher) {
 
 #[bench]
 fn bench_6_ply(b: &mut Bencher) {
-    let limit = UCILimit::Depth(6);
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(6);
     let board = Board::default();
     b.iter(|| {
         let mut s = PlecoSearcher::init(false);

@@ -819,8 +819,8 @@ impl Board {
     ///
     /// # Panics
     ///
-    /// Cannot be done if after a [Board::shallow_clone()] or [Board::parallel_clone()] has been done
-    /// and no subsequent moves have been played.
+    /// Cannot be done if after any `Board::shallow_clone()` has been applied,
+    /// or if `Board::parallel_clone()` has been done and there is no previous move.
     ///
     /// # Examples
     ///
@@ -948,7 +948,7 @@ impl Board {
     /// # Safety
     ///
     /// This method should only be used if it can be guaranteed that the last played move from
-    /// the current state is a Null-Move. Otherwise, a panic will occur.
+    /// the current state is a Null-Move, eg `Board::apply_null_move()`. Otherwise, a panic will occur.
     ///
     /// # Examples
     ///
@@ -1000,10 +1000,10 @@ impl Board {
         MoveGen::generate::<PseudoLegal, AllGenType>(self)
     }
 
-    /// Get a List of legal `BitMove`s for the player whose turn it is to move or a certain type.
+    /// Get a List of legal `BitMove`s for the player whose turn it is to move and of a certain type.
     ///
     /// This method already takes into account if the Board is currently in check, and will return
-    /// legal moves only. If a non-ALL GenType is supplied, only a subset of the total moves will be given.
+    /// legal moves only. If a non-ALL `GenTypes` is supplied, only a subset of the total moves will be given.
     ///
     /// # Panics
     ///
@@ -1302,7 +1302,7 @@ impl Board {
         self.turn
     }
 
-    /// Return the Zobrist Hash.
+    /// Return the Zobrist Hash of the board.
     pub fn zobrist(&self) -> u64 {
         self.state.zobrast
     }
@@ -1551,7 +1551,7 @@ impl Board {
     }
 
     /// Returns the pinned pieces for a given players king. Can contain piece of from both players,
-    /// but all are garunteed to be pinned to the given player's king.
+    /// but all are guaranteed to be pinned to the given player's king.
     pub fn all_pinned_pieces(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize]
     }

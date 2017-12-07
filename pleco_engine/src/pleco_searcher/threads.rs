@@ -9,7 +9,7 @@ use std::{mem,time};
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
-use pleco::tools::*;
+
 
 use super::thread_search::ThreadSearcher;
 use super::misc::*;
@@ -56,7 +56,7 @@ impl LockLatch {
 }
 
 pub struct ThreadGo {
-    limit: UCILimit,
+    limit: Limits,
     board: Board,
     // Options: ?
 }
@@ -185,7 +185,7 @@ impl ThreadPool {
 
         let mut i: usize = curr_num;
         while i < num {
-            let mut thread = self.create_thread(i);
+            let thread = self.create_thread(i);
             self.attach_thread(&thread);
             let builder = thread::Builder::new();
             self.threads.push(builder.spawn(move || {
@@ -196,18 +196,18 @@ impl ThreadPool {
         }
     }
 
-    pub fn uci_search(&mut self, board: &Board, limits: &UCILimit) {
+    pub fn uci_search(&mut self, board: &Board, limits: &PreLimits) {
         {
             let mut thread_go = self.pos_state.write().unwrap();
             *thread_go = Some(ThreadGo {
                 board: board.shallow_clone(),
-                limit: limits.clone()
+                limit: (limits.clone()).create()
             });
         }
         self.main_thread_go.set();
     }
 
-    pub fn search(&mut self, board: &Board, limits: &UCILimit) -> BitMove {
+    pub fn search(&mut self, board: &Board, limits: &PreLimits) -> BitMove {
         self.uci_search(&board, &limits);
         let data = self.receiver.recv().unwrap();
         match data {
@@ -319,7 +319,7 @@ impl Thread {
         board
     }
 
-    pub fn retrieve_limit(&self) -> Option<UCILimit> {
+    pub fn retrieve_limit(&self) -> Option<Limits> {
         let s: &Option<ThreadGo> = &*(self.pos_state.read().unwrap());
         let board = s.as_ref().map(|ref tg| (*tg).limit.clone());
         board
@@ -335,7 +335,7 @@ impl Thread {
         }
     }
 
-    fn start_searching(&mut self, board: Board, limit: UCILimit) {
+    fn start_searching(&mut self, board: Board, limit: Limits) {
         let mut thread_search = ThreadSearcher {
             thread: self,
             limit: limit,

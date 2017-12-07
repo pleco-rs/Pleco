@@ -4,17 +4,15 @@ pub mod threads;
 pub mod thread_search;
 pub mod root_moves;
 
-use pleco::tools::UCILimit;
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
-use pleco::tools::timer::Timer;
-use pleco::board::eval::*;
 
 use std::thread;
 use std::io;
 
-use self::options::{UciOption,AllOptions,UciOptionMut};
+use self::misc::PreLimits;
+use self::options::{AllOptions,UciOptionMut};
 use self::threads::ThreadPool;
 
 
@@ -22,6 +20,7 @@ const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 pub const MAX_THREADS: usize = 256;
 pub const DEFAULT_TT_SIZE: usize = 256;
+//pub const DEFAULT_TT_SIZE: usize = 1024;
 
 lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
@@ -43,7 +42,7 @@ pub struct PlecoSearcher {
     thread_pool: ThreadPool,
     search_mode: SearchType,
     board: Option<Board>,
-    limit: Option<UCILimit>
+    limit: Option<PreLimits>
 }
 
 
@@ -104,7 +103,7 @@ impl PlecoSearcher {
                 .take_while(|p: &&&str| **p != "moves")
                 .map(|p| (*p).to_string())
                 .collect::<Vec<String>>()
-                .connect(" ");
+                .join(" ");
             Board::new_from_fen(&fen_string).ok()
         } else {
             None
@@ -155,7 +154,7 @@ impl PlecoSearcher {
         println!("uciok");
     }
 
-    pub fn search(&mut self, board: &Board, limit: &UCILimit) {
+    pub fn search(&mut self, board: &Board, limit: &PreLimits) {
         TT_TABLE.new_search();
         self.search_mode = SearchType::Search;
         self.thread_pool.uci_search(&board, &limit);
@@ -277,24 +276,4 @@ impl PlecoSearcher {
 //    )
 //}
 
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-//    #[test]
-    pub fn testme() {
-        {
-            let mut s = PlecoSearcher::init(false);
-            let limit = UCILimit::Infinite;
-            let board = Board::default();
-            s.search(&board, &limit);
-            thread::sleep_ms(20000);
-            s.stop_search_get_move();
-            println!("TT Hash {}", 100.0 * TT_TABLE.hash_percent());
-        }
-    }
-
-}
 

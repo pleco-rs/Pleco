@@ -37,10 +37,6 @@ pub enum UCILimit {
     Time(Timer),
 }
 
-pub struct Limit {
-
-}
-
 impl UCILimit {
     /// Returns if time management should be used.
     pub fn use_time(&self) -> bool {

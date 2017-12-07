@@ -1,7 +1,7 @@
 use super::threads::Thread;
-use super::UCILimit;
+use super::misc::Limits;
 
-use rand::{Rng};
+
 
 //use test::{self,Bencher};
 
@@ -26,7 +26,7 @@ static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 
 pub struct ThreadSearcher<'a> {
     pub thread: &'a mut Thread,
-    pub limit: UCILimit,
+    pub limit: Limits,
     pub board: Board
 }
 
@@ -40,8 +40,8 @@ impl<'a> ThreadSearcher<'a> {
             println!("info id {} start", self.thread.id);
         }
 
-        let max_depth = if self.limit.is_depth() {
-            self.limit.depth_limit()
+        let max_depth = if let LimitsType::Depth(d) = self.limit.limits_type {
+            d
         } else {
             MAX_PLY
         };
@@ -213,7 +213,7 @@ impl<'a> ThreadSearcher<'a> {
                     return 0;
                 }
                 if at_root {
-                    if (moves_played == 1 || value as i32 > alpha) {
+                    if moves_played == 1 || value as i32 > alpha {
                         self.thread.root_moves.insert_score_depth(i,value, max_depth);
                     } else {
                         self.thread.root_moves.insert_score(i, NEG_INFINITY as i32);
