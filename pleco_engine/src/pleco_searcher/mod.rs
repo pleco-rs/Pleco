@@ -11,7 +11,7 @@ use pleco::BitMove;
 use std::thread;
 use std::io;
 
-use self::misc::PreLimits;
+use self::misc::{PreLimits,UCITimer};
 use self::options::{AllOptions,UciOptionMut};
 use self::threads::ThreadPool;
 
@@ -118,20 +118,118 @@ impl PlecoSearcher {
 
         if let Some(start) = moves_start {
             if let Some(ref mut board) = self.board {
-                args[start..]
+                let all_moves = board.generate_moves()
                     .iter()
+                    .map(|m| m.stringify())
+                    .collect::<Vec<String>>();
+
+                args[start..].iter()
+                    .take_while(|m| all_moves.contains(&(**m).to_string()))
                     .for_each(|p| {
-                        board.apply_uci_move(*p);
-                    })
+                        assert!(board.apply_uci_move(*p));
+                    });
             }
         }
     }
 
+    // when "go" is passed into stdin, followed by several time control parameters
+    // "searchmoves" "move"+
+    // "ponder"
+    // "wtime" "[msec]"
+    // "btime" "[msec]"
+    // "winc" "[msec]"
+    // "binc" "[msec]"
+    // "movestogo" "[u32]"
+    // "depth" "[u16]"
+    // "nodes" "[u64]"
+    // "mate" "[moves]"
+    // movetime "msec"
+    // "infinite"
     fn uci_go(&mut self, args: &[&str]) {
-        let mut token_idx: usize = 1;
-//        while let Some(token) = *args[token_idx] {
-//
-//        }
+        let mut token_idx: usize = 0;
+        let mut limit = PreLimits::blank();
+        let mut timer = UCITimer::blank();
+        while let Some(token) = args.get(token_idx) {
+            match *token {
+                "infinite" => {limit.infinite = true;},
+                "ponder" => {limit.ponder = true;},
+                "wtime" => {
+                    if let Some(wtime_s) =  args.get(token_idx + 1) {
+                        if let Ok(wtime) = wtime_s.parse::<i32>() {
+                            timer.time_msec[0] = wtime;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "btime" => {
+                    if let Some(btime_s) =  args.get(token_idx + 1) {
+                        if let Ok(btime) = btime_s.parse::<i32>() {
+                            timer.time_msec[1] = btime;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "winc" => {
+                    if let Some(winc_s) =  args.get(token_idx + 1) {
+                        if let Ok(winc) = winc_s.parse::<i32>() {
+                            timer.inc_msec[0] = winc;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "binc" => {
+                    if let Some(binc_s) =  args.get(token_idx + 1) {
+                        if let Ok(binc) = binc_s.parse::<i32>() {
+                            timer.inc_msec[1] = binc;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "movestogo" => {
+                    if let Some(movestogo_s) =  args.get(token_idx + 1) {
+                        if let Ok(movestogo) = movestogo_s.parse::<i32>() {
+                            timer.time_msec[0] = movestogo;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "depth" => {
+                    if let Some(depth_s) =  args.get(token_idx + 1) {
+                        if let Ok(depth) = depth_s.parse::<u16>() {
+                            limit.depth = Some(depth);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "nodes" => {
+                    if let Some(nodes_s) =  args.get(token_idx + 1) {
+                        if let Ok(nodes) = nodes_s.parse::<u64>() {
+                            limit.nodes = Some(nodes);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "mate" => {
+                    if let Some(mate_s) =  args.get(token_idx + 1) {
+                        if let Ok(mate) = mate_s.parse::<u16>() {
+                            limit.mate = Some(mate);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "movetime" => {
+                    if let Some(movetime_s) =  args.get(token_idx + 1) {
+                        if let Ok(movetime) = movetime_s.parse::<u64>() {
+                            limit.move_time = Some(movetime);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "searchmoves" => {},
+                _ => {}
+            }
+            token_idx += 1;
+        }
     }
 
     fn apply_option(&mut self, option: &str) {
