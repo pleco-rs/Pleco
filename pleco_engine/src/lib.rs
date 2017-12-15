@@ -29,7 +29,8 @@
 #![feature(integer_atomics)]
 #![feature(unique)]
 #![feature(allocator_api)]
-
+#![feature(trusted_len)]
+#![feature(fused)]
 
 #[macro_use]
 extern crate lazy_static;

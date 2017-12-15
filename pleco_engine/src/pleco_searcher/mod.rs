@@ -3,6 +3,7 @@ pub mod options;
 pub mod threads;
 pub mod thread_search;
 pub mod root_moves;
+pub mod rmoves;
 
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
