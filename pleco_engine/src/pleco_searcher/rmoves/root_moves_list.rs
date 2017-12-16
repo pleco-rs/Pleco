@@ -1,11 +1,14 @@
 use super::{RootMove, MAX_MOVES};
 
-use pleco::MoveList;
+use pleco::{MoveList,Board,Piece};
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
 use std::ptr;
+
+use rand;
+use rand::Rng;
 
 #[repr(C)]
 pub struct RawRootMoveList {
@@ -36,6 +39,46 @@ impl RootMoveList {
             for (i, mov) in moves.iter().enumerate() {
                 self[i] = RootMove::new(*mov);
             }
+        }
+    }
+
+    pub fn rollback(&mut self) {
+        self.iter_mut()
+            .for_each(|b| b.prev_score = b.score);
+    }
+
+    pub fn first(&mut self) -> &mut RootMove {
+        unsafe {
+            self.get_unchecked_mut(0)
+        }
+    }
+
+    pub fn mvv_laa_sort(&mut self, board: &Board) {
+        self.sort_by_key(|root_move| {
+            let a = root_move.bit_move;
+            let piece = board.piece_at_sq((a).get_src()).unwrap();
+
+            if a.is_capture() {
+                piece.value() - board.captured_piece(a).unwrap().value()
+            } else if a.is_castle() {
+                1
+            } else if piece == Piece::P {
+                if a.is_double_push().0 {
+                    2
+                } else {
+                    3
+                }
+            } else {
+                4
+            }
+        });
+    }
+
+    pub fn shuffle(&mut self, thread_id: usize, board: &Board) {
+        if thread_id == 0 || thread_id >= 20 {
+            self.mvv_laa_sort(board);
+        } else {
+            rand::thread_rng().shuffle(self.as_mut());
         }
     }
 }
