@@ -28,6 +28,7 @@
 #![allow(dead_code)]
 #![feature(integer_atomics)]
 #![feature(unique)]
+#![feature(shared)]
 #![feature(allocator_api)]
 #![feature(trusted_len)]
 #![feature(fused)]

@@ -1,8 +1,11 @@
 use super::{RootMove, MAX_MOVES};
 
+use pleco::MoveList;
+
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
+use std::ptr;
 
 #[repr(C)]
 pub struct RawRootMoveList {
@@ -19,6 +22,21 @@ pub struct RootMoveList {
 impl RootMoveList {
     pub fn len(&self) -> usize {
         unsafe {(*self.moves).len as usize}
+    }
+
+    pub fn clone_from(&mut self, other: &RootMoveList) {
+        unsafe {
+            ptr::copy_nonoverlapping(other.moves, self.moves, 1);
+        }
+    }
+
+    pub fn replace(&mut self, moves: &MoveList) {
+        unsafe {
+            (*self.moves).len = moves.len() as u32;
+            for (i, mov) in moves.iter().enumerate() {
+                self[i] = RootMove::new(*mov);
+            }
+        }
     }
 }
 

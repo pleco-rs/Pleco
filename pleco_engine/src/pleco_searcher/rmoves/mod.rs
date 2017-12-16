@@ -3,7 +3,7 @@ pub mod root_moves_manager;
 
 use std::sync::{Arc,RwLock};
 use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
-use std::ptr::Unique;
+use std::ptr::{Unique};
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
 use std::cmp::max;
@@ -21,7 +21,7 @@ use pleco::{MoveList,Piece,BitMove};
 use super::threads::Thread;
 use super::MAX_THREADS;
 
-const MAX_MOVES: usize = 256;
+const MAX_MOVES: usize = 255;
 
 #[derive(Copy, Clone,Eq)]
 pub struct RootMove {
@@ -29,7 +29,6 @@ pub struct RootMove {
     pub prev_score: i32,
     pub bit_move: BitMove,
     pub depth_reached: u16,
-    padding: u32
 }
 
 
@@ -41,7 +40,6 @@ impl RootMove {
             score: NEG_INFINITY as i32,
             prev_score: NEG_INFINITY as i32,
             depth_reached: 0,
-            padding: 0
         }
     }
 

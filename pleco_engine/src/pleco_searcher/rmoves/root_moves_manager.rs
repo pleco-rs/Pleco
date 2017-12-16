@@ -3,7 +3,9 @@ use super::root_moves_list::{RootMoveList,RawRootMoveList};
 
 use std::heap::{Alloc, Layout, Heap};
 use std::cell::UnsafeCell;
-use std::ptr::Unique;
+use std::ptr::{Unique,Shared};
+use std::sync::Arc;
+use std::sync::atomic::{Ordering,AtomicUsize};
 use std::mem;
 
 use std::slice;
@@ -34,35 +36,47 @@ impl RawRmManager {
 
 
 pub struct RmManager {
-    threads: usize,
-    moves: Unique<RawRmManager>
+    threads: Arc<AtomicUsize>,
+    moves: Unique<RawRmManager>,
+    ref_count: Arc<u8>
+}
+
+impl Clone for RmManager {
+    fn clone(&self) -> Self {
+        RmManager {
+            threads: self.threads.clone(),
+            moves: self.moves.clone(),
+            ref_count: self.ref_count.clone()
+        }
+    }
 }
 
 impl RmManager {
     pub fn new() -> Self {
         RmManager {
-            threads: 0,
-            moves: RawRmManager::new()
+            threads: Arc::new(AtomicUsize::new(0)),
+            moves: RawRmManager::new(),
+            ref_count: Arc::new(0)
         }
     }
 
     pub fn threads(&self) -> usize {
-        self.threads
+        self.threads.load(Ordering::Relaxed)
     }
 
     pub fn add_thread(&mut self) -> Option<RootMoveList> {
-        if self.threads >= MAX_THREADS {
+        if self.threads() >= MAX_THREADS {
             None
         } else {
-            self.threads += 1;
+            let thread_idx = self.threads.fetch_add(1, Ordering::Relaxed);
             unsafe {
-                Some(self.get_list_unchecked(self.threads))
+                Some(self.get_list_unchecked(thread_idx + 1))
             }
         }
     }
 
     pub fn get_list(&self, num: usize) -> Option<RootMoveList> {
-        if num >= self.threads {
+        if num >= self.threads() {
             None
         } else {
             unsafe {
@@ -79,9 +93,15 @@ impl RmManager {
 
     pub unsafe fn replace_moves(&mut self, board: &Board) {
         let legal_moves = MoveGen::generate::<PseudoLegal, AllGenType>(&board);
+        let mut first = self.as_ptr();
+        first.replace(&legal_moves);
+        let num = self.threads();
+        for i in 1..num {
+            self.get_list_unchecked(i).clone_from(&first);
+        }
     }
 
-    unsafe fn as_ptr(&self) -> RootMoveList {
+    pub unsafe fn as_ptr(&self) -> RootMoveList {
         RootMoveList {
             moves: mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(self.moves.as_ptr())
         }
@@ -94,6 +114,7 @@ impl RmManager {
 
 pub struct RootMovesIter<'a> {
     root_moves: &'a RmManager,
+    threads: usize,
     idx: usize,
 }
 
@@ -102,7 +123,7 @@ impl<'a> Iterator for RootMovesIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.idx >= self.root_moves.threads() {
+        if self.idx >= self.threads {
             None
         } else {
             unsafe {
@@ -113,7 +134,7 @@ impl<'a> Iterator for RootMovesIter<'a> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.root_moves.threads() - self.idx, Some(self.root_moves.threads() - self.idx))
+        (self.threads - self.idx, Some(self.threads - self.idx))
     }
 }
 
@@ -125,7 +146,20 @@ impl<'a> IntoIterator for &'a RmManager {
     fn into_iter(self) -> Self::IntoIter {
         RootMovesIter {
             root_moves: &self,
+            threads: self.threads(),
             idx: 0,
+        }
+    }
+}
+
+impl Drop for RmManager {
+    fn drop(&mut self) {
+        if Arc::strong_count(&self.ref_count) != 1 {
+            return
+        }
+        unsafe {
+            Heap.dealloc(self.as_raw_ptr() as *mut _,
+                         Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
         }
     }
 }
