@@ -15,6 +15,8 @@ use tools::{Searcher,UCILimit};
 use board::Board;
 use board::eval::*;
 
+use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
+
 const MAX_PLY: u16 = 4;
 
 /// Searcher that randomly chooses a move. The fastest, yet dumbest, searcher we have to offer.
@@ -111,13 +113,14 @@ impl Searcher for ParallelMiniMaxSearcher {
 }
 
 /// Used by the Searchers to keep track of a move's strength.
+#[derive(Eq, Copy, Clone)]
 pub struct BestMove {
     best_move: Option<BitMove>,
     score: i16,
 }
 
 impl BestMove {
-    pub fn new(score: i16) -> Self {
+    pub fn new_none(score: i16) -> Self {
         BestMove {
             best_move: None,
             score: score,
@@ -128,11 +131,42 @@ impl BestMove {
         self.score = self.score.wrapping_neg();
         self
     }
+
+    pub fn new(bitmove: Option<BitMove>, score: i16) -> Self {
+        BestMove {
+            best_move: bitmove,
+            score: score,
+        }
+    }
+
+    pub fn swap_move(mut self, bitmove: BitMove) -> Self {
+        self.best_move = Some(bitmove);
+        self
+    }
 }
+
+impl Ord for BestMove {
+    fn cmp(&self, other: &BestMove) -> Ordering {
+        self.score.cmp(&other.score)
+    }
+}
+
+impl PartialOrd for BestMove {
+    fn partial_cmp(&self, other: &BestMove) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for BestMove {
+    fn eq(&self, other: &BestMove) -> bool {
+        self.score == other.score
+    }
+}
+
 
 #[doc(hidden)]
 pub fn eval_board(board: &Board) -> BestMove {
-    BestMove::new(Eval::eval_low(board))
+    BestMove::new_none(Eval::eval_low(board))
 }
 
 

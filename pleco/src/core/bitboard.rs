@@ -46,21 +46,37 @@ impl_bit_ops!(BitBoard, u64);
 
 impl BitBoard {
 
+    /// BitBoard of File A.
     pub const FILE_A: BitBoard = BitBoard(FILE_A);
+    /// BitBoard of File B.
     pub const FILE_B: BitBoard = BitBoard(FILE_B);
+    /// BitBoard of File C.
     pub const FILE_C: BitBoard = BitBoard(FILE_C);
+    /// BitBoard of File D.
     pub const FILE_D: BitBoard = BitBoard(FILE_D);
+    /// BitBoard of File E.
     pub const FILE_E: BitBoard = BitBoard(FILE_E);
+    /// BitBoard of File F.
     pub const FILE_F: BitBoard = BitBoard(FILE_F);
+    /// BitBoard of File G.
     pub const FILE_G: BitBoard = BitBoard(FILE_G);
+    /// BitBoard of File H.
     pub const FILE_H: BitBoard = BitBoard(FILE_H);
+    /// BitBoard of Rank 1.
     pub const RANK_1: BitBoard = BitBoard(RANK_1);
+    /// BitBoard of Rank 2.
     pub const RANK_2: BitBoard = BitBoard(RANK_2);
+    /// BitBoard of Rank 3.
     pub const RANK_3: BitBoard = BitBoard(RANK_3);
+    /// BitBoard of Rank 4.
     pub const RANK_4: BitBoard = BitBoard(RANK_4);
+    /// BitBoard of Rank 5.
     pub const RANK_5: BitBoard = BitBoard(RANK_5);
+    /// BitBoard of Rank 6.
     pub const RANK_6: BitBoard = BitBoard(RANK_6);
+    /// BitBoard of Rank 7.
     pub const RANK_7: BitBoard = BitBoard(RANK_7);
+    /// BitBoard of Rank 8.
     pub const RANK_8: BitBoard = BitBoard(RANK_8);
 
     /// Converts a `BitBoard` to a square.

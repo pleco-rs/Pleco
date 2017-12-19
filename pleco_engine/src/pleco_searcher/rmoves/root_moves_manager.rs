@@ -29,7 +29,12 @@ impl RawRmManager {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
-            Unique::new(new_ptr as *mut RawRmManager).unwrap()
+            let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
+            for x in 0..MAX_THREADS {
+                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
+                raw_list.init();
+            }
+            raw
         }
     }
 }
@@ -70,7 +75,7 @@ impl RmManager {
         } else {
             let thread_idx = self.threads.fetch_add(1, Ordering::Relaxed);
             unsafe {
-                Some(self.get_list_unchecked(thread_idx + 1))
+                Some(self.get_list_unchecked(thread_idx))
             }
         }
     }
@@ -161,5 +166,33 @@ impl Drop for RmManager {
             Heap.dealloc(self.as_raw_ptr() as *mut _,
                          Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn rm_basic() {
+        let mut rms = RmManager::new();
+        assert_eq!(rms.threads(), 0);
+        let moves_1 = rms.add_thread().unwrap();
+        assert_eq!(rms.threads(), 1);
+        assert_eq!(moves_1.len(), 0);
+        let board = Board::default();
+        unsafe {
+            rms.replace_moves(&board);
+            let moves_1_clone = rms.get_list_unchecked(0);
+            assert_eq!(moves_1.len(), moves_1_clone.len());
+            let moves_2 = rms.add_thread().unwrap();
+            assert_eq!(rms.threads(), 2);
+            rms.replace_moves(&board);
+            let moves_2_clone = rms.get_list_unchecked(0);
+            assert_eq!(moves_2.len(), moves_2_clone.len());
+            assert_eq!(moves_1.len(), moves_2_clone.len());
+        }
+
     }
 }

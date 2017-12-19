@@ -7,15 +7,26 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
 use std::ptr;
 
+use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
+
 use rand;
 use rand::Rng;
 
 #[repr(C)]
 pub struct RawRootMoveList {
     len: u32, // 4 bytes
-    pad: [u8; 12], // 12 bytes
+    depth_completed: AtomicU16, // 2 bytes
+    finished: AtomicBool, // 1 byte
+    pad: [u8; 11], // 9 bytes
     moves: [RootMove; MAX_MOVES], // 4096 bytes
     bottom_pad: [u8; 54] // 48 bytes
+}
+
+impl RawRootMoveList {
+    pub fn init(&mut self) {
+        self.depth_completed = AtomicU16::new(0);
+        self.finished = AtomicBool::new(true);
+    }
 }
 
 pub struct RootMoveList {
@@ -23,6 +34,7 @@ pub struct RootMoveList {
 }
 
 impl RootMoveList {
+    #[inline]
     pub fn len(&self) -> usize {
         unsafe {(*self.moves).len as usize}
     }
@@ -42,17 +54,49 @@ impl RootMoveList {
         }
     }
 
+    #[inline]
     pub fn rollback(&mut self) {
         self.iter_mut()
             .for_each(|b| b.prev_score = b.score);
     }
 
+    #[inline]
     pub fn first(&mut self) -> &mut RootMove {
         unsafe {
             self.get_unchecked_mut(0)
         }
     }
 
+    #[inline]
+    pub fn depth_completed(&mut self) -> u16 {
+        unsafe {
+            (*self.moves).depth_completed.load(Ordering::Relaxed)
+        }
+    }
+
+    #[inline]
+    pub fn set_depth_completed(&mut self, depth: u16) {
+        unsafe {
+            (*self.moves).depth_completed.store(depth, Ordering::Relaxed);
+        }
+    }
+
+    #[inline]
+    pub fn finished(&mut self) -> bool {
+        unsafe {
+            (*self.moves).finished.load(Ordering::Relaxed)
+        }
+    }
+
+    #[inline]
+    pub fn set_finished(&mut self, finished: bool) {
+        unsafe {
+            (*self.moves).finished.store(finished, Ordering::Relaxed);
+        }
+    }
+
+
+    #[inline]
     pub fn mvv_laa_sort(&mut self, board: &Board) {
         self.sort_by_key(|root_move| {
             let a = root_move.bit_move;
@@ -74,6 +118,7 @@ impl RootMoveList {
         });
     }
 
+    #[inline]
     pub fn shuffle(&mut self, thread_id: usize, board: &Board) {
         if thread_id == 0 || thread_id >= 20 {
             self.mvv_laa_sort(board);

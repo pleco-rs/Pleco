@@ -13,7 +13,7 @@ use chrono::*;
 
 
 fn main() {
-    run_many();
+    run_one();
 }
 
 

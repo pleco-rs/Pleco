@@ -6,6 +6,7 @@ use super::{BestMove,eval_board};
 
 use rayon;
 
+use std::cmp::max;
 #[allow(unused_imports)]
 use test::Bencher;
 #[allow(unused_imports)]
@@ -26,9 +27,9 @@ pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            BestMove::new(MATE + (board.depth() as i16))
+            BestMove::new_none(MATE + (board.depth() as i16))
         } else {
-            BestMove::new(STALEMATE)
+            BestMove::new_none(STALEMATE)
         }
     } else {
         parallel_task(&moves, board, max_depth)
@@ -37,21 +38,18 @@ pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
 
 fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMove {
     if board.depth() == max_depth - 2 || slice.len() <= DIVIDE_CUTOFF {
-        let mut best_value: i16 = NEG_INFINITY;
-        let mut best_move: Option<BitMove> = None;
+        let mut best_move = BestMove::new_none(NEG_INFINITY);
+
         for mov in slice {
             board.apply_move(*mov);
-            let returned_move: BestMove = parallel_minimax(board, max_depth).negate();
+            let returned_move: BestMove = parallel_minimax(board, max_depth)
+                .negate()
+                .swap_move(*mov);
             board.undo_move();
-            if returned_move.score > best_value {
-                best_value = returned_move.score;
-                best_move = Some(*mov);
-            }
+            best_move = max(returned_move, best_move);
         }
-        BestMove {
-            best_move: best_move,
-            score: best_value,
-        }
+
+        best_move
     } else {
         let mid_point = slice.len() / 2;
         let (left, right) = slice.split_at(mid_point);
@@ -62,10 +60,7 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
             || parallel_task(right, board, max_depth),
         );
 
-        if left_move.score > right_move.score {
-            left_move
-        } else {
-            right_move
-        }
+        max(left_move,right_move)
     }
+
 }

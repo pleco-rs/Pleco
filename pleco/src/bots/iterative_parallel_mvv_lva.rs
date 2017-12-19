@@ -36,7 +36,7 @@ pub fn iterative_deepening(board: Board, max_depth: u16) -> BitMove {
     let mut beta: i16 = INFINITY;
 
     // Create a dummy best_move
-    let mut best_move = BestMove::new(NEG_INFINITY);
+    let mut best_move = BestMove::new_none(NEG_INFINITY);
 
     // Loop until max_depth is reached
     while i <= max_depth {
@@ -86,9 +86,9 @@ fn jamboree(
     let mut moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new(MATE + (board.depth() as i16));
+            return BestMove::new_none(MATE + (board.depth() as i16));
         } else {
-            return BestMove::new(STALEMATE);
+            return BestMove::new_none(STALEMATE);
         }
     }
 
@@ -212,9 +212,9 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new(MATE + (board.depth() as i16));
+            return BestMove::new_none(MATE + (board.depth() as i16));
         } else {
-            return BestMove::new(-STALEMATE);
+            return BestMove::new_none(-STALEMATE);
         }
     }
 
@@ -259,7 +259,7 @@ fn quiescence_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new(MATE + (board.depth() as i16));
+            return BestMove::new_none(MATE + (board.depth() as i16));
         }
         return eval_board(board);
     }
