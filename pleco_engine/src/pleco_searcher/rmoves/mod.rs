@@ -1,25 +1,13 @@
 pub mod root_moves_list;
 pub mod root_moves_manager;
 
-use std::sync::{Arc,RwLock};
-use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
-use std::ptr::{Unique};
-use std::mem;
-use std::heap::{Alloc, Layout, Heap};
-use std::cmp::max;
-use std::cell::UnsafeCell;
 
-use rand::{self,Rng};
 
 use std::cmp::Ordering as CmpOrder;
 
 use pleco::board::eval::*;
-use pleco::board::*;
 
-use pleco::{MoveList,Piece,BitMove};
-
-use super::threads::Thread;
-use super::MAX_THREADS;
+use pleco::BitMove;
 
 const MAX_MOVES: usize = 255;
 

@@ -86,8 +86,6 @@ extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
 
-#[macro_use]
-extern crate static_assertions;
 
 pub mod core;
 pub mod board;

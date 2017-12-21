@@ -1,20 +1,19 @@
-use super::{MAX_THREADS,MAX_MOVES,RootMove};
+use super::RootMove;
+use super::super::MAX_THREADS;
 use super::root_moves_list::{RootMoveList,RawRootMoveList};
 
+
 use std::heap::{Alloc, Layout, Heap};
-use std::cell::UnsafeCell;
-use std::ptr::{Unique,Shared};
+use std::ptr::Unique;
 use std::sync::Arc;
-use std::sync::atomic::{Ordering,AtomicUsize};
+use std::sync::atomic::{Ordering,AtomicUsize,fence,compiler_fence};
 use std::mem;
 
-use std::slice;
-use std::ops::{Deref,DerefMut,Index,IndexMut};
-use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
+use std::iter::{Iterator,IntoIterator};
 
-use pleco::{BitMove,Board};
-use pleco::board::movegen::{MoveGen,Legal,PseudoLegal,Legality};
-use pleco::core::mono_traits::{GenTypeTrait,AllGenType};
+use pleco::Board;
+use pleco::board::movegen::{MoveGen,Legal};
+use pleco::core::mono_traits::AllGenType;
 
 struct RawRmManager {
     pub rms: [RawRootMoveList; MAX_THREADS]
@@ -46,6 +45,8 @@ pub struct RmManager {
     ref_count: Arc<u8>
 }
 
+unsafe impl Send for RmManager {}
+
 impl Clone for RmManager {
     fn clone(&self) -> Self {
         RmManager {
@@ -73,7 +74,7 @@ impl RmManager {
         if self.threads() >= MAX_THREADS {
             None
         } else {
-            let thread_idx = self.threads.fetch_add(1, Ordering::Relaxed);
+            let thread_idx = self.threads.fetch_add(1, Ordering::SeqCst);
             unsafe {
                 Some(self.get_list_unchecked(thread_idx))
             }
@@ -97,12 +98,12 @@ impl RmManager {
     }
 
     pub unsafe fn replace_moves(&mut self, board: &Board) {
-        let legal_moves = MoveGen::generate::<PseudoLegal, AllGenType>(&board);
+        let legal_moves = MoveGen::generate::<Legal, AllGenType>(&board);
         let mut first = self.as_ptr();
         first.replace(&legal_moves);
         let num = self.threads();
         for i in 1..num {
-            self.get_list_unchecked(i).clone_from(&first);
+            self.get_list_unchecked(i).clone_from_other(&first);
         }
     }
 
@@ -114,6 +115,70 @@ impl RmManager {
 
     unsafe fn as_raw_ptr(&self) -> *mut RawRootMoveList {
         mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(self.moves.as_ptr())
+    }
+
+    pub fn wait_for_finish(&self) {
+        unsafe {
+            for i in 0..self.threads() {
+                fence(Ordering::AcqRel);
+                compiler_fence(Ordering::AcqRel);
+                let root_moves = self.get_list_unchecked(i).moves;
+                (*root_moves).finished.await(true);
+            }
+        }
+    }
+    pub fn wait_for_start(&self) {
+        unsafe {
+            let num_threads = self.threads();
+            for i in 0..num_threads {
+                fence(Ordering::AcqRel);
+                compiler_fence(Ordering::AcqRel);
+                let root_moves = self.get_list_unchecked(i).moves;
+                (*root_moves).finished.await(false);
+            }
+        }
+    }
+
+    pub fn reset_depths(&self) {
+        unsafe {
+            for i in 0..self.threads() {
+                self.get_list_unchecked(i).set_depth_completed(0);
+            }
+        }
+    }
+
+    pub fn thread_best_move_and_depth(&self, thread_id: usize) -> (RootMove, u16) {
+        unsafe {
+            let mut thread = self.get_list_unchecked(thread_id);
+            (thread.first().clone(), thread.depth_completed())
+        }
+
+    }
+
+
+    pub fn best_rootmove(&self, use_stdout: bool) -> RootMove {
+        let (mut best_root_move, mut depth_reached): (RootMove, u16) = self.thread_best_move_and_depth(0);
+        if use_stdout {
+            println!("id: 0, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}", best_root_move.score, best_root_move.prev_score, best_root_move.depth_reached,depth_reached, best_root_move.bit_move);
+        }
+
+        for x in 1..self.threads() {
+            let (thread_move, thread_depth): (RootMove, u16)  = self.thread_best_move_and_depth(x);
+            let depth_diff = thread_depth as i32 - depth_reached as i32;
+            let value_diff = thread_move.score - best_root_move.score;
+            if x != 0 {
+                // If it has a bigger value and greater or equal depth
+                if value_diff > 0 && depth_diff >= 0 {
+                    best_root_move = thread_move;
+                    depth_reached = thread_depth;
+                }
+            }
+
+            if use_stdout {
+                println!("id: {}, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}",x, thread_move.score, thread_move.prev_score, thread_move.depth_reached,thread_depth, thread_move.bit_move);
+            }
+        }
+        best_root_move
     }
 }
 
@@ -193,6 +258,14 @@ mod tests {
             assert_eq!(moves_2.len(), moves_2_clone.len());
             assert_eq!(moves_1.len(), moves_2_clone.len());
         }
+    }
 
+    #[test]
+    fn rm_cloning() {
+        let mut rms = RmManager::new();
+        let rmsc = rms.clone();
+        rms.add_thread();
+        rms.add_thread();
+        assert_eq!(rms.threads(), rmsc.threads());
     }
 }

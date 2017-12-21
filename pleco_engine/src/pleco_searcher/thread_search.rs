@@ -94,11 +94,10 @@ impl<'a> ThreadSearcher<'a> {
                 println!("info id {} depth {} stop {}",self.thread.id, depth, self.stop());
             }
             if !self.stop() {
-                self.thread.depth_completed.store(depth,Ordering::Relaxed);
+                self.thread.root_moves.set_depth_completed(depth);
             }
             depth += skip_size;
         }
-//        self.print_all_moves();
     }
 
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {

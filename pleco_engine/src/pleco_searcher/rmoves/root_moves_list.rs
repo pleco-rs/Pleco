@@ -1,22 +1,23 @@
 use super::{RootMove, MAX_MOVES};
+use super::super::sync::GuardedBool;
 
-use pleco::{MoveList,Board,Piece};
+use pleco::{MoveList,Board,Piece,BitMove};
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
 use std::ptr;
 
-use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
+use std::mem::transmute;
+use std::sync::atomic::{AtomicU16,Ordering,fence};
 
 use rand;
 use rand::Rng;
 
-#[repr(C)]
 pub struct RawRootMoveList {
     len: u32, // 4 bytes
     depth_completed: AtomicU16, // 2 bytes
-    finished: AtomicBool, // 1 byte
+    pub finished: GuardedBool, // 1 byte
     pad: [u8; 11], // 9 bytes
     moves: [RootMove; MAX_MOVES], // 4096 bytes
     bottom_pad: [u8; 54] // 48 bytes
@@ -25,13 +26,17 @@ pub struct RawRootMoveList {
 impl RawRootMoveList {
     pub fn init(&mut self) {
         self.depth_completed = AtomicU16::new(0);
-        self.finished = AtomicBool::new(true);
+        self.finished = GuardedBool::new(true);
     }
 }
 
+#[derive(Copy,Clone)]
 pub struct RootMoveList {
     pub moves: *mut RawRootMoveList
 }
+
+
+unsafe impl Send for RootMoveList {}
 
 impl RootMoveList {
     #[inline]
@@ -39,9 +44,12 @@ impl RootMoveList {
         unsafe {(*self.moves).len as usize}
     }
 
-    pub fn clone_from(&mut self, other: &RootMoveList) {
+    pub fn clone_from_other(&mut self, other: &RootMoveList) {
         unsafe {
-            ptr::copy_nonoverlapping(other.moves, self.moves, 1);
+            (*self.moves).len = other.len() as u32;
+            let self_moves: *mut [RootMove; MAX_MOVES] = transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>((*self.moves).moves.as_mut_ptr());
+            let other_moves: *mut [RootMove; MAX_MOVES] =  transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>((*other.moves).moves.as_mut_ptr());
+            ptr::copy_nonoverlapping(other_moves, self_moves, 1);
         }
     }
 
@@ -68,33 +76,26 @@ impl RootMoveList {
     }
 
     #[inline]
-    pub fn depth_completed(&mut self) -> u16 {
+    pub fn depth_completed(self) -> u16 {
         unsafe {
-            (*self.moves).depth_completed.load(Ordering::Relaxed)
+            (*self.moves).depth_completed.load(Ordering::SeqCst)
         }
     }
 
     #[inline]
     pub fn set_depth_completed(&mut self, depth: u16) {
         unsafe {
-            (*self.moves).depth_completed.store(depth, Ordering::Relaxed);
-        }
-    }
-
-    #[inline]
-    pub fn finished(&mut self) -> bool {
-        unsafe {
-            (*self.moves).finished.load(Ordering::Relaxed)
+            fence(Ordering::SeqCst);
+            (*self.moves).depth_completed.store(depth, Ordering::SeqCst);
         }
     }
 
     #[inline]
     pub fn set_finished(&mut self, finished: bool) {
         unsafe {
-            (*self.moves).finished.store(finished, Ordering::Relaxed);
+            (*self.moves).finished.set(finished);
         }
     }
-
 
     #[inline]
     pub fn mvv_laa_sort(&mut self, board: &Board) {
@@ -124,6 +125,33 @@ impl RootMoveList {
             self.mvv_laa_sort(board);
         } else {
             rand::thread_rng().shuffle(self.as_mut());
+        }
+    }
+
+    pub fn to_list(&self) -> MoveList {
+        let vec =  self.iter().map(|m| m.bit_move).collect::<Vec<BitMove>>();
+        MoveList::from(vec)
+    }
+
+    pub fn prev_best_score(&self) -> i32 {
+        unsafe {
+            self.get_unchecked(0).prev_score
+        }
+    }
+
+    pub fn insert_score_depth(&mut self, index: usize, score: i32, depth: u16) {
+        unsafe {
+            let rm: &mut RootMove = self.get_unchecked_mut(index);
+            rm.score = score;
+            rm.depth_reached = depth;
+
+        }
+    }
+
+    pub fn insert_score(&mut self, index: usize, score: i32) {
+        unsafe {
+            let rm: &mut RootMove = self.get_unchecked_mut(index);
+            rm.score = score;
         }
     }
 }

@@ -36,7 +36,6 @@
 #[macro_use]
 extern crate lazy_static;
 
-
 extern crate test;
 extern crate rayon;
 extern crate num_cpus;

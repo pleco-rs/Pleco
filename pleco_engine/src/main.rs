@@ -13,7 +13,7 @@ use chrono::*;
 
 
 fn main() {
-    run_one();
+    run_many();
 }
 
 
@@ -40,6 +40,7 @@ fn run_one() {
                 println!("Jamboree searcher: {}", mov);
                 board.apply_move(mov);
             });
+            local = local.max(Duration::milliseconds(1));
         } else {
             s.search(&board, &PreLimits::blank());
             thread::sleep_ms(local.num_milliseconds() as u32);
@@ -88,7 +89,7 @@ fn run_many() {
         while i > 0 && !board.checkmate() && !board.stalemate() {
             if i % 2 == 1 {
                 local = Duration::span(|| {
-                    let mov = if i < max_moves - 30 {
+                    let mov = if i < max_moves - 40 {
                         if board.count_all_pieces() < 5 {
                             JamboreeSearcher::best_move_depth(board.shallow_clone(), 8)
                         } else if board.count_all_pieces() < 7 {

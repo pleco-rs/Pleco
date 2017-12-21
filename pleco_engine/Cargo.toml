@@ -31,10 +31,10 @@ debug = true
 
 [profile.release]
 opt-level = 3
-debug = false
-debug-assertions = false
-panic = "panic"
-lto = true
+debug = true
+debug-assertions = true
+panic = "unwind"
+lto = false
 
 [profile.bench]
 opt-level = 3

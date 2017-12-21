@@ -4,17 +4,19 @@ pub mod threads;
 pub mod thread_search;
 pub mod root_moves;
 pub mod rmoves;
+pub mod sync;
 
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
 
-use std::thread;
 use std::io;
 
 use self::misc::{PreLimits,UCITimer};
 use self::options::{AllOptions,UciOptionMut};
 use self::threads::ThreadPool;
+
+use num_cpus;
 
 
 const MAX_PLY: u16 = 126;
@@ -55,7 +57,7 @@ impl PlecoSearcher {
         }
         let mut pool = ThreadPool::new();
         pool.stdout(use_stdout);
-        pool.set_thread_count(8);
+        pool.set_thread_count(num_cpus::get());
         PlecoSearcher {
             options: AllOptions::default(),
             thread_pool: pool,
