@@ -2,7 +2,6 @@ pub mod misc;
 pub mod options;
 pub mod threads;
 pub mod thread_search;
-pub mod root_moves;
 pub mod rmoves;
 pub mod sync;
 
