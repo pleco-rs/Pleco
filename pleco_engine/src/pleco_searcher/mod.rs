@@ -22,7 +22,6 @@ const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 pub const MAX_THREADS: usize = 256;
 pub const DEFAULT_TT_SIZE: usize = 256;
-//pub const DEFAULT_TT_SIZE: usize = 1024;
 
 lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);

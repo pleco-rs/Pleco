@@ -42,17 +42,19 @@ impl RawRmManager {
 pub struct RmManager {
     threads: Arc<AtomicUsize>,
     moves: Unique<RawRmManager>,
-    ref_count: Arc<u8>
+    ref_count: Arc<AtomicUsize>
 }
 
 unsafe impl Send for RmManager {}
 
 impl Clone for RmManager {
     fn clone(&self) -> Self {
+        let ref_count: Arc<AtomicUsize> = self.ref_count.clone();
+        ref_count.fetch_add(1, Ordering::SeqCst);
         RmManager {
             threads: self.threads.clone(),
             moves: self.moves.clone(),
-            ref_count: self.ref_count.clone()
+            ref_count
         }
     }
 }
@@ -62,7 +64,7 @@ impl RmManager {
         RmManager {
             threads: Arc::new(AtomicUsize::new(0)),
             moves: RawRmManager::new(),
-            ref_count: Arc::new(0)
+            ref_count: Arc::new(AtomicUsize::new(1))
         }
     }
 
@@ -224,12 +226,12 @@ impl<'a> IntoIterator for &'a RmManager {
 
 impl Drop for RmManager {
     fn drop(&mut self) {
-        if Arc::strong_count(&self.ref_count) != 1 {
-            return
-        }
-        unsafe {
-            Heap.dealloc(self.as_raw_ptr() as *mut _,
-                         Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
+        let num = self.ref_count.fetch_sub(1, Ordering::SeqCst);
+        if num == 1 {
+            unsafe {
+                Heap.dealloc(self.as_raw_ptr() as *mut _,
+                             Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
+            }
         }
     }
 }
