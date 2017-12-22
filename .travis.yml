@@ -10,8 +10,6 @@ cache:
 
 
 sudo: required
-dist: trusty
-group: deprecated-2017Q4
 
 env:
   global:
@@ -34,7 +32,7 @@ os:
 
 
 script:
-  - cargo bench bench_4_ply
+  - cargo bench bench_4_ply --verbose
   - cargo build --verbose
   - cargo test --verbose
   - |

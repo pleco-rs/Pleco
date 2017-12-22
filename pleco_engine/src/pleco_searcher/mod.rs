@@ -57,8 +57,12 @@ impl PlecoSearcher {
         println!("Cleared TT");
         let mut pool = ThreadPool::new();
         println!("Created ThreadPool");
+        println!("Retrieving num cpus");
+        println!(".... Num CPUs : {}", num_cpus::get());
+        println!("Got num cpus");
         pool.stdout(use_stdout);
         println!("set StdOut");
+        println!("Num CPUs : {}", num_cpus::get());
         pool.set_thread_count(num_cpus::get());
         println!("Set Thread Count");
         PlecoSearcher {
