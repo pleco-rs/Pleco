@@ -73,9 +73,9 @@ doctest = true
 
 [dependencies]
 clippy = {version = "0.0.174", optional = true}
-lazy_static = "0.2"
+lazy_static = "1.0.0"
 bitflags = "1.0.1"
-rand = "0.3"
+rand = "0.4.1"
 rayon = "0.9.0"
 num_cpus = "1.0"
 failure = "0.1.1"

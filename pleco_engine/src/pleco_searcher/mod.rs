@@ -274,6 +274,14 @@ impl PlecoSearcher {
         }
     }
 
+    pub fn await_move(&mut self) -> BitMove {
+        if self.is_searching() {
+            return self.thread_pool.get_move();
+        } else {
+            return BitMove::null();
+        }
+    }
+
     pub fn is_searching(&self) -> bool {
         if self.search_mode == SearchType::None {
             return false;
