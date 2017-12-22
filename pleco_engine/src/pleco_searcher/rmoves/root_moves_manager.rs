@@ -35,9 +35,13 @@ impl RawRmManager {
             println!("Creating up to {} RMs...",MAX_THREADS );
             for x in 0..MAX_THREADS {
                 print!("Attempt {} :", x);
-                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
+                let mut list = mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(raw.as_ptr())
+                    .offset(x as isize);
+
+//                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
                 print!(" raw_list ... ");
-                raw_list.init();
+                (*list).init();
+//                raw_list.init();
                 println!("Made raw list");
             }
             println!("Raw RMManager create: Done!");
