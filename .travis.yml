@@ -34,6 +34,7 @@ os:
 
 
 script:
+  - cargo bench bench_4_ply
   - cargo build --verbose
   - cargo test --verbose
   - |

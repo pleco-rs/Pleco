@@ -1691,7 +1691,7 @@ impl Board {
     }
 
     #[doc(hidden)]
-    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
+    pub fn pseudo_legal_move(&self, _m: BitMove) -> bool {
         unimplemented!()
         // TODO: create pseduo-legal-move
     }

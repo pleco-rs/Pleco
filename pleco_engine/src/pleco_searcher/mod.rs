@@ -50,12 +50,17 @@ pub struct PlecoSearcher {
 impl PlecoSearcher {
 
     pub fn init(use_stdout: bool) -> Self {
+        println!("Attempting to clear TT");
         unsafe {
             TT_TABLE.clear();
         }
+        println!("Cleared TT");
         let mut pool = ThreadPool::new();
+        println!("Created ThreadPool");
         pool.stdout(use_stdout);
+        println!("set StdOut");
         pool.set_thread_count(num_cpus::get());
+        println!("Set Thread Count");
         PlecoSearcher {
             options: AllOptions::default(),
             thread_pool: pool,
