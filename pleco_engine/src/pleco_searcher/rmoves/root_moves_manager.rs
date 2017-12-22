@@ -31,20 +31,19 @@ impl RawRmManager {
             };
             println!("Raw RMManager create: created new_ptr");
             let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
-            println!("Raw RMManager create: created raw Unique");
-            println!("Creating up to {} RMs...",MAX_THREADS );
 //            for x in 0..MAX_THREADS {
 //                print!("Attempt {} :", x);
 //                let mut list = mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(raw.as_ptr())
 //                    .offset(x as isize);
 //
-////                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
+//                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
 //                print!(" raw_list ... ");
 //                (*list).init();
-////                raw_list.init();
+//                raw_list.init();
 //                println!("Made raw list");
 //            }
 //            println!("Raw RMManager create: Done!");
+            println!("Raw RMManager created raw ptr! Success");
             raw
         }
     }
@@ -79,10 +78,14 @@ impl RmManager {
             moves: RawRmManager::new(),
             ref_count: Arc::new(AtomicUsize::new(1))
         };
+        println!("Created RM Manager");
         for thread in 0..MAX_THREADS {
             unsafe {
+                println!("Made raw list");
                 let mut rm = rms.get_list_unchecked(thread);
+                print!(" raw_list ... ");
                 rm.init();
+                println!("Made raw list");
             }
         }
         rms
