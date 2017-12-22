@@ -22,17 +22,25 @@ struct RawRmManager {
 impl RawRmManager {
     pub fn new() -> Unique<RawRmManager> {
         unsafe {
+            println!("Raw RMManager create: start");
             let ptr = Heap.alloc_zeroed(Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
-
+            println!("Raw RMManager create: created ptr");
             let new_ptr = match ptr {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
+            println!("Raw RMManager create: created new_ptr");
             let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
+            println!("Raw RMManager create: created raw Unique");
+            println!("Creating up to {} RMs...",MAX_THREADS );
             for x in 0..MAX_THREADS {
+                print!("Attempt {} :", x);
                 let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
+                print!(" raw_list ... ");
                 raw_list.init();
+                println!("Made raw list");
             }
+            println!("Raw RMManager create: Done!");
             raw
         }
     }
@@ -61,11 +69,20 @@ impl Clone for RmManager {
 
 impl RmManager {
     pub fn new() -> Self {
-        RmManager {
+        println!("Creating RmManager");
+//        RmManager {
+//            threads: Arc::new(AtomicUsize::new(0)),
+//            moves: RawRmManager::new(),
+//            ref_count: Arc::new(AtomicUsize::new(1))
+//        }
+
+        let x = RmManager {
             threads: Arc::new(AtomicUsize::new(0)),
             moves: RawRmManager::new(),
             ref_count: Arc::new(AtomicUsize::new(1))
-        }
+        };
+        println!("Created RmManager Successfully!");
+        x
     }
 
     pub fn threads(&self) -> usize {

@@ -130,8 +130,11 @@ impl ThreadPool {
 
     pub fn new() -> Self {
         let (tx, rx) = channel();
+        println!("Created Channels");
         let mut pool = ThreadPool::init(rx);
+        println!("Created ThreadPool");
         pool.spawn_main_thread(tx);
+        println!("Created ThreadPool");
         pool
     }
 
