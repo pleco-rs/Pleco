@@ -39,6 +39,11 @@ pub struct RootMoveList {
 unsafe impl Send for RootMoveList {}
 
 impl RootMoveList {
+    pub unsafe fn init(&mut self) {
+        (*self.moves).depth_completed = AtomicU16::new(0);
+        (*self.moves).finished = GuardedBool::new(true);
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         unsafe {(*self.moves).len as usize}
