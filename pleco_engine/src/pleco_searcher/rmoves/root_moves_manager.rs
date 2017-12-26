@@ -43,7 +43,6 @@ impl RawRmManager {
 //                println!("Made raw list");
 //            }
 //            println!("Raw RMManager create: Done!");
-            println!("Raw RMManager created raw ptr! Success");
             raw
         }
     }
@@ -81,9 +80,9 @@ impl RmManager {
         println!("Created RM Manager");
         for thread in 0..MAX_THREADS {
             unsafe {
-                println!("Made raw list");
+                println!("Trying init raw list.... ");
                 let mut rm = rms.get_list_unchecked(thread);
-                print!(" raw_list ... ");
+                print!(" pointer got ... ");
                 rm.init();
                 println!("Made raw list");
             }
