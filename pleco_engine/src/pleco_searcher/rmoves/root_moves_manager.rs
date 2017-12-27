@@ -49,7 +49,6 @@ use pleco::core::mono_traits::AllGenType;
 //    }
 //}
 
-type RawRmManager = [RawRootMoveList; MAX_THREADS];
 
 pub struct RmManager {
     threads: Arc<AtomicUsize>,

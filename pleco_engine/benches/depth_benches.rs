@@ -13,7 +13,6 @@ use test::{black_box, Bencher};
 
 
 
-
 #[bench]
 fn bench_4_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();

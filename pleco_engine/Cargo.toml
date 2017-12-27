@@ -33,7 +33,7 @@ debug = true
 opt-level = 3
 debug = true
 debug-assertions = true
-panic = "unwind"
+panic = "panic"
 lto = false
 
 [profile.bench]
@@ -43,7 +43,7 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-panic = "unwind"
+panic = "panic"
 
 [profile.test]
 opt-level = 2
@@ -52,7 +52,7 @@ rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 4
-panic = 'unwind'
+panic = 'panic'
 
 [profile.doc]
 opt-level = 0
@@ -61,7 +61,7 @@ rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 4
-panic = 'unwind'
+panic = 'panic'
 
 [lib]
 name = "pleco_engine"
