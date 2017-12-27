@@ -18,9 +18,7 @@ pub struct RawRootMoveList {
     len: u32, // 4 bytes
     depth_completed: AtomicU16, // 2 bytes
     pub finished: GuardedBool, // 1 byte
-    pad: [u8; 11], // 9 bytes
     moves: [RootMove; MAX_MOVES], // 4096 bytes
-    bottom_pad: [u8; 54] // 48 bytes
 }
 
 impl RawRootMoveList {
@@ -30,9 +28,16 @@ impl RawRootMoveList {
     }
 }
 
-#[derive(Copy,Clone)]
 pub struct RootMoveList {
     pub moves: *mut RawRootMoveList
+}
+
+impl Clone for RootMoveList {
+    fn clone(&self) -> Self {
+        RootMoveList {
+            moves: self.moves
+        }
+    }
 }
 
 

@@ -15,22 +15,22 @@ use pleco::Board;
 use pleco::board::movegen::{MoveGen,Legal};
 use pleco::core::mono_traits::AllGenType;
 
-struct RawRmManager {
-    pub rms: [RawRootMoveList; MAX_THREADS]
-}
-
-impl RawRmManager {
-    pub fn new() -> Unique<RawRmManager> {
-        unsafe {
-            println!("Raw RMManager create: start");
-            let ptr = Heap.alloc_zeroed(Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
-            println!("Raw RMManager create: created ptr");
-            let new_ptr = match ptr {
-                Ok(ptr) => ptr,
-                Err(err) => Heap.oom(err),
-            };
-            println!("Raw RMManager create: created new_ptr");
-            let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
+//struct RawRmManager {
+//    pub rms: [RawRootMoveList; MAX_THREADS]
+//}
+//
+//impl RawRmManager {
+//    pub fn new() -> Unique<RawRmManager> {
+//        unsafe {
+//            println!("Raw RMManager create: start");
+//            let ptr = Heap.alloc_zeroed(Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
+//            println!("Raw RMManager create: created ptr");
+//            let new_ptr = match ptr {
+//                Ok(ptr) => ptr,
+//                Err(err) => Heap.oom(err),
+//            };
+//            println!("Raw RMManager create: created new_ptr");
+//            let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
 //            for x in 0..MAX_THREADS {
 //                print!("Attempt {} :", x);
 //                let mut list = mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(raw.as_ptr())
@@ -42,13 +42,14 @@ impl RawRmManager {
 //                raw_list.init();
 //                println!("Made raw list");
 //            }
-//            println!("Raw RMManager create: Done!");
-            println!("Raw RMManager created raw ptr! Success");
-            raw
-        }
-    }
-}
+////            println!("Raw RMManager create: Done!");
+//            println!("Raw RMManager created raw ptr! Success");
+//            raw
+//        }
+//    }
+//}
 
+type RawRmManager = [RawRootMoveList; MAX_THREADS];
 
 pub struct RmManager {
     threads: Arc<AtomicUsize>,
@@ -72,23 +73,43 @@ impl Clone for RmManager {
 
 impl RmManager {
     pub fn new() -> Self {
-        println!("Creating RmManager");
-        let mut rms = RmManager {
-            threads: Arc::new(AtomicUsize::new(0)),
-            moves: RawRmManager::new(),
-            ref_count: Arc::new(AtomicUsize::new(1))
-        };
-        println!("Created RM Manager");
-        for thread in 0..MAX_THREADS {
-            unsafe {
-                println!("Made raw list");
-                let mut rm = rms.get_list_unchecked(thread);
-                print!(" raw_list ... ");
-                rm.init();
-                println!("Made raw list");
-            }
-        }
+        let mut rms = RmManager::init();
+        rms.allocate();
+        unsafe { rms.set_states();}
         rms
+    }
+
+    fn init() -> Self {
+        RmManager {
+            threads: Arc::new(AtomicUsize::new(0)),
+            moves: Unique::empty(),
+            ref_count: Arc::new(AtomicUsize::new(1))
+        }
+    }
+
+    fn allocate(&mut self) {
+        unsafe {
+            let elem_size = mem::size_of::<RawRootMoveList>();
+            let alloc_size = elem_size * MAX_THREADS;
+            let align = mem::align_of::<RawRootMoveList>();
+            let layout = Layout::from_size_align(alloc_size, align).unwrap();
+            let result = Heap.alloc_zeroed(layout);
+            let new_ptr = match result {
+                Ok(ptr) => ptr,
+                Err(err) => Heap.oom(err),
+            };
+            self.moves = Unique::new_unchecked(new_ptr as *mut RawRmManager);
+        }
+    }
+
+    unsafe fn set_states(&mut self) {
+        for x in 0..MAX_THREADS {
+            print!("Attempt {} :", x);
+            let mut raw_list = self.get_list_unchecked(x);
+            print!(" raw_list ... ");
+            raw_list.init();
+            println!("Made raw list");
+        }
     }
 
     pub fn threads(&self) -> usize {
