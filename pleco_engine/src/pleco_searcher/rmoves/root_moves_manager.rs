@@ -74,7 +74,7 @@ impl RmManager {
         println!("Creating RmManager");
         let mut rms = RmManager {
             threads: Arc::new(AtomicUsize::new(0)),
-            moves: RawRmManager::new(),
+            moves: alloc_raw(),
             ref_count: Arc::new(AtomicUsize::new(1))
         };
         println!("Created RM Manager");
@@ -204,6 +204,7 @@ impl RmManager {
         }
         best_root_move
     }
+
 }
 
 pub struct RootMovesIter<'a> {
@@ -255,6 +256,33 @@ impl Drop for RmManager {
                              Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
             }
         }
+    }
+}
+
+fn alloc_raw() -> Unique<RawRmManager> {
+    unsafe {
+        println!("Raw RMManager create: start");
+        let ptr = Heap.alloc_zeroed(Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
+        println!("Raw RMManager create: created ptr");
+        let new_ptr = match ptr {
+            Ok(ptr) => ptr,
+            Err(err) => Heap.oom(err),
+        };
+        println!("Raw RMManager create: created new_ptr");
+        let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
+//            for x in 0..MAX_THREADS {
+//                print!("Attempt {} :", x);
+//                let mut list = mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(raw.as_ptr())
+//                    .offset(x as isize);
+//
+//                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
+//                print!(" raw_list ... ");
+//                (*list).init();
+//                raw_list.init();
+//                println!("Made raw list");
+//            }
+//            println!("Raw RMManager create: Done!");
+        raw
     }
 }
 
