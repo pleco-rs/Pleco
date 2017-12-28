@@ -15,40 +15,6 @@ use pleco::Board;
 use pleco::board::movegen::{MoveGen,Legal};
 use pleco::core::mono_traits::AllGenType;
 
-//struct RawRmManager {
-//    pub rms: [RawRootMoveList; MAX_THREADS]
-//}
-//
-//impl RawRmManager {
-//    pub fn new() -> Unique<RawRmManager> {
-//        unsafe {
-//            println!("Raw RMManager create: start");
-//            let ptr = Heap.alloc_zeroed(Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
-//            println!("Raw RMManager create: created ptr");
-//            let new_ptr = match ptr {
-//                Ok(ptr) => ptr,
-//                Err(err) => Heap.oom(err),
-//            };
-//            println!("Raw RMManager create: created new_ptr");
-//            let raw = Unique::new(new_ptr as *mut RawRmManager).unwrap();
-//            for x in 0..MAX_THREADS {
-//                print!("Attempt {} :", x);
-//                let mut list = mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(raw.as_ptr())
-//                    .offset(x as isize);
-//
-//                let raw_list: &mut RawRootMoveList = (*raw.as_ptr()).rms.get_unchecked_mut(x);
-//                print!(" raw_list ... ");
-//                (*list).init();
-//                raw_list.init();
-//                println!("Made raw list");
-//            }
-////            println!("Raw RMManager create: Done!");
-//            println!("Raw RMManager created raw ptr! Success");
-//            raw
-//        }
-//    }
-//}
-
 pub type RawRmManager = [RawRootMoveList; MAX_THREADS];
 
 pub struct RmManager {
@@ -98,12 +64,19 @@ impl RmManager {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
-            self.moves = Unique::new_unchecked(new_ptr as *mut RawRmManager);
+            {
+                let location: usize = mem::transmute::<*mut u8, usize>(new_ptr);
+                println!("Bytes at {:x}", location);
+            }
+            self.moves = Unique::new(new_ptr as *mut RawRmManager).unwrap();
         }
     }
 
     unsafe fn set_states(&mut self) {
         for x in 0..MAX_THREADS {
+            let line =  self.as_raw_ptr().offset(x as isize);
+            let location: usize = mem::transmute::<*mut RawRootMoveList, usize>(line);
+            println!("This x at {:x}", location);
             let mut raw_list = self.get_list_unchecked(x);
             raw_list.init();
         }
@@ -224,6 +197,7 @@ impl RmManager {
         best_root_move
     }
 }
+
 
 pub struct RootMovesIter<'a> {
     root_moves: &'a RmManager,
