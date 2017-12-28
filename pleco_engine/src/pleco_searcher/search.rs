@@ -1,7 +1,7 @@
+//! The main searching function.
+
 use super::threads::Thread;
 use super::misc::Limits;
-
-
 
 //use test::{self,Bencher};
 

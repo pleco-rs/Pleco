@@ -8,8 +8,6 @@ use std::ptr::Unique;
 use std::sync::Arc;
 use std::sync::atomic::{Ordering,AtomicUsize,fence,compiler_fence};
 use std::ops::{Deref, DerefMut,Index,IndexMut};
-use std::mem;
-use std::thread;
 
 use std::iter::{Iterator,IntoIterator};
 

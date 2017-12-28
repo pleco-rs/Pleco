@@ -1,7 +1,9 @@
+//! The main searching structure.
+
 pub mod misc;
 pub mod options;
 pub mod threads;
-pub mod thread_search;
+pub mod search;
 pub mod root_moves;
 pub mod sync;
 

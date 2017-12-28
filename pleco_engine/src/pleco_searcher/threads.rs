@@ -1,8 +1,9 @@
+//! Contains the ThreadPool and the individual Threads.
+
 use std::sync::{Arc,RwLock};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
-
 
 use std::{mem,time};
 
@@ -11,7 +12,7 @@ use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
 
 
-use super::thread_search::ThreadSearcher;
+use super::search::ThreadSearcher;
 use super::misc::*;
 use super::{TT_TABLE,THREAD_STACK_SIZE};
 use super::root_moves::RootMove;
