@@ -36,22 +36,21 @@ rpath = false
 debug-assertions = false
 panic = "unwind"
 codegen-units = 1
-#lto = false
+lto = true
 
 [profile.bench]
 opt-level = 3
 debug = true
 rpath = false
-#lto = true
+lto = true
 debug-assertions = false
 codegen-units = 1
-panic = "unwind"
+panic = "panic"
 
 [profile.test]
 opt-level = 2
 debug = true
 rpath = false
-#lto = false
 debug-assertions = true
 codegen-units = 4
 panic = "unwind"

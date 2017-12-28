@@ -14,9 +14,9 @@ use pleco::tools::tt::*;
 use super::thread_search::ThreadSearcher;
 use super::misc::*;
 use super::{TT_TABLE,THREAD_STACK_SIZE};
-use super::rmoves::RootMove;
-use super::rmoves::root_moves_list::RootMoveList;
-use super::rmoves::root_moves_manager::RmManager;
+use super::root_moves::RootMove;
+use super::root_moves::root_moves_list::RootMoveList;
+use super::root_moves::root_moves_manager::RmManager;
 use super::sync::LockLatch;
 
 
@@ -112,7 +112,7 @@ impl ThreadPool {
 
     fn spawn_main_thread(&mut self, tx: Sender<SendData>) {
         let root_moves = self.rm_manager.add_thread().unwrap();
-        let mut thread = self.create_thread(0, root_moves);
+        let thread = self.create_thread(0, root_moves);
         let main_thread = MainThread {
             per_thread: self.rm_manager.clone(),
             main_thread_go: Arc::clone(&self.main_thread_go),
@@ -244,7 +244,7 @@ impl MainThread {
         self.per_thread.wait_for_finish();
 
         // find best move
-        let mut best_root_move: RootMove = self.per_thread.best_rootmove(self.thread.use_stdout.load(Ordering::Relaxed));
+        let best_root_move: RootMove = self.per_thread.best_rootmove(self.thread.use_stdout.load(Ordering::Relaxed));
 
         self.sender.send(SendData::BestMove(best_root_move)).unwrap();
 

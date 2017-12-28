@@ -43,7 +43,8 @@ fn run_one() {
             local = local.max(Duration::milliseconds(1));
         } else {
             s.search(&board, &PreLimits::blank());
-            thread::sleep_ms(local.num_milliseconds() as u32);
+            thread::sleep(local.to_std().unwrap());
+//            thread::sleep_ms(local.num_milliseconds() as u32);
             println!("Stop!");
             let mov = s.stop_search_get_move();
             println!("Pleco searcher: {}",mov);

@@ -5,7 +5,6 @@ use super::root_moves_list::{RootMoveList,RawRootMoveList};
 
 use std::heap::{Alloc, Layout, Heap};
 use std::ptr::Unique;
-use std::ptr::Shared;
 use std::sync::Arc;
 use std::sync::atomic::{Ordering,AtomicUsize,fence,compiler_fence};
 use std::ops::{Deref, DerefMut,Index,IndexMut};
@@ -20,7 +19,7 @@ use pleco::core::mono_traits::AllGenType;
 
 pub struct RmManager {
     threads: Arc<AtomicUsize>,
-    moves: Shared<RawRootMoveList>,
+    moves: Unique<RawRootMoveList>,
     ref_count: Arc<AtomicUsize>
 }
 
@@ -48,7 +47,7 @@ impl RmManager {
     fn init() -> Self {
         RmManager {
             threads: Arc::new(AtomicUsize::new(0)),
-            moves: Shared::empty(),
+            moves: Unique::empty(),
             ref_count: Arc::new(AtomicUsize::new(1))
         }
     }
@@ -61,14 +60,13 @@ impl RmManager {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
-            self.moves = Shared::new(new_ptr as *mut RawRootMoveList).unwrap();
-            for x in 0..MAX_THREADS {
-                let mut raw_list: &mut RawRootMoveList = self.get_unchecked_mut(x);
-                raw_list.init();
-            }
+            self.moves = Unique::new(new_ptr as *mut RawRootMoveList).unwrap();
         }
     }
 
+    fn ptr(&self) -> *mut RawRootMoveList {
+        self.moves.as_ptr()
+    }
 
     pub fn size(&self) -> usize {
         self.threads.load(Ordering::Relaxed)
@@ -80,7 +78,9 @@ impl RmManager {
         } else {
             let thread_idx = self.threads.fetch_add(1, Ordering::SeqCst);
             unsafe {
-                Some(self.get_list_unchecked(thread_idx))
+                let mut list = self.get_list_unchecked(thread_idx);
+                list.init();
+                Some(list)
             }
         }
     }
@@ -103,22 +103,12 @@ impl RmManager {
 
     pub unsafe fn replace_moves(&mut self, board: &Board) {
         let legal_moves = MoveGen::generate::<Legal, AllGenType>(&board);
-        let mut first = self.as_ptr();
+        let mut first = self.get_list_unchecked(0);
         first.replace(&legal_moves);
         let num = self.size();
         for i in 1..num {
             self.get_list_unchecked(i).clone_from_other(&first);
         }
-    }
-
-    pub unsafe fn as_ptr(&self) -> RootMoveList {
-        RootMoveList {
-            moves: self.moves.as_ptr()
-        }
-    }
-
-    fn ptr(&self) -> *mut RawRootMoveList {
-        self.moves.as_ptr()
     }
 
     pub fn wait_for_finish(&self) {
