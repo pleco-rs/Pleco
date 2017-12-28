@@ -8,7 +8,9 @@ use std::ptr::Unique;
 use std::ptr::Shared;
 use std::sync::Arc;
 use std::sync::atomic::{Ordering,AtomicUsize,fence,compiler_fence};
+use std::ops::{Deref, DerefMut,Index,IndexMut};
 use std::mem;
+use std::thread;
 
 use std::iter::{Iterator,IntoIterator};
 
@@ -16,11 +18,9 @@ use pleco::Board;
 use pleco::board::movegen::{MoveGen,Legal};
 use pleco::core::mono_traits::AllGenType;
 
-pub type RawRmManager = [RawRootMoveList; MAX_THREADS];
-
 pub struct RmManager {
     threads: Arc<AtomicUsize>,
-    moves: Shared<RawRmManager>,
+    moves: Shared<RawRootMoveList>,
     ref_count: Arc<AtomicUsize>
 }
 
@@ -42,7 +42,6 @@ impl RmManager {
     pub fn new() -> Self {
         let mut rms = RmManager::init();
         rms.allocate();
-        unsafe { rms.set_states();}
         rms
     }
 
@@ -56,40 +55,30 @@ impl RmManager {
 
     fn allocate(&mut self) {
         unsafe {
-            let elem_size = mem::size_of::<RawRootMoveList>();
-            let alloc_size = elem_size * MAX_THREADS;
-            let align = mem::align_of::<RawRootMoveList>();
-            let layout = Layout::from_size_align(alloc_size, align).unwrap();
-            let result = Heap.alloc_zeroed(layout);
+            let layout = Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap();
+            let result = Heap.alloc(layout);
             let new_ptr = match result {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
-            {
-                println!("elem size: {}, align: {}, alloc size: {}",elem_size,align, alloc_size);
-                let location: usize = mem::transmute::<*mut u8, usize>(new_ptr);
-                println!("Bytes at {:x}", location);
+            println!("Hello");
+            self.moves = Shared::new(new_ptr as *mut RawRootMoveList).unwrap();
+            println!("Hello2");
+            for x in 0..MAX_THREADS {
+                let mut raw_list = self.get_unchecked_mut(x);
+                raw_list.init();
             }
-            self.moves = Shared::new(new_ptr as *mut RawRmManager).unwrap();
+            println!("Good");
         }
     }
 
-    unsafe fn set_states(&mut self) {
-        for x in 0..MAX_THREADS {
-            let line =  self.as_raw_ptr().offset(x as isize);
-            let location: usize = mem::transmute::<*mut RawRootMoveList, usize>(line);
-            println!("This x at {:x}", location);
-            let mut raw_list = self.get_list_unchecked(x);
-            raw_list.init();
-        }
-    }
 
-    pub fn threads(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.threads.load(Ordering::Relaxed)
     }
 
     pub fn add_thread(&mut self) -> Option<RootMoveList> {
-        if self.threads() >= MAX_THREADS {
+        if self.size() >= MAX_THREADS {
             None
         } else {
             let thread_idx = self.threads.fetch_add(1, Ordering::SeqCst);
@@ -100,7 +89,7 @@ impl RmManager {
     }
 
     pub fn get_list(&self, num: usize) -> Option<RootMoveList> {
-        if num >= self.threads() {
+        if num >= self.size() {
             None
         } else {
             unsafe {
@@ -111,7 +100,7 @@ impl RmManager {
 
     pub unsafe fn get_list_unchecked(&self, num: usize) -> RootMoveList {
         RootMoveList {
-            moves: self.as_raw_ptr().offset(num as isize)
+            moves: self.ptr().offset(num as isize)
         }
     }
 
@@ -119,7 +108,7 @@ impl RmManager {
         let legal_moves = MoveGen::generate::<Legal, AllGenType>(&board);
         let mut first = self.as_ptr();
         first.replace(&legal_moves);
-        let num = self.threads();
+        let num = self.size();
         for i in 1..num {
             self.get_list_unchecked(i).clone_from_other(&first);
         }
@@ -127,17 +116,17 @@ impl RmManager {
 
     pub unsafe fn as_ptr(&self) -> RootMoveList {
         RootMoveList {
-            moves: mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(self.moves.as_ptr())
+            moves: self.moves.as_ptr()
         }
     }
 
-    unsafe fn as_raw_ptr(&self) -> *mut RawRootMoveList {
-        mem::transmute::<*mut RawRmManager, *mut RawRootMoveList>(self.moves.as_ptr())
+    fn ptr(&self) -> *mut RawRootMoveList {
+        self.moves.as_ptr()
     }
 
     pub fn wait_for_finish(&self) {
         unsafe {
-            for i in 0..self.threads() {
+            for i in 0..self.size() {
                 fence(Ordering::AcqRel);
                 compiler_fence(Ordering::AcqRel);
                 let root_moves = self.get_list_unchecked(i).moves;
@@ -147,7 +136,7 @@ impl RmManager {
     }
     pub fn wait_for_start(&self) {
         unsafe {
-            let num_threads = self.threads();
+            let num_threads = self.size();
             for i in 0..num_threads {
                 fence(Ordering::AcqRel);
                 compiler_fence(Ordering::AcqRel);
@@ -159,7 +148,7 @@ impl RmManager {
 
     pub fn reset_depths(&self) {
         unsafe {
-            for i in 0..self.threads() {
+            for i in 0..self.size() {
                 self.get_list_unchecked(i).set_depth_completed(0);
             }
         }
@@ -180,7 +169,7 @@ impl RmManager {
             println!("id: 0, value: {}, prev_value: {}, depth: {}, depth_comp: {}, mov: {}", best_root_move.score, best_root_move.prev_score, best_root_move.depth_reached,depth_reached, best_root_move.bit_move);
         }
 
-        for x in 1..self.threads() {
+        for x in 1..self.size() {
             let (thread_move, thread_depth): (RootMove, u16)  = self.thread_best_move_and_depth(x);
             let depth_diff = thread_depth as i32 - depth_reached as i32;
             let value_diff = thread_move.score - best_root_move.score;
@@ -197,6 +186,40 @@ impl RmManager {
             }
         }
         best_root_move
+    }
+}
+
+impl Deref for RmManager {
+    type Target = [RawRootMoveList];
+    fn deref(&self) -> &[RawRootMoveList] {
+        unsafe {
+            ::std::slice::from_raw_parts(self.ptr(), MAX_THREADS)
+        }
+    }
+}
+
+impl DerefMut for RmManager {
+    fn deref_mut(&mut self) -> &mut [RawRootMoveList] {
+        unsafe {
+            ::std::slice::from_raw_parts_mut(self.ptr(), MAX_THREADS)
+        }
+    }
+}
+
+impl Index<usize> for RmManager {
+    type Output = RawRootMoveList;
+
+    #[inline]
+    fn index(&self, index: usize) -> &RawRootMoveList {
+        &(**self)[index]
+    }
+}
+
+impl IndexMut<usize> for RmManager {
+
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut RawRootMoveList {
+        &mut (**self)[index]
     }
 }
 
@@ -235,7 +258,7 @@ impl<'a> IntoIterator for &'a RmManager {
     fn into_iter(self) -> Self::IntoIter {
         RootMovesIter {
             root_moves: &self,
-            threads: self.threads(),
+            threads: self.size(),
             idx: 0,
         }
     }
@@ -246,7 +269,7 @@ impl Drop for RmManager {
         let num = self.ref_count.fetch_sub(1, Ordering::SeqCst);
         if num == 1 {
             unsafe {
-                Heap.dealloc(self.as_raw_ptr() as *mut _,
+                Heap.dealloc(self.ptr() as *mut _,
                              Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap());
             }
         }
@@ -261,9 +284,9 @@ mod tests {
     #[test]
     fn rm_basic() {
         let mut rms = RmManager::new();
-        assert_eq!(rms.threads(), 0);
+        assert_eq!(rms.size(), 0);
         let moves_1 = rms.add_thread().unwrap();
-        assert_eq!(rms.threads(), 1);
+        assert_eq!(rms.size(), 1);
         assert_eq!(moves_1.len(), 0);
         let board = Board::default();
         unsafe {
@@ -271,7 +294,7 @@ mod tests {
             let moves_1_clone = rms.get_list_unchecked(0);
             assert_eq!(moves_1.len(), moves_1_clone.len());
             let moves_2 = rms.add_thread().unwrap();
-            assert_eq!(rms.threads(), 2);
+            assert_eq!(rms.size(), 2);
             rms.replace_moves(&board);
             let moves_2_clone = rms.get_list_unchecked(0);
             assert_eq!(moves_2.len(), moves_2_clone.len());
@@ -285,6 +308,6 @@ mod tests {
         let rmsc = rms.clone();
         rms.add_thread();
         rms.add_thread();
-        assert_eq!(rms.threads(), rmsc.threads());
+        assert_eq!(rms.size(), rmsc.size());
     }
 }

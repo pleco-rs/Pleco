@@ -130,11 +130,8 @@ impl ThreadPool {
 
     pub fn new() -> Self {
         let (tx, rx) = channel();
-        println!("Created Channels");
         let mut pool = ThreadPool::init(rx);
-        println!("Created ThreadPool");
         pool.spawn_main_thread(tx);
-        println!("Created ThreadPool");
         pool
     }
 
@@ -144,7 +141,7 @@ impl ThreadPool {
 
     pub fn set_thread_count(&mut self, num: usize) {
         // TODO: Check for overflow
-        let curr_num: usize = self.rm_manager.threads();
+        let curr_num: usize = self.rm_manager.size();
 
         let mut i: usize = curr_num;
         while i < num {
