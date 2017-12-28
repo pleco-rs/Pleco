@@ -20,7 +20,7 @@ use num_cpus;
 
 const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
-pub const MAX_THREADS: usize = 256;
+pub const MAX_THREADS: usize = 16;
 pub const DEFAULT_TT_SIZE: usize = 256;
 
 lazy_static! {
