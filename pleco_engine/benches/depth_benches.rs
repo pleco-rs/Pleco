@@ -1,6 +1,6 @@
 #![feature(test)]
-extern crate pleco;
 extern crate test;
+extern crate pleco;
 extern crate pleco_engine;
 
 use pleco::Board;
@@ -18,15 +18,10 @@ fn bench_4_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(4);
     let board = Board::default();
-    println!("Attemping to create plecosearcher...");
     let mut s = PlecoSearcher::init(false);
-    println!("PlecoSearch created");
     black_box(s.clear_tt());
-    println!("TT cleared");
     black_box(s.search(&board, &limit));
-    println!("Search started");
     black_box(s.await_move());
-    println!("Move Found");
     b.iter(|| {
         black_box(s.clear_tt());
         black_box(s.search(&board, &limit));

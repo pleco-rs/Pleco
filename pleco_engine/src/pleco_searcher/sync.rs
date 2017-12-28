@@ -1,3 +1,5 @@
+//! Contains useful synchronization primitives.
+
 use std::sync::{Mutex,Condvar};
 
 /// A Latch starts as false and eventually becomes true. You can block
@@ -25,6 +27,7 @@ impl LockLatch {
         }
     }
 
+    // Sets the lock to true and notifies any threads waiting on it.
     #[inline]
     pub fn set(&self) {
         let mut guard = self.m.lock().unwrap();
@@ -32,6 +35,7 @@ impl LockLatch {
         self.v.notify_all();
     }
 
+    // Locks the latch, causing threads to await its unlocking.
     #[inline]
     pub fn lock(&self) {
         let mut guard = self.m.lock().unwrap();
@@ -40,12 +44,6 @@ impl LockLatch {
 
     #[inline]
     fn new_value(value: bool) -> LockLatch {
-//        let m = Mutex::new(value);
-//        let v = Condvar::new();
-//        LockLatch {
-//            m,
-//            v
-//        }
         LockLatch {
             m: Mutex::new(value),
             v: Condvar::new(),
@@ -69,6 +67,7 @@ impl LockLatch {
 
 }
 
+/// A GuardedBool allows for waiting on a specific bool value.
 pub struct GuardedBool {
     a: LockLatch
 }
@@ -81,11 +80,13 @@ impl GuardedBool {
         }
     }
 
+    /// Sets the value.
     #[inline]
     pub fn set(&self, value: bool) {
         self.a.set_value(value);
     }
 
+    /// Awaits a value.
     #[inline]
     pub fn await(&self, value: bool) {
         self.a.await_value(value);

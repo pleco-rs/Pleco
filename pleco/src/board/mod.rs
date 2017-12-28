@@ -127,7 +127,7 @@ impl From<num::ParseIntError> for FenBuildError {
 /// Square A1, bit 1 is B1, etc.). Indexes increase first horizontally by File, and then by Rank. See
 /// [BitBoards article ChessWiki](https://chessprogramming.wikispaces.com/Bitboards) for more information.
 ///
-/// The exact mapping from each square to bits is below,
+/// The exact mapping from each square to bits is as follows:
 ///
 /// ```md,ignore
 /// 8 | 56 57 58 59 60 61 62 63
@@ -1696,7 +1696,7 @@ impl Board {
         // TODO: create pseduo-legal-move
     }
 
-    /// Returns if a move will give check to the opposing player's King.
+    /// Returns if a move gives check to the opposing player's King.
     pub fn gives_check(&self, m: BitMove) -> bool {
         // I am too drunk to be making this right now
         let src: SQ = m.get_src();

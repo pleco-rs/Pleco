@@ -71,8 +71,8 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "0.2.3" }
-clippy = {version = "0.0.174", optional = true}
+pleco = { path = "../pleco", version = "0.3.0" }
+clippy = {version = "0.0.177", optional = true}
 lazy_static = "1.0.0"
 chrono = "0.4.0"
 rand = "0.3"

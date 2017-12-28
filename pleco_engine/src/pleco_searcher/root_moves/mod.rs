@@ -1,12 +1,12 @@
+//! This module contains the basic RootMove structures, allowing for storage of the moves from a specific position
+//! alongside information about each of the moves.
+
 pub mod root_moves_list;
 pub mod root_moves_manager;
-
-
 
 use std::cmp::Ordering as CmpOrder;
 
 use pleco::board::eval::*;
-
 use pleco::BitMove;
 
 const MAX_MOVES: usize = 255;

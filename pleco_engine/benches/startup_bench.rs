@@ -18,16 +18,3 @@ fn searcher_creation(b: &mut Bencher) {
         s = black_box(PlecoSearcher::init(false));
     })
 }
-
-#[bench]
-fn searcher_setup(b: &mut Bencher) {
-    let mut limit = PreLimits::blank();
-    limit.depth = Some(0);
-    let board = Board::default();
-    let mut s = PlecoSearcher::init(false);
-    b.iter(|| {
-        black_box(s.clear_tt());
-        black_box(s.search(&board, &limit));
-        black_box(s.await_move());
-    })
-}

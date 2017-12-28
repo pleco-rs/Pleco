@@ -85,6 +85,12 @@ impl RmManager {
         }
     }
 
+    pub fn remove_thread(&mut self) {
+        if self.size() > 0 {
+            self.threads.fetch_sub(1, Ordering::SeqCst);
+        }
+    }
+
     pub fn get_list(&self, num: usize) -> Option<RootMoveList> {
         if num >= self.size() {
             None
