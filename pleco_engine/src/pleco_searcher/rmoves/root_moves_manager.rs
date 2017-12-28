@@ -61,14 +61,11 @@ impl RmManager {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
-            println!("Hello");
             self.moves = Shared::new(new_ptr as *mut RawRootMoveList).unwrap();
-            println!("Hello2");
             for x in 0..MAX_THREADS {
-                let mut raw_list = self.get_unchecked_mut(x);
+                let mut raw_list: &mut RawRootMoveList = self.get_unchecked_mut(x);
                 raw_list.init();
             }
-            println!("Good");
         }
     }
 

@@ -40,6 +40,12 @@ impl LockLatch {
 
     #[inline]
     fn new_value(value: bool) -> LockLatch {
+//        let m = Mutex::new(value);
+//        let v = Condvar::new();
+//        LockLatch {
+//            m,
+//            v
+//        }
         LockLatch {
             m: Mutex::new(value),
             v: Condvar::new(),

@@ -24,7 +24,10 @@ pub struct RawRootMoveList {
 impl RawRootMoveList {
     pub fn init(&mut self) {
         self.depth_completed = AtomicU16::new(0);
-        self.finished = GuardedBool::new(true);
+        unsafe {
+            let f = &mut self.finished;
+            ptr::write_volatile(f, GuardedBool::new(true));
+        }
     }
 }
 
