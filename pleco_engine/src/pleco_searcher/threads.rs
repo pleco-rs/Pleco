@@ -1,62 +1,28 @@
-use std::sync::{Arc,Mutex,Condvar,RwLock};
-use std::sync::atomic::{AtomicBool,AtomicU16,Ordering};
+//! Contains the ThreadPool and the individual Threads.
+
+use std::sync::{Arc,RwLock};
+use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
-
 
 use std::{mem,time};
 
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
-use pleco::tools::*;
 
-use super::thread_search::ThreadSearcher;
+
+use super::search::ThreadSearcher;
 use super::misc::*;
 use super::{TT_TABLE,THREAD_STACK_SIZE};
-use super::root_moves::*;
+use super::root_moves::RootMove;
+use super::root_moves::root_moves_list::RootMoveList;
+use super::root_moves::root_moves_manager::RmManager;
+use super::sync::LockLatch;
 
-/// A Latch starts as false and eventually becomes true. You can block
-/// until it becomes true.
-pub struct LockLatch {
-    m: Mutex<bool>,
-    v: Condvar,
-}
-
-impl LockLatch {
-    #[inline]
-    pub fn new() -> LockLatch {
-        LockLatch {
-            m: Mutex::new(false),
-            v: Condvar::new(),
-        }
-    }
-
-    /// Block until latch is set.
-    #[inline]
-    pub fn wait(&self) {
-        let mut guard = self.m.lock().unwrap();
-        while !*guard {
-            guard = self.v.wait(guard).unwrap();
-        }
-    }
-
-    #[inline]
-    fn set(&self) {
-        let mut guard = self.m.lock().unwrap();
-        *guard = true;
-        self.v.notify_all();
-    }
-
-    #[inline]
-    fn lock(&self) {
-        let mut guard = self.m.lock().unwrap();
-        *guard = false;
-    }
-}
 
 pub struct ThreadGo {
-    limit: UCILimit,
+    limit: Limits,
     board: Board,
     // Options: ?
 }
@@ -72,7 +38,9 @@ pub struct ThreadPool {
     pos_state: Arc<RwLock<Option<ThreadGo>>>,
 
     // This is all rootmoves for all treads.
-    all_thread_info: AllThreadInfo,
+    rm_manager: RmManager,
+
+
 
     // Join handle for the main thread.
     main_thread: Option<JoinHandle<()>>,
@@ -117,7 +85,7 @@ impl ThreadPool {
     fn init(rx: Receiver<SendData>) -> Self {
         ThreadPool {
             pos_state: Arc::new(RwLock::new(None)),
-            all_thread_info: AllThreadInfo::new(),
+            rm_manager: RmManager::new(),
             main_thread: None,
             receiver: rx,
             main_thread_go: Arc::new(LockLatch::new()),
@@ -129,15 +97,13 @@ impl ThreadPool {
         }
     }
 
-    fn create_thread(&self, id: usize) -> Thread {
+    fn create_thread(&self, id: usize, root_moves: RootMoveList) -> Thread {
         Thread {
-            root_moves: RootMoves::new(),
-            depth_completed: Arc::new(AtomicU16::new(0)),
+            root_moves: root_moves,
             id: id,
             tt: &super::TT_TABLE,
             use_stdout: Arc::clone(&self.use_stdout),
             stop: Arc::clone(&self.stop),
-            finished: Arc::new(AtomicBool::new(true)),
             drop: Arc::clone(&self.drop),
             pos_state: Arc::clone(&self.pos_state),
             cond: Arc::clone(&self.all_thread_go),
@@ -145,22 +111,17 @@ impl ThreadPool {
         }
     }
 
-    fn attach_thread(&mut self, thread: &Thread) {
-        let info = ThreadInfo::new(&thread);
-        self.all_thread_info.add(info);
-    }
-
     fn spawn_main_thread(&mut self, tx: Sender<SendData>) {
-        let mut thread = self.create_thread(0);
-        self.attach_thread(&thread);
+        let root_moves = self.rm_manager.add_thread().unwrap();
+        let thread = self.create_thread(0, root_moves);
         let main_thread = MainThread {
-            per_thread: self.all_thread_info.clone(),
+            per_thread: self.rm_manager.clone(),
             main_thread_go: Arc::clone(&self.main_thread_go),
             sender: tx,
             thread
         };
 
-        let builder = thread::Builder::new();
+        let builder = thread::Builder::new().name(String::from("0"));
         self.main_thread = Some(
             builder.spawn(move || {
                 let mut main_thread = main_thread;
@@ -181,13 +142,13 @@ impl ThreadPool {
 
     pub fn set_thread_count(&mut self, num: usize) {
         // TODO: Check for overflow
-        let curr_num: usize = self.all_thread_info.size();
+        let curr_num: usize = self.rm_manager.size();
 
         let mut i: usize = curr_num;
         while i < num {
-            let mut thread = self.create_thread(i);
-            self.attach_thread(&thread);
-            let builder = thread::Builder::new();
+            let root_moves = self.rm_manager.add_thread().unwrap();
+            let thread = self.create_thread(i, root_moves);
+            let builder = thread::Builder::new().name(i.to_string());
             self.threads.push(builder.spawn(move || {
                 let mut current_thread = thread;
                 current_thread.idle_loop()
@@ -196,18 +157,18 @@ impl ThreadPool {
         }
     }
 
-    pub fn uci_search(&mut self, board: &Board, limits: &UCILimit) {
+    pub fn uci_search(&mut self, board: &Board, limits: &PreLimits) {
         {
             let mut thread_go = self.pos_state.write().unwrap();
             *thread_go = Some(ThreadGo {
                 board: board.shallow_clone(),
-                limit: limits.clone()
+                limit: (limits.clone()).create()
             });
         }
         self.main_thread_go.set();
     }
 
-    pub fn search(&mut self, board: &Board, limits: &UCILimit) -> BitMove {
+    pub fn search(&mut self, board: &Board, limits: &PreLimits) -> BitMove {
         self.uci_search(&board, &limits);
         let data = self.receiver.recv().unwrap();
         match data {
@@ -228,7 +189,7 @@ impl ThreadPool {
 }
 
 pub struct MainThread {
-    per_thread: AllThreadInfo,
+    per_thread: RmManager,
     main_thread_go: Arc<LockLatch>,
     sender: Sender<SendData>,
     thread: Thread,
@@ -258,11 +219,14 @@ impl MainThread {
     }
 
     pub fn go(&mut self) {
-        self.thread.finished.store(false, Ordering::Relaxed);
+        self.thread.root_moves.set_finished(true);
         self.thread.stop.store(true, Ordering::Relaxed);
+        self.per_thread.wait_for_finish();
         self.per_thread.reset_depths();
         let board = self.thread.retrieve_board().unwrap();
-        self.per_thread.set_rootmoves(&board);
+        unsafe {
+            self.per_thread.replace_moves(&board);
+        }
 
         // turn stop searching off
         self.thread.stop.store(false, Ordering::Relaxed);
@@ -270,17 +234,18 @@ impl MainThread {
         self.start_threads();
 
         let limit = self.thread.retrieve_limit().unwrap();
+        self.thread.root_moves.set_finished(false);
         self.per_thread.wait_for_start();
         self.lock_threads();
 
         // start searching
         self.thread.start_searching(board, limit);
-        self.thread.finished.store(true, Ordering::Relaxed);
+        self.thread.root_moves.set_finished(true);
         self.thread.stop.store(true, Ordering::Relaxed);
         self.per_thread.wait_for_finish();
 
         // find best move
-        let mut best_root_move: RootMove = self.per_thread.best_rootmove(self.thread.use_stdout.load(Ordering::Relaxed));
+        let best_root_move: RootMove = self.per_thread.best_rootmove(self.thread.use_stdout.load(Ordering::Relaxed));
 
         self.sender.send(SendData::BestMove(best_root_move)).unwrap();
 
@@ -294,13 +259,11 @@ impl MainThread {
 }
 
 pub struct Thread {
-    pub root_moves: RootMoves,
-    pub depth_completed: Arc<AtomicU16>,
+    pub root_moves: RootMoveList,
     pub id: usize,
     pub tt: &'static TranspositionTable,
     pub use_stdout: Arc<AtomicBool>,
     pub stop: Arc<AtomicBool>,
-    pub finished: Arc<AtomicBool>,
     pub drop: Arc<AtomicBool>,
     pub pos_state: Arc<RwLock<Option<ThreadGo>>>,
     pub cond: Arc<LockLatch>,
@@ -319,23 +282,26 @@ impl Thread {
         board
     }
 
-    pub fn retrieve_limit(&self) -> Option<UCILimit> {
+    pub fn retrieve_limit(&self) -> Option<Limits> {
         let s: &Option<ThreadGo> = &*(self.pos_state.read().unwrap());
         let board = s.as_ref().map(|ref tg| (*tg).limit.clone());
         board
     }
 
     pub fn idle_loop(&mut self) {
+        self.root_moves.set_finished(true);
         while !self.drop(){
             self.cond.wait();
             if self.drop() {
                 return;
             }
+            self.root_moves.set_finished(false);
             self.go();
+            self.root_moves.set_finished(true);
         }
     }
 
-    fn start_searching(&mut self, board: Board, limit: UCILimit) {
+    fn start_searching(&mut self, board: Board, limit: Limits) {
         let mut thread_search = ThreadSearcher {
             thread: self,
             limit: limit,
@@ -345,11 +311,9 @@ impl Thread {
     }
 
     pub fn go(&mut self) {
-        self.finished.store(false, Ordering::Relaxed);
         let board = self.retrieve_board().unwrap();
         let limit = self.retrieve_limit().unwrap();
         self.start_searching(board, limit);
-        self.finished.store(true, Ordering::Relaxed);
     }
 }
 
@@ -378,12 +342,4 @@ impl Drop for ThreadPool {
 pub fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
     let s: [ThreadStack; THREAD_STACK_SIZE] = unsafe { mem::zeroed() };
     s
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-
 }

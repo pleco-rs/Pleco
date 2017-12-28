@@ -61,7 +61,7 @@ fn test_movegen_quiet_checks() {
         }
     }
     vec.iter().for_each(|b| {
-        let moves = b.generate_moves_of_type(GenTypes::QuietChecks);
+        b.generate_moves_of_type(GenTypes::QuietChecks);
     })
 }
 

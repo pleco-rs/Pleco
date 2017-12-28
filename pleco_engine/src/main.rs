@@ -4,18 +4,19 @@ extern crate pleco_engine;
 
 use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
 use pleco::Board;
-use pleco::tools::UCILimit;
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
+use pleco_engine::pleco_searcher::misc::PreLimits;
 
 use std::thread;
 use chrono::*;
 
 
 fn main() {
-//    run_many();
-    run_one();
+    run_many();
 }
+
+
 
 fn uciloop() {
     let mut s = PlecoSearcher::init(true);
@@ -39,9 +40,11 @@ fn run_one() {
                 println!("Jamboree searcher: {}", mov);
                 board.apply_move(mov);
             });
+            local = local.max(Duration::milliseconds(1));
         } else {
-            s.search(&board, &UCILimit::Infinite);
-            thread::sleep_ms(local.num_milliseconds() as u32);
+            s.search(&board, &PreLimits::blank());
+            thread::sleep(local.to_std().unwrap());
+//            thread::sleep_ms(local.num_milliseconds() as u32);
             println!("Stop!");
             let mov = s.stop_search_get_move();
             println!("Pleco searcher: {}",mov);
@@ -87,8 +90,16 @@ fn run_many() {
         while i > 0 && !board.checkmate() && !board.stalemate() {
             if i % 2 == 1 {
                 local = Duration::span(|| {
-                    let mov = if i < max_moves - 60 {
-                        JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
+                    let mov = if i < max_moves - 40 {
+                        if board.count_all_pieces() < 5 {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 8)
+                        } else if board.count_all_pieces() < 7 {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 7)
+                        } else if board.count_all_pieces() < 9 {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 6)
+                        } else {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
+                        }
                     } else {
                         JamboreeSearcher::best_move_depth(board.shallow_clone(), 4)
                     };
@@ -96,7 +107,7 @@ fn run_many() {
                 });
                 local = local.max(Duration::milliseconds(1));
             } else {
-                s.search(&board, &UCILimit::Infinite);
+                s.search(&board, &PreLimits::blank());
                 thread::sleep(local.to_std().unwrap());
                 let mov = s.stop_search_get_move();
                 board.apply_move(mov);

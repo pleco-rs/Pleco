@@ -32,8 +32,10 @@ use std::sync::Arc;
 /// [`Board`]: ../struct.Board.html
 #[derive(Clone)]
 pub struct BoardState {
-    // The Following Fields are easily copied from the previous version and possbily modified
+    // The Following Fields are easily copied from the previous version and possibly modified
+    /// The castling rights for the current board.
     pub castling: Castling,
+    /// Rule 50 for the current board. Tracks the moves since a capture, pawn move, or castle.
     pub rule_50: i16,
     pub ply: u16,
     pub ep_square: SQ,

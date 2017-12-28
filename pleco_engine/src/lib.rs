@@ -28,12 +28,13 @@
 #![allow(dead_code)]
 #![feature(integer_atomics)]
 #![feature(unique)]
+#![feature(shared)]
 #![feature(allocator_api)]
-
+#![feature(trusted_len)]
+#![feature(fused)]
 
 #[macro_use]
 extern crate lazy_static;
-
 
 extern crate test;
 extern crate rayon;

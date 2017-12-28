@@ -109,6 +109,7 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [
 
 
 impl Eval {
+    /// Evaluates the score of a `Board` for the current side to move.
     pub fn eval_low(board: &Board) -> i16 {
         match board.turn() {
             Player::White => eval_all::<WhiteType>(board) - eval_all::<BlackType>(board),

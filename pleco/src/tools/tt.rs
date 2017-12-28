@@ -167,6 +167,7 @@ impl Entry {
     }
 }
 
+
 // 30 bytes + 2 = 32 Bytes
 /// Structure containing multiple Entries all mapped to by the same zobrist key.
 #[repr(C)]
@@ -480,7 +481,6 @@ mod tests {
     const HALF_GIG: usize = 2 << 24;
     // around 30 MB
     const THIRTY_MB: usize = 2 << 20;
-
 
     #[test]
     fn tt_alloc_realloc() {

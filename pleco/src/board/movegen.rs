@@ -597,7 +597,7 @@ mod tests {
         let b = Board::default();
         let mut m = b.generate_moves();
         let mut i = 0;
-        for d in m.iter() {
+        for _d in m.iter() {
             i+= 1;
         }
         {

@@ -128,7 +128,10 @@ impl ChessRound {
         let mut cr = ChessRound::default();
         let args = round[1..(round.len() - 1)].split('.');
         args.for_each(|r: &str| {
-            r.parse().map(|m: u32| cr.rounds.push(m));
+//            r.parse().map(|m: u32| cr.rounds.push(m));
+            if let Ok(m) = r.parse() {
+                cr.rounds.push(m)
+            }
         });
         cr
     }
@@ -350,10 +353,10 @@ mod tests {
 
     #[test]
     fn tags_test() {
-        let mut m = PGNTags::default();
-        m = m.add(TEST_WHITE).unwrap();
-        m = m.add(TEST_BLACK).unwrap();
-        m = m.add(TEST_DATE).unwrap();
-        m = m.add(TEST_ROUND).unwrap();
+        PGNTags::default()
+            .add(TEST_WHITE).unwrap()
+            .add(TEST_BLACK).unwrap()
+            .add(TEST_DATE).unwrap()
+            .add(TEST_ROUND).unwrap();
     }
 }

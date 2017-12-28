@@ -88,10 +88,26 @@ pub struct BitMove {
 /// Selected Meta-Data to accompany each move.
 #[derive(Copy, Clone, PartialEq)]
 pub enum MoveFlag {
-    Promotion { capture: bool, prom: Piece },
-    Castle { king_side: bool },
+    /// The move is a promotion.
+    Promotion {
+        /// Marks the move as a capturing promotion.
+        capture: bool,
+        /// The piece that the move promotes to.
+        prom: Piece
+    },
+    /// The move is a castle.
+    Castle {
+        /// Determines if the castle is a castle on the king side.
+        king_side: bool
+    },
+    /// The move is a double pawn push.
     DoublePawnPush,
-    Capture { ep_capture: bool },
+    /// The move is a capturing move.
+    Capture {
+        /// Marks this move as an en-passant capture.
+        ep_capture: bool
+    },
+    /// The move is a quiet move. This means its not a capture, promotion, castle, or double-pawn push.
     QuietMove,
 }
 
@@ -99,17 +115,24 @@ pub enum MoveFlag {
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
 pub enum MoveType {
+    /// The move is "Normal", So its not a castle, promotion, or en-passant.
     Normal,
+    /// The move is a promotion.
     Promotion,
+    /// The move is castling move.
     Castle,
+    /// The move is an en-passant capture.
     EnPassant,
 }
 
 /// Useful pre-encoding of a move's information before it is compressed into a `BitMove` struct.
 #[derive(Copy, Clone, PartialEq)]
 pub struct PreMoveInfo {
+    /// The square the moving piece originates from.
     pub src: SQ,
+    /// The square the piece is moving to.
     pub dst: SQ,
+    /// Marks the type of move. E.g, Promotion, Castle, Capture.
     pub flags: MoveFlag,
 }
 

@@ -1,48 +1,57 @@
 #![feature(test)]
-extern crate pleco;
 extern crate test;
+extern crate pleco;
 extern crate pleco_engine;
 
 use pleco::Board;
-use pleco::tools::UCILimit;
+
 use pleco_engine::pleco_searcher::PlecoSearcher;
+use pleco_engine::pleco_searcher::misc::PreLimits;
 
 
 use test::{black_box, Bencher};
 
 
 
-
 #[bench]
 fn bench_4_ply(b: &mut Bencher) {
-    let limit = UCILimit::Depth(4);
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(4);
     let board = Board::default();
+    let mut s = PlecoSearcher::init(false);
+    black_box(s.clear_tt());
+    black_box(s.search(&board, &limit));
+    black_box(s.await_move());
     b.iter(|| {
-        let mut s = PlecoSearcher::init(false);
+        black_box(s.clear_tt());
         black_box(s.search(&board, &limit));
-        black_box(s.stop_search_get_move());
+        black_box(s.await_move());
     })
 }
 
 
 #[bench]
 fn bench_5_ply(b: &mut Bencher) {
-    let limit = UCILimit::Depth(5);
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(5);
     let board = Board::default();
+    let mut s = PlecoSearcher::init(false);
     b.iter(|| {
-        let mut s = PlecoSearcher::init(false);
+        black_box(s.clear_tt());
         black_box(s.search(&board, &limit));
-        black_box(s.stop_search_get_move());
+        black_box(s.await_move());
     })
 }
 
 #[bench]
 fn bench_6_ply(b: &mut Bencher) {
-    let limit = UCILimit::Depth(6);
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(6);
     let board = Board::default();
+    let mut s = PlecoSearcher::init(false);
     b.iter(|| {
-        let mut s = PlecoSearcher::init(false);
+        black_box(s.clear_tt());
         black_box(s.search(&board, &limit));
-        black_box(s.stop_search_get_move());
+        black_box(s.await_move());
     })
 }

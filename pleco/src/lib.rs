@@ -68,7 +68,6 @@
 #![feature(unique)]
 #![feature(allocator_api)]
 
-
 // [`Vec<T>`]: ../../std/vec/struct.Vec.html
 // [`new`]: ../../std/vec/struct.Vec.html#method.new
 // [`push`]: ../../std/vec/struct.Vec.html#method.push
@@ -86,6 +85,7 @@ extern crate test;
 extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
+
 
 pub mod core;
 pub mod board;

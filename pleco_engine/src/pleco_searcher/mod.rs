@@ -1,21 +1,23 @@
+//! The main searching structure.
+
 pub mod misc;
 pub mod options;
 pub mod threads;
-pub mod thread_search;
+pub mod search;
 pub mod root_moves;
+pub mod sync;
 
-use pleco::tools::UCILimit;
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
-use pleco::tools::timer::Timer;
-use pleco::board::eval::*;
 
-use std::thread;
 use std::io;
 
-use self::options::{UciOption,AllOptions,UciOptionMut};
+use self::misc::{PreLimits,UCITimer};
+use self::options::{AllOptions,UciOptionMut};
 use self::threads::ThreadPool;
+
+use num_cpus;
 
 
 const MAX_PLY: u16 = 126;
@@ -43,7 +45,7 @@ pub struct PlecoSearcher {
     thread_pool: ThreadPool,
     search_mode: SearchType,
     board: Option<Board>,
-    limit: Option<UCILimit>
+    limit: Option<PreLimits>
 }
 
 
@@ -55,7 +57,7 @@ impl PlecoSearcher {
         }
         let mut pool = ThreadPool::new();
         pool.stdout(use_stdout);
-        pool.set_thread_count(8);
+        pool.set_thread_count(num_cpus::get());
         PlecoSearcher {
             options: AllOptions::default(),
             thread_pool: pool,
@@ -104,7 +106,7 @@ impl PlecoSearcher {
                 .take_while(|p: &&&str| **p != "moves")
                 .map(|p| (*p).to_string())
                 .collect::<Vec<String>>()
-                .connect(" ");
+                .join(" ");
             Board::new_from_fen(&fen_string).ok()
         } else {
             None
@@ -119,20 +121,118 @@ impl PlecoSearcher {
 
         if let Some(start) = moves_start {
             if let Some(ref mut board) = self.board {
-                args[start..]
+                let all_moves = board.generate_moves()
                     .iter()
+                    .map(|m| m.stringify())
+                    .collect::<Vec<String>>();
+
+                args[start..].iter()
+                    .take_while(|m| all_moves.contains(&(**m).to_string()))
                     .for_each(|p| {
-                        board.apply_uci_move(*p);
-                    })
+                        assert!(board.apply_uci_move(*p));
+                    });
             }
         }
     }
 
+    // when "go" is passed into stdin, followed by several time control parameters
+    // "searchmoves" "move"+
+    // "ponder"
+    // "wtime" "[msec]"
+    // "btime" "[msec]"
+    // "winc" "[msec]"
+    // "binc" "[msec]"
+    // "movestogo" "[u32]"
+    // "depth" "[u16]"
+    // "nodes" "[u64]"
+    // "mate" "[moves]"
+    // movetime "msec"
+    // "infinite"
     fn uci_go(&mut self, args: &[&str]) {
-        let mut token_idx: usize = 1;
-//        while let Some(token) = *args[token_idx] {
-//
-//        }
+        let mut token_idx: usize = 0;
+        let mut limit = PreLimits::blank();
+        let mut timer = UCITimer::blank();
+        while let Some(token) = args.get(token_idx) {
+            match *token {
+                "infinite" => {limit.infinite = true;},
+                "ponder" => {limit.ponder = true;},
+                "wtime" => {
+                    if let Some(wtime_s) =  args.get(token_idx + 1) {
+                        if let Ok(wtime) = wtime_s.parse::<i32>() {
+                            timer.time_msec[0] = wtime;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "btime" => {
+                    if let Some(btime_s) =  args.get(token_idx + 1) {
+                        if let Ok(btime) = btime_s.parse::<i32>() {
+                            timer.time_msec[1] = btime;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "winc" => {
+                    if let Some(winc_s) =  args.get(token_idx + 1) {
+                        if let Ok(winc) = winc_s.parse::<i32>() {
+                            timer.inc_msec[0] = winc;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "binc" => {
+                    if let Some(binc_s) =  args.get(token_idx + 1) {
+                        if let Ok(binc) = binc_s.parse::<i32>() {
+                            timer.inc_msec[1] = binc;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "movestogo" => {
+                    if let Some(movestogo_s) =  args.get(token_idx + 1) {
+                        if let Ok(movestogo) = movestogo_s.parse::<i32>() {
+                            timer.time_msec[0] = movestogo;
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "depth" => {
+                    if let Some(depth_s) =  args.get(token_idx + 1) {
+                        if let Ok(depth) = depth_s.parse::<u16>() {
+                            limit.depth = Some(depth);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "nodes" => {
+                    if let Some(nodes_s) =  args.get(token_idx + 1) {
+                        if let Ok(nodes) = nodes_s.parse::<u64>() {
+                            limit.nodes = Some(nodes);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "mate" => {
+                    if let Some(mate_s) =  args.get(token_idx + 1) {
+                        if let Ok(mate) = mate_s.parse::<u16>() {
+                            limit.mate = Some(mate);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "movetime" => {
+                    if let Some(movetime_s) =  args.get(token_idx + 1) {
+                        if let Ok(movetime) = movetime_s.parse::<u64>() {
+                            limit.move_time = Some(movetime);
+                        }
+                        token_idx += 1;
+                    }
+                },
+                "searchmoves" => {},
+                _ => {}
+            }
+            token_idx += 1;
+        }
     }
 
     fn apply_option(&mut self, option: &str) {
@@ -155,7 +255,7 @@ impl PlecoSearcher {
         println!("uciok");
     }
 
-    pub fn search(&mut self, board: &Board, limit: &UCILimit) {
+    pub fn search(&mut self, board: &Board, limit: &PreLimits) {
         TT_TABLE.new_search();
         self.search_mode = SearchType::Search;
         self.thread_pool.uci_search(&board, &limit);
@@ -169,6 +269,14 @@ impl PlecoSearcher {
     pub fn stop_search_get_move(&mut self) -> BitMove {
         if self.is_searching() {
             self.halt();
+            return self.thread_pool.get_move();
+        } else {
+            return BitMove::null();
+        }
+    }
+
+    pub fn await_move(&mut self) -> BitMove {
+        if self.is_searching() {
             return self.thread_pool.get_move();
         } else {
             return BitMove::null();
@@ -277,24 +385,4 @@ impl PlecoSearcher {
 //    )
 //}
 
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-//    #[test]
-    pub fn testme() {
-        {
-            let mut s = PlecoSearcher::init(false);
-            let limit = UCILimit::Infinite;
-            let board = Board::default();
-            s.search(&board, &limit);
-            thread::sleep_ms(20000);
-            s.stop_search_get_move();
-            println!("TT Hash {}", 100.0 * TT_TABLE.hash_percent());
-        }
-    }
-
-}
 

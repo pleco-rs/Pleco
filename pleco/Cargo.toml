@@ -1,9 +1,9 @@
 [package]
 name = "pleco"
 # REMINDER TO CHANGE IN README
-version = "0.2.3"
+version = "0.3.0"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
-description = "A blazingly-fast chess engine and Chess AI."
+description = "A blazingly-fast chess library."
 homepage = "https://github.com/sfleischman105/Pleco"
 documentation = "https://docs.rs/pleco/"
 readme = "README.md"
@@ -72,10 +72,10 @@ doctest = true
 
 
 [dependencies]
-clippy = {version = "0.0.174", optional = true}
-lazy_static = "0.2"
+clippy = {version = "0.0.177", optional = true}
+lazy_static = "1.0.0"
 bitflags = "1.0.1"
-rand = "0.3"
+rand = "0.4.1"
 rayon = "0.9.0"
 num_cpus = "1.0"
 failure = "0.1.1"
@@ -85,9 +85,3 @@ failure_derive = "0.1.1"
 [features]
 default = []
 dev = ["clippy"]
-
-
-#
-#[[bench]]
-#path = "benches/bench.rs"
-#name = "integration_benches"

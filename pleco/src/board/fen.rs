@@ -106,14 +106,10 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
             if piece_2 == Piece::B || piece_2 == Piece::N || piece_2 == Piece::P {
                 return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
             }
-        } else if piece_1 == Piece::B {
-            if piece_2 == Piece::P || piece_2 == Piece::B {
-                return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
-            }
-        } else if piece_1 == Piece::N {
-            if piece_2 == Piece::P || piece_2 == Piece::N {
-                return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
-            }
+        } else if piece_1 == Piece::B && (piece_2 == Piece::P || piece_2 == Piece::B) {
+            return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
+        } else if piece_1 == Piece::N && (piece_2 == Piece::P || piece_2 == Piece::N) {
+            return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
         }
     }
 

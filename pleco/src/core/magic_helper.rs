@@ -33,9 +33,13 @@ const SEEDS: [[u64; 8]; 2] = [
 
 /// Structure for helping determine Zobrist hashes for a given position.
 pub struct Zobrist {
+    /// Zobrist key for each piece on each square.
     pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
+    /// Zobrist key for each possible en-passant capturable file.
     pub en_p: [u64; FILE_CNT], // 8 * 8
+    /// Zobrist key for each possible castling rights.
     pub castle: [u64; ALL_CASTLING_RIGHTS], // 8 * 4
+    /// Zobrist key for the side to move.
     pub side: u64, // 8
 }
 
@@ -104,15 +108,23 @@ impl Zobrist {
 ///      - Pawn Attacks from a certain square
 ///      - Zobrist Structure for Zobrist Hashing
 pub struct MagicHelper<'a, 'b> {
+    /// Magic Bitboard structure for the rook.
     magic_rook: MagicTable<'a>,
+    /// Magic Bitboard structure for the bishop.
     magic_bishop: MagicTable<'b>,
+    /// Fast lookup Knight moves for each square.
     knight_table: [u64; 64],
+    /// Fast lookup King moves for each square.
     king_table: [u64; 64],
+    /// Fast lookup distance between each square.
     dist_table: [[u8; 64]; 64],
+    /// Fast lookup line bitboards for any two squares.
     line_bitboard: [[u64; 64]; 64],
+    /// Fast lookup bitboards for the squares between any two squares.
     between_sqs_bb: [[u64; 64]; 64],
     adjacent_files_bb: [u64; 8],
     pawn_attacks_from: [[u64; 64]; 2],
+    /// Zobrist hasher.
     pub zobrist: Zobrist,
 }
 

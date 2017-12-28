@@ -1,6 +1,5 @@
 //! The minimax algorithm.
 use board::*;
-use core::piece_move::*;
 use board::eval::*;
 use super::{BestMove, eval_board};
 
@@ -8,6 +7,8 @@ use super::{BestMove, eval_board};
 use test::Bencher;
 #[allow(unused_imports)]
 use test;
+
+use std::cmp::max;
 
 // depth: depth from given
 // half_moves: total moves
@@ -20,24 +21,20 @@ pub fn minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new(MATE + (board.depth() as i16));
+            return BestMove::new_none(MATE + (board.depth() as i16));
         } else {
-            return BestMove::new(STALEMATE);
+            return BestMove::new_none(STALEMATE);
         }
     }
-    let mut best_value: i16 = NEG_INFINITY;
-    let mut best_move: Option<BitMove> = None;
+    let mut best_move = BestMove::new_none(NEG_INFINITY);
     for mov in moves {
         board.apply_move(mov);
-        let returned_move: BestMove = minimax(board, max_depth).negate();
+        let returned_move: BestMove = minimax(board, max_depth)
+            .negate()
+            .swap_move(mov);
+
         board.undo_move();
-        if returned_move.score > best_value {
-            best_value = returned_move.score;
-            best_move = Some(mov);
-        }
+        best_move = max(returned_move, best_move);
     }
-    BestMove {
-        best_move: best_move,
-        score: best_value,
-    }
+    best_move
 }
