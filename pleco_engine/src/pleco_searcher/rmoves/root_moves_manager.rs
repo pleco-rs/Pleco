@@ -5,6 +5,7 @@ use super::root_moves_list::{RootMoveList,RawRootMoveList};
 
 use std::heap::{Alloc, Layout, Heap};
 use std::ptr::Unique;
+use std::ptr::Shared;
 use std::sync::Arc;
 use std::sync::atomic::{Ordering,AtomicUsize,fence,compiler_fence};
 use std::mem;
@@ -19,7 +20,7 @@ pub type RawRmManager = [RawRootMoveList; MAX_THREADS];
 
 pub struct RmManager {
     threads: Arc<AtomicUsize>,
-    moves: Unique<RawRmManager>,
+    moves: Shared<RawRmManager>,
     ref_count: Arc<AtomicUsize>
 }
 
@@ -48,7 +49,7 @@ impl RmManager {
     fn init() -> Self {
         RmManager {
             threads: Arc::new(AtomicUsize::new(0)),
-            moves: Unique::empty(),
+            moves: Shared::empty(),
             ref_count: Arc::new(AtomicUsize::new(1))
         }
     }
@@ -68,7 +69,7 @@ impl RmManager {
                 let location: usize = mem::transmute::<*mut u8, usize>(new_ptr);
                 println!("Bytes at {:x}", location);
             }
-            self.moves = Unique::new(new_ptr as *mut RawRmManager).unwrap();
+            self.moves = Shared::new(new_ptr as *mut RawRmManager).unwrap();
         }
     }
 
