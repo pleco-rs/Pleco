@@ -104,11 +104,8 @@ impl RmManager {
 
     unsafe fn set_states(&mut self) {
         for x in 0..MAX_THREADS {
-            print!("Attempt {} :", x);
             let mut raw_list = self.get_list_unchecked(x);
-            print!(" raw_list ... ");
             raw_list.init();
-            println!("Made raw list");
         }
     }
 
