@@ -66,6 +66,7 @@ impl RmManager {
                 Err(err) => Heap.oom(err),
             };
             {
+                println!("elem size: {}, align: {}, alloc size: {}",elem_size,align, alloc_size);
                 let location: usize = mem::transmute::<*mut u8, usize>(new_ptr);
                 println!("Bytes at {:x}", location);
             }
