@@ -20,7 +20,7 @@ const DIVIDE_CUTOFF: usize = 8;
 // half_moves: total moves
 
 pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
-    if board.depth() == max_depth {
+    if board.depth() >= max_depth {
         return eval_board(board);
     }
 
@@ -48,7 +48,6 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
             board.undo_move();
             best_move = max(returned_move, best_move);
         }
-
         best_move
     } else {
         let mid_point = slice.len() / 2;
@@ -62,5 +61,4 @@ fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMo
 
         max(left_move,right_move)
     }
-
 }

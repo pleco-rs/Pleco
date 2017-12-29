@@ -14,7 +14,7 @@ use std::cmp::max;
 // half_moves: total moves
 
 pub fn minimax(board: &mut Board, max_depth: u16) -> BestMove {
-    if board.depth() == max_depth {
+    if board.depth() >= max_depth {
         return eval_board(board);
     }
 

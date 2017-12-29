@@ -132,13 +132,6 @@ impl BestMove {
         self
     }
 
-    pub fn new(bitmove: Option<BitMove>, score: i16) -> Self {
-        BestMove {
-            best_move: bitmove,
-            score: score,
-        }
-    }
-
     pub fn swap_move(mut self, bitmove: BitMove) -> Self {
         self.best_move = Some(bitmove);
         self

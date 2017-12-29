@@ -69,6 +69,8 @@ pub struct ThreadPool {
     drop: Arc<AtomicBool>,
 
     use_stdout: Arc<AtomicBool>,
+
+    stop_guard: Arc<AtomicBool>
 }
 
 // Okay, this all looks like madness, but there is some reason to it all.
@@ -94,6 +96,7 @@ impl ThreadPool {
             stop: Arc::new(AtomicBool::new(false)),
             drop: Arc::new(AtomicBool::new(false)),
             use_stdout: Arc::new(AtomicBool::new(false)),
+            stop_guard: Arc::new(AtomicBool::new(true))
         }
     }
 
@@ -118,8 +121,10 @@ impl ThreadPool {
             per_thread: self.rm_manager.clone(),
             main_thread_go: Arc::clone(&self.main_thread_go),
             sender: tx,
-            thread
+            thread,
+            stop_guard: self.stop_guard.clone()
         };
+
 
         let builder = thread::Builder::new().name(String::from("0"));
         self.main_thread = Some(
@@ -158,6 +163,7 @@ impl ThreadPool {
     }
 
     pub fn uci_search(&mut self, board: &Board, limits: &PreLimits) {
+        self.stop_guard.store(false, Ordering::SeqCst);
         {
             let mut thread_go = self.pos_state.write().unwrap();
             *thread_go = Some(ThreadGo {
@@ -166,6 +172,7 @@ impl ThreadPool {
             });
         }
         self.main_thread_go.set();
+        while !self.stop_guard.load(Ordering::SeqCst) {}
     }
 
     pub fn search(&mut self, board: &Board, limits: &PreLimits) -> BitMove {
@@ -193,6 +200,7 @@ pub struct MainThread {
     main_thread_go: Arc<LockLatch>,
     sender: Sender<SendData>,
     thread: Thread,
+    stop_guard: Arc<AtomicBool>
 }
 
 impl MainThread {
@@ -239,6 +247,7 @@ impl MainThread {
         self.lock_threads();
 
         // start searching
+        self.stop_guard.store(true, Ordering::SeqCst);
         self.thread.start_searching(board, limit);
         self.thread.root_moves.set_finished(true);
         self.thread.stop.store(true, Ordering::Relaxed);
