@@ -101,9 +101,7 @@ impl<'a> ThreadSearcher<'a> {
     }
 
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
-
         let is_pv: bool = N::is_pv();
-        let old_alpha = alpha;
         let at_root: bool = self.board.depth() == 0;
         let zob = self.board.zobrist();
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
@@ -252,9 +250,7 @@ impl<'a> ThreadSearcher<'a> {
         best_value
     }
 
-    fn qsearch<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: i32) -> i32 {
-        unimplemented!()
-    }
+    // TODO: Qscience search
 
     fn main_thread(&self) -> bool {
         self.thread.id == 0

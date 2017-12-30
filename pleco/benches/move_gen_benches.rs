@@ -7,7 +7,7 @@ extern crate rand;
 extern crate lazy_static;
 
 use pleco::core::GenTypes;
-use pleco::board::{RandBoard,Board};
+use pleco::board::Board;
 
 use test::{black_box, Bencher};
 

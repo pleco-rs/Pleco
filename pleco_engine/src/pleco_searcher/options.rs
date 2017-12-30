@@ -380,6 +380,7 @@ fn c_threads() -> UciOption {
 
 // button!("name", "on_change")
 // button!("Hello", clear_tt());
+#[allow(unused_macros)]
 macro_rules! button {
     ($name:expr, $func:tt()) => {
         {
@@ -392,6 +393,7 @@ macro_rules! button {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! check {
     ($name:expr, $default:expr) => {
         {
@@ -410,6 +412,7 @@ macro_rules! check {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! spin {
     ($name:expr, $default:expr, $min:expr, $max:expr) => {
         {

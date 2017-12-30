@@ -7,7 +7,6 @@ extern crate rand;
 extern crate lazy_static;
 
 use pleco::{Player,Board,BitMove,MoveList};
-use pleco::board::RandBoard;
 use pleco::tools::prng::PRNG;
 
 pub const SEED: u64 = 5363310003543;
