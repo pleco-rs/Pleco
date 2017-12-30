@@ -485,10 +485,14 @@ impl Board {
                 // TODO: Should return error on unreadable
                 let digit = char.to_digit(10).unwrap() as u8;
                 // must be 3 or 6
-                if digit != 3 && digit != 6 {
+
+                if digit == 3 {
+                    ep_sq += SQ(16);  // add two ranks
+                } else if digit == 6 {
+                    ep_sq += SQ(40);
+                } else {
                     return Err(FenBuildError::EPSquareInvalid{ep: det_split[3].to_string()});
                 }
-                ep_sq += SQ(8 * digit);
             }
         }
 

@@ -8,7 +8,7 @@ cache:
   - cargo
   - apt
 
-sudo: false
+sudo: true
 
 env:
   global:
