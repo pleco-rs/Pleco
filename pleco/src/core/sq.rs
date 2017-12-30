@@ -59,7 +59,7 @@ use super::*;
 use std::fmt;
 use std::ops::*;
 
-// TODO: Investigate possibility of using an Enum instead after 0.2.0 release.
+// TODO: Investigate possibility of using an Enum instead
 
 /// Represents a singular square of a chessboard.
 #[derive(Copy, Clone, Default, Hash, PartialEq, PartialOrd, Eq, Debug)]
