@@ -128,7 +128,7 @@ impl RmManager {
     pub fn wait_for_start(&self) {
         unsafe {
             let num_threads = self.size();
-            for i in 0..num_threads {
+            for i in 1..num_threads {
                 fence(Ordering::AcqRel);
                 compiler_fence(Ordering::AcqRel);
                 let root_moves = self.get_list_unchecked(i).moves;
@@ -150,7 +150,26 @@ impl RmManager {
             let mut thread = self.get_list_unchecked(thread_id);
             (thread.first().clone(), thread.depth_completed())
         }
+    }
 
+    pub fn set_stop(&mut self, stop: bool) {
+        let num_threads = self.size();
+        unsafe {
+            for i in 0..num_threads {
+                let mut root_moves = self.get_list_unchecked(i);
+                root_moves.set_stop(stop);
+            }
+        }
+    }
+
+    pub fn kill_all(&mut self) {
+        let num_threads = self.size();
+        unsafe {
+            for i in 0..num_threads {
+                let mut root_moves = self.get_list_unchecked(i);
+                root_moves.kill();
+            }
+        }
     }
 
 

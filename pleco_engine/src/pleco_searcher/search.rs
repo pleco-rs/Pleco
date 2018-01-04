@@ -33,7 +33,9 @@ pub struct ThreadSearcher<'a> {
 impl<'a> ThreadSearcher<'a> {
     pub fn search_root(&mut self) {
         assert!(self.board.depth() == 0);
+        self.thread.root_moves.set_finished(false);
         if self.stop() {
+            self.thread.root_moves.set_finished(true);
             return;
         }
         if self.use_stdout() {
@@ -98,6 +100,7 @@ impl<'a> ThreadSearcher<'a> {
             }
             depth += skip_size;
         }
+        self.thread.root_moves.set_finished(true);
     }
 
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
@@ -257,7 +260,7 @@ impl<'a> ThreadSearcher<'a> {
     }
 
     fn stop(&self) -> bool {
-        self.thread.stop.load(Ordering::Relaxed)
+        self.thread.root_moves.load_stop()
     }
 
     pub fn print_startup(&self) {

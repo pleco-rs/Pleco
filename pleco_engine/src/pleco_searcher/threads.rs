@@ -20,6 +20,7 @@ use super::root_moves::root_moves_list::RootMoveList;
 use super::root_moves::root_moves_manager::RmManager;
 use super::sync::LockLatch;
 
+use rand;
 
 pub struct ThreadGo {
     limit: Limits,
@@ -60,13 +61,6 @@ pub struct ThreadPool {
     // don't really touch this at all.
     all_thread_go: Arc<LockLatch>,
 
-    // For each thread (including the mainthread), is it finished?
-
-    // Tells all threads to stop and return the ebstmove found
-    stop: Arc<AtomicBool>,
-
-    // Tells the threads to drop.
-    drop: Arc<AtomicBool>,
 
     use_stdout: Arc<AtomicBool>,
 }
@@ -91,8 +85,6 @@ impl ThreadPool {
             main_thread_go: Arc::new(LockLatch::new()),
             threads: Vec::with_capacity(8),
             all_thread_go: Arc::new(LockLatch::new()),
-            stop: Arc::new(AtomicBool::new(false)),
-            drop: Arc::new(AtomicBool::new(false)),
             use_stdout: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -103,8 +95,6 @@ impl ThreadPool {
             id: id,
             tt: &super::TT_TABLE,
             use_stdout: Arc::clone(&self.use_stdout),
-            stop: Arc::clone(&self.stop),
-            drop: Arc::clone(&self.drop),
             pos_state: Arc::clone(&self.pos_state),
             cond: Arc::clone(&self.all_thread_go),
             thread_stack: init_thread_stack(),
@@ -185,7 +175,7 @@ impl ThreadPool {
     }
 
     pub fn stop_searching(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
+        self.rm_manager.set_stop(true);
     }
 }
 
@@ -220,29 +210,26 @@ impl MainThread {
     }
 
     pub fn go(&mut self) {
-        self.thread.root_moves.set_finished(true);
-        self.thread.stop.store(true, Ordering::Relaxed);
+        self.per_thread.set_stop(true);
         self.per_thread.wait_for_finish();
         self.per_thread.reset_depths();
         let board = self.thread.retrieve_board().unwrap();
         unsafe {
             self.per_thread.replace_moves(&board);
         }
-
         // turn stop searching off
-        self.thread.stop.store(false, Ordering::Relaxed);
         // wakeup all threads
+
+        self.per_thread.set_stop(false);
         self.start_threads();
 
         let limit = self.thread.retrieve_limit().unwrap();
-        self.thread.root_moves.set_finished(false);
         self.per_thread.wait_for_start();
         self.lock_threads();
 
         // start searching
         self.thread.start_searching(board, limit);
-        self.thread.root_moves.set_finished(true);
-        self.thread.stop.store(true, Ordering::Relaxed);
+        self.per_thread.set_stop(true);
         self.per_thread.wait_for_finish();
 
         // find best move
@@ -264,17 +251,18 @@ pub struct Thread {
     pub id: usize,
     pub tt: &'static TranspositionTable,
     pub use_stdout: Arc<AtomicBool>,
-    pub stop: Arc<AtomicBool>,
-    pub drop: Arc<AtomicBool>,
     pub pos_state: Arc<RwLock<Option<ThreadGo>>>,
     pub cond: Arc<LockLatch>,
     pub thread_stack: [ThreadStack; THREAD_STACK_SIZE],
 }
 
 impl Thread {
-
     pub fn drop(&self) -> bool {
-        self.drop.load(Ordering::Relaxed)
+        self.root_moves.get_kill()
+    }
+
+    pub fn stop(&self) -> bool {
+        self.root_moves.load_stop()
     }
 
     pub fn retrieve_board(&self) -> Option<Board> {
@@ -290,15 +278,12 @@ impl Thread {
     }
 
     pub fn idle_loop(&mut self) {
-        self.root_moves.set_finished(true);
         while !self.drop(){
             self.cond.wait();
             if self.drop() {
                 return;
             }
-            self.root_moves.set_finished(false);
             self.go();
-            self.root_moves.set_finished(true);
         }
     }
 
@@ -321,9 +306,9 @@ impl Thread {
 impl Drop for ThreadPool {
     fn drop(&mut self) {
         // Store that we are dropping
-        self.drop.store(true, Ordering::Relaxed);
+        self.rm_manager.kill_all();
         thread::sleep(time::Duration::new(0,100));
-        self.stop.store(true, Ordering::Relaxed);
+        self.rm_manager.set_stop(true);
 
         // Notify the main thread to wakeup and stop
         self.main_thread_go.set();
