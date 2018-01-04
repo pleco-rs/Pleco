@@ -8,7 +8,7 @@ cache:
   - cargo
   - apt
 
-sudo: true
+sudo: false
 
 env:
   global:
@@ -30,9 +30,9 @@ os:
   - linux
 
 script:
+  - cargo bench
   - cargo build --verbose
   - cargo test --verbose
-  - cargo bench
 
 after_success:
   - |

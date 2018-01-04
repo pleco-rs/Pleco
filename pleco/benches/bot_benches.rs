@@ -21,8 +21,6 @@ lazy_static! {
 }
 
 
-
-
 #[bench]
 fn _4_ply_minimax(b: &mut Bencher) {
     b.iter(|| {
