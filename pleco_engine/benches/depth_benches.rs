@@ -11,6 +11,19 @@ use pleco_engine::pleco_searcher::misc::PreLimits;
 
 use test::{black_box, Bencher};
 
+#[bench]
+fn bench_3_ply(b: &mut Bencher) {
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(3);
+    let board = Board::default();
+    let mut s = PlecoSearcher::init(false);
+    b.iter(|| {
+        black_box(s.clear_tt());
+        black_box(s.search(&board, &limit));
+        black_box(s.await_move());
+    })
+}
+
 
 
 #[bench]
@@ -19,9 +32,6 @@ fn bench_4_ply(b: &mut Bencher) {
     limit.depth = Some(4);
     let board = Board::default();
     let mut s = PlecoSearcher::init(false);
-    black_box(s.clear_tt());
-    black_box(s.search(&board, &limit));
-    black_box(s.await_move());
     b.iter(|| {
         black_box(s.clear_tt());
         black_box(s.search(&board, &limit));

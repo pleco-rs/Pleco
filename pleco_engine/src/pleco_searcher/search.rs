@@ -33,7 +33,9 @@ pub struct ThreadSearcher<'a> {
 impl<'a> ThreadSearcher<'a> {
     pub fn search_root(&mut self) {
         assert!(self.board.depth() == 0);
+        self.thread.root_moves.set_finished(false);
         if self.stop() {
+            self.thread.root_moves.set_finished(true);
             return;
         }
         if self.use_stdout() {
@@ -98,12 +100,11 @@ impl<'a> ThreadSearcher<'a> {
             }
             depth += skip_size;
         }
+        self.thread.root_moves.set_finished(true);
     }
 
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
-
         let is_pv: bool = N::is_pv();
-        let old_alpha = alpha;
         let at_root: bool = self.board.depth() == 0;
         let zob = self.board.zobrist();
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
@@ -252,16 +253,14 @@ impl<'a> ThreadSearcher<'a> {
         best_value
     }
 
-    fn qsearch<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: i32) -> i32 {
-        unimplemented!()
-    }
+    // TODO: Qscience search
 
     fn main_thread(&self) -> bool {
         self.thread.id == 0
     }
 
     fn stop(&self) -> bool {
-        self.thread.stop.load(Ordering::Relaxed)
+        self.thread.root_moves.load_stop()
     }
 
     pub fn print_startup(&self) {

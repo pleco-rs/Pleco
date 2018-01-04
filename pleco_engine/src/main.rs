@@ -3,20 +3,76 @@ extern crate chrono;
 extern crate pleco_engine;
 
 use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
-use pleco::Board;
+use pleco::{Board,Player};
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
 use pleco_engine::pleco_searcher::misc::PreLimits;
 
 use std::thread;
+use std::collections::HashMap;
 use chrono::*;
 
 
 fn main() {
-    run_many();
+    test_frequency();
 }
 
 
+fn test_frequency() {
+    let mut count_frequency: Vec<u64> = vec![0; 500];
+    let mut j = 50;
+    while j > 0 {
+        print!(" {} ...", j);
+        let mut s = PlecoSearcher::init(false);
+
+        let mut board = Board::default();
+        let mut local: Duration = Duration::seconds(1);
+        let max_moves = 500;
+        let mut i: usize = max_moves;
+        let pleco_side = if j % 2 == 0 { Player::White } else { Player::Black };
+
+        while i > 0 && !board.checkmate() && !board.stalemate() {
+            let num_moves = board.moves_played() as usize;
+            count_frequency[num_moves] += 1;
+            if board.turn() != pleco_side {
+                local = Duration::span(|| {
+                    let mov = if i < max_moves - 47 {
+                        if board.count_all_pieces() < 6 {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 8)
+                        } else if board.count_all_pieces() < 8 {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 7)
+                        } else if board.count_all_pieces() < 9 {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 6)
+                        } else {
+                            JamboreeSearcher::best_move_depth(board.shallow_clone(), 5)
+                        }
+                    } else {
+                        JamboreeSearcher::best_move_depth(board.shallow_clone(), 4)
+                    };
+                    board.apply_move(mov);
+                });
+                local = local.max(Duration::milliseconds(1));
+            } else {
+                s.search(&board, &PreLimits::blank());
+                thread::sleep(local.to_std().unwrap());
+                let mov = s.stop_search_get_move();
+                board.apply_move(mov);
+            }
+            i -= 1;
+        }
+        j -= 1;
+    }
+
+    println!();
+    let mut total_num: u64 = 0;
+    for (num, count) in count_frequency.iter().enumerate() {
+        total_num += *count;
+    }
+    for (num, count) in count_frequency.iter().enumerate() {
+        let percent: f64 = (*count as f64 / total_num as f64) * 100.0;
+        println!("# Moves: {}, Count: {}, Frequency: {:.4}%, ",num, *count, percent);
+    }
+}
 
 fn uciloop() {
     let mut s = PlecoSearcher::init(true);
@@ -27,7 +83,7 @@ fn run_one() {
     let mut s = PlecoSearcher::init(true);
     let mut board = Board::default();
 
-    let mut local: Duration = Duration::seconds(2);
+    let mut local: Duration = Duration::seconds(1);
 
     let mut i = 0;
 
@@ -36,18 +92,18 @@ fn run_one() {
 
         if i % 2 == 1 {
             local = Duration::span(|| {
-                let mov = JamboreeSearcher::best_move_depth(board.shallow_clone(), 5);
+                let mov = JamboreeSearcher::best_move_depth(board.shallow_clone(), 4);
                 println!("Jamboree searcher: {}", mov);
                 board.apply_move(mov);
             });
-            local = local.max(Duration::milliseconds(1));
+//            local = local.max(Duration::milliseconds(1));
         } else {
-            s.search(&board, &PreLimits::blank());
+            println!("Pleco Searcher searching for {} micro s", local.num_microseconds().unwrap());
+            let start_time = Duration::span(|| { s.search(&board, &PreLimits::blank()); });
             thread::sleep(local.to_std().unwrap());
-//            thread::sleep_ms(local.num_milliseconds() as u32);
             println!("Stop!");
             let mov = s.stop_search_get_move();
-            println!("Pleco searcher: {}",mov);
+            println!("Pleco searcher: {}, start_time = {}",mov,start_time.num_microseconds().unwrap());
             board.apply_move(mov);
         }
         i += 1;
@@ -87,13 +143,15 @@ fn run_many() {
         let max_moves = 250;
         let mut i = max_moves;
 
+        let pleco_side = if j % 2 == 0 {Player::White} else {Player::Black};
+
         while i > 0 && !board.checkmate() && !board.stalemate() {
-            if i % 2 == 1 {
+            if board.turn() != pleco_side {
                 local = Duration::span(|| {
-                    let mov = if i < max_moves - 40 {
-                        if board.count_all_pieces() < 5 {
+                    let mov = if i < max_moves - 47 {
+                        if board.count_all_pieces() < 6 {
                             JamboreeSearcher::best_move_depth(board.shallow_clone(), 8)
-                        } else if board.count_all_pieces() < 7 {
+                        } else if board.count_all_pieces() < 8 {
                             JamboreeSearcher::best_move_depth(board.shallow_clone(), 7)
                         } else if board.count_all_pieces() < 9 {
                             JamboreeSearcher::best_move_depth(board.shallow_clone(), 6)
@@ -107,6 +165,7 @@ fn run_many() {
                 });
                 local = local.max(Duration::milliseconds(1));
             } else {
+//                println!("Pleco Searcher searching for {} ms", local.num_milliseconds());
                 s.search(&board, &PreLimits::blank());
                 thread::sleep(local.to_std().unwrap());
                 let mov = s.stop_search_get_move();
@@ -126,7 +185,7 @@ fn run_many() {
                 println!("Not in check");
             }
             draws += 1;
-        } else if i % 2 == 1 {
+        } else if board.turn() != pleco_side {
             println!("Pleco Wins");
             wins += 1;
         } else {

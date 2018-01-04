@@ -378,6 +378,59 @@ fn c_threads() -> UciOption {
 }
 
 
+// button!("name", "on_change")
+// button!("Hello", clear_tt());
+#[allow(unused_macros)]
+macro_rules! button {
+    ($name:expr, $func:tt()) => {
+        {
+            let c: ButtonMutGenerator =  Box::new(|| Box::new(
+                |p: &mut PlecoSearcher|
+                p.$func())
+            );
+            UciOption::make_button($name, c)
+        }
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! check {
+    ($name:expr, $default:expr) => {
+        {
+            let c: CheckMutGenerator =  Check::blank_mut();
+            UciOption::make_check($name,$default, c)
+        }
+    };
+    ($name:expr, $default:expr, $func:tt()) => {
+        {
+            let c: CheckMutGenerator =  Box::new(||
+                Box::new(|p: &mut PlecoSearcher, x: bool|
+                p.$func(x))
+            );
+            UciOption::make_check($name,$default,c)
+        }
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! spin {
+    ($name:expr, $default:expr, $min:expr, $max:expr) => {
+        {
+            let c: SpinMutGenerator =  Spin::blank_mut();
+            UciOption::make_spin($name,$default,$max,$min,c)
+        }
+    };
+    ($name:expr, $default:expr, $min:expr, $max:expr, $func:tt()) => {
+        {
+            let c: SpinMutGenerator =  Box::new(||
+                Box::new(|p: &mut PlecoSearcher, x: i32|
+                p.$func(x))
+            );
+
+            UciOption::make_spin($name,$default,$max,$min,c)
+        }
+    }
+}
 
 
 // ----- MISC FUNCTIONS -----
@@ -390,5 +443,13 @@ fn bool_str(b: bool) -> &'static str {
     }
 }
 
+//#[test]
+//fn test_me() {
+//    let button: UciOption = button!("clear tt", clear_tt());
+//    println!("{}",button.display_op());
+//    let spin: UciOption = spin!("threads", 8, 1, 20);
+//    println!("{}",spin.display_op());
+//
+//}
 
 

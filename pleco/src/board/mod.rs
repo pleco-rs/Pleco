@@ -87,7 +87,7 @@ pub enum FenBuildError {
     #[fail(display = "Too many pawns for player: player: {}, # pawns {}",player, num)]
     TooManyPawns{player: Player, num: u8},
     #[fail(display = "Pawn on first or last row")]
-    PawnOnLastRow,
+    PawnOnLastRow
 }
 
 impl From<num::ParseIntError> for FenBuildError {
@@ -453,7 +453,10 @@ impl Board {
         let (piece_loc, piece_cnt) = PieceLocations::from_partial_fen(b_rep.as_slice())?;
 
         // Side to Move
-        let turn: Player = match det_split[1].chars().next().unwrap() {
+        let turn_char: char = det_split[1].chars()
+            .next()
+            .ok_or(FenBuildError::UnrecognizedTurn{turn: det_split[1].to_string()})?;
+        let turn: Player = match turn_char {
             'b' => Player::Black,
             'w' => Player::White,
             _ => {return Err(FenBuildError::UnrecognizedTurn{turn: det_split[1].to_string()});},
@@ -466,10 +469,10 @@ impl Board {
         }
 
         let mut ep_sq: SQ = SQ(0);
-        for (i, char) in det_split[3].chars().enumerate() {
+        for (i, character) in det_split[3].chars().enumerate() {
             if i > 1 { return Err(FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()}); }
             if i == 0 {
-                match char {
+                match character {
                     'a' => ep_sq += SQ(0),
                     'b' => ep_sq += SQ(1),
                     'c' => ep_sq += SQ(2),
@@ -482,13 +485,17 @@ impl Board {
                     _ => { return Err(FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()}); }
                 }
             } else {
-                // TODO: Should return error on unreadable
-                let digit = char.to_digit(10).unwrap() as u8;
+                let digit = character.to_digit(10)
+                    .ok_or( FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()})? as u8;
                 // must be 3 or 6
-                if digit != 3 && digit != 6 {
+
+                if digit == 3 {
+                    ep_sq += SQ(16);  // add two ranks
+                } else if digit == 6 {
+                    ep_sq += SQ(40);
+                } else {
                     return Err(FenBuildError::EPSquareInvalid{ep: det_split[3].to_string()});
                 }
-                ep_sq += SQ(8 * digit);
             }
         }
 
@@ -786,7 +793,12 @@ impl Board {
             self.set_check_info(new_state); // Set the checking information
         }
         self.state = next_arc_state;
-        assert!(self.is_okay());
+
+        if cfg!(debug_assertions) {
+            self.is_okay().unwrap();
+        } else {
+            assert!(self.is_ok_quick());
+        }
     }
 
     /// Applies a UCI move to the board. If the move is a valid string representing a UCI move, then
@@ -882,7 +894,12 @@ impl Board {
         self.state = self.state.get_prev().unwrap();
         self.half_moves -= 1;
         self.depth -= 1;
-        assert!(self.is_okay());
+
+        if cfg!(debug_assertions) {
+            self.is_okay().unwrap();
+        } else {
+            assert!(self.is_ok_quick());
+        }
     }
 
     /// Apply a "Null Move" to the board, essentially swapping the current turn of
@@ -940,7 +957,12 @@ impl Board {
             self.set_check_info(new_state);
         }
         self.state = next_arc_state;
-        assert!(self.is_okay());
+
+        if cfg!(debug_assertions) {
+            self.is_okay().unwrap();
+        } else {
+            assert!(self.is_ok_quick());
+        }
     }
 
     /// Undo a "Null Move" to the Board, returning to the previous state.
@@ -1271,8 +1293,7 @@ impl Board {
             zob ^= self.magic_helper.z_piece_at_sq(piece.unwrap(), sq);
         }
         let ep = self.state.ep_square;
-        // TODO: EP - solidify the lack of a square
-        if ep != SQ(0) && ep.is_okay() {
+        if ep != NO_SQ && ep.is_okay() {
             zob ^= self.magic_helper.z_ep_file(ep);
         }
 
@@ -1873,81 +1894,70 @@ impl Board {
 
     }
 
-    /// Checks if the current state of the Board is okay.
-    pub fn is_okay(&self) -> bool {
-        const QUICK_CHECK: bool = true;
-
-        if QUICK_CHECK {
-            return self.check_basic();
-        }
-        self.check_basic() && self.check_bitboards() && self.check_king() &&
-            self.check_state_info() && self.check_lists() && self.check_castling()
-    }
 }
 
 // TODO: Error Propagation
 
-#[derive(Debug, Copy, Clone)]
-pub enum BoardCheckError {
-    TagParse,
-    Length,
+/// Represents possible Errors encountered while building a `Board` from a fen string.
+#[derive(Fail, Debug)]
+pub enum BoardError {
+    #[fail(display = "incorrect number of kings for {}: {}", player, num)]
+    IncorrectKingNum {player: Player, num: u8},
 }
 
-// Debugging helper Functions
-// Returns false if the board is not good
 impl Board {
-    fn check_basic(&self) -> bool {
-        assert_eq!(
-            self.piece_at_sq(self.king_sq(Player::White)).unwrap(),
-            Piece::K
-        );
-        assert_eq!(
-            self.piece_at_sq(self.king_sq(Player::Black)).unwrap(),
-            Piece::K
-        );
-        assert!(
-            self.state.ep_square == SQ(0) || self.state.ep_square == NO_SQ ||
-                self.turn.relative_rank_of_sq(self.state.ep_square) == Rank::R6
-        );
-        true
+    // Checks the basic status of the board
+    pub fn is_ok_quick(&self) -> bool {
+        self.piece_at_sq(self.king_sq(Player::White)).unwrap() == Piece::K
+            && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == Piece::K
+            && (self.state.ep_square == NO_SQ
+            || self.turn.relative_rank_of_sq(self.state.ep_square) == Rank::R6)
     }
 
-    fn check_king(&self) -> bool {
+    /// Checks if the current state of the Board is okay.
+    pub fn is_okay(&self) -> Result<(), BoardError> {
+        self.check_king()?;
+        Ok(())
+    }
+
+    fn check_king(&self) -> Result<(), BoardError> {
         // TODO: Implement attacks to opposing king must be zero
-        assert_eq!(self.count_piece(Player::White, Piece::K), 1);
-        assert_eq!(self.count_piece(Player::Black, Piece::K), 1);
-        true
+        let w_king_num = self.count_piece(Player::White, Piece::K);
+        let b_king_num = self.count_piece(Player::Black, Piece::K);
+        if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::White, num: w_king_num}); }
+        if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::Black, num: b_king_num}); }
+        Ok(())
     }
+//
+//    fn check_bitboards(&self) -> bool {
+//        assert_eq!(self.occupied_white() & self.occupied_black(), BitBoard(0));
+//        assert_eq!(
+//            self.occupied_black() | self.occupied_white(),
+//            self.get_occupied()
+//        );
+//
+//        let all: BitBoard = self.piece_bb(Player::White, Piece::P) ^ self.piece_bb(Player::Black, Piece::P)
+//            ^ self.piece_bb(Player::White, Piece::N) ^ self.piece_bb(Player::Black, Piece::N)
+//            ^ self.piece_bb(Player::White, Piece::B) ^ self.piece_bb(Player::Black, Piece::B)
+//            ^ self.piece_bb(Player::White, Piece::R) ^ self.piece_bb(Player::Black, Piece::R)
+//            ^ self.piece_bb(Player::White, Piece::Q) ^ self.piece_bb(Player::Black, Piece::Q)
+//            ^ self.piece_bb(Player::White, Piece::K) ^ self.piece_bb(Player::Black, Piece::K);
+//        // Note, this was once all.0, self.get_occupied.0
+//        assert_eq!(all, self.get_occupied());
+//        true
+//    }
 
-    fn check_bitboards(&self) -> bool {
-        assert_eq!(self.occupied_white() & self.occupied_black(), BitBoard(0));
-        assert_eq!(
-            self.occupied_black() | self.occupied_white(),
-            self.get_occupied()
-        );
-
-        let all: BitBoard = self.piece_bb(Player::White, Piece::P) ^ self.piece_bb(Player::Black, Piece::P)
-            ^ self.piece_bb(Player::White, Piece::N) ^ self.piece_bb(Player::Black, Piece::N)
-            ^ self.piece_bb(Player::White, Piece::B) ^ self.piece_bb(Player::Black, Piece::B)
-            ^ self.piece_bb(Player::White, Piece::R) ^ self.piece_bb(Player::Black, Piece::R)
-            ^ self.piece_bb(Player::White, Piece::Q) ^ self.piece_bb(Player::Black, Piece::Q)
-            ^ self.piece_bb(Player::White, Piece::K) ^ self.piece_bb(Player::Black, Piece::K);
-        // Note, this was once all.0, self.get_occupied.0
-        assert_eq!(all, self.get_occupied());
-        true
-    }
-
-    fn check_state_info(&self) -> bool {
-        true
-    }
-
-    fn check_lists(&self) -> bool {
-        true
-    }
-
-    fn check_castling(&self) -> bool {
-        true
-    }
+//    fn check_state_info(&self) -> bool {
+//        true
+//    }
+//
+//    fn check_lists(&self) -> bool {
+//        true
+//    }
+//
+//    fn check_castling(&self) -> bool {
+//        true
+//    }
 }
 
 #[derive(Eq, PartialEq)]

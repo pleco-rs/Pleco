@@ -9,7 +9,7 @@ use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator
 use std::ptr;
 
 use std::mem::transmute;
-use std::sync::atomic::{AtomicU16,Ordering,fence};
+use std::sync::atomic::{AtomicU16,Ordering,fence,AtomicBool};
 
 use rand;
 use rand::Rng;
@@ -17,6 +17,8 @@ use rand::Rng;
 pub struct RawRootMoveList {
     len: u32, // 4 bytes
     depth_completed: AtomicU16, // 2 bytes
+    stop: AtomicBool,
+    kill: AtomicBool,
     pub finished: GuardedBool, // 1 byte
     moves: [RootMove; MAX_MOVES], // 4096 bytes
 }
@@ -24,6 +26,8 @@ pub struct RawRootMoveList {
 impl RawRootMoveList {
     pub fn init(&mut self) {
         self.depth_completed = AtomicU16::new(0);
+        self.stop.store(true, Ordering::SeqCst);
+        self.kill.store(false, Ordering::SeqCst);
         unsafe {
             let f = &mut self.finished;
             ptr::write_volatile(f, GuardedBool::new(true));
@@ -106,6 +110,30 @@ impl RootMoveList {
     pub fn set_finished(&mut self, finished: bool) {
         unsafe {
             (*self.moves).finished.set(finished);
+        }
+    }
+
+    pub fn load_stop(&self) -> bool{
+        unsafe {
+            (*self.moves).stop.load(Ordering::SeqCst)
+        }
+    }
+
+    pub fn set_stop(&mut self, stop: bool) {
+        unsafe {
+            (*self.moves).stop.store(stop, Ordering::Relaxed);
+        }
+    }
+
+    pub fn kill(&mut self) {
+        unsafe {
+            (*self.moves).kill.store(true, Ordering::Relaxed);
+        }
+    }
+
+    pub fn get_kill(&self) -> bool {
+        unsafe {
+            (*self.moves).kill.load(Ordering::SeqCst)
         }
     }
 

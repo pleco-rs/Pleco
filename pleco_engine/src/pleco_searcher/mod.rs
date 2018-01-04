@@ -235,17 +235,25 @@ impl PlecoSearcher {
         }
     }
 
-    fn apply_option(&mut self, option: &str) {
-        let c = self.options.apply_option(option);
-        match c {
-            UciOptionMut::Button(c)   => {(c)(self);},
-            UciOptionMut::Check(c, v) => {(c)(self, v);},
-            UciOptionMut::Spin(c, v)  => {(c)(self, v);},
-            UciOptionMut::Combo(c, v) => {(c)(self, v);},
-            UciOptionMut::Text(c, v)  => {(c)(self, v);},
-            UciOptionMut::None => {},
+    fn apply_option(&mut self, full_command: &str) {
+        let mut args: Vec<&str> = full_command.split_whitespace().collect();
+        if args.len() < 3 || args[1] != "name" {
+            println!("unknown option: {}", full_command);
         }
+        args.remove(0);
+        args.remove(0);
 
+        let name: &str = args[0];
+
+//        let c = self.options.apply_option(option);
+//        match c {
+//            UciOptionMut::Button(c)   => {(c)(self);},
+//            UciOptionMut::Check(c, v) => {(c)(self, v);},
+//            UciOptionMut::Spin(c, v)  => {(c)(self, v);},
+//            UciOptionMut::Combo(c, v) => {(c)(self, v);},
+//            UciOptionMut::Text(c, v)  => {(c)(self, v);},
+//            UciOptionMut::None => {},
+//        }
     }
 
     fn uci_startup(&self) {
@@ -253,6 +261,10 @@ impl PlecoSearcher {
         println!("id authors {}", ID_AUTHORS);
         self.options.print_all();
         println!("uciok");
+    }
+
+    fn print_options(&self) {
+
     }
 
     pub fn search(&mut self, board: &Board, limit: &PreLimits) {

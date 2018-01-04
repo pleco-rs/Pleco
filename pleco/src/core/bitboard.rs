@@ -42,8 +42,6 @@ pub struct BitBoard(pub u64);
 
 impl_bit_ops!(BitBoard, u64);
 
-// TODO: Make riple carry
-
 impl BitBoard {
 
     /// BitBoard of File A.
