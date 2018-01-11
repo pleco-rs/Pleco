@@ -197,7 +197,7 @@ impl<'a> MoveGen<'a> {
         self.moves_per_piece::<L, P ,QueenType>(target);
 
         if G::gen_type() != GenTypes::QuietChecks && G::gen_type() != GenTypes::Evasions {
-            self.generate_king_moves::<L, P>(target);
+            self.moves_per_piece::<L, P, KingType>(target);
         }
 
         if G::gen_type() != GenTypes::Captures && G::gen_type() != GenTypes::Evasions
@@ -435,16 +435,17 @@ impl<'a> MoveGen<'a> {
                 self.create_all_promotions::<L>(dst, P::down(dst), false);
             }
 
-            while left_cap_promo.is_not_empty() {
-                let dst: SQ = left_cap_promo.pop_lsb();
-                self.create_all_promotions::<L>(dst, P::down_right(dst), true);
-            }
+            if G::gen_type() != GenTypes::Quiets {
+                while left_cap_promo.is_not_empty() {
+                    let dst: SQ = left_cap_promo.pop_lsb();
+                    self.create_all_promotions::<L>(dst, P::down_right(dst), true);
+                }
 
-            while right_cap_promo.is_not_empty() {
-                let dst: SQ = right_cap_promo.pop_lsb();
-                self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                while right_cap_promo.is_not_empty() {
+                    let dst: SQ = right_cap_promo.pop_lsb();
+                    self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                }
             }
-
         }
 
         // Captures
