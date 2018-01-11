@@ -594,6 +594,11 @@ impl Board {
                 );
             }
         }
+
+        if blanks != 0 {
+            s.push(char::from_digit(blanks, 10).unwrap());
+        }
+
         s.push(' ');
         // current turn
         s.push(match self.turn {

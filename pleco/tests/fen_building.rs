@@ -8,7 +8,7 @@ use pleco::core::{Piece, Player};
 // "r1bqkbr1/1ppppp1N/p1n3pp/8/1P2PP2/3P4/P1P2nPP/RNBQKBR1 b KQkq -",
 
 #[test]
-fn multiple_fens() {
+fn basic_fen() {
     // Test if positions int he right place
     let board = Board::new_from_fen("k6r/1p2b3/8/8/8/8/P4KPP/1B5R w KQkq - 0 3").unwrap();
     assert_eq!(board.count_piece(Player::White, Piece::P), 3);
@@ -25,7 +25,7 @@ fn multiple_fens() {
     assert_eq!(board.count_piece(Player::Black, Piece::K), 1);
 
 
-    let board = Board::new_from_fen("8/2Q1pk2/nbpppppp/8/8/2K4N/PPPPPPPP/BBB2BBB w ---- a3 0 10").unwrap();
+    let board = Board::new_from_fen("8/2Q1pk2/nbpppppp/8/8/2K4N/PPPPPPPP/BBB2BBB w - - 0 10").unwrap();
     assert_eq!(board.count_piece(Player::White, Piece::P), 8);
     assert_eq!(board.count_piece(Player::White, Piece::N), 1);
     assert_eq!(board.count_piece(Player::White, Piece::B), 6);
@@ -43,6 +43,7 @@ fn multiple_fens() {
 #[test]
 fn all_fens() {
     for fen in pleco::board::fen::ALL_FENS.iter() {
-        Board::new_from_fen(*fen).unwrap();
+        let board = Board::new_from_fen(*fen).unwrap();
+        assert_eq!(*fen, board.get_fen());
     }
 }

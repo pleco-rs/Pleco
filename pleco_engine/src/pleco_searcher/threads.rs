@@ -4,13 +4,11 @@ use std::sync::{Arc,RwLock};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
-
 use std::{mem,time};
 
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 use pleco::tools::tt::*;
-
 
 use super::search::ThreadSearcher;
 use super::misc::*;
@@ -20,12 +18,10 @@ use super::root_moves::root_moves_list::RootMoveList;
 use super::root_moves::root_moves_manager::RmManager;
 use super::sync::LockLatch;
 
-use rand;
-
+// Data sent from the main thread to initialize a new search
 pub struct ThreadGo {
     limit: Limits,
-    board: Board,
-    // Options: ?
+    board: Board
 }
 
 pub enum SendData {
@@ -40,8 +36,6 @@ pub struct ThreadPool {
 
     // This is all rootmoves for all treads.
     rm_manager: RmManager,
-
-
 
     // Join handle for the main thread.
     main_thread: Option<JoinHandle<()>>,
@@ -66,15 +60,14 @@ pub struct ThreadPool {
 }
 
 // Okay, this all looks like madness, but there is some reason to it all.
-// Basically, Threadpool manages spawning and despawning threads, as well
+// Basically, `ThreadPool` manages spawning and despawning threads, as well
 // as passing state to / from those threads, telling them to stop, go, drop,
 // and lastly determining the "best move" from all the threads.
-
+///
 // While we spawn all the other threads, We mostly communicate with the
 // MainThread to do anything useful. We let the mainthread handle anything fun.
 // The goal of the ThreadPool is to be NON BLOCKING, unless we want to await a
 // result.
-
 impl ThreadPool {
     fn init(rx: Receiver<SendData>) -> Self {
         ThreadPool {
@@ -120,6 +113,7 @@ impl ThreadPool {
             }).unwrap());
     }
 
+    /// Creates a new `ThreadPool`
     pub fn new() -> Self {
         let (tx, rx) = channel();
         let mut pool = ThreadPool::init(rx);
@@ -127,12 +121,17 @@ impl ThreadPool {
         pool
     }
 
+    /// Sets the use of standard out. This can be changed mid search as well.
     pub fn stdout(&mut self, use_stdout: bool) {
         self.use_stdout.store(use_stdout, Ordering::Relaxed)
     }
 
+    /// Sets the thread count of the pool. If num is less than 1, nothing will happen.
+    ///
+    /// # Safety
+    ///
+    /// Completely unsafe to use when the pool is searching.
     pub fn set_thread_count(&mut self, num: usize) {
-        // TODO: Check for overflow
         let curr_num: usize = self.rm_manager.size();
 
         let mut i: usize = curr_num;
@@ -146,8 +145,12 @@ impl ThreadPool {
             }).unwrap());
             i += 1;
         }
+
+        // TODO: Remove threads.
     }
 
+    /// Starts a UCI search. The result will be printed to stdout if the stdout setting
+    /// is true.
     pub fn uci_search(&mut self, board: &Board, limits: &PreLimits) {
         {
             let mut thread_go = self.pos_state.write().unwrap();
@@ -159,12 +162,10 @@ impl ThreadPool {
         self.main_thread_go.set();
     }
 
+    /// performs a standard search, and blocks waiting for a returned `BitMove`.
     pub fn search(&mut self, board: &Board, limits: &PreLimits) -> BitMove {
         self.uci_search(&board, &limits);
-        let data = self.receiver.recv().unwrap();
-        match data {
-            SendData::BestMove(t) => t.bit_move
-        }
+        self.get_move()
     }
 
     pub fn get_move(&self) -> BitMove {
@@ -179,6 +180,9 @@ impl ThreadPool {
     }
 }
 
+/// The main execution thread of the pool. Technically a superset of the `Thread`
+/// structure, but coordinates setting up and communicating between threads. This
+/// is also the only point of contact between the actual search and the `ThreadPool`.
 pub struct MainThread {
     per_thread: RmManager,
     main_thread_go: Arc<LockLatch>,
