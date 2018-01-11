@@ -31,9 +31,17 @@ lazy_static! {
     };
 }
 
+fn prefetch() {
+    let board = Board::default();
+    black_box(board.generate_moves());
+    black_box(board.generate_pseudolegal_moves());
+    black_box(board.generate_moves_of_type(GenTypes::Captures));
+}
 
 #[bench]
 fn bench_movegen_any_legal(b: &mut Bencher) {
+    // prefetch any cache instructions
+    black_box(prefetch());
     b.iter(|| {
         for board in RAND_BOARDS_ANY.iter() {
             black_box(board.generate_moves());

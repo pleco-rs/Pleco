@@ -235,22 +235,26 @@ impl TranspositionTable {
     }
 
     /// Returns the size of the heap allocated portion of the TT in KiloBytes.
+    #[inline(always)]
     pub fn size_kilobytes(&self) -> usize {
         (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_KB
     }
 
     /// Returns the size of the heap allocated portion of the TT in MegaBytes.
+    #[inline(always)]
     pub fn size_megabytes(&self) -> usize {
         (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_MB
     }
 
     /// Returns the size of the heap allocated portion of the TT in GigaBytes.
+    #[inline(always)]
     pub fn size_gigabytes(&self) -> usize {
         (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_GB
 
     }
 
     /// Returns the number of clusters the Transposition Table holds.
+    #[inline(always)]
     pub fn num_clusters(&self) -> usize {
         unsafe {
             *self.cap.get()

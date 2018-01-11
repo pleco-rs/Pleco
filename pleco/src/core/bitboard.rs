@@ -112,7 +112,6 @@ impl BitBoard {
     /// Will panic if the `BitBoard` is empty.
     #[inline(always)]
     pub fn bit_scan_forward_u8(self) -> u8 {
-        assert!(self.is_not_empty());
         bit_scan_forward(self.0)
     }
 

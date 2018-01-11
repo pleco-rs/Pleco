@@ -146,6 +146,10 @@ impl fmt::Display for BitMove {
 // https://chessprogramming.wikispaces.com/Encoding+Moves
 impl BitMove {
 
+    pub const FLAG_QUIET: u16 = 0;
+    pub const FLAG_DOUBLE_PAWN: u16 = 1;
+    pub const FLAG_CAPTURE: u16 = 4;
+    pub const FLAG_EP: u16 = 5;
     /// Creates a new BitMove from raw bits.
     ///
     /// # Safety
@@ -157,6 +161,36 @@ impl BitMove {
         BitMove { data: input }
     }
 
+    #[inline(always)]
+    pub fn make_quiet(src: SQ, dst: SQ) -> BitMove {
+        BitMove::make(BitMove::FLAG_QUIET,src,dst)
+    }
+
+    #[inline(always)]
+    pub fn make_pawn_push(src: SQ, dst: SQ) -> BitMove {
+        BitMove::make(BitMove::FLAG_DOUBLE_PAWN,src,dst)
+    }
+
+    #[inline(always)]
+    pub fn make_capture(src: SQ, dst: SQ) -> BitMove {
+        BitMove::make(BitMove::FLAG_CAPTURE,src,dst)
+    }
+
+    #[inline]
+    pub fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
+        BitMove { data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6) }
+    }
+
+    #[inline(always)]
+    fn promotion_piece_flag(piece: Piece) -> u16 {
+        match piece {
+            Piece::R => 2,
+            Piece::B => 1,
+            Piece::N => 0,
+            Piece::Q | _ => 3,
+        }
+    }
+
     /// Creates a BitMove from a [PreMoveInfo].
     #[inline]
     pub fn init(info: PreMoveInfo) -> BitMove {
@@ -165,12 +199,7 @@ impl BitMove {
         let flags = info.flags;
         let flag_bits: u16 = match flags {
             MoveFlag::Promotion { capture, prom } => {
-                let p_bit: u16 = match prom {
-                    Piece::R => 2,
-                    Piece::B => 1,
-                    Piece::N => 0,
-                    Piece::Q | _ => 3,
-                };
+                let p_bit: u16 = BitMove::promotion_piece_flag(prom);
                 let cp_bit = if capture { 4 } else { 0 };
                 p_bit + cp_bit + 8
             }

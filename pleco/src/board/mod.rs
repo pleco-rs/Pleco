@@ -1324,11 +1324,13 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.turn(), Player::White);
     /// ```
+    #[inline(always)]
     pub fn turn(&self) -> Player {
         self.turn
     }
 
     /// Return the Zobrist Hash of the board.
+    #[inline(always)]
     pub fn zobrist(&self) -> u64 {
         self.state.zobrast
     }
@@ -1347,21 +1349,25 @@ impl Board {
     /// chessboard.apply_move(moves[0]);
     /// assert_eq!(chessboard.moves_played(), 1);
     /// ```
+    #[inline(always)]
     pub fn moves_played(&self) -> u16 {
         self.half_moves
     }
 
     /// Get the current depth (half moves from a [Board::shallow_clone()].
+    #[inline(always)]
     pub fn depth(&self) -> u16 {
         self.depth
     }
 
     /// Get the number of half-moves since a Pawn Push, castle, or capture.
+    #[inline(always)]
     pub fn rule_50(&self) -> i16 {
         self.state.rule_50
     }
 
     /// Return the Piece, if any, that was last captured.
+    #[inline(always)]
     pub fn piece_captured_last_turn(&self) -> Option<Piece> {
         self.state.captured_piece
     }
@@ -1372,6 +1378,7 @@ impl Board {
     }
 
     /// Get the current ply of the board.
+    #[inline(always)]
     pub fn ply(&self) -> u16 {
         self.state.ply
     }
@@ -1379,6 +1386,7 @@ impl Board {
     /// Get the current square of en_passant.
     ///
     /// If the current en-passant square is none, it should return 64.
+    #[inline(always)]
     pub fn ep_square(&self) -> SQ {
         self.state.ep_square
     }
@@ -1393,6 +1401,7 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.get_occupied().0, 0xFFFF00000000FFFF);
     /// ```
+    #[inline(always)]
     pub fn get_occupied(&self) -> BitBoard {
         self.occ_all
     }
@@ -1407,16 +1416,19 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.get_occupied_player(Player::White).0, 0x000000000000FFFF);
     /// ```
+    #[inline(always)]
     pub fn get_occupied_player(&self, player: Player) -> BitBoard {
         self.occ[player as usize]
     }
 
     /// Returns a Bitboard consisting of only the squares occupied by the White Player.
+    #[inline(always)]
     pub fn occupied_white(&self) -> BitBoard {
         self.occ[Player::White as usize]
     }
 
     /// Returns a BitBoard consisting of only the squares occupied by the Black Player.
+    #[inline(always)]
     pub fn occupied_black(&self) -> BitBoard {
         self.occ[Player::Black as usize]
     }
@@ -1432,6 +1444,7 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.piece_bb(Player::White,Piece::P).0, 0x000000000000FF00);
     /// ```
+    #[inline]
     pub fn piece_bb(&self, player: Player, piece: Piece) -> BitBoard {
         self.bit_boards[player as usize][piece as usize]
     }
@@ -1447,6 +1460,7 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.sliding_piece_bb(Player::White).count_bits(), 3);
     /// ```
+    #[inline]
     pub fn sliding_piece_bb(&self, player: Player) -> BitBoard {
         self.bit_boards[player as usize][Piece::R as usize] ^
             self.bit_boards[player as usize][Piece::Q as usize]
@@ -1462,6 +1476,7 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.diagonal_piece_bb(Player::White).count_bits(), 3);
     /// ```
+    #[inline]
     pub fn diagonal_piece_bb(&self, player: Player) -> BitBoard {
         self.bit_boards[player as usize][Piece::B as usize] ^
             self.bit_boards[player as usize][Piece::Q as usize]
@@ -1477,6 +1492,7 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.piece_bb_both_players(Piece::P).0, 0x00FF00000000FF00);
     /// ```
+    #[inline(always)]
     pub fn piece_bb_both_players(&self, piece: Piece) -> BitBoard {
         self.bit_boards[Player::White as usize][piece as usize] ^
             self.bit_boards[Player::Black as usize][piece as usize]
@@ -1493,12 +1509,14 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.piece_two_bb_both_players(Piece::Q,Piece::K).count_bits(), 4);
     /// ```
+    #[inline]
     pub fn piece_two_bb_both_players(&self, piece: Piece, piece2: Piece) -> BitBoard {
         self.piece_bb_both_players(piece) | self.piece_bb_both_players(piece2)
     }
 
-
-
+    /// Returns the `BitBoard` containing the locations of two given types of pieces for the given
+    /// player.
+    #[inline(always)]
     pub fn piece_two_bb(&self, piece: Piece, piece2: Piece, player: Player) -> BitBoard {
         self.bit_boards[player as usize][piece as usize] | self.bit_boards[player as usize][piece2 as usize]
     }
@@ -1513,6 +1531,7 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_piece(Player::White, Piece::P), 8);
     /// ```
+    #[inline(always)]
     pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
         self.piece_counts[player as usize][piece as usize]
     }
@@ -1543,28 +1562,41 @@ impl Board {
     /// let chessboard = Board::default();
     /// assert_eq!(chessboard.count_all_pieces(), 32);
     /// ```
+    #[inline]
     pub fn count_all_pieces(&self) -> u8 {
         self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
     }
 
     /// Returns the Piece, if any, at the square.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the square is not a legal square.
+    #[inline]
     pub fn piece_at_sq(&self, sq: SQ) -> Option<Piece> {
         assert!(sq.is_okay());
         self.piece_locations.piece_at(sq)
     }
 
-    /// Returns the Player, if any, occupying the square.
+    /// Returns the Player, if any, occupying a square.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the square is not a legal square.
+    #[inline]
     pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
         assert!(sq.is_okay());
         self.piece_locations.player_at(sq)
     }
 
     /// Returns the player, if any, at the square.
+    #[inline(always)]
     pub fn player_at_sq(&self, s: SQ) -> Option<Player> {
         self.piece_locations.player_at(s)
     }
 
-    /// Returns the square of the King for a given player
+    /// Returns the square of the King for a given player.
+    #[inline(always)]
     pub fn king_sq(&self, player: Player) -> SQ {
         (self.bit_boards[player as usize][Piece::K as usize]).to_sq()
     }
@@ -1572,39 +1604,51 @@ impl Board {
     /// Returns the pinned pieces of the given player.
     ///
     /// Pinned is defined as pinned to the same players king
+    #[inline(always)]
     pub fn pinned_pieces(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
 
     /// Returns the pinned pieces for a given players king. Can contain piece of from both players,
     /// but all are guaranteed to be pinned to the given player's king.
+    #[inline(always)]
     pub fn all_pinned_pieces(&self, player: Player) -> BitBoard {
         self.state.blockers_king[player as usize]
     }
 
     /// Returns the pinning pieces of a given player.
-    /// e.g, pieces that are pinning a piece to the opponent's king.
+    /// e.g, pieces that are pinning a piece to the opponent's king. This will return the pinned
+    /// pieces of both players, pinned to the given player's king.
+    #[inline(always)]
     pub fn pinning_pieces(&self, player: Player) -> BitBoard {
         self.state.pinners_king[player as usize]
     }
 
     /// Return if a player has the possibility of castling for a given CastleType.
+    /// This does not ensure a castling is possible for the player, just that the player
+    /// has the castling-right available.
+    #[inline(always)]
     pub fn can_castle(&self, player: Player, castle_type: CastleType) -> bool {
         self.state.castling.castle_rights(player, castle_type)
     }
 
-    /// Check if the castle path is impeded for the current player.
+    /// Check if the castle path is impeded for the current player. Does not assume that the
+    /// current player has the ability to castle, whether by having the castling-rights to, or
+    /// having the rook and king be in the correct square.
+    #[inline]
     pub fn castle_impeded(&self, castle_type: CastleType) -> bool {
         let path: BitBoard = BitBoard(CASTLING_PATH[self.turn as usize][castle_type as usize]);
         (path & self.occ_all).is_not_empty()
     }
 
     /// Square of the Rook that is involved with the current player's castle.
+    #[inline]
     pub fn castling_rook_square(&self, castle_type: CastleType) -> SQ {
         SQ(CASTLING_ROOK_START[self.turn as usize][castle_type as usize])
     }
 
     /// Return the last move played, if any.
+    #[inline(always)]
     pub fn last_move(&self) -> Option<BitMove> {
         if self.state.prev_move.is_null() {
             None
@@ -1614,18 +1658,22 @@ impl Board {
     }
 
     /// Returns if the current player has castled ever.
+    #[inline]
     pub fn has_castled(&self, player: Player) -> bool {
         self.state.castling.has_castled(player)
     }
 
-    /// Return if the piece (if any) that was captured last move.
+    /// Returns if the piece (if any) that was captured last move. This method does not
+    /// distinguish between not having any last move played and not having a piece last captured.
+    #[inline(always)]
     pub fn piece_last_captured(&self) -> Option<Piece> {
         self.state.captured_piece
     }
 
     //  ------- CHECKING  -------
 
-    /// Return if current side to move is in check.
+    /// Returns if current side to move is in check.
+    #[inline(always)]
     pub fn in_check(&self) -> bool {
         self.state.checkers_bb.is_not_empty()
     }
@@ -1637,30 +1685,38 @@ impl Board {
         self.in_check() && self.generate_moves().is_empty()
     }
 
-    /// Return if the current side to move is in stalemate.
+    /// Returns if the current side to move is in stalemate.
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
         !self.in_check() && (self.generate_moves().is_empty() || self.state.rule_50 >= 50)
     }
 
-    /// Return the BitBoard of Checks on the current player's king.
+    /// Return the `BitBoard` of all checks on the current player's king. If the current side
+    /// to move is not in check, the `BitBoard` will be empty.
+    #[inline(always)]
     pub fn checkers(&self) -> BitBoard {
         self.state.checkers_bb
     }
 
-    /// Returns the BitBoard of pieces the current side can move to discover check.
+    /// Returns the `BitBoard` of pieces the current side can move to discover check.
+    /// Discovered check candidates are pieces for the current side to move, that are currently
+    /// blocking a check from another piece of the same color.
+    #[inline(always)]
     pub fn discovered_check_candidates(&self) -> BitBoard {
         self.state.blockers_king[self.turn.other_player() as usize] &
             self.get_occupied_player(self.turn)
     }
 
-    /// Gets the Pinned pieces for the given player.
+    /// Gets the Pinned pieces for the given player. A pinned piece is defined as a piece that
+    /// if suddenly removed, the player would find itself in check.
+    #[inline(always)]
     pub fn pieces_pinned(&self, player: Player) -> BitBoard {
         // TODO: combine with Board::piece_pinned
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
+    /// Includes pieces from both players.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
         (self.magic_helper.pawn_attacks_from(sq, Player::Black) &
             self.piece_bb(Player::White, Piece::P)) |
@@ -1676,7 +1732,13 @@ impl Board {
 
 //  ------- Move Testing -------
 
-    /// Tests if a given move is legal.
+    /// Tests if a given move is a legal. This is mostly for checking the legality of moves that
+    /// were generated in a pseudo-legal fashion. Generating moves like this is faster, but doesn't
+    /// guarantee legality due to the possibility of a discovered check happening.
+    ///
+    /// # Safety
+    ///
+    /// Assumes the move is legal for the current board.
     pub fn legal_move(&self, m: BitMove) -> bool {
         if m.get_src() == m.get_dest() {
             return false;
@@ -1723,6 +1785,10 @@ impl Board {
     }
 
     /// Returns if a move gives check to the opposing player's King.
+    ///
+    /// # Safety
+    ///
+    /// Assumes the move is legal for the current board.
     pub fn gives_check(&self, m: BitMove) -> bool {
         // I am too drunk to be making this right now
         let src: SQ = m.get_src();
@@ -1799,12 +1865,22 @@ impl Board {
     }
 
     /// Returns the piece that was moved from a given BitMove.
+    ///
+    /// # Safety
+    ///
+    /// Assumes the move is legal for the current board.
+    #[inline]
     pub fn moved_piece(&self, m: BitMove) -> Piece {
         let src = m.get_src();
         self.piece_at_sq(src).unwrap() // panics if no piece here :)
     }
 
     /// Returns the piece that was captured, if any from a given BitMove.
+    ///
+    /// # Safety
+    ///
+    /// Assumes the move is legal for the current board.
+    #[inline]
     pub fn captured_piece(&self, m: BitMove) -> Option<Piece> {
         if m.is_en_passant() {
             return Some(Piece::P);
@@ -1837,6 +1913,8 @@ impl Board {
     }
 
     /// Return the current ARC count of the board's BoardState.
+    #[doc(hidden)]
+    #[inline(always)]
     pub fn get_arc_strong_count(&self) -> usize {
         Arc::strong_count(&self.state)
     }
@@ -1911,7 +1989,7 @@ pub enum BoardError {
 }
 
 impl Board {
-    // Checks the basic status of the board
+    /// Checks the basic status of the board, returning false if something is wrong.
     pub fn is_ok_quick(&self) -> bool {
         self.piece_at_sq(self.king_sq(Player::White)).unwrap() == Piece::K
             && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == Piece::K

@@ -297,13 +297,13 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
     #[inline(always)]
     fn bishop_moves_bb(&self, occupied: u64, square: u8) -> u64 {
-        assert!(square < 64);
+        debug_assert!(square < 64);
         self.magic_bishop.attacks(occupied, square)
     }
 
     #[inline(always)]
     fn rook_moves_bb(&self, occupied: u64, square: u8) -> u64 {
-        assert!(square < 64);
+        debug_assert!(square < 64);
         self.magic_rook.attacks(occupied, square)
     }
 
