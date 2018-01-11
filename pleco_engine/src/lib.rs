@@ -33,6 +33,8 @@
 #![feature(trusted_len)]
 #![feature(fused)]
 
+#![crate_type = "rlib"]
+
 #[macro_use]
 extern crate lazy_static;
 
