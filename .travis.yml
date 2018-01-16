@@ -13,7 +13,7 @@ sudo: required
 env:
   global:
     - RUST_BACKTRACE=1
-    - RUSTFLAGS="-Ctarget-cpu=native -Zthinlto=on -Zmir-opt-level=3 -Zmutable-noalias -Zenable-nonzeroing-move-hints"
+    - RUSTFLAGS="-Ctarget-cpu=native -Zthinlto=on -Zmir-opt-level=3 -Zmutable-noalias"
 
 addons:
   apt:

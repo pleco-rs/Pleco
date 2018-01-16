@@ -132,8 +132,18 @@ impl ThreadPool {
     ///
     /// Completely unsafe to use when the pool is searching.
     pub fn set_thread_count(&mut self, num: usize) {
-        let curr_num: usize = self.rm_manager.size();
+        if num > 0 {
+            let curr_size = self.rm_manager.size();
+            if num > curr_size {
+                self.add_threads(num);
+            } else if num < curr_size {
+                self.remove_threads(num)
+            }
+        }
+    }
 
+    fn add_threads(&mut self, num: usize) {
+        let curr_num: usize = self.rm_manager.size();
         let mut i: usize = curr_num;
         while i < num {
             let root_moves = self.rm_manager.add_thread().unwrap();
@@ -145,9 +155,20 @@ impl ThreadPool {
             }).unwrap());
             i += 1;
         }
-
-        // TODO: Remove threads.
     }
+
+
+    fn remove_threads(&mut self, num: usize) {
+        let curr_num: usize = self.rm_manager.size();
+        let mut i: usize = curr_num;
+        while i > num {
+            self.rm_manager.remove_thread();
+            let thread_handle = self.threads.pop().unwrap();
+            thread_handle.join().unwrap();
+            i -= 1;
+        }
+    }
+
 
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
     /// is true.
