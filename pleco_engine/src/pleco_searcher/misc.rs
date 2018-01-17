@@ -2,7 +2,6 @@
 extern crate chrono;
 
 use super::THREAD_STACK_SIZE;
-use pleco::core::piece_move::BitMove;
 use pleco::core::masks::PLAYER_CNT;
 use std::time;
 

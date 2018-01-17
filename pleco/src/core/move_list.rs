@@ -20,7 +20,7 @@ use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator
 const MAX_MOVES: usize = 256;
 
 /// This is the list of possible moves for a current position. Think of it alike a faster
-/// version of 'Vec<BitMove>'.
+/// version of `Vec<BitMove>`, as all the data is stored in the Stack rather than the Heap.
 pub struct MoveList {
     inner: [BitMove; 256],
     len: usize,

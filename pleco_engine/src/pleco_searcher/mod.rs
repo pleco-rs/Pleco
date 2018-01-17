@@ -1,12 +1,12 @@
 //! The main searching structure.
 
 pub mod misc;
-pub mod options;
 pub mod threads;
 pub mod search;
 pub mod root_moves;
 pub mod sync;
 pub mod parse;
+pub mod uci_options;
 
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
@@ -14,25 +14,32 @@ use pleco::BitMove;
 
 use std::io;
 
-use self::misc::{PreLimits,UCITimer};
-use self::options::{AllOptions,UciOptionMut};
+use self::misc::{PreLimits};
 use self::threads::ThreadPool;
+use self::uci_options::OptionsMap;
 
 use num_cpus;
 
+// --------- STATIC VARIABLES
+
+pub static ID_NAME: &str = "Pleco";
+pub static ID_AUTHORS: &str = "Stephen Fleischman";
+pub static VERSION: &str = "0.0.3";
+
+// -------- CONSTANTS
 
 const MAX_PLY: u16 = 126;
 const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 pub const MAX_THREADS: usize = 256;
 pub const DEFAULT_TT_SIZE: usize = 256;
 
+
+// MUTATABLE STATIC VARIABLES;
+
 lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
 }
 
-pub static ID_NAME: &str = "Pleco";
-pub static ID_AUTHORS: &str = "Stephen Fleischman";
-pub static VERSION: &str = "0.0.3";
 
 #[derive(PartialEq)]
 enum SearchType {
@@ -42,16 +49,16 @@ enum SearchType {
 }
 
 pub struct PlecoSearcher {
-    options: AllOptions,
+    options: OptionsMap,
     thread_pool: ThreadPool,
     search_mode: SearchType,
     board: Option<Board>,
-    limit: Option<PreLimits>
+    limit: Option<PreLimits>,
 }
 
 
-impl PlecoSearcher {
 
+impl PlecoSearcher {
     pub fn init(use_stdout: bool) -> Self {
         unsafe {
             TT_TABLE.clear();
@@ -60,11 +67,11 @@ impl PlecoSearcher {
         pool.stdout(use_stdout);
         pool.set_thread_count(num_cpus::get());
         PlecoSearcher {
-            options: AllOptions::default(),
+            options: OptionsMap::new(),
             thread_pool: pool,
             search_mode: SearchType::None,
             board: None,
-            limit: None,
+            limit: None
         }
     }
 
@@ -79,7 +86,7 @@ impl PlecoSearcher {
                 "" => continue,
                 "uci" => self.uci_startup(),
                 "setoption" => self.apply_option(&full_command),
-                "options" | "alloptions" => self.options.print_curr(),
+                "options" | "alloptions" => {},
                 "ucinewgame" => self.clear_search(),
                 "isready" => println!("readyok"),
                 "position" => self.board = parse::parse_board(&args[1..]),
@@ -118,7 +125,7 @@ impl PlecoSearcher {
         args.remove(0);
         args.remove(0);
 
-        let name: &str = args[0];
+//        let name: &str = args[0];
 
 //        let c = self.options.apply_option(option);
 //        match c {
@@ -134,12 +141,8 @@ impl PlecoSearcher {
     fn uci_startup(&self) {
         println!("id name {}",ID_NAME);
         println!("id authors {}", ID_AUTHORS);
-        self.options.print_all();
+        self.options.display_all();
         println!("uciok");
-    }
-
-    fn print_options(&self) {
-
     }
 
     pub fn search(&mut self, board: &Board, limit: &PreLimits) {

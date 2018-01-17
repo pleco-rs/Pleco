@@ -1,5 +1,5 @@
 /// Functions for parsing UCI input.
-use super::misc::{Limits,PreLimits,UCITimer};
+use super::misc::{PreLimits,UCITimer};
 use pleco::Board;
 
 
@@ -140,7 +140,6 @@ fn valid_move(board: &mut Board, mov: &str) -> bool {
     false
 }
 
-
 pub fn parse_board(args: &[&str]) -> Option<Board> {
     let start: &str = args[0];
     let mut board = if start == "startpos" {
@@ -183,6 +182,7 @@ pub fn parse_board(args: &[&str]) -> Option<Board> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pleco::Player;
 
     // TODO: More testing
 
@@ -192,6 +192,7 @@ mod tests {
         let args: Vec<&str> = b_str.split_whitespace().collect();
         let board = parse_board(&args[1..]).unwrap();
         assert_eq!(board.moves_played(), 2);
+        assert_eq!(board.turn(), Player::White);
 
         let b_str = "position startpos";
         let args: Vec<&str> = b_str.split_whitespace().collect();

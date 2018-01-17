@@ -3,10 +3,8 @@ extern crate pleco;
 extern crate test;
 extern crate pleco_engine;
 
-use pleco::Board;
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
-use pleco_engine::pleco_searcher::misc::PreLimits;
 
 
 use test::{black_box, Bencher};

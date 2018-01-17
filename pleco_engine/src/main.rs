@@ -9,7 +9,6 @@ use pleco_engine::pleco_searcher::PlecoSearcher;
 use pleco_engine::pleco_searcher::misc::PreLimits;
 
 use std::thread;
-use std::collections::HashMap;
 use chrono::*;
 
 
@@ -65,7 +64,7 @@ fn test_frequency() {
 
     println!();
     let mut total_num: u64 = 0;
-    for (num, count) in count_frequency.iter().enumerate() {
+    for (_num, count) in count_frequency.iter().enumerate() {
         total_num += *count;
     }
     for (num, count) in count_frequency.iter().enumerate() {
