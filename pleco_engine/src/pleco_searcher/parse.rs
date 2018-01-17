@@ -1,4 +1,5 @@
-/// Functions for parsing UCI input.
+//! Functions for parsing UCI input, including both time data & the position of the board to be searched.
+
 use super::misc::{PreLimits,UCITimer};
 use pleco::Board;
 

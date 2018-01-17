@@ -56,8 +56,6 @@ pub struct PlecoSearcher {
     limit: Option<PreLimits>,
 }
 
-
-
 impl PlecoSearcher {
     pub fn init(use_stdout: bool) -> Self {
         unsafe {

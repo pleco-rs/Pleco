@@ -1,4 +1,4 @@
-//! Contains useful synchronization primitives.
+//! Useful synchronization primitives.
 
 use std::sync::{Mutex,Condvar};
 

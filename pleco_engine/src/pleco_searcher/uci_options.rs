@@ -1,10 +1,15 @@
+//! Houses any UCI compatible options, as well as the framework for parsing and applying them.
+
 use std::option::Option;
 use std::collections::VecDeque;
+
+use num_cpus;
 
 /// A List of work for the Searcher to do following the application of options
 pub enum OptionWork {
     ClearTT,
-    ResizeTT(usize)
+    ResizeTT(usize),
+    Threads(usize)
 }
 
 /// A sorted map of options available
@@ -14,18 +19,29 @@ pub struct OptionsMap {
 }
 
 impl OptionsMap {
+    /// Creates a new `OptionsMap`.
     pub fn new() -> Self {
         let mut map = Vec::new();
         let work = VecDeque::new();
         map.push(OptionsMap::clear_hash());
         map.push(OptionsMap::resize_hash());
+        map.push(OptionsMap::threads());
         map.sort_by(|a, b|
             a.option_name().cmp(b.option_name()));
 
         OptionsMap {map, work}
     }
 
+    /// Applies an option and returns its success.
     pub fn apply_option(&mut self, value: &str) -> bool {
+        // setoption name value
+        if !value.starts_with("setoption ") {
+            return false;
+        }
+
+        //TODO: parse the option
+
+
         for op in self.map.iter() {
             if op.option_name() == value {
                 if let Some(work) = op.mutate(value) {
@@ -38,12 +54,24 @@ impl OptionsMap {
         false
     }
 
+    /// Displays all available options in alphabetical order
+    pub fn display_all(&self) {
+        for op in self.map.iter() {
+            println!("{}",op.display());
+        }
+    }
+
+    /// Returns if there is any work available from the `OptionsMap`.
+    pub fn work(&mut self) -> Option<OptionWork> {
+        self.work.pop_front()
+    }
+
     fn clear_hash() -> Box<UCIOption> {
         let mutator: fn() -> Option<OptionWork> = || {
             Some(OptionWork::ClearTT)
         };
         Box::new(UCIButton {
-            option_name: "clear TT",
+            option_name: "Clear Hash",
             mutator: mutator
         })
     }
@@ -53,7 +81,7 @@ impl OptionsMap {
             Some(OptionWork::ResizeTT(x as usize))
         };
         Box::new(UCISpin {
-            option_name: "resize_hash",
+            option_name: "Hash Size",
             default: super::DEFAULT_TT_SIZE as i32,
             min: 1,
             max: 8000,
@@ -61,17 +89,18 @@ impl OptionsMap {
         })
     }
 
-    /// Displays all available options in alphabetical order
-    pub fn display_all(&self) {
-        for op in self.map.iter() {
-            println!("{}",op.display());
-        }
+    fn threads() -> Box<UCIOption> {
+        let mutator: fn(i32) -> Option<OptionWork> = |x: i32| {
+            Some(OptionWork::Threads(x as usize))
+        };
+        Box::new(UCISpin {
+            option_name: "Threads",
+            default: num_cpus::get() as i32,
+            min: 1,
+            max: super::MAX_THREADS as i32,
+            mutator
+        })
     }
-
-    pub fn work(&mut self) -> Option<OptionWork> {
-        self.work.pop_front()
-    }
-
 }
 
 
@@ -79,18 +108,19 @@ impl OptionsMap {
 // "option name Style type combo default Normal var Solid var Normal var Risky\n"
 // "option name Clear Hash type button\n"
 
-/// Defines an object that applies a UCIOptions
+/// UCI complient options for a searcher.
 pub trait UCIOption {
 
-    // button, combo, etc
+    // Returns the type of option. This can be one of the following: button, check, spin, text, or combo.
     fn option_type(&self) -> &'static str;
 
-    // the exact name of the option
+    // Returns the exact name of the option.
     fn option_name(&self) -> &'static str;
 
-    // e,g, "default true"
+    // Returns the remaining display text of the `UCIOption`.
     fn partial_display(&self) -> Option<String>;
 
+    /// Displays the options
     fn display(&self) -> String {
         let mut display = String::from("option name ")
             + self.option_name()
@@ -104,6 +134,8 @@ pub trait UCIOption {
         display
     }
 
+    /// Possibly mutates a value with an option. If additional work needs to be done
+    /// by the searcher, `Some(OptionWork)` is returned back.
     fn mutate(&self, val: &str) -> Option<OptionWork>;
 }
 
@@ -252,8 +284,6 @@ impl UCIOption for UCIText {
         (self.mutator)(val)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
