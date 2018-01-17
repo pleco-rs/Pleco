@@ -1,3 +1,4 @@
+//! Miscellaneous structures.
 
 extern crate chrono;
 
@@ -123,6 +124,7 @@ impl PreLimits {
             search_moves: Vec::new()
         }
     }
+
     pub fn create(self) -> Limits {
         let mut limits = Limits {
             search_moves: self.search_moves.clone(),
