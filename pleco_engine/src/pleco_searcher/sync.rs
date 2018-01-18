@@ -1,8 +1,8 @@
-//! Contains useful synchronization primitives.
+//! Useful synchronization primitives.
 
 use std::sync::{Mutex,Condvar};
 
-/// A Latch starts as false and eventually becomes true. You can block
+/// A `LockLatch` starts as false and eventually becomes true. You can block
 /// until it becomes true.
 pub struct LockLatch {
     m: Mutex<bool>,
@@ -67,7 +67,7 @@ impl LockLatch {
 
 }
 
-/// A GuardedBool allows for waiting on a specific bool value.
+/// A `GuardedBool` allows for waiting on a specific bool value.
 pub struct GuardedBool {
     a: LockLatch
 }

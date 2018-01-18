@@ -120,6 +120,7 @@ pub struct BestMove {
 }
 
 impl BestMove {
+    #[inline(always)]
     pub fn new_none(score: i16) -> Self {
         BestMove {
             best_move: None,
@@ -127,11 +128,13 @@ impl BestMove {
         }
     }
 
+    #[inline(always)]
     pub fn negate(mut self) -> Self {
         self.score = self.score.wrapping_neg();
         self
     }
 
+    #[inline(always)]
     pub fn swap_move(mut self, bitmove: BitMove) -> Self {
         self.best_move = Some(bitmove);
         self

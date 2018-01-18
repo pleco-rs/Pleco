@@ -68,6 +68,8 @@
 #![feature(unique)]
 #![feature(allocator_api)]
 
+#![crate_type = "rlib"]
+
 // [`Vec<T>`]: ../../std/vec/struct.Vec.html
 // [`new`]: ../../std/vec/struct.Vec.html#method.new
 // [`push`]: ../../std/vec/struct.Vec.html#method.push

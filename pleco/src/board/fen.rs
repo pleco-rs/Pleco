@@ -2,7 +2,8 @@
 
 
 use super::{Board,FenBuildError};
-use {BitBoard,Piece,Player};
+use {BitBoard,Piece,Player,Rank};
+use super::super::core::sq::NO_SQ;
 
 pub const OPENING_POS_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -127,6 +128,24 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
     if black_pawns > 8 {
         return Err(FenBuildError::TooManyPawns { player: Player::Black, num: black_pawns });
     }
+
+    let ep_sq = board.ep_square();
+    if ep_sq != NO_SQ {
+        match board.turn() {
+            Player::White => {
+                if ep_sq.rank() != Rank::R6 {
+                    println!("White turn");
+                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                }
+            },
+            Player::Black => {
+                if ep_sq.rank() != Rank::R3 {
+                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                }
+            },
+        }
+    }
+
     // TODO: If EP square, check for legal EP square
 
     Ok(board)

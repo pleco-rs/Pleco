@@ -1,6 +1,6 @@
 [package]
 name = "pleco_engine"
-version = "0.0.5"
+version = "0.0.6"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -34,7 +34,7 @@ opt-level = 3
 debug = false
 rpath = false
 debug-assertions = false
-panic = "unwind"
+panic = "panic"
 codegen-units = 1
 lto = true
 
@@ -48,7 +48,7 @@ codegen-units = 1
 panic = "panic"
 
 [profile.test]
-opt-level = 2
+opt-level = 3
 debug = true
 rpath = false
 debug-assertions = true
@@ -57,7 +57,7 @@ panic = "unwind"
 
 [profile.doc]
 opt-level = 0
-debug = 2
+debug = true
 rpath = false
 lto = false
 debug-assertions = true
@@ -71,13 +71,13 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "0.3.0" }
-clippy = {version = "0.0.177", optional = true}
+pleco = { path = "../pleco", version = "0.3.1" }
+clippy = {version = "0.0.179", optional = true}
 lazy_static = "1.0.0"
 chrono = "0.4.0"
-rand = "0.4.1"
+rand = "0.4.2"
 rayon = "0.9.0"
-num_cpus = "1.7.0"
+num_cpus = "1.8.0"
 
 
 [features]

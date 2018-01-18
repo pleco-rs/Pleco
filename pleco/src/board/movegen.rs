@@ -13,6 +13,8 @@
 //! `QuietChecks`, and `NonEvasions` can only be done if the board is in NOT in check. Likewise,
 //! `Evasions` can only be done when the board is currently in check.
 //!
+//! `All` will generating all moves, while any other option will generate all moves, except for under-promotions.
+//!
 //! # `Legal` vs. `PseudoLegal` Moves
 //!
 //! For the generation type, moves can either be generated to be Legal, Or Pseudo-Legal. A Legal
@@ -127,6 +129,7 @@ pub struct MoveGen<'a> {
 impl<'a> MoveGen<'a> {
 
     // Helper function to setup the MoveGen structure.
+    #[inline]
     fn get_self(chessboard: &'a Board) -> Self {
         MoveGen {
             movelist: MoveList::default(),
@@ -194,10 +197,11 @@ impl<'a> MoveGen<'a> {
         self.moves_per_piece::<L, P ,QueenType>(target);
 
         if G::gen_type() != GenTypes::QuietChecks && G::gen_type() != GenTypes::Evasions {
-            self.generate_king_moves::<L, P>(target);
+            self.moves_per_piece::<L, P, KingType>(target);
         }
 
-        if G::gen_type() != GenTypes::Captures && G::gen_type() != GenTypes::Evasions {
+        if G::gen_type() != GenTypes::Captures && G::gen_type() != GenTypes::Evasions
+            && (self.board.can_castle(P::player(), CastleType::KingSide) || self.board.can_castle(P::player(), CastleType::QueenSide)){
             self.generate_castling::<L, P>();
         }
 
@@ -245,9 +249,8 @@ impl<'a> MoveGen<'a> {
         // Seperate captures and non captures
         let mut captures_bb: BitBoard = k_moves & self.them_occ;
         let mut non_captures_bb: BitBoard = k_moves & !self.them_occ;
-        self.move_append_from_bb::<L>(&mut captures_bb, ksq, MoveFlag::Capture { ep_capture: false },
-        );
-        self.move_append_from_bb::<L>(&mut non_captures_bb, ksq, MoveFlag::QuietMove);
+        self.move_append_from_bb_flag::<L>(&mut captures_bb, ksq, BitMove::FLAG_CAPTURE);
+        self.move_append_from_bb_flag::<L>(&mut non_captures_bb, ksq, BitMove::FLAG_QUIET);
 
         // If there is only one checking square, we can block or capture the piece
         if !(self.board.checkers().more_than_one()) {
@@ -338,19 +341,13 @@ impl<'a> MoveGen<'a> {
             let moves_bb: BitBoard = self.moves_bb(P::piece_type(), src) & !self.us_occ & target;
             let mut captures_bb: BitBoard = moves_bb & self.them_occ;
             let mut non_captures_bb: BitBoard = moves_bb & !self.them_occ;
-            self.move_append_from_bb::<L>(
-                &mut captures_bb,
-                src,
-                MoveFlag::Capture { ep_capture: false },
-            );
-            self.move_append_from_bb::<L>(&mut non_captures_bb, src, MoveFlag::QuietMove);
+            self.move_append_from_bb_flag::<L>(&mut captures_bb, src, BitMove::FLAG_CAPTURE);
+            self.move_append_from_bb_flag::<L>(&mut non_captures_bb, src, BitMove::FLAG_QUIET);
         }
     }
 
     // Generate pawn moves
     fn generate_pawn_moves<L: Legality, G: GenTypeTrait, P: PlayerTrait>(&mut self, target: BitBoard) {
-
-
         let (rank_8, rank_7, rank_3): (BitBoard, BitBoard, BitBoard) = if P::player() == Player::White {
             (BitBoard::RANK_8, BitBoard::RANK_7, BitBoard::RANK_3)
         } else {
@@ -410,21 +407,13 @@ impl<'a> MoveGen<'a> {
             while push_one.is_not_empty() {
                 let dst: SQ = push_one.pop_lsb();
                 let src: SQ = P::down(dst);
-                self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src: src,
-                    dst: dst,
-                    flags: MoveFlag::QuietMove,
-                }));
+                self.check_and_add::<L>(BitMove::make_quiet(src, dst));
             }
 
             while push_two.is_not_empty() {
                 let dst: SQ = push_two.pop_lsb();
                 let src: SQ = P::down(P::down(dst));
-                self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src: src,
-                    dst: dst,
-                    flags: MoveFlag::DoublePawnPush,
-                }));
+                self.check_and_add::<L>(BitMove::make_pawn_push(src, dst));
             }
         }
 
@@ -446,16 +435,17 @@ impl<'a> MoveGen<'a> {
                 self.create_all_promotions::<L>(dst, P::down(dst), false);
             }
 
-            while left_cap_promo.is_not_empty() {
-                let dst: SQ = left_cap_promo.pop_lsb();
-                self.create_all_promotions::<L>(dst, P::down_right(dst), true);
-            }
+            if G::gen_type() != GenTypes::Quiets {
+                while left_cap_promo.is_not_empty() {
+                    let dst: SQ = left_cap_promo.pop_lsb();
+                    self.create_all_promotions::<L>(dst, P::down_right(dst), true);
+                }
 
-            while right_cap_promo.is_not_empty() {
-                let dst: SQ = right_cap_promo.pop_lsb();
-                self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                while right_cap_promo.is_not_empty() {
+                    let dst: SQ = right_cap_promo.pop_lsb();
+                    self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                }
             }
-
         }
 
         // Captures
@@ -469,21 +459,13 @@ impl<'a> MoveGen<'a> {
             while left_cap.is_not_empty() {
                 let dst: SQ = left_cap.pop_lsb();
                 let src: SQ = P::down_right(dst);
-                self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src: src,
-                    dst: dst,
-                    flags: MoveFlag::Capture { ep_capture: false },
-                }));
+                self.check_and_add::<L>(BitMove::make_capture(src, dst));
             }
 
             while right_cap.is_not_empty() {
                 let dst: SQ = right_cap.pop_lsb();
                 let src: SQ = P::down_left(dst);
-                self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src: src,
-                    dst: dst,
-                    flags: MoveFlag::Capture { ep_capture: false },
-                }));
+                self.check_and_add::<L>(BitMove::make_capture(src, dst));
             }
 
             if self.board.ep_square() != NO_SQ {
@@ -510,31 +492,43 @@ impl<'a> MoveGen<'a> {
     fn create_all_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
         let prom_pieces = [Piece::Q, Piece::N, Piece::R, Piece::B];
         for piece in &prom_pieces {
-            if is_capture {
-                self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src, dst,
-                    flags: MoveFlag::Promotion {
-                        capture: true,
-                        prom: *piece,
-                    },
-                }));
-            } else {
-                self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                    src, dst,
-                    flags: MoveFlag::Promotion {
-                        capture: false,
-                        prom: *piece,
-                    },
-                }));
-            }
+            self.check_and_add::<L>(BitMove::init(PreMoveInfo {
+                src, dst,
+                flags: MoveFlag::Promotion {
+                    capture: is_capture,
+                    prom: *piece,
+                },
+            }));
         }
     }
 
-    // Return the moves Bitboard
     #[inline]
+    fn create_knight_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
+        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
+            src, dst,
+            flags: MoveFlag::Promotion {
+                capture: is_capture,
+                prom: Piece::N,
+            },
+        }));
+    }
+
+    #[inline]
+    fn create_queen_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
+        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
+            src, dst,
+            flags: MoveFlag::Promotion {
+                capture: is_capture,
+                prom: Piece::Q,
+            },
+        }));
+    }
+
+    // Return the moves Bitboard
+    #[inline(always)]
     fn moves_bb(&self, piece: Piece, square: SQ) -> BitBoard {
-        assert!(square.is_okay());
-        assert_ne!(piece, Piece::P);
+        debug_assert!(square.is_okay());
+        debug_assert_ne!(piece, Piece::P);
         match piece {
             Piece::P => panic!(),
             Piece::N => self.magic.knight_moves(square),
@@ -557,6 +551,15 @@ impl<'a> MoveGen<'a> {
         }
     }
 
+    #[inline]
+    fn move_append_from_bb_flag<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
+        while bits.is_not_empty() {
+            let dst = bits.pop_lsb();
+            let b_move = BitMove::make(flag_bits, src, dst);
+            self.check_and_add::<L>(b_move);
+        }
+    }
+
     /// Checks if the move is legal, and if so adds to the move list.
     #[inline]
     fn check_and_add<L: Legality>(&mut self, b_move: BitMove) {
@@ -569,7 +572,6 @@ impl<'a> MoveGen<'a> {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

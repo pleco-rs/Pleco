@@ -1,8 +1,8 @@
+//! Miscellaneous structures.
 
 extern crate chrono;
 
 use super::THREAD_STACK_SIZE;
-use pleco::core::piece_move::BitMove;
 use pleco::core::masks::PLAYER_CNT;
 use std::time;
 
@@ -90,10 +90,28 @@ pub struct PreLimits {
     pub mate: Option<u16>,
     pub infinite: bool,
     pub ponder: bool,
-    pub search_moves: Vec<BitMove>,
+    pub search_moves: Vec<String>,
 }
 
 impl PreLimits {
+    pub fn print(&self) {
+        if let Some(ref time) = self.time {
+            println!("time_msec: W = {}, B = {}",time.time_msec[0], time.time_msec[1]);
+            println!("inc_msec: W = {}, B = {}",time.inc_msec[0], time.inc_msec[1]);
+            println!("movestogo: {}",time.moves_to_go);
+        }
+        if let Some(move_time) = self.move_time {println!("move_time: {}", move_time)}
+        if let Some(nodes) = self.nodes {println!("nodes: {}", nodes)}
+        if let Some(depth) = self.depth {println!("depth: {}", depth)}
+        if let Some(mate) = self.mate {println!("move_time: {}", mate)}
+        println!("infinite: {}", self.infinite);
+        println!("ponder: {}", self.ponder);
+        if self.search_moves.len() > 1 {
+            print!("search_moves:");
+            self.search_moves.iter().for_each(|p|print!(" {}", p));
+            println!();
+        }
+    }
     pub fn blank() -> Self {
         PreLimits {
             time: None,
@@ -106,6 +124,7 @@ impl PreLimits {
             search_moves: Vec::new()
         }
     }
+
     pub fn create(self) -> Limits {
         let mut limits = Limits {
             search_moves: self.search_moves.clone(),
@@ -136,7 +155,7 @@ impl PreLimits {
 
 #[derive(Clone)]
 pub struct Limits {
-    pub search_moves: Vec<BitMove>,
+    pub search_moves: Vec<String>,
     pub limits_type: LimitsType,
     pub start: time::Instant
 }
