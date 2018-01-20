@@ -141,10 +141,18 @@ fn valid_move(board: &mut Board, mov: &str) -> bool {
     false
 }
 
-pub fn parse_board(args: &[&str]) -> Option<Board> {
+pub fn setboard_parse_board(args: &[&str]) -> Option<Board> {
+    let fen_string: String = args.iter()
+                                      .take_while(|p: &&&str| **p != "moves")
+                                      .map(|p| (*p).to_string())
+                                      .collect::<Vec<String>>()
+                                      .join(" ");
+    Board::new_from_fen(&fen_string).ok()
+}
+
+pub fn position_parse_board(args: &[&str]) -> Option<Board> {
     let start: &str = args[0];
     let mut board = if start == "startpos" {
-        println!("Yes");
         Some(Board::default())
     } else if start == "fen" {
         let fen_string: String = args[1..].iter()
@@ -191,13 +199,13 @@ mod tests {
     fn board_parse() {
         let b_str = "position startpos moves e2e4 e7e5";
         let args: Vec<&str> = b_str.split_whitespace().collect();
-        let board = parse_board(&args[1..]).unwrap();
+        let board = position_parse_board(&args[1..]).unwrap();
         assert_eq!(board.moves_played(), 2);
         assert_eq!(board.turn(), Player::White);
 
         let b_str = "position startpos";
         let args: Vec<&str> = b_str.split_whitespace().collect();
-        let board = parse_board(&args[1..]).unwrap();
+        let board = position_parse_board(&args[1..]).unwrap();
         assert_eq!(board.moves_played(), 0);
     }
 

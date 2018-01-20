@@ -12,6 +12,7 @@ use pleco::tools::tt::*;
 
 use super::search::ThreadSearcher;
 use super::misc::*;
+#[allow(unused_imports)]
 use super::{TT_TABLE,THREAD_STACK_SIZE};
 use super::root_moves::RootMove;
 use super::root_moves::root_moves_list::RootMoveList;

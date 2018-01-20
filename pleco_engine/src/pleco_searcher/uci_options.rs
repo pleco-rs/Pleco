@@ -33,17 +33,9 @@ impl OptionsMap {
     }
 
     /// Applies an option and returns its success.
-    pub fn apply_option(&mut self, value: &str) -> bool {
-        // setoption name value
-        if !value.starts_with("setoption ") {
-            return false;
-        }
-
-        //TODO: parse the option
-
-
+    pub fn apply_option(&mut self, name: &str, value: &str) -> bool {
         for op in self.map.iter() {
-            if op.option_name() == value {
+            if op.option_name() == name {
                 if let Some(work) = op.mutate(value) {
                     self.work.push_back(work);
                     return true;
@@ -81,7 +73,7 @@ impl OptionsMap {
             Some(OptionWork::ResizeTT(x as usize))
         };
         Box::new(UCISpin {
-            option_name: "Hash Size",
+            option_name: "Hash",
             default: super::DEFAULT_TT_SIZE as i32,
             min: 1,
             max: 8000,

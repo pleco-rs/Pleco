@@ -53,6 +53,7 @@ impl<'a> ThreadSearcher<'a> {
         let mut depth: u16 = start_ply;
 
         let mut delta: i32 = NEG_INFINITY as i32;
+        #[allow(unused_assignments)]
         let mut best_value: i32 = NEG_INFINITY as i32;
         let mut alpha: i32 = NEG_INFINITY as i32;
         let mut beta: i32 = INFINITY as i32;
