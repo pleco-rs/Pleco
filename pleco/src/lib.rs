@@ -67,6 +67,7 @@
 #![feature(integer_atomics)]
 #![feature(unique)]
 #![feature(allocator_api)]
+#![feature(ptr_internals)]
 
 #![crate_type = "rlib"]
 

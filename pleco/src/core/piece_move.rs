@@ -384,7 +384,19 @@ impl BitMove {
     /// appended to the end of the string, alike "a7a8q" in the case of a queen promotion.
     pub fn stringify(&self) -> String {
         let src = self.get_src().to_string();
-        let dst = self.get_dest().to_string();
+        let dst_sq = self.get_dest();
+
+        let dst = if self.is_castle() {
+            match dst_sq {
+                SQ::A8 => String::from("c8"),
+                SQ::A1 => String::from("c1"),
+                SQ::H8 => String::from("g8"),
+                SQ::H1 => String::from("g1"),
+                _ => dst_sq.to_string()
+            }
+        } else {
+            dst_sq.to_string()
+        };
         let mut s = format!("{}{}", src, dst);
         if self.is_promo() {
             let c = self.promo_piece().char_lower();

@@ -32,6 +32,7 @@
 #![feature(allocator_api)]
 #![feature(trusted_len)]
 #![feature(fused)]
+#![feature(ptr_internals)]
 
 #![crate_type = "rlib"]
 
@@ -43,6 +44,7 @@ extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
 extern crate pleco;
+extern crate chrono;
 
 pub mod pleco_searcher;
 

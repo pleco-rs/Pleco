@@ -6,7 +6,9 @@ pub mod search;
 pub mod root_moves;
 pub mod sync;
 pub mod parse;
+pub mod time_management;
 pub mod uci_options;
+pub mod uci_timer;
 
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
@@ -14,9 +16,10 @@ use pleco::BitMove;
 
 use std::io;
 
-use self::misc::{PreLimits};
+use self::uci_timer::{PreLimits};
 use self::threads::ThreadPool;
-use self::uci_options::OptionsMap;
+use self::uci_options::{OptionsMap,OptionWork};
+
 
 use num_cpus;
 
@@ -111,6 +114,7 @@ impl PlecoSearcher {
                 "stop" => self.halt(),
                 _ => print!("Unknown Command: {}",full_command)
             }
+            self.apply_all_options();
 
         }
     }
@@ -154,10 +158,6 @@ impl PlecoSearcher {
             return;
         }
 
-        // TODO: Apply optioons with many words!
-        // Take until "value" is found. If it is, stop and concatainarte theremaining words into
-        // a value
-
         'nv: while let Some(ref partial_name) = args.next(){
             if *partial_name == "value" {
                 value = args.map(|s| s.to_string() + " ")
@@ -179,8 +179,23 @@ impl PlecoSearcher {
 
         if !self.options.apply_option(&name, &value) {
             println!("unable to apply option: {}",full_command);
+        } else {
+            self.apply_all_options();
         }
+    }
 
+    fn apply_all_options(&mut self) {
+        while let Some(work) = self.options.work() {
+            if self.is_searching() && !work.usable_while_searching() {
+                println!("unable to apply work");
+            } else {
+                match work {
+                    OptionWork::ClearTT => {self.clear_tt()},
+                    OptionWork::ResizeTT(mb) => {self.resize_tt(mb)},
+                    OptionWork::Threads(num) => {self.thread_pool.set_thread_count(num)}
+                }
+            }
+        }
     }
 
     fn uci_startup(&self) {

@@ -6,6 +6,7 @@
 pub mod prng;
 pub mod tt;
 pub mod timer;
+mod pawn_table;
 
 use core::piece_move::BitMove;
 use tools::timer::Timer;

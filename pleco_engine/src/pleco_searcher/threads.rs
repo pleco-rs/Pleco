@@ -12,6 +12,7 @@ use pleco::tools::tt::*;
 
 use super::search::ThreadSearcher;
 use super::misc::*;
+use super::uci_timer::*;
 #[allow(unused_imports)]
 use super::{TT_TABLE,THREAD_STACK_SIZE};
 use super::root_moves::RootMove;
@@ -19,6 +20,12 @@ use super::root_moves::root_moves_list::RootMoveList;
 use super::root_moves::root_moves_manager::RmManager;
 use super::sync::LockLatch;
 
+use super::time_management::TimeManager;
+
+/// Global Timer
+lazy_static! {
+    pub static ref TIMER: TimeManager = TimeManager::blank();
+}
 // Data sent from the main thread to initialize a new search
 pub struct ThreadGo {
     limit: Limits,
@@ -247,9 +254,16 @@ impl MainThread {
         // wakeup all threads
 
         self.per_thread.set_stop(false);
+        let limit = self.thread.retrieve_limit().unwrap();
+
+        // set the global timer and start the threads
+
+        if let Some(timer) = limit.use_time_management() {
+
+            TIMER.init(limit.start.clone(), &timer, board.turn(), board.moves_played());
+        }
         self.start_threads();
 
-        let limit = self.thread.retrieve_limit().unwrap();
         self.per_thread.wait_for_start();
         self.lock_threads();
 
@@ -317,7 +331,8 @@ impl Thread {
         let mut thread_search = ThreadSearcher {
             thread: self,
             limit: limit,
-            board: board
+            board: board,
+            time_man: &TIMER
         };
         thread_search.search_root();
     }
@@ -327,6 +342,7 @@ impl Thread {
         let limit = self.retrieve_limit().unwrap();
         self.start_searching(board, limit);
     }
+
 }
 
 impl Drop for ThreadPool {

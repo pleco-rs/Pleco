@@ -12,6 +12,16 @@ pub enum OptionWork {
     Threads(usize)
 }
 
+impl OptionWork {
+    pub fn usable_while_searching(&self) -> bool{
+        match *self {
+            OptionWork::ClearTT => false,
+            OptionWork::ResizeTT(_) => false,
+            OptionWork::Threads(_) => false
+        }
+    }
+}
+
 /// A sorted map of options available
 pub struct OptionsMap {
     pub map: Vec<Box<UCIOption>>,

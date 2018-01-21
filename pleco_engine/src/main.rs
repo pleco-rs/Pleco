@@ -7,7 +7,7 @@ use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
 use pleco::{Board,Player};
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
-use pleco_engine::pleco_searcher::misc::PreLimits;
+use pleco_engine::pleco_searcher::uci_timer::PreLimits;
 
 use std::thread;
 use chrono::*;

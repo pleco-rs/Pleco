@@ -1,8 +1,8 @@
 //! The main searching function.
 
 use super::threads::Thread;
-use super::misc::Limits;
-
+use super::uci_timer::*;
+use super::time_management::TimeManager;
 //use test::{self,Bencher};
 
 use std::cmp::{min,max};
@@ -27,7 +27,8 @@ static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 pub struct ThreadSearcher<'a> {
     pub thread: &'a mut Thread,
     pub limit: Limits,
-    pub board: Board
+    pub board: Board,
+    pub time_man: &'static TimeManager
 }
 
 impl<'a> ThreadSearcher<'a> {
@@ -61,7 +62,7 @@ impl<'a> ThreadSearcher<'a> {
         self.thread.root_moves.shuffle(self.thread.id, &self.board);
 
 
-        while !self.stop() && depth < max_depth {
+        'iterative_deepening: while !self.stop() && depth < max_depth {
             self.thread.root_moves.rollback();
 
             if depth >= 5 {
@@ -100,6 +101,20 @@ impl<'a> ThreadSearcher<'a> {
                 self.thread.root_moves.set_depth_completed(depth);
             }
             depth += skip_size;
+
+            if !self.main_thread() {
+                continue;
+            }
+
+            // check for time
+            if let Some(_) = self.limit.use_time_management() {
+                if !self.stop() {
+                    if self.thread.root_moves.len() == 1 || self.time_man.elapsed() >= self.time_man.ideal_time() {
+                        break 'iterative_deepening;
+                    }
+                }
+            }
+
         }
         self.thread.root_moves.set_finished(true);
     }
@@ -120,6 +135,10 @@ impl<'a> ThreadSearcher<'a> {
         let mut moves_played = 0;
 
         let mut pos_eval: i32 = 0;
+
+        if self.main_thread() {
+            self.check_time();
+        }
 
         if ply >= max_depth || self.stop() {
             return Eval::eval_low(&self.board) as i32;
@@ -262,6 +281,17 @@ impl<'a> ThreadSearcher<'a> {
 
     fn stop(&self) -> bool {
         self.thread.root_moves.load_stop()
+    }
+
+    fn check_time(&mut self) {
+        if self.limit.use_time_management().is_some()
+            && self.time_man.elapsed() >= self.time_man.maximum_time() {
+            self.thread.root_moves.set_stop(true);
+        } else if let Some(time) = self.limit.use_movetime() {
+            if self.limit.elapsed() >= time as i64 {
+                self.thread.root_moves.set_stop(true);
+            }
+        }
     }
 
     pub fn print_startup(&self) {
