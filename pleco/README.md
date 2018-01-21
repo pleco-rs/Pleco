@@ -13,7 +13,6 @@ This project aims to utilize the efficiency of Rust to create a Chess Library & 
 This project is split into two crates, `pleco` (the library you are currently in), which contains the library functionality, and `pleco_engine`, which contains the
 UCI (Universal Chess Interface) compatible Engine & AI. 
 
-The overall goal for this project is to utilize the efficiency of Rust to create a Chess AI matching the speed of modern chess engines.
 
 - [Documentation](https://docs.rs/pleco)
 - [crates.io](https://crates.io/crates/pleco)
@@ -38,7 +37,7 @@ To use Pleco inside your own Rust projects, [Pleco.rs is available as a library 
 
 ```
 [dependencies]
-pleco = "0.3.1"
+pleco = "0.3.2"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:

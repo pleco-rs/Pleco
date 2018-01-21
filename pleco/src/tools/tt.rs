@@ -33,6 +33,7 @@
 //! [`TranspositionTable`]: ../../tools/tt/struct.TranspositionTable.html
 //! [`Entry`]: ../../tools/tt/struct.Entry.html
 
+
 use std::ptr::Unique;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};

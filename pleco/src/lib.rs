@@ -59,23 +59,24 @@
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
+#![feature(ptr_internals)]
 #![feature(integer_atomics)]
 #![feature(fused)]
 #![feature(trusted_len)]
 #![feature(test)]
-#![allow(dead_code)]
 #![feature(integer_atomics)]
 #![feature(unique)]
 #![feature(allocator_api)]
-#![feature(ptr_internals)]
 
-#![crate_type = "rlib"]
+#![allow(dead_code)]
+
+//#![crate_type = "rlib"]
 
 // [`Vec<T>`]: ../../std/vec/struct.Vec.html
 // [`new`]: ../../std/vec/struct.Vec.html#method.new
 // [`push`]: ../../std/vec/struct.Vec.html#method.push
 // [`Index`]: ../../std/ops/trait.Index.html
-// [`IndexMut`]: ../../std/ops/trait.IndexMut.html
+// [`IndexMut`]: ../../`std/ops/trait.IndexMut.html
 // [`vec!`]: ../../std/macro.vec.html
 #[macro_use]
 extern crate bitflags;
