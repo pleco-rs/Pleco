@@ -20,7 +20,6 @@ lto = true
 debug-assertions = false
 codegen-units = 1
 
-
 [profile.test]
 opt-level = 3
 debug = true

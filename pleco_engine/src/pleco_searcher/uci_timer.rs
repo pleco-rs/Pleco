@@ -37,6 +37,10 @@ impl UCITimer {
             self.inc_msec[1] == 0 &&
             self.moves_to_go == 0
     }
+
+    pub fn display(&self) {
+        println!("time: [{}, {}], inc: [{}, {}], moves to go: {}", self.time_msec[0], self.time_msec[1], self.inc_msec[0], self.inc_msec[1], self.moves_to_go);
+    }
 }
 
 #[derive(Clone)]

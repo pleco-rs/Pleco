@@ -60,7 +60,6 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![feature(ptr_internals)]
-#![feature(integer_atomics)]
 #![feature(fused)]
 #![feature(trusted_len)]
 #![feature(test)]

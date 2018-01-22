@@ -1,3 +1,5 @@
+//! Time Management calculations for the searcher.
+
 use chrono;
 
 use pleco::Player;
@@ -18,12 +20,12 @@ impl TimeCalc {
         if moves_to_go {
             match *self {
                 TimeCalc::Ideal => 1.0,
-                TimeCalc::Max => 0.07
+                TimeCalc::Max => 6.0
             }
         } else {
             match *self {
-                TimeCalc::Ideal => 0.017,
-                TimeCalc::Max => 3.0
+                TimeCalc::Ideal => 0.011,
+                TimeCalc::Max => 0.064
             }
         }
     }
@@ -47,10 +49,13 @@ impl TimeManager {
     }
 
     pub fn init(&self, start: Instant, timer: &UCITimer, turn: Player, ply: u16) {
-        let move_num = (ply as u32 + 1) / 2;
-        let move_overhead: i64 = 1;
+        let move_num = (ply as i32 + 1) / 2;
+        if true {
+            timer.display();
+        }
+        let move_overhead: i64 = 400;
         let ideal_time = TimeManager::remaining(timer.time_msec[turn as usize],
-                                                timer.time_msec[turn as usize],
+                                                timer.inc_msec[turn as usize],
                                                 move_overhead,
                                                 timer.moves_to_go,
                                                 move_num,
@@ -58,7 +63,7 @@ impl TimeManager {
                                                 TimeCalc::Ideal);
 
         let max_time = TimeManager::remaining(timer.time_msec[turn as usize],
-                                                timer.time_msec[turn as usize],
+                                                timer.inc_msec[turn as usize],
                                                 move_overhead,
                                                 timer.moves_to_go,
                                                 move_num,
@@ -83,12 +88,12 @@ impl TimeManager {
         }
     }
 
-    fn remaining(my_time: i64, my_inc: i64, move_overhead: i64, movestogo: u32, move_num: u32, ponder: bool, time_type: TimeCalc) -> i64 {
+    fn remaining(my_time: i64, my_inc: i64, move_overhead: i64, movestogo: u32, move_num: i32, ponder: bool, time_type: TimeCalc) -> i64 {
         if my_time <= 0 {
             return 0;
         }
         let inc: f64 = my_inc as f64 * (55.0 as f64).max(120.0 - 0.12 * f64::from((move_num - 25) * (move_num - 25)));
-
+        println!("inc {}", inc);
         let ratio: f64 = if movestogo != 0 {
             let mut pre_ratio: f64 = time_type.ratio(true) / f64::from(min(50, movestogo));
             if move_num <= 40 {
@@ -104,13 +109,14 @@ impl TimeManager {
             pre_ratio * (1.0 + inc / (my_time as f64 * 8.5))
         } else {
             let k: f64 = 1.0 + 20.0 * move_num as f64 / (500.0 + move_num as f64);
+            println!("k: {}", k);
             time_type.ratio(false) * (k + inc / my_time as f64)
         };
-
-        let time: i64 = min(1, ratio as i64) * max(0, my_time - move_overhead);
+        println!("ratio {}", ratio);
+        let time: i64 = (ratio.min(1.0) * max(0, my_time - move_overhead) as f64) as i64;
 
         if time_type == TimeCalc::Ideal && ponder {
-            5 * time / 4
+            (5 * time) / 4
         } else {
             time
         }
@@ -127,6 +133,21 @@ impl TimeManager {
             *self.ideal_time.get()
         }
     }
+}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[test]
+    fn time_man() {
+        let my_time: i64 = 120000;
+        let my_inc: i64 = 6000;
+        let move_overhead: i64 = 4;
+        let movestogo: u32 = 0;
+        let move_num: i32 = 20;
+        let ideal = TimeManager::remaining(my_time, my_inc, move_overhead, movestogo, move_num, false, TimeCalc::Ideal);
+        let max = TimeManager::remaining(my_time, my_inc, move_overhead, movestogo, move_num, false, TimeCalc::Max);
+        println!("ideal: {} max: {}", ideal, max);
+    }
 }

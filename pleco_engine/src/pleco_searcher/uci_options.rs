@@ -291,7 +291,7 @@ impl UCIOption for UCIText {
 mod tests {
     use super::*;
 
-    #[test]
+//    #[test]
     fn test_print() {
         let all = OptionsMap::new();
         all.display_all();

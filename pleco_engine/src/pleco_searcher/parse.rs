@@ -196,7 +196,7 @@ pub fn position_parse_board(args: &[&str]) -> Option<Board> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pleco::{Player,MoveList,BitMove};
+    use pleco::Player;
 
     // TODO: More testing
 

@@ -39,8 +39,13 @@ impl<'a> ThreadSearcher<'a> {
             self.thread.root_moves.set_finished(true);
             return;
         }
+
         if self.use_stdout() {
             println!("info id {} start", self.thread.id);
+        }
+
+        if self.main_thread() {
+            println!("info max_time: {}, ideal time: {}", self.time_man.maximum_time(), self.time_man.ideal_time());
         }
 
         let max_depth = if let LimitsType::Depth(d) = self.limit.limits_type {
@@ -58,6 +63,11 @@ impl<'a> ThreadSearcher<'a> {
         let mut best_value: i32 = NEG_INFINITY as i32;
         let mut alpha: i32 = NEG_INFINITY as i32;
         let mut beta: i32 = INFINITY as i32;
+
+        let mut time_reduction: f64 = 1.0;
+        let mut last_best_move: BitMove = BitMove::null();
+        let mut best_move_changes: u32 = 0;
+        let mut best_move_stability: u32 = 0;
 
         self.thread.root_moves.shuffle(self.thread.id, &self.board);
 
@@ -94,8 +104,8 @@ impl<'a> ThreadSearcher<'a> {
             }
 
             self.thread.root_moves.sort();
-            if self.use_stdout() {
-                println!("info id {} depth {} stop {}",self.thread.id, depth, self.stop());
+            if self.use_stdout() && self.main_thread() {
+                println!("info depth {}", depth);
             }
             if !self.stop() {
                 self.thread.root_moves.set_depth_completed(depth);
@@ -106,10 +116,29 @@ impl<'a> ThreadSearcher<'a> {
                 continue;
             }
 
+            let best_move = self.thread.root_moves.first().bit_move;
+            if best_move != last_best_move {
+                best_move_changes += 1;
+                time_reduction = 1.0;
+                best_move_stability = 0;
+            } else {
+                time_reduction *= 0.91;
+                best_move_changes = 0;
+                best_move_stability += 1;
+            }
+
+            last_best_move = best_move;
+
             // check for time
             if let Some(_) = self.limit.use_time_management() {
                 if !self.stop() {
-                    if self.thread.root_moves.len() == 1 || self.time_man.elapsed() >= self.time_man.ideal_time() {
+//                    let prev_best = self.thread.root_moves.first().prev_score;
+                    let ideal = self.time_man.ideal_time();
+                    let elapsed = self.time_man.elapsed();
+                    let stability: f64 = f64::powi(0.92, best_move_stability as i32);
+                    let new_ideal = (ideal as f64 * stability * time_reduction) as i64;
+                    println!("ideal: {}, new_ideal: {}, elapsed: {}", ideal, new_ideal, elapsed);
+                    if self.thread.root_moves.len() == 1 || self.time_man.elapsed() >= new_ideal {
                         break 'iterative_deepening;
                     }
                 }

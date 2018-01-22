@@ -259,7 +259,6 @@ impl MainThread {
         // set the global timer and start the threads
 
         if let Some(timer) = limit.use_time_management() {
-
             TIMER.init(limit.start.clone(), &timer, board.turn(), board.moves_played());
         }
         self.start_threads();
