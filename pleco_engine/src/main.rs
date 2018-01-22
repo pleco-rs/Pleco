@@ -2,21 +2,22 @@ extern crate pleco;
 extern crate chrono;
 extern crate pleco_engine;
 
+#[allow(unused_imports)]
 use pleco::bot_prelude::{JamboreeSearcher,Searcher,IterativeSearcher};
 use pleco::{Board,Player};
 
 use pleco_engine::pleco_searcher::PlecoSearcher;
-use pleco_engine::pleco_searcher::misc::PreLimits;
+use pleco_engine::pleco_searcher::uci_timer::PreLimits;
 
 use std::thread;
 use chrono::*;
 
 
 fn main() {
-    test_frequency();
+    uciloop();
 }
 
-
+#[allow(dead_code)]
 fn test_frequency() {
     let mut count_frequency: Vec<u64> = vec![0; 500];
     let mut j = 50;
@@ -73,11 +74,13 @@ fn test_frequency() {
     }
 }
 
+#[allow(dead_code)]
 fn uciloop() {
     let mut s = PlecoSearcher::init(true);
     s.uci();
 }
 
+#[allow(dead_code)]
 fn run_one() {
     let mut s = PlecoSearcher::init(true);
     let mut board = Board::default();
@@ -127,6 +130,7 @@ fn run_one() {
 
 }
 
+#[allow(dead_code)]
 fn run_many() {
     let mut j = 1000;
     let mut wins = 0;

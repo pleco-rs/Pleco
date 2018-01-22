@@ -6,7 +6,9 @@ pub mod search;
 pub mod root_moves;
 pub mod sync;
 pub mod parse;
+pub mod time_management;
 pub mod uci_options;
+pub mod uci_timer;
 
 use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
@@ -14,9 +16,10 @@ use pleco::BitMove;
 
 use std::io;
 
-use self::misc::{PreLimits};
+use self::uci_timer::{PreLimits};
 use self::threads::ThreadPool;
-use self::uci_options::OptionsMap;
+use self::uci_options::{OptionsMap,OptionWork};
+
 
 use num_cpus;
 
@@ -40,6 +43,9 @@ lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
 }
 
+// TODO: Helper thread that prints awaits error messages
+// mio::poll
+// spawn a thread
 
 #[derive(PartialEq)]
 enum SearchType {
@@ -74,6 +80,7 @@ impl PlecoSearcher {
     }
 
     pub fn uci(&mut self) {
+        self.uci_startup();
         let mut full_command = String::new();
         'main: loop {
             full_command.clear();
@@ -87,15 +94,27 @@ impl PlecoSearcher {
                 "options" | "alloptions" => {},
                 "ucinewgame" => self.clear_search(),
                 "isready" => println!("readyok"),
-                "position" => self.board = parse::parse_board(&args[1..]),
+                "position" => {
+                    self.board = parse::position_parse_board(&args[1..]);
+                    if self.board.is_none() {
+                        println!("unable to parse board");
+                    }
+                },
+                "setboard" => {
+                    self.board = parse::setboard_parse_board(&args[1..]);
+                    if self.board.is_none() {
+                        println!("unable to parse board");
+                    }
+                }
                 "go" => self.uci_go(&args[1..]),
                 "quit" => {
                     self.halt();
                     break;
                 },
                 "stop" => self.halt(),
-                _ => println!("Unknown Command: {}",full_command)
+                _ => print!("Unknown Command: {}",full_command)
             }
+            self.apply_all_options();
 
         }
     }
@@ -106,34 +125,77 @@ impl PlecoSearcher {
     }
 
     fn uci_go(&mut self, args: &[&str]) {
-        let limit = parse::parse_time(&args[1..]);
+        let limit = parse::parse_time(&args);
 
         let poss_board = self.board.as_ref()
             .map(|b| b.shallow_clone());
         if let Some(board) = poss_board {
             self.search(&board, &limit);
+        } else {
+            println!("unable to start, no position set!");
         }
     }
 
     fn apply_option(&mut self, full_command: &str) {
-        let mut args: Vec<&str> = full_command.split_whitespace().collect();
-        if args.len() < 3 || args[1] != "name" {
-            println!("unknown option: {}", full_command);
+        let mut args  = full_command.split_whitespace();
+        args.next().unwrap();  // setoption
+        if let Some(non_name) = args.next() {
+            if non_name != "name" {
+                println!("setoption `name`");
+                return;
+            }
+        } else {
+            println!("setoption `name`");
+            return;
         }
-        args.remove(0);
-        args.remove(0);
+        let mut name = String::new();
+        let mut value = String::new();
 
-//        let name: &str = args[0];
+        if let Some(third_arg) = args.next() { //[should be name of the option]
+            name += third_arg;
+        } else {
+            println!("setoption needs a name!");
+            return;
+        }
 
-//        let c = self.options.apply_option(option);
-//        match c {
-//            UciOptionMut::Button(c)   => {(c)(self);},
-//            UciOptionMut::Check(c, v) => {(c)(self, v);},
-//            UciOptionMut::Spin(c, v)  => {(c)(self, v);},
-//            UciOptionMut::Combo(c, v) => {(c)(self, v);},
-//            UciOptionMut::Text(c, v)  => {(c)(self, v);},
-//            UciOptionMut::None => {},
-//        }
+        'nv: while let Some(ref partial_name) = args.next(){
+            if *partial_name == "value" {
+                value = args.map(|s| s.to_string() + " ")
+                                            .collect::<String>()
+                                            .trim()
+                                            .to_string();
+                if &value == "" {
+                    println!("forgot a value!");
+                    return;
+                }
+                break 'nv;
+            } else {
+                name += " ";
+                name += partial_name;
+            }
+        }
+
+        println!("name :{}: value :{}:",name,value);
+
+        if !self.options.apply_option(&name, &value) {
+            println!("unable to apply option: {}",full_command);
+        } else {
+            self.apply_all_options();
+        }
+    }
+
+    fn apply_all_options(&mut self) {
+        while let Some(work) = self.options.work() {
+            if self.is_searching() && !work.usable_while_searching() {
+                println!("unable to apply work");
+            } else {
+                match work {
+                    OptionWork::ClearTT => {self.clear_tt()},
+                    OptionWork::ResizeTT(mb) => {self.resize_tt(mb)},
+                    OptionWork::Threads(num) => {self.thread_pool.set_thread_count(num)}
+                }
+            }
+        }
     }
 
     fn uci_startup(&self) {

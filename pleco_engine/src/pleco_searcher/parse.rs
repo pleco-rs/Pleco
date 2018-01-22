@@ -1,6 +1,6 @@
 //! Functions for parsing UCI input, including both time data & the position of the board to be searched.
 
-use super::misc::{PreLimits,UCITimer};
+use super::uci_timer::{PreLimits,UCITimer};
 use pleco::Board;
 
 
@@ -37,7 +37,7 @@ pub fn parse_time(args: &[&str]) -> PreLimits {
             "ponder" => {limit.ponder = true;},
             "wtime" => {
                 if let Some(wtime_s) =  args.get(token_idx + 1) {
-                    if let Ok(wtime) = wtime_s.parse::<i32>() {
+                    if let Ok(wtime) = wtime_s.parse::<i64>() {
                         timer.time_msec[0] = wtime;
                     }
                     token_idx += 1;
@@ -45,7 +45,7 @@ pub fn parse_time(args: &[&str]) -> PreLimits {
             },
             "btime" => {
                 if let Some(btime_s) =  args.get(token_idx + 1) {
-                    if let Ok(btime) = btime_s.parse::<i32>() {
+                    if let Ok(btime) = btime_s.parse::<i64>() {
                         timer.time_msec[1] = btime;
                     }
                     token_idx += 1;
@@ -53,7 +53,7 @@ pub fn parse_time(args: &[&str]) -> PreLimits {
             },
             "winc" => {
                 if let Some(winc_s) =  args.get(token_idx + 1) {
-                    if let Ok(winc) = winc_s.parse::<i32>() {
+                    if let Ok(winc) = winc_s.parse::<i64>() {
                         timer.inc_msec[0] = winc;
                     }
                     token_idx += 1;
@@ -61,7 +61,7 @@ pub fn parse_time(args: &[&str]) -> PreLimits {
             },
             "binc" => {
                 if let Some(binc_s) =  args.get(token_idx + 1) {
-                    if let Ok(binc) = binc_s.parse::<i32>() {
+                    if let Ok(binc) = binc_s.parse::<i64>() {
                         timer.inc_msec[1] = binc;
                     }
                     token_idx += 1;
@@ -69,8 +69,8 @@ pub fn parse_time(args: &[&str]) -> PreLimits {
             },
             "movestogo" => {
                 if let Some(movestogo_s) =  args.get(token_idx + 1) {
-                    if let Ok(movestogo) = movestogo_s.parse::<i32>() {
-                        timer.time_msec[0] = movestogo;
+                    if let Ok(movestogo) = movestogo_s.parse::<u32>() {
+                        timer.moves_to_go = movestogo;
                     }
                     token_idx += 1;
                 }
@@ -135,16 +135,30 @@ fn valid_move(board: &mut Board, mov: &str) -> bool {
     let all_moves = board.generate_moves().iter()
                          .map(|m| m.stringify())
                          .collect::<Vec<String>>();
+
     if all_moves.contains(&mov.to_string()) {
+//        println!("Yes: {}", mov);
         return board.apply_uci_move(mov);
     }
+//    println!("Nope: :{}:", mov);
+//    for mov3 in all_moves.iter() {
+//        println!("mov: :{}:", &*mov3);
+//    }
     false
 }
 
-pub fn parse_board(args: &[&str]) -> Option<Board> {
+pub fn setboard_parse_board(args: &[&str]) -> Option<Board> {
+    let fen_string: String = args.iter()
+                                      .take_while(|p: &&&str| **p != "moves")
+                                      .map(|p| (*p).to_string())
+                                      .collect::<Vec<String>>()
+                                      .join(" ");
+    Board::new_from_fen(&fen_string).ok()
+}
+
+pub fn position_parse_board(args: &[&str]) -> Option<Board> {
     let start: &str = args[0];
     let mut board = if start == "startpos" {
-        println!("Yes");
         Some(Board::default())
     } else if start == "fen" {
         let fen_string: String = args[1..].iter()
@@ -160,7 +174,6 @@ pub fn parse_board(args: &[&str]) -> Option<Board> {
     let mut moves_start: Option<usize> =  None;
     for (i, mov) in args.iter().enumerate() {
         if *mov == "moves" {
-            println!("moves start {}",i);
             moves_start = Some(i);
         }
     };
@@ -183,7 +196,7 @@ pub fn parse_board(args: &[&str]) -> Option<Board> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use pleco::Player;
+    use pleco::{Player,MoveList,BitMove};
 
     // TODO: More testing
 
@@ -191,13 +204,13 @@ mod tests {
     fn board_parse() {
         let b_str = "position startpos moves e2e4 e7e5";
         let args: Vec<&str> = b_str.split_whitespace().collect();
-        let board = parse_board(&args[1..]).unwrap();
+        let board = position_parse_board(&args[1..]).unwrap();
         assert_eq!(board.moves_played(), 2);
         assert_eq!(board.turn(), Player::White);
 
         let b_str = "position startpos";
         let args: Vec<&str> = b_str.split_whitespace().collect();
-        let board = parse_board(&args[1..]).unwrap();
+        let board = position_parse_board(&args[1..]).unwrap();
         assert_eq!(board.moves_played(), 0);
     }
 
@@ -207,5 +220,14 @@ mod tests {
         let args: Vec<&str> = t_str.split_whitespace().collect();
         let time = parse_time(&args[1..]);
         assert_eq!(time.search_moves.len(), 2);
+    }
+
+    #[test]
+    fn tempboard() {
+        // should be e1g1
+        let old_str = "position startpos moves e2e4 d7d5 e4d5 d8d5 g1f3 d5e4 f1e2 c7c6 e1g1";
+        // e8c8
+        let args: Vec<&str> = old_str.split_whitespace().collect();
+        let board = position_parse_board(&args[1..]).unwrap();
     }
 }
