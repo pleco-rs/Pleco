@@ -209,7 +209,7 @@ impl Board {
             half_moves: 0,
             depth: 0,
             piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
-            piece_locations: PieceLocations::blank(),
+            piece_locations: PieceLocations::default(),
             state: Arc::new(BoardState::default()),
             magic_helper: &MAGIC_HELPER,
         };
