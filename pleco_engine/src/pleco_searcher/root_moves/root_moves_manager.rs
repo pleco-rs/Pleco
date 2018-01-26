@@ -1,7 +1,6 @@
 use super::RootMove;
-use super::super::MAX_THREADS;
 use super::root_moves_list::{RootMoveList,RawRootMoveList};
-
+use MAX_THREADS;
 
 use std::heap::{Alloc, Layout, Heap};
 use std::ptr::Unique;

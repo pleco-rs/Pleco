@@ -1,5 +1,7 @@
 //! Houses any UCI compatible options, as well as the framework for parsing and applying them.
 
+use consts::{MAX_THREADS,DEFAULT_TT_SIZE};
+
 use std::option::Option;
 use std::collections::VecDeque;
 
@@ -84,7 +86,7 @@ impl OptionsMap {
         };
         Box::new(UCISpin {
             option_name: "Hash",
-            default: super::DEFAULT_TT_SIZE as i32,
+            default: DEFAULT_TT_SIZE as i32,
             min: 1,
             max: 8000,
             mutator
@@ -99,7 +101,7 @@ impl OptionsMap {
             option_name: "Threads",
             default: num_cpus::get() as i32,
             min: 1,
-            max: super::MAX_THREADS as i32,
+            max: MAX_THREADS as i32,
             mutator
         })
     }
@@ -291,7 +293,7 @@ impl UCIOption for UCIText {
 mod tests {
     use super::*;
 
-//    #[test]
+    //    #[test]
     fn test_print() {
         let all = OptionsMap::new();
         all.display_all();

@@ -13,6 +13,7 @@ pub mod mono_traits;
 pub mod sq;
 pub mod bitboard;
 pub mod move_list;
+mod score;
 
 use self::bit_twiddles::*;
 use self::masks::*;
@@ -264,6 +265,18 @@ pub enum File {
     F = 5,
     G = 6,
     H = 7,
+}
+
+impl File {
+    #[inline(always)]
+    pub fn left_side_mask(self) -> u8 {
+        (1 << self as u8) - 1
+    }
+
+    #[inline(always)]
+    pub fn right_side_mask(self) -> u8 {
+        !((1 << (self as u16 + 1)) - 1) as u8
+    }
 }
 
 /// Enum for the Ranks of a Chessboard.

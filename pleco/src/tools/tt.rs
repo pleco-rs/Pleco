@@ -33,12 +33,12 @@
 //! [`TranspositionTable`]: ../../tools/tt/struct.TranspositionTable.html
 //! [`Entry`]: ../../tools/tt/struct.Entry.html
 
-
-use std::ptr::Unique;
+use std::ptr::{Unique};
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
 use std::cmp::max;
 use std::cell::UnsafeCell;
+
 
 use core::piece_move::BitMove;
 
@@ -233,6 +233,12 @@ impl TranspositionTable {
             cap: UnsafeCell::new(size),
             time_age: UnsafeCell::new(0),
         }
+    }
+
+    pub unsafe fn uninitialized_init(&self, mb_size: usize) {
+        let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
+        num_clusters = num_clusters.next_power_of_two() / 2;
+        self.re_alloc(num_clusters);
     }
 
     /// Returns the size of the heap allocated portion of the TT in KiloBytes.

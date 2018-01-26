@@ -66,6 +66,9 @@
 #![feature(integer_atomics)]
 #![feature(unique)]
 #![feature(allocator_api)]
+#![feature(const_fn)]
+#![feature(const_indexing)]
+#![feature(untagged_unions)]
 
 #![allow(dead_code)]
 

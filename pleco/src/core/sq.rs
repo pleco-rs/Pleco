@@ -58,6 +58,7 @@ use super::*;
 
 use std::fmt;
 use std::ops::*;
+use std::mem::transmute;
 
 // TODO: Investigate possibility of using an Enum instead
 
@@ -149,7 +150,10 @@ impl SQ {
     /// ```
     #[inline(always)]
     pub fn rank(self) -> Rank {
-        ALL_RANKS[(self.0 >> 3) as usize]
+//        ALL_RANKS[(self.0 >> 3) as usize]
+        unsafe {
+            transmute::<u8,Rank>((self.0 >> 3) & 0b0000_0111)
+        }
     }
 
     /// Returns the `BitBoard` representation of a `Rank` that a `SQ` lies on.
@@ -177,7 +181,7 @@ impl SQ {
     #[inline(always)]
     pub fn file(self) -> File {
         unsafe {
-            *ALL_FILES.get_unchecked((self.0 & 0b0000_0111) as usize)
+            transmute::<u8,File>(self.0 & 0b0000_0111)
         }
     }
 
@@ -224,6 +228,19 @@ impl SQ {
     #[inline(always)]
     pub fn make(file: File, rank: Rank) -> SQ {
         SQ(((rank as u8).wrapping_shl(3) + (file as u8)) as u8)
+    }
+
+    pub fn on_dark_square(self) -> bool {
+        self.0 % 2 == 0
+    }
+
+    pub fn on_light_square(self) -> bool {
+        self.0 % 2 == 1
+    }
+
+    // 0 = white squares, 1 = black square
+    pub fn square_color_index(self) -> usize {
+        ((self.0 + 1) % 2) as usize
     }
 }
 

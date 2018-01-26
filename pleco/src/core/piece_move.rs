@@ -230,7 +230,7 @@ impl BitMove {
     /// A Null move is never a valid move to play. Using a Null move should onl be used for search and
     /// evaluation purposes.
     #[inline]
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         BitMove { data: 0 }
     }
 

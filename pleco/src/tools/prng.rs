@@ -12,8 +12,10 @@ impl PRNG {
     /// # Panics
     ///
     /// Panics if the seed is zero.
-    pub fn init(s: u64) -> PRNG {
-        assert_ne!(s, 0);
+    pub const fn init(s: u64) -> PRNG {
+//        if s == 0 {
+//            panic!();
+//        }
         PRNG { seed: s }
     }
 

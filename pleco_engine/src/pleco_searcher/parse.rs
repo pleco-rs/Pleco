@@ -1,8 +1,8 @@
 //! Functions for parsing UCI input, including both time data & the position of the board to be searched.
 
-use super::uci_timer::{PreLimits,UCITimer};
 use pleco::Board;
 
+use time::uci_timer::{PreLimits,UCITimer};
 
 fn is_keyword(arg: &str) -> bool {
     match arg {
@@ -228,6 +228,6 @@ mod tests {
         let old_str = "position startpos moves e2e4 d7d5 e4d5 d8d5 g1f3 d5e4 f1e2 c7c6 e1g1";
         // e8c8
         let args: Vec<&str> = old_str.split_whitespace().collect();
-        let board = position_parse_board(&args[1..]).unwrap();
+        position_parse_board(&args[1..]).unwrap();
     }
 }

@@ -4,22 +4,18 @@ pub mod misc;
 pub mod threads;
 pub mod search;
 pub mod root_moves;
-pub mod sync;
 pub mod parse;
-pub mod time_management;
-pub mod uci_options;
-pub mod uci_timer;
 
-use pleco::tools::tt::TranspositionTable;
 use pleco::Board;
 use pleco::BitMove;
 
 use std::io;
 
-use self::uci_timer::{PreLimits};
 use self::threads::ThreadPool;
-use self::uci_options::{OptionsMap,OptionWork};
-
+use time::uci_timer::{PreLimits};
+use uci::options::{OptionsMap,OptionWork};
+use TT_TABLE;
+use init_globals;
 
 use num_cpus;
 
@@ -27,25 +23,9 @@ use num_cpus;
 
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
-pub static VERSION: &str = "0.0.3";
-
-// -------- CONSTANTS
-
-const MAX_PLY: u16 = 126;
-const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
-pub const MAX_THREADS: usize = 256;
-pub const DEFAULT_TT_SIZE: usize = 256;
+pub static VERSION: &str = "0.0.8";
 
 
-// MUTATABLE STATIC VARIABLES;
-
-lazy_static! {
-    pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
-}
-
-// TODO: Helper thread that prints awaits error messages
-// mio::poll
-// spawn a thread
 
 #[derive(PartialEq)]
 enum SearchType {
@@ -64,9 +44,7 @@ pub struct PlecoSearcher {
 
 impl PlecoSearcher {
     pub fn init(use_stdout: bool) -> Self {
-        unsafe {
-            TT_TABLE.clear();
-        }
+        init_globals();
         let mut pool = ThreadPool::new();
         pool.stdout(use_stdout);
         pool.set_thread_count(num_cpus::get());

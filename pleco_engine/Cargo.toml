@@ -17,8 +17,7 @@ include = [
     "tests/*.rs",
     "Cargo.toml",
     ".gitignore",
-    "README.md",
-    "examples/*"
+    "README.md"
 ]
 
 [badges]
@@ -73,11 +72,15 @@ doctest = true
 [dependencies]
 pleco = { path = "../pleco", version = "0.3.2" }
 clippy = {version = "0.0.179", optional = true}
-lazy_static = "1.0.0"
 chrono = "0.4.0"
 rand = "0.4.2"
 rayon = "0.9.0"
 num_cpus = "1.8.0"
+
+
+[dependencies.lazy_static]
+version = "1.0.0"
+features = ["nightly"]
 
 
 [features]

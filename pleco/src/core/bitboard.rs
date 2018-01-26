@@ -164,7 +164,7 @@ impl BitBoard {
     }
 
     /// Array containing all the `BitBoards` for of the starting position, for each player and piece.
-    pub fn start_bbs() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+    pub const fn start_bbs() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
         [[
             BitBoard(START_W_PAWN),
             BitBoard(START_W_KNIGHT),

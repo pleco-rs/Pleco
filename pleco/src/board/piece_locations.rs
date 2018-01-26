@@ -37,7 +37,7 @@ pub struct PieceLocations {
 
 impl PieceLocations {
     /// Constructs a new `PieceLocations` with a default of no pieces on the board.
-    pub fn blank() -> PieceLocations {
+    pub const fn blank() -> PieceLocations {
         PieceLocations { data: [0b0111; 64] }
     }
 
@@ -46,7 +46,7 @@ impl PieceLocations {
     /// This function is unsafe as Zeros represent Pawns, and therefore care mus be taken
     /// to iterate through every square and ensure the correct piece or lack of piece
     /// is placed.
-    pub unsafe fn default() -> PieceLocations {
+    pub const fn default() -> PieceLocations {
         PieceLocations { data: [0; 64] }
     }
 

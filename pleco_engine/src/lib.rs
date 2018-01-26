@@ -32,6 +32,8 @@
 #![feature(allocator_api)]
 #![feature(trusted_len)]
 #![feature(fused)]
+#![feature(const_indexing)]
+#![feature(const_fn)]
 
 #![crate_type = "rlib"]
 
@@ -45,5 +47,9 @@ extern crate pleco;
 extern crate chrono;
 
 pub mod pleco_searcher;
+pub mod sync;
+pub mod time;
+pub mod consts;
+pub mod uci;
 
-
+pub use consts::*;

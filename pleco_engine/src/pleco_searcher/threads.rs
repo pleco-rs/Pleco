@@ -8,24 +8,20 @@ use std::{mem,time};
 
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
-use pleco::tools::tt::*;
 
 use super::search::ThreadSearcher;
 use super::misc::*;
-use super::uci_timer::*;
 #[allow(unused_imports)]
-use super::{TT_TABLE,THREAD_STACK_SIZE};
+use TT_TABLE;
 use super::root_moves::RootMove;
 use super::root_moves::root_moves_list::RootMoveList;
 use super::root_moves::root_moves_manager::RmManager;
-use super::sync::LockLatch;
+use THREAD_STACK_SIZE;
+use sync::LockLatch;
+use time::uci_timer::*;
+use time::time_management::TimeManager;
 
-use super::time_management::TimeManager;
 
-/// Global Timer
-lazy_static! {
-    pub static ref TIMER: TimeManager = TimeManager::blank();
-}
 // Data sent from the main thread to initialize a new search
 pub struct ThreadGo {
     limit: Limits,
@@ -34,6 +30,11 @@ pub struct ThreadGo {
 
 pub enum SendData {
     BestMove(RootMove)
+}
+
+/// Global Timer
+lazy_static! {
+    pub static ref TIMER: TimeManager = TimeManager::uninitialized();
 }
 
 pub struct ThreadPool {
@@ -94,7 +95,6 @@ impl ThreadPool {
         Thread {
             root_moves: root_moves,
             id: id,
-            tt: &super::TT_TABLE,
             use_stdout: Arc::clone(&self.use_stdout),
             pos_state: Arc::clone(&self.pos_state),
             cond: Arc::clone(&self.all_thread_go),
@@ -288,7 +288,6 @@ impl MainThread {
 pub struct Thread {
     pub root_moves: RootMoveList,
     pub id: usize,
-    pub tt: &'static TranspositionTable,
     pub use_stdout: Arc<AtomicBool>,
     pub pos_state: Arc<RwLock<Option<ThreadGo>>>,
     pub cond: Arc<LockLatch>,

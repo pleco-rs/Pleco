@@ -1,5 +1,5 @@
-extern crate chrono;
 
+use chrono;
 use std::time;
 use pleco::core::masks::PLAYER_CNT;
 

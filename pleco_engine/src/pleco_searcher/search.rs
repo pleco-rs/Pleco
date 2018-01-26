@@ -1,9 +1,8 @@
 //! The main searching function.
 
 use super::threads::Thread;
-use super::uci_timer::*;
-use super::time_management::TimeManager;
-//use test::{self,Bencher};
+
+use time::uci_timer::*;
 
 use std::cmp::{min,max};
 use std::sync::atomic::Ordering;
@@ -13,10 +12,12 @@ use pleco::core::*;
 use pleco::board::eval::*;
 use pleco::tools::tt::*;
 
-
 use super::misc::*;
-use super::MAX_PLY;
-use super::TT_TABLE;
+use MAX_PLY;
+use TT_TABLE;
+
+use time::time_management::TimeManager;
+use super::threads::TIMER;
 
 const THREAD_DIST: usize = 20;
 //                                      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
@@ -44,9 +45,9 @@ impl<'a> ThreadSearcher<'a> {
             println!("info id {} start", self.thread.id);
         }
 
-        if self.main_thread() {
-            println!("info max_time: {}, ideal time: {}", self.time_man.maximum_time(), self.time_man.ideal_time());
-        }
+//        if self.main_thread() {
+//            println!("info max_time: {}, ideal time: {}", self.time_man.maximum_time(), self.time_man.ideal_time());
+//        }
 
         let max_depth = if let LimitsType::Depth(d) = self.limit.limits_type {
             d
@@ -133,12 +134,12 @@ impl<'a> ThreadSearcher<'a> {
             if let Some(_) = self.limit.use_time_management() {
                 if !self.stop() {
 //                    let prev_best = self.thread.root_moves.first().prev_score;
-                    let ideal = self.time_man.ideal_time();
-                    let elapsed = self.time_man.elapsed();
+                    let ideal = TIMER.ideal_time();
+                    let elapsed = TIMER.elapsed();
                     let stability: f64 = f64::powi(0.92, best_move_stability as i32);
                     let new_ideal = (ideal as f64 * stability * time_reduction) as i64;
                     println!("ideal: {}, new_ideal: {}, elapsed: {}", ideal, new_ideal, elapsed);
-                    if self.thread.root_moves.len() == 1 || self.time_man.elapsed() >= new_ideal {
+                    if self.thread.root_moves.len() == 1 || TIMER.elapsed() >= new_ideal {
                         break 'iterative_deepening;
                     }
                 }
@@ -314,7 +315,7 @@ impl<'a> ThreadSearcher<'a> {
 
     fn check_time(&mut self) {
         if self.limit.use_time_management().is_some()
-            && self.time_man.elapsed() >= self.time_man.maximum_time() {
+            && TIMER.elapsed() >= TIMER.maximum_time() {
             self.thread.root_moves.set_stop(true);
         } else if let Some(time) = self.limit.use_movetime() {
             if self.limit.elapsed() >= time as i64 {

@@ -31,6 +31,8 @@ const SEEDS: [[u64; 8]; 2] = [
     [728, 10_316, 55_013, 32_803, 12_281, 15_100, 16_645, 255],
 ];
 
+const ZOBRIST_SEED: u64 = 23_081;
+
 /// Structure for helping determine Zobrist hashes for a given position.
 pub struct Zobrist {
     /// Zobrist key for each piece on each square.
@@ -55,8 +57,7 @@ impl Zobrist {
             side: 0,
         };
 
-        let zobrist_seed: u64 = 23_081;
-        let mut rng = PRNG::init(zobrist_seed);
+        let mut rng = PRNG::init(ZOBRIST_SEED);
 
         for i in 0..SQ_CNT {
             for j in 0..PIECE_CNT {

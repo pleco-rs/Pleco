@@ -158,7 +158,7 @@ pub struct Board {
 
     /// Reference to the pre-computed lookup tables.
     #[doc(hidden)]
-    pub magic_helper: &'static MAGIC_HELPER,
+    pub magic_helper: &'static MagicHelper<'static, 'static>,
 }
 
 impl fmt::Display for Board {
@@ -209,7 +209,7 @@ impl Board {
             half_moves: 0,
             depth: 0,
             piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
-            piece_locations: unsafe { PieceLocations::default() },
+            piece_locations: PieceLocations::blank(),
             state: Arc::new(BoardState::default()),
             magic_helper: &MAGIC_HELPER,
         };

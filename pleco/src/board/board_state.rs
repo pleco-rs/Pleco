@@ -161,6 +161,9 @@ impl BoardState {
         }
         println!();
     }
+
+//    #[doc(hidden)]
+//    pub fn
 }
 
 impl PartialEq for BoardState {
