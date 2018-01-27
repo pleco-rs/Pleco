@@ -77,9 +77,9 @@ pub struct BoardState {
 
 impl BoardState {
     /// Constructs a `BoardState` from the starting position.
-    pub fn default() -> BoardState {
+    pub const fn default() -> BoardState {
         BoardState {
-            castling: Castling::all(),
+            castling: Castling::all_castling(),
             rule_50: 0,
             ply: 0,
             ep_square: NO_SQ,
@@ -96,9 +96,9 @@ impl BoardState {
     }
 
     /// Constructs a blank `BoardState`.
-    pub fn blank() -> BoardState {
+    pub const fn blank() -> BoardState {
         BoardState {
-            castling: Castling::empty(),
+            castling: Castling::empty_set(),
             rule_50: 0,
             ply: 0,
             ep_square: NO_SQ,

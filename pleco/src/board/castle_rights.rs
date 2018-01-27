@@ -57,8 +57,16 @@ impl Castling {
         }
     }
 
+    #[doc(hidden)]
+    #[inline]
     pub const fn all_castling() -> Self {
-        Castling{bits: ALL_CASTLING}
+        Castling {bits: ALL_CASTLING}
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    pub const fn empty_set() -> Self {
+        Castling {bits: 0}
     }
 
     /// Removes King-Side castling possibility for a single player

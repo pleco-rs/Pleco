@@ -13,7 +13,8 @@ pub mod iterative_parallel_mvv_lva;
 use core::piece_move::BitMove;
 use tools::{Searcher,UCILimit};
 use board::Board;
-use board::eval::*;
+use tools::eval::*;
+use core::score::Value;
 
 use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
 
@@ -116,12 +117,12 @@ impl Searcher for ParallelMiniMaxSearcher {
 #[derive(Eq, Copy, Clone)]
 pub struct BestMove {
     best_move: Option<BitMove>,
-    score: i16,
+    score: Value,
 }
 
 impl BestMove {
     #[inline(always)]
-    pub fn new_none(score: i16) -> Self {
+    pub fn new_none(score: Value) -> Self {
         BestMove {
             best_move: None,
             score: score,
@@ -130,7 +131,7 @@ impl BestMove {
 
     #[inline(always)]
     pub fn negate(mut self) -> Self {
-        self.score = self.score.wrapping_neg();
+        self.score = Value(self.score.0.wrapping_neg());
         self
     }
 

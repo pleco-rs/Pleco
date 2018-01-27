@@ -13,7 +13,7 @@ pub mod mono_traits;
 pub mod sq;
 pub mod bitboard;
 pub mod move_list;
-mod score;
+pub mod score;
 
 use self::bit_twiddles::*;
 use self::masks::*;

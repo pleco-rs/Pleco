@@ -6,7 +6,7 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 
-use pleco::board::eval::Eval;
+use pleco::tools::eval::Eval;
 use pleco::board::Board;
 
 use test::{black_box, Bencher};

@@ -6,7 +6,7 @@ pub mod root_moves_manager;
 
 use std::cmp::Ordering as CmpOrder;
 
-use pleco::board::eval::*;
+use pleco::core::score::*;
 use pleco::BitMove;
 
 const MAX_MOVES: usize = 255;
@@ -25,8 +25,8 @@ impl RootMove {
     pub fn new(bit_move: BitMove) -> Self {
         RootMove {
             bit_move: bit_move,
-            score: NEG_INFINITY as i32,
-            prev_score: NEG_INFINITY as i32,
+            score: Value::NEG_INFINITE.0 as i32,
+            prev_score: Value::NEG_INFINITE.0 as i32,
             depth_reached: 0,
         }
     }

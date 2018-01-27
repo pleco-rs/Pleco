@@ -1,16 +1,15 @@
 //! The main searching function.
-
-use super::threads::Thread;
-
 use time::uci_timer::*;
 
 use std::cmp::{min,max};
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{Ordering,AtomicBool};
+use std::sync::Arc;
 
 use pleco::{MoveList,Board,BitMove};
 use pleco::core::*;
-use pleco::board::eval::*;
 use pleco::tools::tt::*;
+use pleco::core::score::*;
+use pleco::tools::eval::Eval;
 
 use super::misc::*;
 use MAX_PLY;
@@ -18,6 +17,8 @@ use TT_TABLE;
 
 use time::time_management::TimeManager;
 use super::threads::TIMER;
+use super::root_moves::root_moves_list::RootMoveList;
+use consts::*;
 
 const THREAD_DIST: usize = 20;
 //                                      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
@@ -25,24 +26,28 @@ static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
 
 
-pub struct ThreadSearcher<'a> {
-    pub thread: &'a mut Thread,
+pub struct ThreadSearcher {
     pub limit: Limits,
     pub board: Board,
-    pub time_man: &'static TimeManager
+    pub time_man: &'static TimeManager,
+    pub tt: &'static TranspositionTable,
+    pub thread_stack: [ThreadStack; THREAD_STACK_SIZE],
+    pub id: usize,
+    pub root_moves: RootMoveList,
+    pub use_stdout: Arc<AtomicBool>,
 }
 
-impl<'a> ThreadSearcher<'a> {
+impl ThreadSearcher {
     pub fn search_root(&mut self) {
         assert!(self.board.depth() == 0);
-        self.thread.root_moves.set_finished(false);
+        self.root_moves.set_finished(false);
         if self.stop() {
-            self.thread.root_moves.set_finished(true);
+            self.root_moves.set_finished(true);
             return;
         }
 
         if self.use_stdout() {
-            println!("info id {} start", self.thread.id);
+            println!("info id {} start", self.id);
         }
 
 //        if self.main_thread() {
@@ -55,61 +60,60 @@ impl<'a> ThreadSearcher<'a> {
             MAX_PLY
         };
 
-        let start_ply: u16 = START_PLY[self.thread.id % THREAD_DIST];
-        let skip_size: u16 = SKIP_SIZE[self.thread.id % THREAD_DIST];
+        let start_ply: u16 = START_PLY[self.id % THREAD_DIST];
+        let skip_size: u16 = SKIP_SIZE[self.id % THREAD_DIST];
         let mut depth: u16 = start_ply;
 
-        let mut delta: i32 = NEG_INFINITY as i32;
+        let mut delta: i32 = Value::NEG_INFINITE.0 as i32;
         #[allow(unused_assignments)]
-        let mut best_value: i32 = NEG_INFINITY as i32;
-        let mut alpha: i32 = NEG_INFINITY as i32;
-        let mut beta: i32 = INFINITY as i32;
+        let mut best_value: i32 = Value::NEG_INFINITE.0 as i32;
+        let mut alpha: i32 = Value::NEG_INFINITE.0 as i32;
+        let mut beta: i32 = Value::INFINITE.0 as i32;
 
         let mut time_reduction: f64 = 1.0;
         let mut last_best_move: BitMove = BitMove::null();
-        let mut best_move_changes: u32 = 0;
         let mut best_move_stability: u32 = 0;
 
-        self.thread.root_moves.shuffle(self.thread.id, &self.board);
+        self.root_moves.shuffle(self.id, &self.board);
 
 
         'iterative_deepening: while !self.stop() && depth < max_depth {
-            self.thread.root_moves.rollback();
+            self.root_moves.rollback();
 
             if depth >= 5 {
                 delta = 18;
-                alpha = max(self.thread.root_moves.prev_best_score() - delta, NEG_INFINITY as i32);
-                beta = min(self.thread.root_moves.prev_best_score() + delta, INFINITY as i32);
+                alpha = max(self.root_moves.prev_best_score() - delta, Value::NEG_INFINITE.0 as i32);
+                beta = min(self.root_moves.prev_best_score() + delta, Value::INFINITE.0 as i32);
             }
 
             'aspiration_window: loop {
 
                 best_value = self.search::<PV>(alpha, beta, depth) as i32;
-                self.thread.root_moves.sort();
+                self.root_moves.sort();
 
                 if self.stop() {
                     break 'aspiration_window;
                 }
 
                 if best_value <= alpha {
-                    alpha = max(best_value - delta, NEG_INFINITY as i32);
+                    alpha = max(best_value - delta, Value::NEG_INFINITE.0 as i32);
                 } else if best_value >= beta {
-                    beta = min(best_value + delta, INFINITY as i32);
+                    beta = min(best_value + delta, Value::INFINITE.0 as i32);
                 } else {
                     break 'aspiration_window;
                 }
                 delta += (delta / 4) + 5;
 
-                assert!(alpha >= NEG_INFINITY as i32);
-                assert!(beta <= INFINITY as i32);
+                assert!(alpha >= Value::NEG_INFINITE.0 as i32);
+                assert!(beta <= Value::INFINITE.0 as i32);
             }
 
-            self.thread.root_moves.sort();
+            self.root_moves.sort();
             if self.use_stdout() && self.main_thread() {
                 println!("info depth {}", depth);
             }
             if !self.stop() {
-                self.thread.root_moves.set_depth_completed(depth);
+                self.root_moves.set_depth_completed(depth);
             }
             depth += skip_size;
 
@@ -117,14 +121,12 @@ impl<'a> ThreadSearcher<'a> {
                 continue;
             }
 
-            let best_move = self.thread.root_moves.first().bit_move;
+            let best_move = self.root_moves.first().bit_move;
             if best_move != last_best_move {
-                best_move_changes += 1;
                 time_reduction = 1.0;
                 best_move_stability = 0;
             } else {
                 time_reduction *= 0.91;
-                best_move_changes = 0;
                 best_move_stability += 1;
             }
 
@@ -139,14 +141,14 @@ impl<'a> ThreadSearcher<'a> {
                     let stability: f64 = f64::powi(0.92, best_move_stability as i32);
                     let new_ideal = (ideal as f64 * stability * time_reduction) as i64;
                     println!("ideal: {}, new_ideal: {}, elapsed: {}", ideal, new_ideal, elapsed);
-                    if self.thread.root_moves.len() == 1 || TIMER.elapsed() >= new_ideal {
+                    if self.root_moves.len() == 1 || TIMER.elapsed() >= new_ideal {
                         break 'iterative_deepening;
                     }
                 }
             }
 
         }
-        self.thread.root_moves.set_finished(true);
+        self.root_moves.set_finished(true);
     }
 
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
@@ -160,8 +162,8 @@ impl<'a> ThreadSearcher<'a> {
 
         let mut best_move = BitMove::null();
 
-        let mut value = NEG_INFINITY as i32;
-        let mut best_value = NEG_INFINITY as i32;
+        let mut value = Value::NEG_INFINITE.0 as i32;
+        let mut best_value = Value::NEG_INFINITE.0 as i32;
         let mut moves_played = 0;
 
         let mut pos_eval: i32 = 0;
@@ -171,7 +173,7 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         if ply >= max_depth || self.stop() {
-            return Eval::eval_low(&self.board) as i32;
+            return Eval::eval_low(&self.board).0 as i32;
         }
 
         let plys_to_zero = max_depth - ply;
@@ -195,13 +197,13 @@ impl<'a> ThreadSearcher<'a> {
         } else {
             if tt_hit {
                 if tt_entry.eval == 0 {
-                    pos_eval = Eval::eval_low(&self.board) as i32;
+                    pos_eval = Eval::eval_low(&self.board).0 as i32;
                 }
                 if tt_value != 0 && correct_bound(tt_value, pos_eval, tt_entry.node_type()) {
                     pos_eval = tt_value;
                 }
             } else {
-                pos_eval = Eval::eval_low(&self.board) as i32;
+                pos_eval = Eval::eval_low(&self.board).0 as i32;
                 tt_entry.place(zob, BitMove::null(), 0, pos_eval as i16, 0, NodeBound::NoBound);
             }
         }
@@ -217,16 +219,16 @@ impl<'a> ThreadSearcher<'a> {
 
         #[allow(unused_mut)]
         let mut moves: MoveList = if at_root {
-            self.thread.root_moves.to_list()
+            self.root_moves.to_list()
         } else {
             self.board.generate_pseudolegal_moves()
         };
 
         if moves.is_empty() {
             if self.board.in_check() {
-                return MATE as i32 + (ply as i32);
+                return Value::MATE.0 as i32 + (ply as i32);
             } else {
-                return STALEMATE as i32;
+                return Value::DRAW.0 as i32;
             }
         }
 
@@ -257,16 +259,16 @@ impl<'a> ThreadSearcher<'a> {
                     value = -self.search::<PV>(-beta, -alpha, max_depth);
                 }
                 self.board.undo_move();
-                assert!(value > NEG_INFINITY as i32);
-                assert!(value < INFINITY as i32);
+                assert!(value > Value::NEG_INFINITE.0 as i32);
+                assert!(value < Value::INFINITE.0 as i32);
                 if self.stop() {
                     return 0;
                 }
                 if at_root {
                     if moves_played == 1 || value as i32 > alpha {
-                        self.thread.root_moves.insert_score_depth(i,value, max_depth);
+                        self.root_moves.insert_score_depth(i,value, max_depth);
                     } else {
-                        self.thread.root_moves.insert_score(i, NEG_INFINITY as i32);
+                        self.root_moves.insert_score(i, Value::NEG_INFINITE.0 as i32);
                     }
                 }
 
@@ -288,9 +290,9 @@ impl<'a> ThreadSearcher<'a> {
 
         if moves_played == 0 {
             if self.board.in_check() {
-                return MATE as i32 + (ply as i32);
+                return Value::MATE.0 as i32 + (ply as i32);
             } else {
-                return STALEMATE as i32;
+                return Value::DRAW.0 as i32;
             }
         }
 
@@ -306,32 +308,32 @@ impl<'a> ThreadSearcher<'a> {
     // TODO: Qscience search
 
     fn main_thread(&self) -> bool {
-        self.thread.id == 0
+        self.id == 0
     }
 
     fn stop(&self) -> bool {
-        self.thread.root_moves.load_stop()
+        self.root_moves.load_stop()
     }
 
     fn check_time(&mut self) {
         if self.limit.use_time_management().is_some()
             && TIMER.elapsed() >= TIMER.maximum_time() {
-            self.thread.root_moves.set_stop(true);
+            self.root_moves.set_stop(true);
         } else if let Some(time) = self.limit.use_movetime() {
             if self.limit.elapsed() >= time as i64 {
-                self.thread.root_moves.set_stop(true);
+                self.root_moves.set_stop(true);
             }
         }
     }
 
     pub fn print_startup(&self) {
         if self.use_stdout() {
-            println!("info id {} start", self.thread.id);
+            println!("info id {} start", self.id);
         }
     }
 
     pub fn use_stdout(&self) -> bool {
-        self.thread.use_stdout.load(Ordering::Relaxed)
+        self.use_stdout.load(Ordering::Relaxed)
     }
 
 }

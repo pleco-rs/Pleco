@@ -230,15 +230,21 @@ impl SQ {
         SQ(((rank as u8).wrapping_shl(3) + (file as u8)) as u8)
     }
 
+    #[inline(always)]
+    /// Returns if the `SQ` is a dark square.
     pub fn on_dark_square(self) -> bool {
         self.0 % 2 == 0
     }
 
+    /// Returns if the `SQ` is a light square.
+    #[inline(always)]
     pub fn on_light_square(self) -> bool {
         self.0 % 2 == 1
     }
 
     // 0 = white squares, 1 = black square
+    /// Returns the player index of the color of the square.
+    #[inline(always)]
     pub fn square_color_index(self) -> usize {
         ((self.0 + 1) % 2) as usize
     }

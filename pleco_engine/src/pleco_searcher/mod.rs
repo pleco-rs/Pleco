@@ -25,8 +25,6 @@ pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
 pub static VERSION: &str = "0.0.8";
 
-
-
 #[derive(PartialEq)]
 enum SearchType {
     None,

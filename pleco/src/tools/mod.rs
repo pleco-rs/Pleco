@@ -4,6 +4,7 @@
 //! for building bots.
 
 pub mod prng;
+pub mod eval;
 pub mod tt;
 pub mod timer;
 mod pawn_table;

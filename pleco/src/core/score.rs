@@ -1,7 +1,9 @@
+//! Primitives for determining the value / score of specific
+
 use std::ops::*;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq,Copy, Clone)]
-pub struct Value(i16);
+pub struct Value(pub i16);
 
 impl Value {
     pub const ZERO: Value = Value(0);
@@ -34,7 +36,22 @@ impl Value {
 impl_bit_ops!(Value, i16);
 
 #[derive(Copy, Clone)]
-pub struct Score {
-    pub mg: i16,
-    pub eg: i16
+pub struct Score(pub i16, pub i16);
+
+impl Score {
+    pub fn make(mg: i16, eg: i16) -> Self {
+        Score(mg, eg)
+    }
+
+    pub fn new(mg: Value, eg: Value) -> Self {
+        Score(mg.0, eg.0)
+    }
+
+    pub fn mg(self) -> Value {
+        Value(self.0)
+    }
+
+    pub fn eg(self) -> Value {
+        Value(self.1)
+    }
 }

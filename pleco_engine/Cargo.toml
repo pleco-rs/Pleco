@@ -77,7 +77,6 @@ rand = "0.4.2"
 rayon = "0.9.0"
 num_cpus = "1.8.0"
 
-
 [dependencies.lazy_static]
 version = "1.0.0"
 features = ["nightly"]

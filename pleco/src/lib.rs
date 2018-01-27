@@ -3,6 +3,8 @@
 //! This package is separated into two parts. Firstly, the board representation & associated functions (the current crate, `pleco`), and secondly,
 //! the AI implementations [pleco_engine](https://crates.io/crates/pleco_engine).
 //!
+//! This crate requires NIGHTLY rust to use.
+//!
 //! # Usage
 //!
 //! This crate is [on crates.io](https://crates.io/crates/pleco) and can be

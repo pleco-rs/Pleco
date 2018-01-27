@@ -1,11 +1,12 @@
 //! Module for evaluating the strength of a current position.
 
-use board::Board;
+use Board;
 use std::i16;
 use core::*;
 use core::masks::*;
 use core::bitboard::BitBoard;
 use core::mono_traits::*;
+use core::score::Value;
 
 lazy_static! {
     pub static ref BISHOP_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(BISHOP_POS_ARRAY)), flatten(BISHOP_POS_ARRAY) ];
@@ -110,7 +111,7 @@ pub const PIECE_VALS: [i16; PIECE_CNT] = [
 
 impl Eval {
     /// Evaluates the score of a `Board` for the current side to move.
-    pub fn eval_low(board: &Board) -> i16 {
+    pub fn eval_low(board: &Board) -> Value {
         match board.turn() {
             Player::White => eval_all::<WhiteType>(board) - eval_all::<BlackType>(board),
             Player::Black => eval_all::<BlackType>(board) - eval_all::<WhiteType>(board)
@@ -121,17 +122,18 @@ impl Eval {
 
 
 
-fn eval_all<P: PlayerTrait>(board: &Board) -> i16 {
+fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
     if board.rule_50() >= 50 {
-        return MATE;
+        return Value::MATE;
     }
-    eval_piece_counts::<P>(board) +
+    let pre_value = eval_piece_counts::<P>(board) +
     eval_castling::<P>(board) +
     eval_king_pos::<P>(board) +
     eval_bishop_pos::<P>(board) +
     eval_knight_pos::<P>(board) +
     eval_king_blockers_pinners::<P>(board) +
-    eval_pawns::<P>(board)
+    eval_pawns::<P>(board);
+    Value(pre_value)
 }
 
 

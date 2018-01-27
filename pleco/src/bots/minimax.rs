@@ -1,7 +1,8 @@
 //! The minimax algorithm.
 use board::*;
-use board::eval::*;
+use tools::eval::*;
 use super::{BestMove, eval_board};
+use core::score::Value;
 
 #[allow(unused_imports)]
 use test::Bencher;
@@ -21,12 +22,12 @@ pub fn minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + (board.depth() as i16));
+            return BestMove::new_none(Value(MATE + (board.depth() as i16)));
         } else {
-            return BestMove::new_none(STALEMATE);
+            return BestMove::new_none(Value::DRAW);
         }
     }
-    let mut best_move = BestMove::new_none(NEG_INFINITY);
+    let mut best_move = BestMove::new_none(Value::NEG_INFINITE);
     for mov in moves {
         board.apply_move(mov);
         let returned_move: BestMove = minimax(board, max_depth)

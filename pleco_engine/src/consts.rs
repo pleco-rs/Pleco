@@ -5,7 +5,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
 use pleco::tools::tt::TranspositionTable;
-use time::time_management::TimeManager;
+//use time::time_management::TimeManager;
 
 pub const MAX_PLY: u16 = 126;
 pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -32,13 +32,13 @@ pub fn init_globals() {
     }
 }
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_da() {
-        init_globals();
-
-    }
-}
+//
+//#[cfg(test)]
+//mod tests {
+//    use super::*;
+//    #[test]
+//    fn test_da() {
+//        init_globals();
+//
+//    }
+//}

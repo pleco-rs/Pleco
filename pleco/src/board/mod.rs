@@ -14,7 +14,6 @@
 
 use failure;
 pub mod movegen;
-pub mod eval;
 pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
@@ -49,6 +48,9 @@ use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 pub type Error = failure::Error;
+
+
+
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.

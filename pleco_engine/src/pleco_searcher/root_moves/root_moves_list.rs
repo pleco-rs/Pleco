@@ -47,7 +47,6 @@ impl Clone for RootMoveList {
     }
 }
 
-
 unsafe impl Send for RootMoveList {}
 
 impl RootMoveList {
