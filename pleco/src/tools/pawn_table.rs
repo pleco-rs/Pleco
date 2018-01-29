@@ -1,3 +1,5 @@
+use std::cell::UnsafeCell;
+
 use {Player,File,SQ,BitBoard,Board,Piece,Rank};
 use super::super::core::masks::{PLAYER_CNT,RANK_CNT};
 use super::super::core::score::*;
@@ -107,22 +109,25 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
 }
 
 pub struct PawnTable {
-    table: TableBase<Entry>,
+    table: UnsafeCell<TableBase<Entry>>,
 }
 
 impl PawnTable {
     pub fn new(size: usize) -> Self {
         PawnTable {
-            table: TableBase::new(size).unwrap()
+            table: UnsafeCell::new(TableBase::new(size).unwrap())
         }
     }
 
     pub fn get(&self, key: u64) -> &mut Entry {
-        self.table.get_mut(key)
+        unsafe {
+            (&*self.table.get()).get_mut(key)
+        }
     }
 
+
     pub unsafe fn clear(&self) {
-        self.table.resize(self.table.size());
+        (&*self.table.get()).resize((&*self.table.get()).size());
     }
 
     pub fn probe(&self, board: &Board) -> &mut Entry {
@@ -403,6 +408,7 @@ mod tests {
 
     use std::thread::sleep;
     use std::time::Duration;
+    use std::mem::forget;
 
     use std::sync::atomic::Ordering;
     use std::sync::atomic::compiler_fence;
@@ -415,6 +421,7 @@ mod tests {
         boards.iter().for_each(|b| {
             score += t.probe(b).pawns_score().0 as i64;
         });
+        forget(t);
         compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
     }
@@ -431,6 +438,7 @@ mod tests {
         }
         t = PawnTable::new(1 << 5);
         s += t.probe(&b).pawns_score();
+        forget(t);
         compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
     }
