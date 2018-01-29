@@ -366,9 +366,6 @@ pub fn file_of_sq(s: u8) -> File {
     unsafe {
         mem::transmute::<u8,File>(s & 0b0000_0111)
     }
-//    unsafe {
-//        *ALL_FILES.get_unchecked((s & 0b0000_0111) as usize)
-//    }
 }
 
 /// For whatever file the bit (inner value of a `SQ`) is, returns the
