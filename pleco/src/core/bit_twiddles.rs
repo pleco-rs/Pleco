@@ -107,7 +107,10 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 8;
     bb |= bb >> 16;
     bb |= bb >> 32;
-    DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
+//    DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
+    unsafe {
+        *DEBRUIJ_T.get_unchecked((bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize)
+    }
 }
 
 /// Returns if there are more than one bits in a u64.

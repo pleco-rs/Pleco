@@ -486,6 +486,8 @@ mod tests {
     extern crate rand;
     use super::*;
 
+    use std::thread::sleep;
+    use std::time::Duration;
 
     // around 0.5 GB
     const HALF_GIG: usize = 2 << 24;
@@ -500,9 +502,8 @@ mod tests {
 
         let key = create_key(32, 44);
         let (_found,_entry) = tt.probe(key);
-        unsafe {
-            tt.clear();
-        }
+
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -510,9 +511,7 @@ mod tests {
         let tt = TranspositionTable::new_num_clusters(100);
         assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
         assert_eq!(tt.num_entries(), (100 as usize).next_power_of_two() * CLUSTER_SIZE);
-        unsafe {
-            tt.clear();
-        }
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -529,9 +528,8 @@ mod tests {
             }
             tt.new_search();
         }
-        unsafe {
-            tt.clear();
-        }
+
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -580,9 +578,7 @@ mod tests {
         assert_eq!(entry.partial_key, partial_key_1);
         assert_eq!(entry.depth, 2);
 
-        unsafe {
-            tt.clear();
-        }
+        sleep(Duration::from_millis(1));
     }
 
     /// Helper function to create a key of specified index / partial_key
