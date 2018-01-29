@@ -119,12 +119,20 @@ pub struct MagicHelper<'a, 'b> {
     king_table: [u64; 64],
     /// Fast lookup distance between each square.
     dist_table: [[u8; 64]; 64],
+    /// Ring around a certain square
+    dist_ring_table: [[u64; 64]; 8],
     /// Fast lookup line bitboards for any two squares.
     line_bitboard: [[u64; 64]; 64],
     /// Fast lookup bitboards for the squares between any two squares.
     between_sqs_bb: [[u64; 64]; 64],
     adjacent_files_bb: [u64; 8],
     pawn_attacks_from: [[u64; 64]; 2],
+
+    pawn_attacks_span: [[u64; 64]; 2],
+    forward_file_bb: [[u64; 64]; 2],
+    passed_pawn_mask: [[u64; 64]; 2],
+
+    forward_ranks_bb: [[u64; PLAYER_CNT]; RANK_CNT],
     /// Zobrist hasher.
     pub zobrist: Zobrist,
 }
@@ -146,6 +154,9 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             .gen_between_and_line_bbs()
             .gen_adjacent_file_bbs()
             .gen_pawn_attacks()
+            .gen_ring_distance_bb()
+            .gen_forward_ranks_bb()
+            .gen_pawn_attacks_span()
     }
 
     fn init() -> MagicHelper<'a, 'b> {
@@ -155,10 +166,15 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             knight_table: gen_knight_moves(),
             king_table: gen_king_moves(),
             dist_table: init_distance_table(),
+            dist_ring_table: [[0; 64]; 8],
             line_bitboard: [[0; 64]; 64],
             between_sqs_bb: [[0; 64]; 64],
             adjacent_files_bb: [0; 8],
             pawn_attacks_from: [[0; 64]; 2],
+            pawn_attacks_span: [[0; 64]; 2],
+            forward_file_bb: [[0; 64]; 2],
+            passed_pawn_mask: [[0; 64]; 2],
+            forward_ranks_bb: [[0; PLAYER_CNT]; RANK_CNT],
             zobrist: Zobrist::default(),
         }
     }
@@ -235,10 +251,18 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
     /// Gets the adjacent files `BitBoard` of the square
     #[inline(always)]
-    pub fn adjacent_file(&self, sq: SQ) -> BitBoard {
+    pub fn adjacent_sq_file(&self, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
         unsafe {
             BitBoard(*self.adjacent_files_bb.get_unchecked(sq.file() as usize))
+        }
+    }
+
+    /// Gets the adjacent files `BitBoard` of the file
+    #[inline(always)]
+    pub fn adjacent_file(&self, f: File) -> BitBoard {
+        unsafe {
+            BitBoard(*self.adjacent_files_bb.get_unchecked(f as usize))
         }
     }
 
@@ -294,6 +318,37 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn z_side(&self) -> u64 {
         self.zobrist.side
+    }
+
+    /// Returns the ring of bits surronding the square sq at a specified distance.
+    ///
+    /// # Safety
+    ///
+    /// distance must be less than 8, or else a panic will occur.
+    #[inline(always)]
+    pub fn ring_distance(&self, sq: SQ, distance: u8) -> BitBoard {
+        debug_assert!(distance <= 7);
+        BitBoard(self.dist_ring_table[sq.0 as usize][distance as usize])
+    }
+
+
+    pub fn forward_rank_bb(&self, player: Player, rank: Rank) -> BitBoard {
+        BitBoard(self.forward_ranks_bb[rank as usize][player as usize])
+    }
+
+    #[inline(always)]
+    pub fn pawn_attacks_span(&self, player: Player, sq: SQ) -> BitBoard {
+        BitBoard(self.pawn_attacks_span[player as usize][sq.0 as usize])
+    }
+
+    #[inline(always)]
+    pub fn forward_file_bb(&self, player: Player, sq: SQ) -> BitBoard {
+        BitBoard(self.forward_file_bb[player as usize][sq.0 as usize])
+    }
+
+    #[inline(always)]
+    pub fn passed_pawn_mask(&self, player: Player, sq: SQ) -> BitBoard {
+        BitBoard(self.passed_pawn_mask[player as usize][sq.0 as usize])
     }
 
     #[inline(always)]
@@ -373,6 +428,38 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             }
             self.pawn_attacks_from[1][i as usize] = bb;
         }
+        self
+    }
+
+    fn gen_ring_distance_bb(mut self) -> Self {
+        for i in 0..64 {
+            for j in 0..64 {
+                if i != j {
+                    let dist = self.dist_table[i][j] as usize;
+                    self.dist_ring_table[dist - 1][i] |= (1 as u64) << (j as usize);
+                }
+            }
+        }
+        self
+    }
+
+    fn gen_forward_ranks_bb(mut self) -> Self {
+        for i in 0..7 {
+            self.forward_ranks_bb[i + 1][Player::Black as usize] = self.forward_ranks_bb[i][Player::Black as usize] | rank_bb(i as u8);
+            self.forward_ranks_bb[i][Player::White as usize] = !self.forward_ranks_bb[i + 1][Player::Black as usize];
+        }
+        self
+    }
+
+    fn gen_pawn_attacks_span(mut self) -> Self {
+        for p in 0..2 {
+            for s in 0..64 {
+                self.forward_file_bb[p][s] = self.forward_ranks_bb[rank_idx_of_sq(s as u8) as usize][p] & FILE_BB[file_idx_of_sq(s as u8) as usize];
+                self.pawn_attacks_span[p][s] = self.forward_ranks_bb[rank_idx_of_sq(s as u8) as usize][p] & self.adjacent_files_bb[file_idx_of_sq(s as u8) as usize];
+                self.passed_pawn_mask[p][s] = self.forward_file_bb[p][s] | self.pawn_attacks_span[p][s];
+            }
+        }
+
         self
     }
 }

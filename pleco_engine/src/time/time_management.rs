@@ -170,9 +170,4 @@ mod tests {
         let ideal = time_man.ideal_time();
         println!("ideal: {} max: {}", ideal, max);
     }
-
-    #[test]
-    fn test_uninit() {
-        let man = TimeManager::uninitialized();
-    }
 }

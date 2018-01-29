@@ -20,6 +20,10 @@ pub trait PlayerTrait {
     /// Return the opposing `Player`.
     fn opp_player() -> Player;
 
+    /// Returns the index of the player
+    fn player_idx() -> usize;
+
+
     /// Given a `SQ`, return a square that is down relative to the current player.
     fn down(sq: SQ) -> SQ;
 
@@ -89,6 +93,9 @@ impl PlayerTrait for WhiteType {
     }
 
     #[inline(always)]
+    fn player_idx() -> usize {Player::White as usize}
+
+    #[inline(always)]
     fn down(sq: SQ) -> SQ { sq - SQ(8) }
 
     #[inline(always)]
@@ -147,6 +154,9 @@ impl PlayerTrait for BlackType {
     fn opp_player() -> Player {
         Player::White
     }
+
+    #[inline(always)]
+    fn player_idx() -> usize {Player::Black as usize}
 
     #[inline(always)]
     fn down(sq: SQ) -> SQ { sq + SQ(8) }

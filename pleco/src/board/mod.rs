@@ -1661,6 +1661,11 @@ impl Board {
         self.state.castling.castle_rights(player, castle_type)
     }
 
+    #[inline(always)]
+    pub fn player_can_castle(&self, player: Player) -> Castling {
+        self.state.castling.player_can_castle(player)
+    }
+
     /// Check if the castle path is impeded for the current player. Does not assume that the
     /// current player has the ability to castle, whether by having the castling-rights to, or
     /// having the rook and king be in the correct square.

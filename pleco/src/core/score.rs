@@ -39,6 +39,8 @@ impl_bit_ops!(Value, i16);
 pub struct Score(pub i16, pub i16);
 
 impl Score {
+    pub const ZERO: Score = Score(0,0);
+
     pub fn make(mg: i16, eg: i16) -> Self {
         Score(mg, eg)
     }
@@ -53,5 +55,34 @@ impl Score {
 
     pub fn eg(self) -> Value {
         Value(self.1)
+    }
+}
+
+impl Add for Score {
+    type Output = Score;
+
+    fn add(self, other: Score) -> Score {
+        Score(other.0 + self.0, other.1 + self.1)
+    }
+}
+
+
+impl AddAssign for Score {
+    fn add_assign(&mut self, other: Score) {
+        *self = Score(other.0 + self.0, other.1 + self.1);
+    }
+}
+
+impl Sub for Score {
+    type Output = Score;
+
+    fn sub(self, other: Score) -> Score {
+        Score(other.0 - self.0, other.1 - self.1)
+    }
+}
+
+impl SubAssign for Score {
+    fn sub_assign(&mut self, other: Score) {
+        *self = Score(other.0 - self.0, other.1 - self.1);
     }
 }

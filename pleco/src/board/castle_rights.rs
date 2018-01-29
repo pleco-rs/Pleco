@@ -115,6 +115,13 @@ impl Castling {
         }
     }
 
+    #[inline]
+    pub fn player_can_castle(&self, player: Player) -> Castling {
+        Castling {
+            bits: self.bits & (Castling::WHITE_ALL.bits << (2 * player as u16))
+        }
+    }
+
     /// Returns if a given player has castled
     #[inline]
     pub fn has_castled(&self, player: Player) -> bool {

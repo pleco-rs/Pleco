@@ -8,6 +8,7 @@ extern crate lazy_static;
 
 use pleco::tools::eval::Eval;
 use pleco::board::Board;
+use pleco::tools::pawn_table::{Entry,PawnTable};
 
 use test::{black_box, Bencher};
 
@@ -25,6 +26,19 @@ fn bench_100_evaluations(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
             black_box(Eval::eval_low(board));
+        }
+    })
+}
+
+#[bench]
+fn bench_100_pawn_evals(b: &mut Bencher) {
+    b.iter(|| {
+        let t: PawnTable = PawnTable::new(1 << 10);
+        #[allow(unused_variables)]
+        let mut score: i64 = 0;
+        for board in RAND_BOARDS.iter() {
+            let entry: &mut Entry = black_box(t.probe(board));
+            score += entry.pawns_score().0 as i64;
         }
     })
 }

@@ -236,7 +236,7 @@ impl SQ {
         self.0 % 2 == 0
     }
 
-    /// Returns if the `SQ` is a light square.
+    /// Returns if the `SQ` is a dark square.
     #[inline(always)]
     pub fn on_light_square(self) -> bool {
         self.0 % 2 == 1

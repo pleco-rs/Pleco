@@ -20,7 +20,8 @@ use self::masks::*;
 use self::sq::SQ;
 
 use std::fmt;
-
+use std::mem;
+use std::ops::Not;
 
 /// Array of all possible pieces, indexed by their enum value.
 pub const ALL_PIECES: [Piece; PIECE_CNT] =
@@ -277,11 +278,38 @@ impl File {
     pub fn right_side_mask(self) -> u8 {
         !((1 << (self as u16 + 1)) - 1) as u8
     }
+
+    pub fn min(self, other: File) -> File {
+        if (self as u8) < (other as u8) {
+            self
+        } else {
+            other
+        }
+    }
+
+    pub fn max(self, other: File) -> File {
+        if (self as u8) > (other as u8) {
+            self
+        } else {
+            other
+        }
+    }
+}
+
+impl Not for File {
+    type Output = File;
+
+    fn not(self) -> File {
+        unsafe {
+            let f = self as u8 ^ File::H as u8;
+            mem::transmute::<u8,File>(f)
+        }
+    }
 }
 
 /// Enum for the Ranks of a Chessboard.
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Ord, PartialOrd)]
 pub enum Rank { // eg a specific row
     R1 = 0,
     R2 = 1,

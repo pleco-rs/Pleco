@@ -7,7 +7,7 @@ pub mod prng;
 pub mod eval;
 pub mod tt;
 pub mod timer;
-mod pawn_table;
+pub mod pawn_table;
 
 use std::ptr::Unique;
 use std::heap::{Alloc, Layout, Heap};

@@ -29,6 +29,7 @@ use super::sq::SQ;
 use super::bit_twiddles::*;
 use super::masks::*;
 use tools::prng::PRNG;
+use super::Player;
 
 use std::mem;
 use std::ops::*;
@@ -76,6 +77,8 @@ impl BitBoard {
     pub const RANK_7: BitBoard = BitBoard(RANK_7);
     /// BitBoard of Rank 8.
     pub const RANK_8: BitBoard = BitBoard(RANK_8);
+
+    pub const DARK_SQUARES: BitBoard = BitBoard(0xAA55AA55AA55AA55);
 
     /// Converts a `BitBoard` to a square.
     ///
@@ -139,6 +142,10 @@ impl BitBoard {
         BitBoard(self.lsb_u64())
     }
 
+    /// Returns the most significant bit
+    pub fn msb(self) -> BitBoard {
+        BitBoard(msb(self.0))
+    }
     /// Returns the least significant bit as a u64.
     #[inline(always)]
     pub fn lsb_u64(self) -> u64 {
@@ -154,6 +161,15 @@ impl BitBoard {
         sq
     }
 
+    #[inline(always)]
+    pub fn pop_some_lsb(&mut self) -> Option<SQ> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self.pop_lsb())
+        }
+    }
+
     /// Returns the index (as a square) and bit of the least significant bit and removes
     /// that bit from the `BitBoard`.
     #[inline(always)]
@@ -161,6 +177,20 @@ impl BitBoard {
         let sq: SQ = self.bit_scan_forward();
         *self &= *self - 1;
         (sq, sq.to_bb())
+    }
+
+    pub fn frontmost_sq(self, player: Player) -> SQ {
+        match player {
+            Player::White => self.msb().to_sq(),
+            Player::Black => self.bit_scan_forward(),
+        }
+    }
+
+    pub fn backmost_sq(self, player: Player) -> SQ {
+        match player {
+            Player::White => self.bit_scan_forward(),
+            Player::Black => self.msb().to_sq(),
+        }
     }
 
     /// Array containing all the `BitBoards` for of the starting position, for each player and piece.
