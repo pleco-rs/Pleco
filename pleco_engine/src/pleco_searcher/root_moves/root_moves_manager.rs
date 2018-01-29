@@ -3,7 +3,7 @@ use super::root_moves_list::{RootMoveList,RawRootMoveList};
 use MAX_THREADS;
 
 use std::heap::{Alloc, Layout, Heap};
-use std::ptr::Unique;
+use std::ptr::NonNull;
 use std::sync::Arc;
 use std::sync::atomic::{Ordering,AtomicUsize,fence,compiler_fence};
 use std::ops::{Deref, DerefMut,Index,IndexMut};
@@ -16,7 +16,7 @@ use pleco::core::mono_traits::AllGenType;
 
 pub struct RmManager {
     threads: Arc<AtomicUsize>,
-    moves: Unique<RawRootMoveList>,
+    moves: NonNull<RawRootMoveList>,
     ref_count: Arc<AtomicUsize>
 }
 
@@ -44,7 +44,7 @@ impl RmManager {
     fn init() -> Self {
         RmManager {
             threads: Arc::new(AtomicUsize::new(0)),
-            moves: Unique::empty(),
+            moves: NonNull::dangling(),
             ref_count: Arc::new(AtomicUsize::new(1))
         }
     }
@@ -57,7 +57,7 @@ impl RmManager {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
             };
-            self.moves = Unique::new(new_ptr as *mut RawRootMoveList).unwrap();
+            self.moves = NonNull::new(new_ptr as *mut RawRootMoveList).unwrap();
         }
     }
 

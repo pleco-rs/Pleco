@@ -25,10 +25,10 @@ lazy_static! {
 
 pub fn init_globals() {
     if !INITALIZED.swap(true, Ordering::SeqCst) {
-        unsafe {
+//        unsafe {
             lazy_static::initialize(&TT_TABLE);
 //            POSITION.uninitialized_init();
-        }
+//        }
     }
 }
 

@@ -256,7 +256,7 @@ impl fmt::Display for Piece {
 
 /// Enum for the Files of a Chessboard.
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Ord, PartialOrd, Eq)]
 pub enum File {
     A = 0, // eg a specific coloumn
     B = 1,
@@ -302,7 +302,7 @@ impl Not for File {
     fn not(self) -> File {
         unsafe {
             let f = self as u8 ^ File::H as u8;
-            mem::transmute::<u8,File>(f)
+            mem::transmute::<u8,File>(0b111 & f)
         }
     }
 }
@@ -339,7 +339,10 @@ pub fn rank_bb(s: u8) -> u64 {
 /// corresponding `Rank`.
 #[inline(always)]
 pub fn rank_of_sq(s: u8) -> Rank {
-    ALL_RANKS[(s >> 3) as usize]
+    unsafe {
+        mem::transmute::<u8,Rank>((s >> 3) & 0b0000_0111)
+    }
+//    ALL_RANKS[(s >> 3) as usize]
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the
@@ -361,8 +364,11 @@ pub fn file_bb(s: u8) -> u64 {
 #[inline(always)]
 pub fn file_of_sq(s: u8) -> File {
     unsafe {
-        *ALL_FILES.get_unchecked((s & 0b0000_0111) as usize)
+        mem::transmute::<u8,File>(s & 0b0000_0111)
     }
+//    unsafe {
+//        *ALL_FILES.get_unchecked((s & 0b0000_0111) as usize)
+//    }
 }
 
 /// For whatever file the bit (inner value of a `SQ`) is, returns the
@@ -396,4 +402,3 @@ pub fn u8_to_u64(s: u8) -> u64 {
     debug_assert!(s < 64);
     (1 as u64).wrapping_shl(s as u32)
 }
-

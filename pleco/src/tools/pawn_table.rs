@@ -3,11 +3,12 @@ use super::super::core::masks::{PLAYER_CNT,RANK_CNT};
 use super::super::core::score::*;
 use super::super::core::mono_traits::*;
 use super::super::board::castle_rights::Castling;
-
+use super::super::core::masks::FILE_DISPLAYS;
 use core::CastleType;
 
 use super::TableBase;
 
+use std::mem::transmute;
 // isolated pawn penalty
 const ISOLATED: Score = Score(13, 18);
 
@@ -118,6 +119,10 @@ impl PawnTable {
 
     pub fn get(&self, key: u64) -> &mut Entry {
         self.table.get_mut(key)
+    }
+
+    pub unsafe fn clear(&self) {
+        self.table.resize(self.table.size());
     }
 
     pub fn probe(&self, board: &Board) -> &mut Entry {
@@ -259,7 +264,8 @@ impl Entry {
             } else {
                 P::player().relative_rank_of_sq(b.frontmost_sq(P::opp_player()))
             };
-            let d = (file as u8).min((!file) as u8);
+            let d: File = unsafe { (transmute::<u8,File>(file)).min(!transmute::<u8,File>(file)) };
+
             let r = if file == ksq.file() as u8 {
                 1
             } else {
@@ -272,11 +278,16 @@ impl Entry {
             } else if rk_them as u8 == rk_us as u8 + 1 {
                 2  // Blocked by Pawn
             } else {
-                4  // Unblocked
+                3  // Unblocked
             };
+            if d >= File::E {
+                println!("file: {}, num: {}",FILE_DISPLAYS[file as usize], file);
+                println!("flip: {}", FILE_DISPLAYS[d as usize]);
+            }
             safety -= SHELTER_WEAKNESS[r as usize][d as usize][rk_us as usize];
-            safety -= STORM_DANGER[storm_danger_idx][d as usize][rk_them as usize];
-
+            if rk_them <= Rank::R5 {
+                safety -= STORM_DANGER[storm_danger_idx][d as usize][rk_them as usize];
+            }
         }
         safety
     }
@@ -393,9 +404,10 @@ mod tests {
     #[test]
     fn pawn_eval() {
         let t: PawnTable = PawnTable::new(1 << 7);
-        let boards: Vec<Board> = Board::random().many(20);
+        let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(15);
+        let mut score: i64 = 0;
         boards.iter().for_each(|b| {
-            t.probe(b).pawns_score();
+            score += t.probe(b).pawns_score().0 as i64;
         });
     }
 

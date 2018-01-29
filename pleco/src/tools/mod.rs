@@ -9,7 +9,7 @@ pub mod tt;
 pub mod timer;
 pub mod pawn_table;
 
-use std::ptr::Unique;
+use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
 use std::cell::UnsafeCell;
 
@@ -85,7 +85,7 @@ impl UCILimit {
 
 /// Generic Heap-stored array of entries.
 pub struct TableBase<T: Sized> {
-    table: UnsafeCell<Unique<T>>,
+    table: UnsafeCell<NonNull<T>>,
     size: UnsafeCell<usize>
 }
 
@@ -138,12 +138,13 @@ impl<T: Sized> TableBase<T> {
         *self.size.get() = size;
     }
 
-    unsafe fn alloc(size: usize) -> Unique<T> {
-        let ptr = Heap.alloc_zeroed(Layout::array::<T>(size).unwrap());let new_ptr = match ptr {
+    unsafe fn alloc(size: usize) -> NonNull<T> {
+        let ptr = Heap.alloc_zeroed(Layout::array::<T>(size).unwrap());
+        let new_ptr = match ptr {
             Ok(ptr) => ptr,
             Err(err) => Heap.oom(err),
         };
-        Unique::new(new_ptr as *mut T).unwrap()
+        NonNull::new(new_ptr as *mut T).unwrap()
     }
 
     unsafe fn de_alloc(&self) {
@@ -157,5 +158,23 @@ impl<T: Sized> Drop for TableBase<T> {
         unsafe {
             self.de_alloc();
         }
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn table_base_allocs() {
+        for i in 0..14 {
+            let size: usize = 1 << i;
+            let t = TableBase::<u64>::new(size).unwrap();
+            for x in 0..(3*size) {
+                *t.get_mut(x as u64) = x as u64;
+            }
+        }
+//        println!("ok");
     }
 }

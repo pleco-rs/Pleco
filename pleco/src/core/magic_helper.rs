@@ -328,7 +328,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn ring_distance(&self, sq: SQ, distance: u8) -> BitBoard {
         debug_assert!(distance <= 7);
-        BitBoard(self.dist_ring_table[sq.0 as usize][distance as usize])
+        BitBoard(self.dist_ring_table[distance as usize][sq.0 as usize])
     }
 
 

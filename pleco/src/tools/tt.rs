@@ -33,7 +33,7 @@
 //! [`TranspositionTable`]: ../../tools/tt/struct.TranspositionTable.html
 //! [`Entry`]: ../../tools/tt/struct.Entry.html
 
-use std::ptr::{Unique};
+use std::ptr::NonNull;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
 use std::cmp::max;
@@ -185,7 +185,7 @@ pub struct Cluster {
 /// of HashTable that maps Zobrist Keys to information about that position, including the best move
 /// found, score, depth the move was found at, and other information.
 pub struct TranspositionTable {
-    clusters: UnsafeCell<Unique<Cluster>>, // pointer to the heap
+    clusters: UnsafeCell<NonNull<Cluster>>, // pointer to the heap
     cap: UnsafeCell<usize>, // number of clusters, so (So n * CLUSTER_SIZE) number of entries
     time_age: UnsafeCell<u8>, // documenting at which root position an entry was placed
 }
@@ -466,7 +466,7 @@ unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
 
 // Return a Heap Allocation of Size number of Clusters.
 #[inline]
-fn alloc_room(size: usize) -> Unique<Cluster> {
+fn alloc_room(size: usize) -> NonNull<Cluster> {
     unsafe {
         let ptr = Heap.alloc_zeroed(Layout::array::<Cluster>(size).unwrap());
 
@@ -474,7 +474,7 @@ fn alloc_room(size: usize) -> Unique<Cluster> {
             Ok(ptr) => ptr,
             Err(err) => Heap.oom(err),
         };
-        Unique::new(new_ptr as *mut Cluster).unwrap()
+        NonNull::new(new_ptr as *mut Cluster).unwrap()
     }
 
 }
@@ -485,7 +485,6 @@ mod tests {
 
     extern crate rand;
     use super::*;
-    use std::ptr::null;
 
 
     // around 0.5 GB
@@ -501,6 +500,9 @@ mod tests {
 
         let key = create_key(32, 44);
         let (_found,_entry) = tt.probe(key);
+        unsafe {
+            tt.clear();
+        }
     }
 
     #[test]
@@ -508,6 +510,9 @@ mod tests {
         let tt = TranspositionTable::new_num_clusters(100);
         assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
         assert_eq!(tt.num_entries(), (100 as usize).next_power_of_two() * CLUSTER_SIZE);
+        unsafe {
+            tt.clear();
+        }
     }
 
     #[test]
@@ -521,9 +526,11 @@ mod tests {
                 let (_found, entry) = tt.probe(key);
                 entry.depth = (x % 0b1111_1111) as u8;
                 entry.partial_key = key.wrapping_shr(48) as u16;
-                assert_ne!((entry as * const _), null());
             }
             tt.new_search();
+        }
+        unsafe {
+            tt.clear();
         }
     }
 
@@ -572,6 +579,10 @@ mod tests {
         // most vulnerable should be key_1
         assert_eq!(entry.partial_key, partial_key_1);
         assert_eq!(entry.depth, 2);
+
+        unsafe {
+            tt.clear();
+        }
     }
 
     /// Helper function to create a key of specified index / partial_key
