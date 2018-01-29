@@ -25,7 +25,7 @@ opt-level = 3
 debug = true
 rpath = false
 debug-assertions = true
-codegen-units = 4
+codegen-units = 1
 
 
 [dependencies]
