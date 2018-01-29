@@ -119,18 +119,18 @@ impl PawnTable {
         }
     }
 
-    pub fn get(&self, key: u64) -> &mut Entry {
+    pub fn get(&mut self, key: u64) -> &mut Entry {
         unsafe {
             (&*self.table.get()).get_mut(key)
         }
     }
 
 
-    pub unsafe fn clear(&self) {
+    pub unsafe fn clear(&mut self) {
         (&*self.table.get()).resize((&*self.table.get()).size());
     }
 
-    pub fn probe(&self, board: &Board) -> &mut Entry {
+    pub fn probe(&mut self, board: &Board) -> &mut Entry {
         let key: u64 = board.pawn_key();
         let entry = self.get(key);
 
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn pawn_eval() {
-        let t: PawnTable = PawnTable::new(1 << 7);
+        let mut t: PawnTable = PawnTable::new(1 << 7);
         let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(15);
         let mut score: i64 = 0;
         boards.iter().for_each(|b| {
