@@ -68,7 +68,23 @@ const STORM_DANGER: [[[Value; 5]; 4]; 4] = [
 ];
 
 lazy_static!{
-    static ref CONNECTED: [[[[Score; 2]; 2] ;3]; RANK_CNT] = init_connected();
+    static ref CONNECTED: [[[[Score; 2]; 2] ;3]; RANK_CNT] = {
+        let seed: [i32; 8] = [0, 13, 24, 18, 76, 100, 175, 330];
+        let mut a: [[[[Score; 2]; 2] ;3]; 8] = [[[[Score(0,0); 2]; 2] ;3]; 8];
+        for opposed in 0..2 {
+            for phalanx in 0..2 {
+                for support in 0..3 {
+                    for r in 1..7 {
+                        let mut v: i32 = 17 * support;
+                        v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
+                        let eg: i16 = (v * (r as i32 - 2) / 4) as i16;
+                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v as i16, eg);
+                    }
+                }
+            }
+        }
+        a
+    };
 }
 
 fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
