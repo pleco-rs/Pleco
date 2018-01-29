@@ -12,6 +12,9 @@ use pleco::tools::pawn_table::{Entry,PawnTable};
 use pleco::core::mono_traits::WhiteType;
 use test::{black_box, Bencher};
 
+use std::thread::sleep;
+use std::time::Duration;
+
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         RAND_BOARD_NON_CHECKS_100.iter()
@@ -32,24 +35,23 @@ fn bench_100_evaluations(b: &mut Bencher) {
 
 #[bench]
 fn bench_100_pawn_evals(b: &mut Bencher) {
-    let t: PawnTable = black_box(PawnTable::new(1 << 10));
     b.iter(|| {
+        let t: PawnTable = black_box(PawnTable::new(1 << 10));
         #[allow(unused_variables)]
         let mut score: i64 = 0;
         for board in RAND_BOARDS.iter() {
             let entry: &mut Entry = black_box(t.probe(board));
             score += black_box(entry.pawns_score()).0 as i64;
         }
-        unsafe {
-            t.clear();
-        }
+
+        sleep(Duration::from_millis(1));
     })
 }
 
 #[bench]
 fn bench_100_pawn_king_evals(b: &mut Bencher) {
-    let t: PawnTable = black_box(PawnTable::new(1 << 10));
     b.iter(|| {
+        let t: PawnTable = black_box(PawnTable::new(1 << 10));
         #[allow(unused_variables)]
         let mut score: i64 = 0;
         for board in RAND_BOARDS.iter() {
@@ -57,9 +59,7 @@ fn bench_100_pawn_king_evals(b: &mut Bencher) {
             score += black_box(entry.pawns_score()).0 as i64;
             score +=  black_box(entry.king_safety::<WhiteType>(&board, board.king_sq(Player::White))).0 as i64;
         }
-        unsafe {
-            t.clear();
-        }
+        sleep(Duration::from_millis(1));
     })
 }
 

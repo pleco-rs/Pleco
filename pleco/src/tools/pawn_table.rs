@@ -401,6 +401,12 @@ mod tests {
     use super::*;
     use Board;
 
+    use std::thread::sleep;
+    use std::time::Duration;
+
+    use std::sync::atomic::Ordering;
+    use std::sync::atomic::compiler_fence;
+
     #[test]
     fn pawn_eval() {
         let t: PawnTable = PawnTable::new(1 << 7);
@@ -409,6 +415,8 @@ mod tests {
         boards.iter().for_each(|b| {
             score += t.probe(b).pawns_score().0 as i64;
         });
+        compiler_fence(Ordering::Release);
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -423,6 +431,8 @@ mod tests {
         }
         t = PawnTable::new(1 << 5);
         s += t.probe(&b).pawns_score();
+        compiler_fence(Ordering::Release);
+        sleep(Duration::from_millis(1));
     }
 
 }

@@ -489,6 +489,9 @@ mod tests {
     use std::thread::sleep;
     use std::time::Duration;
 
+    use std::sync::atomic::Ordering;
+    use std::sync::atomic::compiler_fence;
+
     // around 0.5 GB
     const HALF_GIG: usize = 2 << 24;
     // around 30 MB
@@ -511,6 +514,7 @@ mod tests {
         let tt = TranspositionTable::new_num_clusters(100);
         assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
         assert_eq!(tt.num_entries(), (100 as usize).next_power_of_two() * CLUSTER_SIZE);
+        compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
     }
 
@@ -528,7 +532,7 @@ mod tests {
             }
             tt.new_search();
         }
-
+        compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
     }
 
@@ -578,6 +582,7 @@ mod tests {
         assert_eq!(entry.partial_key, partial_key_1);
         assert_eq!(entry.depth, 2);
 
+        compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
     }
 
