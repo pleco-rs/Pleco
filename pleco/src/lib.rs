@@ -61,7 +61,7 @@
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
-#![feature(ptr_internals)]
+
 #![feature(fused)]
 #![feature(trusted_len)]
 #![feature(test)]
