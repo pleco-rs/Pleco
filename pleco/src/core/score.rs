@@ -1,7 +1,11 @@
-//! Primitives for determining the value / score of specific
+//! Primitives for determining the value / score of a specific location.
+//!
+//! A `Value` stores a single `i16` to represent a score. `Score` stores two `i16`s inside of it,
+//! the first to determine the mid-game score, and the second to determine the end-game score.
 
 use std::ops::*;
 
+/// Wrapper type for `i16` to determine the `Value` of an evaluation.
 #[derive(Ord, PartialOrd, Eq, PartialEq,Copy, Clone)]
 pub struct Value(pub i16);
 
@@ -35,24 +39,29 @@ impl Value {
 
 impl_bit_ops!(Value, i16);
 
+/// Struct to define the value of a mid-game / end-game evaluation.
 #[derive(Copy, Clone)]
 pub struct Score(pub i16, pub i16);
 
 impl Score {
     pub const ZERO: Score = Score(0,0);
 
+    /// Creates a new `Score`.
     pub fn make(mg: i16, eg: i16) -> Self {
         Score(mg, eg)
     }
 
+    /// Creates a new `Score`.
     pub fn new(mg: Value, eg: Value) -> Self {
         Score(mg.0, eg.0)
     }
 
+    /// Returns the mid-game score.
     pub fn mg(self) -> Value {
         Value(self.0)
     }
 
+    /// Returns the end-game score.
     pub fn eg(self) -> Value {
         Value(self.1)
     }

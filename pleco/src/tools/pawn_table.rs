@@ -1,7 +1,8 @@
 //! A Table to store information concerning the structure of pawns. Used to evaluate
 //! both the structure of the pawns, as well as king safety values.
 //!
-//! An entry is retrieved from the `pawn_key` field of a `Board`
+//! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
+//! unique to a pawn structure, but it's very likely that there will be no collisions.
 
 use {Player,File,SQ,BitBoard,Board,Piece,Rank};
 use super::super::core::masks::{PLAYER_CNT,RANK_CNT};
@@ -159,7 +160,9 @@ impl PawnTable {
     }
 }
 
-/// Information on a certain pawn structure.
+/// Information on a the pawn structure for a given position.
+///
+/// This information is computed upon access.
 pub struct Entry {
     key: u64,
     score: Score,
@@ -200,7 +203,8 @@ impl Entry {
         self.pawn_attacks_span[player as usize]
     }
 
-    ///
+    /// Returns the weak-unopposed score of the given player. This measures the strength of the pawn
+    /// structure when considering isolated and disconnected pawns.
     pub fn weak_unopposed(&self, player: Player) -> i16 {
         self.weak_unopposed[player as usize]
     }
@@ -215,11 +219,13 @@ impl Entry {
         self.open_files
     }
 
-
+    /// Returns if a file is semi-open for a given player, meaning there are no pieces of the
+    /// opposing player on that file.
     pub fn semiopen_file(&self, player: Player, file: File) -> bool {
         self.semiopen_files[player as usize] & (1 << file as u8) != 0
     }
 
+    /// Returns if a side of a file is semi-open, meaning no enemy pieces.
     pub fn semiopen_side(&self, player: Player, file: File, left_side: bool) -> bool {
         let side_mask: u8 = if left_side {
             file.left_side_mask()
@@ -235,6 +241,7 @@ impl Entry {
     }
 
 
+    /// Returns the current king safety `Score` for a given player and king square.
     pub fn king_safety<P: PlayerTrait>(&mut self, board: &Board, ksq: SQ) -> Score {
         if self.king_squares[P::player_idx()] == ksq
             && self.castling_rights[P::player_idx()] == board.player_can_castle(P::player()) {

@@ -179,6 +179,11 @@ impl BitBoard {
         (sq, sq.to_bb())
     }
 
+    /// Returns the front-most square of a player on the current `BitBoard`.
+    ///
+    /// # Safety
+    ///
+    /// panics if the `BitBoard` is empty.
     pub fn frontmost_sq(self, player: Player) -> SQ {
         match player {
             Player::White => self.msb().to_sq(),
@@ -186,6 +191,11 @@ impl BitBoard {
         }
     }
 
+    /// Returns the back-most square of a player on the current `BitBoard`.
+    ///
+    /// # Safety
+    ///
+    /// panics if the `BitBoard` is empty.
     pub fn backmost_sq(self, player: Player) -> SQ {
         match player {
             Player::White => self.bit_scan_forward(),

@@ -170,6 +170,7 @@ pub fn diff(x: u8, y: u8) -> u8 {
     }
 }
 
+/// Gives the most significant bit of a `u64`.
 pub fn msb(x: u64) -> u64 {
     (1 as u64).wrapping_shl(63 - x.leading_zeros())
 }

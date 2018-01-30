@@ -1,8 +1,10 @@
-//! Traits & Dummy Types defined for various Enum types. Shouldn't be used in place
+//! Traits and Dummy Types defined for various Enum types. Shouldn't be used in place
 //! of their enum representations.
 //!
 //! This modules only use is to allow for compile-time mono-morphization of
 //! functions / methods, where each method created can be optimized further.
+//!
+//! We are awaiting the stabilization of `const fn` to remove these traits.
 
 use super::{Player,Piece,GenTypes};
 use super::sq::SQ;
