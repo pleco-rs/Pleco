@@ -421,26 +421,6 @@ mod tests {
         boards.iter().for_each(|b| {
             score += t.probe(b).pawns_score().0 as i64;
         });
-        forget(t);
-        compiler_fence(Ordering::Release);
-        sleep(Duration::from_millis(1));
-    }
-
-    #[test]
-    fn pawn_table_init() {
-        let b = Board::default();
-        let mut s = Score::ZERO;
-        let mut t = PawnTable::new(1 << 9);
-        s += t.probe(&b).pawns_score();
-        {
-            t = PawnTable::new(1 << 8);
-            s += t.probe(&b).pawns_score();
-        }
-        t = PawnTable::new(1 << 5);
-        s += t.probe(&b).pawns_score();
-        forget(t);
-        compiler_fence(Ordering::Release);
-        sleep(Duration::from_millis(1));
     }
 
 }
