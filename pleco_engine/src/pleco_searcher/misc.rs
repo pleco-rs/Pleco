@@ -1,7 +1,7 @@
 //! Miscellaneous structures.
 
 
-use super::THREAD_STACK_SIZE;
+use THREAD_STACK_SIZE;
 
 use std::mem;
 

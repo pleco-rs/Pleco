@@ -1,5 +1,5 @@
 use super::{RootMove, MAX_MOVES};
-use super::super::sync::GuardedBool;
+use sync::GuardedBool;
 
 use pleco::{MoveList,Board,Piece,BitMove};
 
@@ -46,7 +46,6 @@ impl Clone for RootMoveList {
         }
     }
 }
-
 
 unsafe impl Send for RootMoveList {}
 

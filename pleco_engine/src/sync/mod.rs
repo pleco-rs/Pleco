@@ -76,7 +76,7 @@ impl GuardedBool {
     #[inline]
     pub fn new(value: bool) -> GuardedBool {
         GuardedBool {
-           a: LockLatch::new_value(value)
+            a: LockLatch::new_value(value)
         }
     }
 

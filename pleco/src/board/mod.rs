@@ -14,7 +14,6 @@
 
 use failure;
 pub mod movegen;
-pub mod eval;
 pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
@@ -49,6 +48,9 @@ use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 pub type Error = failure::Error;
+
+
+
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
@@ -158,7 +160,7 @@ pub struct Board {
 
     /// Reference to the pre-computed lookup tables.
     #[doc(hidden)]
-    pub magic_helper: &'static MAGIC_HELPER,
+    pub magic_helper: &'static MagicHelper<'static, 'static>,
 }
 
 impl fmt::Display for Board {
@@ -209,7 +211,7 @@ impl Board {
             half_moves: 0,
             depth: 0,
             piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
-            piece_locations: unsafe { PieceLocations::default() },
+            piece_locations: PieceLocations::default(),
             state: Arc::new(BoardState::default()),
             magic_helper: &MAGIC_HELPER,
         };
@@ -518,6 +520,7 @@ impl Board {
             ply: 0,
             ep_square: ep_sq,
             zobrast: 0,
+            pawn_key: 0,
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -670,7 +673,9 @@ impl Board {
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
 
         // Zobrist Hash
+        let mut pawn_key: u64 = self.state.pawn_key;
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
+
 
         // New Arc for the board to have by making a partial clone of the current state
         let mut next_arc_state = Arc::new(self.state.partial_clone());
@@ -725,18 +730,23 @@ impl Board {
                 new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
                 let mut cap_sq: SQ = to;
-                if cap_p == Piece::P && bit_move.is_en_passant() {
-                    assert_eq!(cap_sq, self.state.ep_square);
-                    match us {
-                        Player::White => cap_sq -= SQ(8),
-                        Player::Black => cap_sq += SQ(8),
-                    };
-                    assert_eq!(piece, Piece::P);
-                    assert_eq!(us.relative_rank( Rank::R6), to.rank());
-                    assert!(self.piece_at_sq(to).is_none());
-                    assert_eq!(self.piece_at_sq(cap_sq).unwrap(), Piece::P);
-                    assert_eq!(self.player_at_sq(cap_sq).unwrap(), them);
-                    self.remove_piece_c(Piece::P, cap_sq, them);
+                if cap_p == Piece::P {
+                    pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq);
+                    if bit_move.is_en_passant() {
+                        assert_eq!(cap_sq, self.state.ep_square);
+                        match us {
+                            Player::White => cap_sq -= SQ(8),
+                            Player::Black => cap_sq += SQ(8),
+                        };
+                        assert_eq!(piece, Piece::P);
+                        assert_eq!(us.relative_rank( Rank::R6), to.rank());
+                        assert!(self.piece_at_sq(to).is_none());
+                        assert_eq!(self.piece_at_sq(cap_sq).unwrap(), Piece::P);
+                        assert_eq!(self.player_at_sq(cap_sq).unwrap(), them);
+                        self.remove_piece_c(Piece::P, cap_sq, them);
+                    } else {
+                        self.remove_piece_c(cap_p, cap_sq, them);
+                    }
                 } else {
                     self.remove_piece_c(cap_p, cap_sq, them);
                 }
@@ -780,12 +790,15 @@ impl Board {
                     self.put_piece_c(promo_piece, to, us);
                     zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to) ^
                         self.magic_helper.z_piece_at_sq(Piece::P, from);
+                    pawn_key ^= self.magic_helper.z_piece_at_sq(piece, to);
                 }
+                pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from) ^ self.magic_helper.z_piece_at_sq(piece, to);
                 new_state.rule_50 = 0;
             }
 
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
+            new_state.pawn_key = pawn_key;
 
             new_state.checkers_bb = if gives_check {
                 self.attackers_to(self.king_sq(them), self.get_occupied()) &
@@ -1291,12 +1304,18 @@ impl Board {
     /// Assumes the rest of the board is initialized.
     fn set_zob_hash(&mut self) {
         let mut zob: u64 = 0;
+        let mut pawn_key: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
         while b.is_not_empty() {
             let sq: SQ = b.pop_lsb();
-            let piece = self.piece_at_sq(sq);
-            zob ^= self.magic_helper.z_piece_at_sq(piece.unwrap(), sq);
+            let piece = self.piece_at_sq(sq).unwrap();
+            let key = self.magic_helper.z_piece_at_sq(piece, sq);
+            zob ^= key;
+            if piece == Piece::P {
+                pawn_key ^= key;
+            }
         }
+
         let ep = self.state.ep_square;
         if ep != NO_SQ && ep.is_okay() {
             zob ^= self.magic_helper.z_ep_file(ep);
@@ -1306,8 +1325,10 @@ impl Board {
             Player::Black => zob ^= self.magic_helper.z_side(),
             Player::White => {}
         };
+        let state =  Arc::get_mut(&mut self.state).unwrap();
 
-        Arc::get_mut(&mut self.state).unwrap().zobrast = zob;
+        state.zobrast = zob;
+        state.pawn_key = pawn_key;
     }
 }
 
@@ -1333,6 +1354,14 @@ impl Board {
     #[inline(always)]
     pub fn zobrist(&self) -> u64 {
         self.state.zobrast
+    }
+
+    /// Return the pawn key of the board.
+    ///
+    /// This is a semi-unique key for any configuration of pawns on the board.
+    #[inline(always)]
+    pub fn pawn_key(&self) -> u64 {
+        self.state.pawn_key
     }
 
     /// Get the total number of moves played.
@@ -1630,6 +1659,11 @@ impl Board {
     #[inline(always)]
     pub fn can_castle(&self, player: Player, castle_type: CastleType) -> bool {
         self.state.castling.castle_rights(player, castle_type)
+    }
+
+    #[inline(always)]
+    pub fn player_can_castle(&self, player: Player) -> Castling {
+        self.state.castling.player_can_castle(player)
     }
 
     /// Check if the castle path is impeded for the current player. Does not assume that the

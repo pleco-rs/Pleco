@@ -13,13 +13,15 @@ pub mod mono_traits;
 pub mod sq;
 pub mod bitboard;
 pub mod move_list;
+pub mod score;
 
 use self::bit_twiddles::*;
 use self::masks::*;
 use self::sq::SQ;
 
 use std::fmt;
-
+use std::mem;
+use std::ops::Not;
 
 /// Array of all possible pieces, indexed by their enum value.
 pub const ALL_PIECES: [Piece; PIECE_CNT] =
@@ -254,7 +256,7 @@ impl fmt::Display for Piece {
 
 /// Enum for the Files of a Chessboard.
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Ord, PartialOrd, Eq)]
 pub enum File {
     A = 0, // eg a specific coloumn
     B = 1,
@@ -266,9 +268,48 @@ pub enum File {
     H = 7,
 }
 
+impl File {
+    #[inline(always)]
+    pub fn left_side_mask(self) -> u8 {
+        (1 << self as u8) - 1
+    }
+
+    #[inline(always)]
+    pub fn right_side_mask(self) -> u8 {
+        !((1 << (self as u16 + 1)) - 1) as u8
+    }
+
+    pub fn min(self, other: File) -> File {
+        if (self as u8) < (other as u8) {
+            self
+        } else {
+            other
+        }
+    }
+
+    pub fn max(self, other: File) -> File {
+        if (self as u8) > (other as u8) {
+            self
+        } else {
+            other
+        }
+    }
+}
+
+impl Not for File {
+    type Output = File;
+
+    fn not(self) -> File {
+        unsafe {
+            let f = self as u8 ^ File::H as u8;
+            mem::transmute::<u8,File>(0b111 & f)
+        }
+    }
+}
+
 /// Enum for the Ranks of a Chessboard.
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Ord, PartialOrd)]
 pub enum Rank { // eg a specific row
     R1 = 0,
     R2 = 1,
@@ -298,7 +339,10 @@ pub fn rank_bb(s: u8) -> u64 {
 /// corresponding `Rank`.
 #[inline(always)]
 pub fn rank_of_sq(s: u8) -> Rank {
-    ALL_RANKS[(s >> 3) as usize]
+    unsafe {
+        mem::transmute::<u8,Rank>((s >> 3) & 0b0000_0111)
+    }
+//    ALL_RANKS[(s >> 3) as usize]
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the
@@ -320,7 +364,7 @@ pub fn file_bb(s: u8) -> u64 {
 #[inline(always)]
 pub fn file_of_sq(s: u8) -> File {
     unsafe {
-        *ALL_FILES.get_unchecked((s & 0b0000_0111) as usize)
+        mem::transmute::<u8,File>(s & 0b0000_0111)
     }
 }
 
@@ -355,4 +399,3 @@ pub fn u8_to_u64(s: u8) -> u64 {
     debug_assert!(s < 64);
     (1 as u64).wrapping_shl(s as u32)
 }
-

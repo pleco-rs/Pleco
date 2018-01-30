@@ -6,9 +6,9 @@ description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
 documentation = "https://docs.rs/pleco_engine/"
 readme = "README.md"
-keywords = ["chess","ai","engine","game","gaming"]
+keywords = ["chess","ai","engine","game","uci"]
 license = "MIT"
-categories = ["games","game-engines"]
+categories = ["games","game-engines","command-line-utilities"]
 repository = "https://github.com/sfleischman105/Pleco"
 
 
@@ -17,8 +17,7 @@ include = [
     "tests/*.rs",
     "Cargo.toml",
     ".gitignore",
-    "README.md",
-    "examples/*"
+    "README.md"
 ]
 
 [badges]
@@ -52,7 +51,7 @@ opt-level = 3
 debug = true
 rpath = false
 debug-assertions = true
-codegen-units = 4
+codegen-units = 1
 panic = "unwind"
 
 [profile.doc]
@@ -71,13 +70,16 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "0.3.2" }
+pleco = { path = "../pleco", version = "0.3.3" }
 clippy = {version = "0.0.179", optional = true}
-lazy_static = "1.0.0"
 chrono = "0.4.0"
 rand = "0.4.2"
 rayon = "0.9.0"
 num_cpus = "1.8.0"
+
+[dependencies.lazy_static]
+version = "1.0.0"
+features = ["nightly"]
 
 
 [features]

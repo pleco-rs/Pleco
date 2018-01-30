@@ -1,4 +1,4 @@
-//! Contains both a fen validation function, alongside many pre-made fens.
+//! Contains fen functions and constants.
 
 
 use super::{Board,FenBuildError};

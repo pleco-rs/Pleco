@@ -33,12 +33,12 @@
 //! [`TranspositionTable`]: ../../tools/tt/struct.TranspositionTable.html
 //! [`Entry`]: ../../tools/tt/struct.Entry.html
 
-
-use std::ptr::Unique;
+use std::ptr::NonNull;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
 use std::cmp::max;
 use std::cell::UnsafeCell;
+
 
 use core::piece_move::BitMove;
 
@@ -185,7 +185,7 @@ pub struct Cluster {
 /// of HashTable that maps Zobrist Keys to information about that position, including the best move
 /// found, score, depth the move was found at, and other information.
 pub struct TranspositionTable {
-    clusters: UnsafeCell<Unique<Cluster>>, // pointer to the heap
+    clusters: UnsafeCell<NonNull<Cluster>>, // pointer to the heap
     cap: UnsafeCell<usize>, // number of clusters, so (So n * CLUSTER_SIZE) number of entries
     time_age: UnsafeCell<u8>, // documenting at which root position an entry was placed
 }
@@ -233,6 +233,12 @@ impl TranspositionTable {
             cap: UnsafeCell::new(size),
             time_age: UnsafeCell::new(0),
         }
+    }
+
+    pub unsafe fn uninitialized_init(&self, mb_size: usize) {
+        let mut num_clusters: usize = (mb_size * BYTES_PER_MB) / mem::size_of::<Cluster>();
+        num_clusters = num_clusters.next_power_of_two() / 2;
+        self.re_alloc(num_clusters);
     }
 
     /// Returns the size of the heap allocated portion of the TT in KiloBytes.
@@ -460,7 +466,7 @@ unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
 
 // Return a Heap Allocation of Size number of Clusters.
 #[inline]
-fn alloc_room(size: usize) -> Unique<Cluster> {
+fn alloc_room(size: usize) -> NonNull<Cluster> {
     unsafe {
         let ptr = Heap.alloc_zeroed(Layout::array::<Cluster>(size).unwrap());
 
@@ -468,7 +474,7 @@ fn alloc_room(size: usize) -> Unique<Cluster> {
             Ok(ptr) => ptr,
             Err(err) => Heap.oom(err),
         };
-        Unique::new(new_ptr as *mut Cluster).unwrap()
+        NonNull::new(new_ptr as *mut Cluster).unwrap()
     }
 
 }
@@ -479,8 +485,12 @@ mod tests {
 
     extern crate rand;
     use super::*;
-    use std::ptr::null;
 
+    use std::thread::sleep;
+    use std::time::Duration;
+
+    use std::sync::atomic::Ordering;
+    use std::sync::atomic::compiler_fence;
 
     // around 0.5 GB
     const HALF_GIG: usize = 2 << 24;
@@ -495,6 +505,8 @@ mod tests {
 
         let key = create_key(32, 44);
         let (_found,_entry) = tt.probe(key);
+
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -502,6 +514,8 @@ mod tests {
         let tt = TranspositionTable::new_num_clusters(100);
         assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
         assert_eq!(tt.num_entries(), (100 as usize).next_power_of_two() * CLUSTER_SIZE);
+        compiler_fence(Ordering::Release);
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -515,10 +529,11 @@ mod tests {
                 let (_found, entry) = tt.probe(key);
                 entry.depth = (x % 0b1111_1111) as u8;
                 entry.partial_key = key.wrapping_shr(48) as u16;
-                assert_ne!((entry as * const _), null());
             }
             tt.new_search();
         }
+        compiler_fence(Ordering::Release);
+        sleep(Duration::from_millis(1));
     }
 
     #[test]
@@ -566,6 +581,9 @@ mod tests {
         // most vulnerable should be key_1
         assert_eq!(entry.partial_key, partial_key_1);
         assert_eq!(entry.depth, 2);
+
+        compiler_fence(Ordering::Release);
+        sleep(Duration::from_millis(1));
     }
 
     /// Helper function to create a key of specified index / partial_key

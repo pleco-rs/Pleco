@@ -8,24 +8,20 @@ use std::{mem,time};
 
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
-use pleco::tools::tt::*;
 
 use super::search::ThreadSearcher;
 use super::misc::*;
-use super::uci_timer::*;
 #[allow(unused_imports)]
-use super::{TT_TABLE,THREAD_STACK_SIZE};
+use TT_TABLE;
 use super::root_moves::RootMove;
 use super::root_moves::root_moves_list::RootMoveList;
 use super::root_moves::root_moves_manager::RmManager;
-use super::sync::LockLatch;
+use THREAD_STACK_SIZE;
+use sync::LockLatch;
+use time::uci_timer::*;
+use time::time_management::TimeManager;
 
-use super::time_management::TimeManager;
 
-/// Global Timer
-lazy_static! {
-    pub static ref TIMER: TimeManager = TimeManager::blank();
-}
 // Data sent from the main thread to initialize a new search
 pub struct ThreadGo {
     limit: Limits,
@@ -34,6 +30,11 @@ pub struct ThreadGo {
 
 pub enum SendData {
     BestMove(RootMove)
+}
+
+/// Global Timer
+lazy_static! {
+    pub static ref TIMER: TimeManager = TimeManager::uninitialized();
 }
 
 pub struct ThreadPool {
@@ -63,7 +64,7 @@ pub struct ThreadPool {
     // don't really touch this at all.
     all_thread_go: Arc<LockLatch>,
 
-
+    // should we print stuff to stdout?
     use_stdout: Arc<AtomicBool>,
 }
 
@@ -91,14 +92,22 @@ impl ThreadPool {
     }
 
     fn create_thread(&self, id: usize, root_moves: RootMoveList) -> Thread {
+        let searcher: ThreadSearcher = ThreadSearcher {
+            limit: Limits::blank(),
+            board: Board::default(),
+            time_man: &TIMER,
+            tt: &TT_TABLE,
+            thread_stack: init_thread_stack(),
+            id,
+            root_moves: root_moves.clone(),
+            use_stdout: Arc::clone(&self.use_stdout),
+        };
         Thread {
             root_moves: root_moves,
             id: id,
-            tt: &super::TT_TABLE,
-            use_stdout: Arc::clone(&self.use_stdout),
             pos_state: Arc::clone(&self.pos_state),
             cond: Arc::clone(&self.all_thread_go),
-            thread_stack: init_thread_stack(),
+            searcher
         }
     }
 
@@ -109,7 +118,8 @@ impl ThreadPool {
             per_thread: self.rm_manager.clone(),
             main_thread_go: Arc::clone(&self.main_thread_go),
             sender: tx,
-            thread
+            thread,
+            use_stdout: Arc::clone(&self.use_stdout)
         };
 
 
@@ -217,6 +227,7 @@ pub struct MainThread {
     main_thread_go: Arc<LockLatch>,
     sender: Sender<SendData>,
     thread: Thread,
+    use_stdout: Arc<AtomicBool>
 }
 
 impl MainThread {
@@ -259,7 +270,6 @@ impl MainThread {
         // set the global timer and start the threads
 
         if let Some(timer) = limit.use_time_management() {
-
             TIMER.init(limit.start.clone(), &timer, board.turn(), board.moves_played());
         }
         self.start_threads();
@@ -273,11 +283,11 @@ impl MainThread {
         self.per_thread.wait_for_finish();
 
         // find best move
-        let best_root_move: RootMove = self.per_thread.best_rootmove(self.thread.use_stdout.load(Ordering::Relaxed));
+        let best_root_move: RootMove = self.per_thread.best_rootmove(self.use_stdout.load(Ordering::Relaxed));
 
         self.sender.send(SendData::BestMove(best_root_move)).unwrap();
 
-        if self.thread.use_stdout.load(Ordering::Relaxed) {
+        if self.use_stdout.load(Ordering::Relaxed) {
             println!("bestmove {}", best_root_move.bit_move);
         }
 
@@ -289,11 +299,9 @@ impl MainThread {
 pub struct Thread {
     pub root_moves: RootMoveList,
     pub id: usize,
-    pub tt: &'static TranspositionTable,
-    pub use_stdout: Arc<AtomicBool>,
     pub pos_state: Arc<RwLock<Option<ThreadGo>>>,
     pub cond: Arc<LockLatch>,
-    pub thread_stack: [ThreadStack; THREAD_STACK_SIZE],
+    pub searcher: ThreadSearcher
 }
 
 impl Thread {
@@ -328,13 +336,9 @@ impl Thread {
     }
 
     fn start_searching(&mut self, board: Board, limit: Limits) {
-        let mut thread_search = ThreadSearcher {
-            thread: self,
-            limit: limit,
-            board: board,
-            time_man: &TIMER
-        };
-        thread_search.search_root();
+        self.searcher.limit = limit;
+        self.searcher.board = board;
+        self.searcher.search_root();
     }
 
     pub fn go(&mut self) {

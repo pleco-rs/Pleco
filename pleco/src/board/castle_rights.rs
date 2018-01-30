@@ -14,6 +14,9 @@ use core::masks::*;
 
 use core::sq::SQ;
 
+const ALL_CASTLING: u8 = 0b0101_1111;
+
+
 bitflags! {
     /// Structure to help with recognizing the various possibilities of castling.
     ///
@@ -52,6 +55,18 @@ impl Castling {
             Player::White => self.bits &= Self::BLACK_ALL.bits,
             Player::Black => self.bits &= Self::WHITE_ALL.bits,
         }
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    pub const fn all_castling() -> Self {
+        Castling {bits: ALL_CASTLING}
+    }
+
+    #[doc(hidden)]
+    #[inline]
+    pub const fn empty_set() -> Self {
+        Castling {bits: 0}
     }
 
     /// Removes King-Side castling possibility for a single player
@@ -97,6 +112,13 @@ impl Castling {
         match player {
             Player::White => self.bits |= Self::WHITE_CASTLE.bits,
             Player::Black => self.bits |= Self::BLACK_CASTLE.bits,
+        }
+    }
+
+    #[inline]
+    pub fn player_can_castle(&self, player: Player) -> Castling {
+        Castling {
+            bits: self.bits & (Castling::WHITE_ALL.bits << (2 * player as u16))
         }
     }
 
@@ -171,5 +193,17 @@ impl Castling {
 impl fmt::Display for Castling {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.pretty_string())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    pub fn const_test() {
+        let c = Castling::all();
+        let c_const = Castling::all_castling();
+        assert_eq!(c, c_const);
     }
 }

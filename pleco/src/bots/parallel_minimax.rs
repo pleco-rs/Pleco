@@ -1,8 +1,9 @@
 //! The parallel minimax algorithm.
 use board::*;
 use core::piece_move::*;
-use board::eval::*;
+use tools::eval::*;
 use super::{BestMove,eval_board};
+use core::score::Value;
 
 use rayon;
 
@@ -27,9 +28,9 @@ pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            BestMove::new_none(MATE + (board.depth() as i16))
+            BestMove::new_none(Value(MATE + (board.depth() as i16)))
         } else {
-            BestMove::new_none(STALEMATE)
+            BestMove::new_none(Value::DRAW)
         }
     } else {
         parallel_task(&moves, board, max_depth)
@@ -38,7 +39,7 @@ pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
 
 fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMove {
     if board.depth() == max_depth - 2 || slice.len() <= DIVIDE_CUTOFF {
-        let mut best_move = BestMove::new_none(NEG_INFINITY);
+        let mut best_move = BestMove::new_none(Value::NEG_INFINITE);
 
         for mov in slice {
             board.apply_move(*mov);

@@ -23,16 +23,16 @@
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
+#![allow(dead_code)]
+
+#![feature(ptr_internals)]
 #![feature(integer_atomics)]
 #![feature(test)]
-#![allow(dead_code)]
-#![feature(integer_atomics)]
-#![feature(unique)]
-#![feature(shared)]
 #![feature(allocator_api)]
 #![feature(trusted_len)]
 #![feature(fused)]
-#![feature(ptr_internals)]
+#![feature(const_indexing)]
+#![feature(const_fn)]
 
 #![crate_type = "rlib"]
 
@@ -40,12 +40,15 @@
 extern crate lazy_static;
 
 extern crate test;
-extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
 extern crate pleco;
 extern crate chrono;
 
 pub mod pleco_searcher;
+pub mod sync;
+pub mod time;
+pub mod consts;
+pub mod uci;
 
-
+pub use consts::*;

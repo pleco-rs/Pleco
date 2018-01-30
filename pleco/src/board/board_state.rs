@@ -42,6 +42,7 @@ pub struct BoardState {
 
     // These fields MUST be Recomputed after a move
     pub zobrast: u64,
+    pub pawn_key: u64,
     pub captured_piece: Option<Piece>,
     pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
     pub blockers_king: [BitBoard; PLAYER_CNT],
@@ -76,13 +77,14 @@ pub struct BoardState {
 
 impl BoardState {
     /// Constructs a `BoardState` from the starting position.
-    pub fn default() -> BoardState {
+    pub const fn default() -> BoardState {
         BoardState {
-            castling: Castling::all(),
+            castling: Castling::all_castling(),
             rule_50: 0,
             ply: 0,
             ep_square: NO_SQ,
             zobrast: 0,
+            pawn_key: 0,
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -94,13 +96,14 @@ impl BoardState {
     }
 
     /// Constructs a blank `BoardState`.
-    pub fn blank() -> BoardState {
+    pub const fn blank() -> BoardState {
         BoardState {
-            castling: Castling::empty(),
+            castling: Castling::empty_set(),
             rule_50: 0,
             ply: 0,
             ep_square: NO_SQ,
             zobrast: 0,
+            pawn_key: 0,
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -122,6 +125,7 @@ impl BoardState {
             ply: self.ply,
             ep_square: self.ep_square,
             zobrast: self.zobrast,
+            pawn_key: self.pawn_key,
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -157,6 +161,9 @@ impl BoardState {
         }
         println!();
     }
+
+//    #[doc(hidden)]
+//    pub fn
 }
 
 impl PartialEq for BoardState {

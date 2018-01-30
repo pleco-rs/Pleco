@@ -107,7 +107,10 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 8;
     bb |= bb >> 16;
     bb |= bb >> 32;
-    DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
+//    DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
+    unsafe {
+        *DEBRUIJ_T.get_unchecked((bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize)
+    }
 }
 
 /// Returns if there are more than one bits in a u64.
@@ -165,6 +168,11 @@ pub fn diff(x: u8, y: u8) -> u8 {
     } else {
         x - y
     }
+}
+
+/// Gives the most significant bit of a `u64`.
+pub fn msb(x: u64) -> u64 {
+    (1 as u64).wrapping_shl(63 - x.leading_zeros())
 }
 
 
@@ -247,6 +255,11 @@ mod tests {
         assert_eq!(bit_scan_forward(0b000000000000010), 1);
         assert_eq!(bit_scan_forward(0b110011100000010), 1);
         assert_eq!(bit_scan_forward(0b110011100000010), 1);
+    }
+
+    #[test]
+    fn msb_t() {
+        assert_eq!(msb(0b0011),0b0010);
     }
 
     #[test]
