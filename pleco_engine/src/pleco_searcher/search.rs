@@ -242,6 +242,7 @@ impl ThreadSearcher {
                 moves_played += 1;
                 let gives_check: bool = self.board.gives_check(*mov);
                 self.board.apply_unknown_move(*mov, gives_check);
+                self.tt.prefetch(self.board.zobrist());
                 let do_full_depth: bool = if max_depth >= 3 && moves_played > 1 && ply >= 2 {
                     if in_check || gives_check {
                         value = -self.search::<NonPV>(-(alpha+1), -alpha, max_depth - 1);

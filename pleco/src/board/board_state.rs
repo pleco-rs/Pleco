@@ -18,7 +18,8 @@ use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::masks::*;
 
-use std::sync::Arc;
+//use std::sync::Arc;
+use tools::pleco_arc::Arc;
 
 /// Holds useful information concerning the current state of the [`Board`].
 ///

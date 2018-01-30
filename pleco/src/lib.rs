@@ -77,6 +77,7 @@
 #![feature(allocator_api)]
 #![feature(const_fn)]
 #![feature(const_indexing)]
+#![feature(core_intrinsics)]
 
 #![allow(dead_code)]
 

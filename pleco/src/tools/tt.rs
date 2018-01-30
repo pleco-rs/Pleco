@@ -39,6 +39,7 @@ use std::heap::{Alloc, Layout, Heap};
 use std::cmp::max;
 use std::cell::UnsafeCell;
 
+use std::intrinsics::prefetch_write_data;
 
 use core::piece_move::BitMove;
 
@@ -446,6 +447,16 @@ impl TranspositionTable {
             }
             (hits * 100.0) / (clusters_scanned * CLUSTER_SIZE as u64) as f64
         }
+    }
+
+    /// prefetches a key.
+    #[inline(always)]
+    pub fn prefetch(&self, key: u64) {
+        let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
+         unsafe {
+             let ptr = (*self.clusters.get()).as_ptr().offset(index as isize);
+             prefetch_write_data(ptr, 3);
+        };
     }
 }
 

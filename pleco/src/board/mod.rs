@@ -43,7 +43,8 @@ use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
 
 use std::option::*;
-use std::sync::Arc;
+//use std::sync::Arc;
+use tools::pleco_arc::{Arc,UniqueArc};
 use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
@@ -180,7 +181,7 @@ impl PartialEq for Board {
     fn eq(&self, other: &Board) -> bool {
         self.turn == other.turn &&
             self.occ_all == other.occ_all &&
-            self.state == other.state &&
+            *self.state == *other.state &&
             self.piece_locations == other.piece_locations
     }
 }
@@ -514,7 +515,7 @@ impl Board {
         };
 
         // Create the Board States
-        let mut board_s = Arc::new(BoardState {
+        let mut board_s = UniqueArc::new(BoardState {
             castling: castle_bytes,
             rule_50: rule_50,
             ply: 0,
@@ -547,10 +548,10 @@ impl Board {
         // Set the BitBoards
         b.set_bitboards();
         { // Set Check info
-            let state: &mut BoardState = Arc::get_mut(&mut board_s).unwrap();
+            let state: &mut BoardState = &mut *board_s;
             b.set_check_info(state);
         }
-        b.state = board_s;
+        b.state = board_s.shareable();
         b.set_zob_hash();
 
         fen::is_valid_fen(b)
@@ -678,12 +679,12 @@ impl Board {
 
 
         // New Arc for the board to have by making a partial clone of the current state
-        let mut next_arc_state = Arc::new(self.state.partial_clone());
+        let mut next_arc_state = UniqueArc::new(self.state.partial_clone());
 
         {
             // Seperate Block to allow derefencing the BoardState
             // As there is garunteed only one owner of the Arc, this is allowed
-            let new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+            let new_state: &mut BoardState = &mut *next_arc_state;
 
             // Set the prev state
             new_state.prev = Some(Arc::clone(&self.state));
@@ -810,7 +811,7 @@ impl Board {
             self.turn = them;
             self.set_check_info(new_state); // Set the checking information
         }
-        self.state = next_arc_state;
+        self.state = next_arc_state.shareable();
 
         if cfg!(debug_assertions) {
             self.is_okay().unwrap();
@@ -954,10 +955,10 @@ impl Board {
 
         self.depth += 1;
         // New Arc for the board to have by making a partial clone of the current state
-        let mut next_arc_state = Arc::new(self.state.partial_clone());
+        let mut next_arc_state = UniqueArc::new(self.state.partial_clone());
 
         {
-            let new_state: &mut BoardState = Arc::get_mut(&mut next_arc_state).unwrap();
+            let new_state: &mut BoardState = &mut *next_arc_state;
 
             new_state.prev_move = BitMove::null();
             new_state.rule_50 += 1;
@@ -974,7 +975,7 @@ impl Board {
             self.turn = self.turn.other_player();
             self.set_check_info(new_state);
         }
-        self.state = next_arc_state;
+        self.state = next_arc_state.shareable();
 
         if cfg!(debug_assertions) {
             self.is_okay().unwrap();
@@ -1944,13 +1945,6 @@ impl Board {
             }
         }
         s
-    }
-
-    /// Return the current ARC count of the board's BoardState.
-    #[doc(hidden)]
-    #[inline(always)]
-    pub fn get_arc_strong_count(&self) -> usize {
-        Arc::strong_count(&self.state)
     }
 
     /// Returns a clone of the current `PieceLocations`.
