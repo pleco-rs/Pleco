@@ -9,6 +9,9 @@ pub mod tt;
 pub mod timer;
 pub mod pawn_table;
 
+#[doc(hidden)]
+pub mod pleco_arc;
+
 use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
 

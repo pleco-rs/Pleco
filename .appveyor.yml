@@ -20,7 +20,6 @@ build: false
 test_script:
   - cargo build
   - cargo test
-  - cargo bench
 
 branches:
   only:

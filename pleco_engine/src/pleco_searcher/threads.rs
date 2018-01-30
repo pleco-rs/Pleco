@@ -1,5 +1,6 @@
 //! Contains the ThreadPool and the individual Threads.
 
+// TODO: use `parking_lot::RwLock`
 use std::sync::{Arc,RwLock};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};

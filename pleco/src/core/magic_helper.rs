@@ -270,12 +270,16 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Basically, given square x, returns the BitBoard of squares a pawn on x attacks.
     #[inline(always)]
     pub fn pawn_attacks_from(&self, sq: SQ, player: Player) -> BitBoard {
-        assert!(sq.is_okay());
-        BitBoard (
-            match player {
-                Player::White => self.pawn_attacks_from[0][sq.0 as usize],
-                Player::Black => self.pawn_attacks_from[1][sq.0 as usize],
-        })
+        debug_assert!(sq.is_okay());
+        unsafe {
+            BitBoard (
+                *self.pawn_attacks_from.get_unchecked(player as usize).get_unchecked(sq.0 as usize)
+//                match player {
+//                    Player::White => self.pawn_attacks_from.get_unchecked(0).get_unchecked(sq.0 as usize),
+//                    Player::Black => self.pawn_attacks_from[1][sq.0 as usize],
+//                }
+            )
+        }
     }
 
 
@@ -288,7 +292,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Returns the Zobrist Hash for a given piece as a given Square
     #[inline(always)]
     pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
-        assert!(square.is_okay());
+        debug_assert!(square.is_okay());
         unsafe {
             *(self.zobrist.sq_piece.get_unchecked(square.0 as usize)).get_unchecked(piece as usize)
         }
@@ -299,6 +303,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// Doesnt assume the EP square is a valid square. It will take the file of the square regardless.
     #[inline(always)]
     pub fn z_ep_file(&self, square: SQ) -> u64 {
+        debug_assert!(square.is_okay());
         unsafe {
             *self.zobrist.en_p.get_unchecked(file_of_sq(square.0) as usize)
         }
@@ -327,13 +332,18 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn ring_distance(&self, sq: SQ, distance: u8) -> BitBoard {
         debug_assert!(distance <= 7);
-        BitBoard(self.dist_ring_table[distance as usize][sq.0 as usize])
+        unsafe {
+            BitBoard(*self.dist_ring_table.get_unchecked(distance as usize).get_unchecked(sq.0 as usize))
+        }
     }
 
 
     /// Returns the BitBoard of all squares in the rank in front of the given one.
     pub fn forward_rank_bb(&self, player: Player, rank: Rank) -> BitBoard {
-        BitBoard(self.forward_ranks_bb[rank as usize][player as usize])
+        unsafe {
+            BitBoard(*self.forward_ranks_bb.get_unchecked(rank as usize).get_unchecked(player as usize))
+        }
+//        BitBoard(self.forward_ranks_bb[rank as usize][player as usize])
     }
 
     /// Returns the `BitBoard` of all squares that can be attacked by a pawn
@@ -341,22 +351,40 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     /// given square. Basically, if the pawn progresses along the same file
     /// for the entire game, this bitboard would contain all possible forward squares
     /// it could attack
+    ///
+    /// # Safety
+    ///
+    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
     #[inline(always)]
     pub fn pawn_attacks_span(&self, player: Player, sq: SQ) -> BitBoard {
-        BitBoard(self.pawn_attacks_span[player as usize][sq.0 as usize])
+        debug_assert!(sq.is_okay());
+        unsafe {
+            BitBoard(*self.pawn_attacks_span.get_unchecked(player as usize).get_unchecked(sq.0 as usize))
+        }
     }
 
     /// Returns the BitBoard of all squares in the file in front of the given one.
+    ///
+    /// # Safety
+    ///
+    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
     #[inline(always)]
     pub fn forward_file_bb(&self, player: Player, sq: SQ) -> BitBoard {
-        BitBoard(self.forward_file_bb[player as usize][sq.0 as usize])
+        unsafe {
+            BitBoard(*self.forward_file_bb.get_unchecked(player as usize).get_unchecked(sq.0 as usize))
+        }
     }
 
     /// Returns a `BitBoard` allowing for testing of the a pawn being a
     /// "passed pawn".
+    /// # Safety
+    ///
+    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
     #[inline(always)]
     pub fn passed_pawn_mask(&self, player: Player, sq: SQ) -> BitBoard {
-        BitBoard(self.passed_pawn_mask[player as usize][sq.0 as usize])
+        unsafe {
+            BitBoard(*self.passed_pawn_mask.get_unchecked(player as usize).get_unchecked(sq.0 as usize))
+        }
     }
 
     #[inline(always)]
