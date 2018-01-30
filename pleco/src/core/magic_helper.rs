@@ -308,7 +308,6 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn z_castle_rights(&self, castle: u8) -> u64 {
         debug_assert!((castle as usize) < ALL_CASTLING_RIGHTS);
-//        self.zobrist.castle[castle as usize]
         unsafe {
             *self.zobrist.en_p.get_unchecked(castle as usize)
         }
@@ -320,7 +319,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
         self.zobrist.side
     }
 
-    /// Returns the ring of bits surronding the square sq at a specified distance.
+    /// Returns the ring of bits surrounding the square sq at a specified distance.
     ///
     /// # Safety
     ///
@@ -332,20 +331,29 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     }
 
 
+    /// Returns the BitBoard of all squares in the rank in front of the given one.
     pub fn forward_rank_bb(&self, player: Player, rank: Rank) -> BitBoard {
         BitBoard(self.forward_ranks_bb[rank as usize][player as usize])
     }
 
+    /// Returns the `BitBoard` of all squares that can be attacked by a pawn
+    /// of the same color when it moves along its file, starting from the
+    /// given square. Basically, if the pawn progresses along the same file
+    /// for the entire game, this bitboard would contain all possible forward squares
+    /// it could attack
     #[inline(always)]
     pub fn pawn_attacks_span(&self, player: Player, sq: SQ) -> BitBoard {
         BitBoard(self.pawn_attacks_span[player as usize][sq.0 as usize])
     }
 
+    /// Returns the BitBoard of all squares in the file in front of the given one.
     #[inline(always)]
     pub fn forward_file_bb(&self, player: Player, sq: SQ) -> BitBoard {
         BitBoard(self.forward_file_bb[player as usize][sq.0 as usize])
     }
 
+    /// Returns a `BitBoard` allowing for testing of the a pawn being a
+    /// "passed pawn".
     #[inline(always)]
     pub fn passed_pawn_mask(&self, player: Player, sq: SQ) -> BitBoard {
         BitBoard(self.passed_pawn_mask[player as usize][sq.0 as usize])

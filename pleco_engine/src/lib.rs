@@ -28,7 +28,6 @@
 #![feature(ptr_internals)]
 #![feature(integer_atomics)]
 #![feature(test)]
-#![feature(shared)]
 #![feature(allocator_api)]
 #![feature(trusted_len)]
 #![feature(fused)]

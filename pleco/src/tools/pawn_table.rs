@@ -1,4 +1,7 @@
-
+//! A Table to store information concerning the structure of pawns. Used to evaluate
+//! both the structure of the pawns, as well as king safety values.
+//!
+//! An entry is retrieved from the `pawn_key` field of a `Board`
 
 use {Player,File,SQ,BitBoard,Board,Piece,Rank};
 use super::super::core::masks::{PLAYER_CNT,RANK_CNT};
@@ -108,27 +111,38 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
     a
 }
 
+/// Table to hold information about the pawn structure.
 pub struct PawnTable {
     table: TableBase<Entry>,
 }
 
 impl PawnTable {
+    /// Creates a new `PawnTable` of `size` entries.
+    ///
+    /// # Panics
+    ///
+    /// Panics if size is not a power of 2.
     pub fn new(size: usize) -> Self {
         PawnTable {
             table: TableBase::new(size).unwrap()
         }
     }
 
+    /// Retrieves the entry of a specified key. This method won't evaluate the resulting entry at all,
+    /// so use sparingly.
     pub fn get(&mut self, key: u64) -> &mut Entry {
         self.table.get_mut(key)
     }
 
 
+    /// Clears the table and resets to another size.
     pub fn clear(&mut self) {
         let size = self.table.size();
         self.table.resize(size);
     }
 
+    /// Retrieves the entry of a specified key. If the `Entry` doesn't a matching key,
+    /// the `Entry` will be evaluated for its pawn structure.
     pub fn probe(&mut self, board: &Board) -> &mut Entry {
         let key: u64 = board.pawn_key();
         let entry = self.get(key);
@@ -145,6 +159,7 @@ impl PawnTable {
     }
 }
 
+/// Information on a certain pawn structure.
 pub struct Entry {
     key: u64,
     score: Score,
@@ -163,33 +178,43 @@ pub struct Entry {
 }
 
 impl Entry {
+
+    /// Returns the current score of the pawn scructure.
     pub fn pawns_score(&self) -> Score {
         self.score
     }
 
+    /// Returns the possible pawn attacks `BitBoard` of a player.
     pub fn pawn_attacks(&self, player: Player) -> BitBoard {
         self.pawn_attacks[player as usize]
     }
 
+    /// Returns the `BitBoard` of the passed pawns for a specified player. A passed pawn is one that
+    /// has no opposing pawns in the same file, or any adjacent file.
     pub fn passed_pawns(&self, player: Player) -> BitBoard {
         self.passed_pawns[player as usize]
     }
 
+    /// Returns the span of all the pawn's attacks for a given player.
     pub fn pawn_attacks_span(&self, player: Player) -> BitBoard {
         self.pawn_attacks_span[player as usize]
     }
 
+    ///
     pub fn weak_unopposed(&self, player: Player) -> i16 {
         self.weak_unopposed[player as usize]
     }
 
+    /// Assymetric score of a position.
     pub fn asymmetry(&self) -> i16 {
         self.asymmetry
     }
 
+    /// Returns a bitfield of the current ranks.
     pub fn open_files(&self) -> u8 {
         self.open_files
     }
+
 
     pub fn semiopen_file(&self, player: Player, file: File) -> bool {
         self.semiopen_files[player as usize] & (1 << file as u8) != 0
@@ -204,10 +229,11 @@ impl Entry {
         self.semiopen_files[player as usize] & side_mask != 0
     }
 
-    // returns count
+    // returns count of pawns of a player on the same color square as the player's color.
     pub fn pawns_on_same_color_squares(&self, player: Player, sq: SQ) -> u8 {
         self.pawns_on_squares[player as usize][sq.square_color_index()]
     }
+
 
     pub fn king_safety<P: PlayerTrait>(&mut self, board: &Board, ksq: SQ) -> Score {
         if self.king_squares[P::player_idx()] == ksq
@@ -219,7 +245,7 @@ impl Entry {
         }
     }
 
-    pub fn do_king_safety<P: PlayerTrait>(&mut self, board: &Board, ksq: SQ) -> Score {
+    fn do_king_safety<P: PlayerTrait>(&mut self, board: &Board, ksq: SQ) -> Score {
         self.king_squares[P::player_idx()] = ksq;
         self.castling_rights[P::player_idx()] = board.player_can_castle(P::player());
         let mut min_king_distance = 0;
@@ -245,7 +271,7 @@ impl Entry {
     }
 
 
-    pub fn shelter_storm<P: PlayerTrait>(&self, board: &Board, ksq: SQ) -> Value {
+    fn shelter_storm<P: PlayerTrait>(&self, board: &Board, ksq: SQ) -> Value {
         let mut b: BitBoard = board.piece_bb_both_players(Piece::P)
             & (board.magic_helper.forward_rank_bb(P::player(), ksq.rank()) | ksq.rank_bb());
 
@@ -296,7 +322,7 @@ impl Entry {
         safety
     }
 
-    pub fn evaluate<P: PlayerTrait>(&mut self, board: &Board) -> Score {
+    fn evaluate<P: PlayerTrait>(&mut self, board: &Board) -> Score {
         let mut b: BitBoard;
         let mut neighbours: BitBoard;
         let mut stoppers: BitBoard;

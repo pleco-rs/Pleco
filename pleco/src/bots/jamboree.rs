@@ -32,7 +32,7 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(Value(MATE + (board.depth() as i16)));
+            return BestMove::new_none(Value::MATE + Value(board.depth() as i16));
         } else {
             return BestMove::new_none(Value::DRAW);
         }
@@ -42,7 +42,7 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     let (seq, non_seq) = moves.split_at(amount_seq);
 
     let mut best_move: Option<BitMove> = None;
-    let mut best_value: i16 = NEG_INFINITY;
+    let mut best_value: i16 = Value::NEG_INFINITE.0;
     for mov in seq {
         board.apply_move(*mov);
         let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();

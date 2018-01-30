@@ -3,7 +3,7 @@
 //! This package is separated into two parts. Firstly, the board representation & associated functions (the current crate, `pleco`), and secondly,
 //! the AI implementations [pleco_engine](https://crates.io/crates/pleco_engine).
 //!
-//! This crate requires NIGHTLY rust to use.
+//! This crate requires NIGHTLY Rust to use.
 //!
 //! # Usage
 //!
@@ -11,6 +11,14 @@
 //! used by adding `pleco` to the dependencies in your project's `Cargo.toml`.
 //!
 //! `pleco` requires nightly rust currently, so make sure your toolchain is a nightly version.
+//!
+//!
+//! # Safety
+//!
+//! While generally a safe library, pleco was built with a focus of speed in mind. Usage of methods must be followed
+//! carefully, as there are many possible ways to `panic` unexpectedly. Methods with the ability to panic will be
+//! documented as such.
+//!
 //!
 //! # Examples
 //!
