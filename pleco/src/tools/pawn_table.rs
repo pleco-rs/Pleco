@@ -126,8 +126,10 @@ impl PawnTable {
     }
 
 
-    pub unsafe fn clear(&mut self) {
-        (&*self.table.get()).resize((&*self.table.get()).size());
+    pub fn clear(&mut self) {
+        unsafe {
+            (&*self.table.get()).resize((&*self.table.get()).size());
+        }
     }
 
     pub fn probe(&mut self, board: &Board) -> &mut Entry {
@@ -405,13 +407,6 @@ impl Entry {
 mod tests {
     use super::*;
     use Board;
-
-    use std::thread::sleep;
-    use std::time::Duration;
-    use std::mem::forget;
-
-    use std::sync::atomic::Ordering;
-    use std::sync::atomic::compiler_fence;
 
     #[test]
     fn pawn_eval() {

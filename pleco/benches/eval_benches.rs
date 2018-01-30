@@ -35,8 +35,9 @@ fn bench_100_evaluations(b: &mut Bencher) {
 
 #[bench]
 fn bench_100_pawn_evals(b: &mut Bencher) {
+    let mut t: PawnTable = black_box(PawnTable::new(1 << 10));
     b.iter(|| {
-        let mut t: PawnTable = black_box(PawnTable::new(1 << 10));
+        t.clear();
         #[allow(unused_variables)]
         let mut score: i64 = 0;
         for board in RAND_BOARDS.iter() {
@@ -48,8 +49,9 @@ fn bench_100_pawn_evals(b: &mut Bencher) {
 
 #[bench]
 fn bench_100_pawn_king_evals(b: &mut Bencher) {
+    let mut t: PawnTable = black_box(PawnTable::new(1 << 10));
     b.iter(|| {
-        let mut t: PawnTable = black_box(PawnTable::new(1 << 10));
+        t.clear();
         #[allow(unused_variables)]
         let mut score: i64 = 0;
         for board in RAND_BOARDS.iter() {
