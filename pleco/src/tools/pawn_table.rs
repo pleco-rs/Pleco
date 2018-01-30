@@ -1,4 +1,4 @@
-use std::cell::UnsafeCell;
+
 
 use {Player,File,SQ,BitBoard,Board,Piece,Rank};
 use super::super::core::masks::{PLAYER_CNT,RANK_CNT};
@@ -109,27 +109,24 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
 }
 
 pub struct PawnTable {
-    table: UnsafeCell<TableBase<Entry>>,
+    table: TableBase<Entry>,
 }
 
 impl PawnTable {
     pub fn new(size: usize) -> Self {
         PawnTable {
-            table: UnsafeCell::new(TableBase::new(size).unwrap())
+            table: TableBase::new(size).unwrap()
         }
     }
 
     pub fn get(&mut self, key: u64) -> &mut Entry {
-        unsafe {
-            (&*self.table.get()).get_mut(key)
-        }
+        self.table.get_mut(key)
     }
 
 
     pub fn clear(&mut self) {
-        unsafe {
-            (&*self.table.get()).resize((&*self.table.get()).size());
-        }
+        let size = self.table.size();
+        self.table.resize(size);
     }
 
     pub fn probe(&mut self, board: &Board) -> &mut Entry {

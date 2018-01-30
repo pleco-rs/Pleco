@@ -11,7 +11,6 @@ pub mod pawn_table;
 
 use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
-use std::cell::UnsafeCell;
 
 use core::piece_move::BitMove;
 use tools::timer::Timer;
@@ -85,8 +84,8 @@ impl UCILimit {
 
 /// Generic Heap-stored array of entries.
 pub struct TableBase<T: Sized> {
-    table: UnsafeCell<NonNull<T>>,
-    size: UnsafeCell<usize>
+    table: NonNull<T>,
+    size: usize
 }
 
 impl<T: Sized> TableBase<T> {
@@ -98,8 +97,8 @@ impl<T: Sized> TableBase<T> {
         } else {
             unsafe  {
                 let table = TableBase {
-                    table: UnsafeCell::new(TableBase::alloc(size)),
-                    size: UnsafeCell::new(size)
+                    table: TableBase::alloc(size),
+                    size: size
                 };
                 Some(table)
             }
@@ -109,33 +108,33 @@ impl<T: Sized> TableBase<T> {
     /// Returns the size of the Table.
     #[inline]
     pub fn size(&self) -> usize {
-        unsafe {*self.size.get()}
+        self.size
     }
 
     /// Gets a mutable reference to an entry with a certain key.
     #[inline]
-    pub fn get_mut(&self, key: u64) -> &mut T {
-        let ptr: *mut T = self.get_ptr(key);
+    pub fn get_mut(&mut self, key: u64) -> &mut T {
+        let index: usize =  (key & (self.size as u64 - 1)) as usize;
         unsafe {
-            &mut *ptr
+            &mut *self.table.as_ptr().offset(index as isize)
         }
     }
 
     /// Gets a mutable pointer to an entry with a certain key.
-    #[inline(always)]
-    pub fn get_ptr(&self, key: u64) -> *mut T {
+    #[inline]
+    pub unsafe fn get_ptr(&self, key: u64) -> *mut T {
         let index: usize = (key & (self.size() as u64 - 1)) as usize;
-        unsafe {
-            (*self.table.get()).as_ptr().offset(index as isize)
-        }
+        self.table.as_ptr().offset(index as isize)
     }
 
     /// Re-sizes the table to a particular size, which must be a power of 2.
-    pub unsafe fn resize(&self, size: usize) {
+    pub fn resize(&mut self, size: usize) {
         assert_eq!(size.count_ones(), 1);
-        self.de_alloc();
-        *self.table.get() = TableBase::alloc(size);
-        *self.size.get() = size;
+        unsafe {
+            self.de_alloc();
+            self.table = TableBase::alloc(size);
+        }
+        self.size = size;
     }
 
     unsafe fn alloc(size: usize) -> NonNull<T> {
@@ -147,9 +146,9 @@ impl<T: Sized> TableBase<T> {
         NonNull::new(new_ptr as *mut T).unwrap()
     }
 
-    unsafe fn de_alloc(&self) {
-        Heap.dealloc(self.table.get() as *mut _,
-                     Layout::array::<T>(*self.size.get()).unwrap());
+    unsafe fn de_alloc(&mut self) {
+        Heap.dealloc(self.table.as_ptr() as *mut _,
+                     Layout::array::<T>(self.size).unwrap());
     }
 }
 
@@ -170,11 +169,10 @@ mod test {
     fn table_base_allocs() {
         for i in 0..14 {
             let size: usize = 1 << i;
-            let t = TableBase::<u64>::new(size).unwrap();
+            let mut t = TableBase::<u64>::new(size).unwrap();
             for x in 0..(3*size) {
-                *t.get_mut(x as u64) = x as u64;
+                *t.get_mut(x as u64) += 1 as u64;
             }
         }
-//        println!("ok");
     }
 }

@@ -12,9 +12,6 @@ use pleco::tools::pawn_table::{Entry,PawnTable};
 use pleco::core::mono_traits::WhiteType;
 use test::{black_box, Bencher};
 
-use std::thread::sleep;
-use std::time::Duration;
-
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         RAND_BOARD_NON_CHECKS_100.iter()
