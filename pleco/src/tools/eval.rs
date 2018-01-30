@@ -80,24 +80,20 @@ trait EvalRuns {
 }
 
 
-pub const INFINITY: i16 = 30_001;
-pub const NEG_INFINITY: i16 = -30_001;
-pub const STALEMATE: i16 = 0;
-
-pub const PAWN_VALUE: i16 = 100;
-pub const KNIGHT_VALUE: i16 = 300;
-pub const BISHOP_VALUE: i16 = 300;
-pub const ROOK_VALUE: i16 = 500;
-pub const QUEEN_VALUE: i16 = 800;
-pub const KING_VALUE: i16 = 350;
-
-pub const CASTLE_ABILITY: i16 = 7;
-pub const CASTLE_BONUS: i16 = 20;
-
-pub const KING_BOTTOM: i16 = 8;
-
-pub const MATE: i16 = -25_000;
-pub const CHECK: i16 = 14;
+const INFINITY: i16 = 30_001;
+const NEG_INFINITY: i16 = -30_001;
+const STALEMATE: i16 = 0;
+const PAWN_VALUE: i16 = 100;
+const KNIGHT_VALUE: i16 = 300;
+const BISHOP_VALUE: i16 = 300;
+const ROOK_VALUE: i16 = 500;
+const QUEEN_VALUE: i16 = 800;
+const KING_VALUE: i16 = 350;
+const CASTLE_ABILITY: i16 = 7;
+const CASTLE_BONUS: i16 = 20;
+const KING_BOTTOM: i16 = 8;
+const MATE: i16 = -25_000;
+const CHECK: i16 = 14;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
 pub const PIECE_VALS: [i16; PIECE_CNT] = [
@@ -126,7 +122,7 @@ impl Eval {
 
 fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
     if board.rule_50() >= 50 {
-        return Value::MATE;
+        return MATE;
     }
     let pre_value = eval_piece_counts::<P>(board) +
     eval_castling::<P>(board) +
@@ -135,7 +131,7 @@ fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
     eval_knight_pos::<P>(board) +
     eval_king_blockers_pinners::<P>(board) +
     eval_pawns::<P>(board);
-    Value(pre_value)
+    pre_value
 }
 
 

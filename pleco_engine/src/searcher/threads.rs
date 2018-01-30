@@ -5,19 +5,17 @@ use std::sync::{Arc,RwLock};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
-use std::{mem,time};
+use std::time;
 
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 
 use super::search::ThreadSearcher;
-use super::misc::*;
 #[allow(unused_imports)]
 use TT_TABLE;
-use super::root_moves::RootMove;
-use super::root_moves::root_moves_list::RootMoveList;
-use super::root_moves::root_moves_manager::RmManager;
-use THREAD_STACK_SIZE;
+use root_moves::RootMove;
+use root_moves::root_moves_list::RootMoveList;
+use root_moves::root_moves_manager::RmManager;
 use sync::LockLatch;
 use time::uci_timer::*;
 use time::time_management::TimeManager;
@@ -98,7 +96,6 @@ impl ThreadPool {
             board: Board::default(),
             time_man: &TIMER,
             tt: &TT_TABLE,
-            thread_stack: init_thread_stack(),
             id,
             root_moves: root_moves.clone(),
             use_stdout: Arc::clone(&self.use_stdout),
@@ -370,9 +367,4 @@ impl Drop for ThreadPool {
         }
         self.main_thread.take().unwrap().join().unwrap();
     }
-}
-
-pub fn init_thread_stack() -> [ThreadStack; THREAD_STACK_SIZE] {
-    let s: [ThreadStack; THREAD_STACK_SIZE] = unsafe { mem::zeroed() };
-    s
 }

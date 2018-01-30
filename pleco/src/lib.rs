@@ -78,6 +78,7 @@
 #![feature(const_fn)]
 #![feature(const_indexing)]
 #![feature(core_intrinsics)]
+#![feature(lang_items)]
 
 #![allow(dead_code)]
 

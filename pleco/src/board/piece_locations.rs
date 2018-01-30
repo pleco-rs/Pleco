@@ -79,7 +79,7 @@ impl PieceLocations {
     /// Panics if square is of index higher than 63.
     #[inline]
     pub fn piece_at(&self, square: SQ) -> Option<Piece> {
-        assert!(square.is_okay());
+        debug_assert!(square.is_okay());
         let byte: u8 = self.data[square.0 as usize] & 0b0111;
         match byte {
             0b0000 => Some(Piece::P),

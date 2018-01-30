@@ -32,6 +32,26 @@ pub fn init_globals() {
     }
 }
 
+pub trait PVNode {
+    fn is_pv() -> bool;
+}
+
+pub struct PV {}
+pub struct NonPV {}
+
+impl PVNode for PV {
+    fn is_pv() -> bool {
+        true
+    }
+}
+
+impl PVNode for NonPV {
+    fn is_pv() -> bool {
+        false
+    }
+}
+
+
 //
 //#[cfg(test)]
 //mod tests {

@@ -1,8 +1,7 @@
 //! The alpha-beta algorithm.
 use board::*;
 use core::piece_move::*;
-use tools::eval::*;
-use core::score::Value;
+use core::score::*;
 
 #[allow(unused_imports)]
 use test::Bencher;
@@ -24,9 +23,9 @@ pub fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(Value(MATE + (board.depth() as i16)));
+            return BestMove::new_none(MATE + board.depth() as i16);
         } else {
-            return BestMove::new_none(Value::DRAW);
+            return BestMove::new_none(DRAW);
         }
     }
     let mut best_move: Option<BitMove> = None;
@@ -34,20 +33,20 @@ pub fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth
         board.apply_move(mov);
         let return_move = alpha_beta_search(board, -beta, -alpha, max_depth).negate();
         board.undo_move();
-        if return_move.score.0 > alpha {
-            alpha = return_move.score.0;
+        if return_move.score > alpha {
+            alpha = return_move.score;
             best_move = Some(mov);
         }
         if alpha >= beta {
             return BestMove {
                 best_move: Some(mov),
-                score: Value(alpha),
+                score: alpha,
             };
         }
     }
 
     BestMove {
         best_move: best_move,
-        score: Value(alpha),
+        score: alpha,
     }
 }

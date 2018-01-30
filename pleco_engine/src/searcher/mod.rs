@@ -1,10 +1,8 @@
 //! The main searching structure.
 
-pub mod misc;
 pub mod threads;
 pub mod search;
-pub mod root_moves;
-pub mod parse;
+pub mod eval;
 
 use pleco::Board;
 use pleco::BitMove;
@@ -14,6 +12,7 @@ use std::io;
 use self::threads::ThreadPool;
 use time::uci_timer::{PreLimits};
 use uci::options::{OptionsMap,OptionWork};
+use uci::parse;
 use TT_TABLE;
 use init_globals;
 

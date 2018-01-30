@@ -34,7 +34,8 @@ os:
 script:
   - cargo build --verbose
   - cargo test --verbose
-  - cd pleco/ && cargo bench
+  - cargo bench
+#  - cd pleco/ && cargo bench
 
 after_success:
   - |

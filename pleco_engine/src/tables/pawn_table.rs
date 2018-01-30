@@ -4,13 +4,13 @@
 //! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
 //! unique to a pawn structure, but it's very likely that there will be no collisions.
 
-use {Player,File,SQ,BitBoard,Board,Piece,Rank};
-use super::super::core::masks::{PLAYER_CNT,RANK_CNT};
-use super::super::core::score::*;
-use super::super::core::mono_traits::*;
-use super::super::board::castle_rights::Castling;
-use super::super::core::masks::FILE_DISPLAYS;
-use core::CastleType;
+use pleco::{Player,File,SQ,BitBoard,Board,Piece,Rank};
+use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
+use pleco::core::score::*;
+use pleco::core::mono_traits::*;
+use pleco::board::castle_rights::Castling;
+use pleco::core::masks::FILE_DISPLAYS;
+use pleco::core::CastleType;
 
 use super::TableBase;
 
@@ -36,42 +36,42 @@ const LEVER: [Score; RANK_CNT] = [
     Score(0,0),
 ];
 
-const MAX_SAFETY_BONUS: Value = Value(258);
+const MAX_SAFETY_BONUS: Value = 258;
 
 
 // Weakness of our pawn shelter in front of the king by [isKingFile][distance from edge][rank].
 // RANK_1 = 0 is used for files where we have no pawns or our pawn is behind our king.
 const SHELTER_WEAKNESS: [[[Value; RANK_CNT]; 4]; 2] = [
-        [[ Value( 0), Value( 97), Value(17), Value( 9), Value(44), Value( 84), Value( 87), Value( 99) ], // Not On King file
-        [ Value( 0), Value(106), Value( 6), Value(33), Value(86), Value( 87), Value(104), Value(112) ],
-        [ Value( 0), Value(101), Value( 2), Value(65), Value(98), Value( 58), Value( 89), Value(115) ],
-        [ Value( 0), Value( 73), Value( 7), Value(54), Value(73), Value( 84), Value( 83), Value(111) ] ],
-        [ [ Value( 0), Value(104), Value(20), Value( 6), Value(27), Value( 86), Value( 93), Value( 82) ], // On King file
-        [ Value( 0), Value(123), Value( 9), Value(34), Value(96), Value(112), Value( 88), Value( 75) ],
-        [ Value( 0), Value(120), Value(25), Value(65), Value(91), Value( 66), Value( 78), Value(117) ],
-        [ Value( 0), Value( 81), Value( 2), Value(47), Value(63), Value( 94), Value( 93), Value(104) ] ]
+    [[  0,  97, 17,  9, 44,  84,  87,  99 ], // Not On King file
+     [  0, 106,  6, 33, 86,  87, 104, 112 ],
+     [  0, 101,  2, 65, 98,  58,  89, 115 ],
+     [  0,  73,  7, 54, 73,  84,  83, 111 ] ],
+    [[  0, 104, 20,  6, 27,  86,  93,  82 ], // On King file
+     [  0, 123,  9, 34, 96, 112,  88,  75 ],
+     [  0, 120, 25, 65, 91,  66,  78, 117 ],
+     [  0,  81,  2, 47, 63,  94,  93, 104 ] ]
 ];
 
 // Danger of enemy pawns moving toward our king by [type][distance from edge][rank].
 // For the unopposed and unblocked cases, RANK_1 = 0 is used when opponent has
 // no pawn on the given file, or their pawn is behind our king.
 const STORM_DANGER: [[[Value; 5]; 4]; 4] = [
-    [ [ Value( 0),  Value(-290), Value(-274), Value(57), Value(41) ],  // BlockedByKing
-    [ Value( 0),  Value(  60), Value( 144), Value(39), Value(13) ],
-    [ Value( 0),  Value(  65), Value( 141), Value(41), Value(34) ],
-    [ Value( 0),  Value(  53), Value( 127), Value(56), Value(14) ] ],
-    [ [ Value( 4),  Value(  73), Value( 132), Value(46), Value(31) ],  // Unopposed
-    [ Value( 1),  Value(  64), Value( 143), Value(26), Value(13) ],
-    [ Value( 1),  Value(  47), Value( 110), Value(44), Value(24) ],
-    [ Value( 0),  Value(  72), Value( 127), Value(50), Value(31) ] ],
-    [ [ Value( 0),  Value(   0), Value(  79), Value(23), Value( 1) ],  // BlockedByPawn
-    [ Value( 0),  Value(   0), Value( 148), Value(27), Value( 2) ],
-    [ Value( 0),  Value(   0), Value( 161), Value(16), Value( 1) ],
-    [ Value( 0),  Value(   0), Value( 171), Value(22), Value(15) ] ],
-    [ [Value(22),  Value(  45), Value( 104), Value(62), Value( 6) ],  // Unblocked
-    [ Value(31),  Value(  30), Value(  99), Value(39), Value(19) ],
-    [ Value(23),  Value(  29), Value(  96), Value(41), Value(15) ],
-    [ Value(21),  Value(  23), Value( 116), Value(41), Value(15) ] ]
+    [ [  0, -290, -274, 57, 41 ],  // BlockedByKing
+      [  0,   60,  144, 39, 13 ],
+      [  0,   65,  141, 41, 34 ],
+      [  0,   53,  127, 56, 14 ] ],
+    [ [  4,   73,  132, 46, 31 ],  // Unopposed
+      [  1,   64,  143, 26, 13 ],
+      [  1,   47,  110, 44, 24 ],
+      [  0,   72,  127, 50, 31 ] ],
+    [ [  0,    0,   79, 23,  1 ],  // BlockedByPawn
+      [  0,    0,  148, 27,  2 ],
+      [  0,    0,  161, 16,  1 ],
+      [  0,    0,  171, 22, 15 ] ],
+    [ [ 22,   45,  104, 62,  6 ],  // Unblocked
+      [ 31,   30,   99, 39, 19 ],
+      [ 23,   29,   96, 41, 15 ],
+      [ 21,   23,  116, 41, 15 ] ]
 ];
 
 lazy_static!{
@@ -274,7 +274,7 @@ impl Entry {
             bonus = bonus.max(self.shelter_storm::<P>(board, P::player().relative_square(SQ::C1)));
         }
 
-        Score::new(bonus, Value(-16 * min_king_distance))
+        Score::new(bonus, -16 * min_king_distance)
     }
 
 
@@ -436,7 +436,7 @@ impl Entry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use Board;
+    use pleco::Board;
 
     #[test]
     fn pawn_eval() {

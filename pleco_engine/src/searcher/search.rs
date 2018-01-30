@@ -11,13 +11,12 @@ use pleco::tools::tt::*;
 use pleco::core::score::*;
 use pleco::tools::eval::Eval;
 
-use super::misc::*;
 use MAX_PLY;
 use TT_TABLE;
 
 use time::time_management::TimeManager;
 use super::threads::TIMER;
-use super::root_moves::root_moves_list::RootMoveList;
+use root_moves::root_moves_list::RootMoveList;
 use consts::*;
 
 const THREAD_DIST: usize = 20;
@@ -31,7 +30,6 @@ pub struct ThreadSearcher {
     pub board: Board,
     pub time_man: &'static TimeManager,
     pub tt: &'static TranspositionTable,
-    pub thread_stack: [ThreadStack; THREAD_STACK_SIZE],
     pub id: usize,
     pub root_moves: RootMoveList,
     pub use_stdout: Arc<AtomicBool>,
@@ -64,11 +62,11 @@ impl ThreadSearcher {
         let skip_size: u16 = SKIP_SIZE[self.id % THREAD_DIST];
         let mut depth: u16 = start_ply;
 
-        let mut delta: i32 = Value::NEG_INFINITE.0 as i32;
+        let mut delta: i32 = NEG_INFINITE as i32;
         #[allow(unused_assignments)]
-        let mut best_value: i32 = Value::NEG_INFINITE.0 as i32;
-        let mut alpha: i32 = Value::NEG_INFINITE.0 as i32;
-        let mut beta: i32 = Value::INFINITE.0 as i32;
+        let mut best_value: i32 = NEG_INFINITE as i32;
+        let mut alpha: i32 = NEG_INFINITE as i32;
+        let mut beta: i32 = INFINITE as i32;
 
         let mut time_reduction: f64 = 1.0;
         let mut last_best_move: BitMove = BitMove::null();
@@ -82,8 +80,8 @@ impl ThreadSearcher {
 
             if depth >= 5 {
                 delta = 18;
-                alpha = max(self.root_moves.prev_best_score() - delta, Value::NEG_INFINITE.0 as i32);
-                beta = min(self.root_moves.prev_best_score() + delta, Value::INFINITE.0 as i32);
+                alpha = max(self.root_moves.prev_best_score() - delta, NEG_INFINITE as i32);
+                beta = min(self.root_moves.prev_best_score() + delta, INFINITE as i32);
             }
 
             'aspiration_window: loop {
@@ -96,16 +94,16 @@ impl ThreadSearcher {
                 }
 
                 if best_value <= alpha {
-                    alpha = max(best_value - delta, Value::NEG_INFINITE.0 as i32);
+                    alpha = max(best_value - delta, NEG_INFINITE as i32);
                 } else if best_value >= beta {
-                    beta = min(best_value + delta, Value::INFINITE.0 as i32);
+                    beta = min(best_value + delta, INFINITE as i32);
                 } else {
                     break 'aspiration_window;
                 }
                 delta += (delta / 4) + 5;
 
-                assert!(alpha >= Value::NEG_INFINITE.0 as i32);
-                assert!(beta <= Value::INFINITE.0 as i32);
+                assert!(alpha >= NEG_INFINITE as i32);
+                assert!(beta <= INFINITE as i32);
             }
 
             self.root_moves.sort();
@@ -162,8 +160,8 @@ impl ThreadSearcher {
 
         let mut best_move = BitMove::null();
 
-        let mut value = Value::NEG_INFINITE.0 as i32;
-        let mut best_value = Value::NEG_INFINITE.0 as i32;
+        let mut value = NEG_INFINITE as i32;
+        let mut best_value = NEG_INFINITE as i32;
         let mut moves_played = 0;
 
         let mut pos_eval: i32 = 0;
@@ -173,7 +171,7 @@ impl ThreadSearcher {
         }
 
         if ply >= max_depth || self.stop() {
-            return Eval::eval_low(&self.board).0 as i32;
+            return Eval::eval_low(&self.board) as i32;
         }
 
         let plys_to_zero = max_depth - ply;
@@ -197,13 +195,13 @@ impl ThreadSearcher {
         } else {
             if tt_hit {
                 if tt_entry.eval == 0 {
-                    pos_eval = Eval::eval_low(&self.board).0 as i32;
+                    pos_eval = Eval::eval_low(&self.board) as i32;
                 }
                 if tt_value != 0 && correct_bound(tt_value, pos_eval, tt_entry.node_type()) {
                     pos_eval = tt_value;
                 }
             } else {
-                pos_eval = Eval::eval_low(&self.board).0 as i32;
+                pos_eval = Eval::eval_low(&self.board) as i32;
                 tt_entry.place(zob, BitMove::null(), 0, pos_eval as i16, 0, NodeBound::NoBound);
             }
         }
@@ -226,9 +224,9 @@ impl ThreadSearcher {
 
         if moves.is_empty() {
             if self.board.in_check() {
-                return Value::MATE.0 as i32 + (ply as i32);
+                return MATE as i32 + (ply as i32);
             } else {
-                return Value::DRAW.0 as i32;
+                return DRAW as i32;
             }
         }
 
@@ -260,8 +258,8 @@ impl ThreadSearcher {
                     value = -self.search::<PV>(-beta, -alpha, max_depth);
                 }
                 self.board.undo_move();
-                assert!(value > Value::NEG_INFINITE.0 as i32);
-                assert!(value < Value::INFINITE.0 as i32);
+                assert!(value > NEG_INFINITE as i32);
+                assert!(value < INFINITE as i32);
                 if self.stop() {
                     return 0;
                 }
@@ -269,7 +267,7 @@ impl ThreadSearcher {
                     if moves_played == 1 || value as i32 > alpha {
                         self.root_moves.insert_score_depth(i,value, max_depth);
                     } else {
-                        self.root_moves.insert_score(i, Value::NEG_INFINITE.0 as i32);
+                        self.root_moves.insert_score(i, NEG_INFINITE as i32);
                     }
                 }
 
@@ -291,9 +289,9 @@ impl ThreadSearcher {
 
         if moves_played == 0 {
             if self.board.in_check() {
-                return Value::MATE.0 as i32 + (ply as i32);
+                return MATE as i32 - (ply as i32);
             } else {
-                return Value::DRAW.0 as i32;
+                return DRAW as i32;
             }
         }
 
