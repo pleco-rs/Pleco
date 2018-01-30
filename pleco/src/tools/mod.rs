@@ -153,13 +153,13 @@ impl<T: Sized> TableBase<T> {
     }
 }
 
-impl<T: Sized> Drop for TableBase<T> {
-    fn drop(&mut self) {
-        unsafe {
-            self.de_alloc();
-        }
-    }
-}
+//impl<T: Sized> Drop for TableBase<T> {
+//    fn drop(&mut self) {
+//        unsafe {
+//            self.de_alloc();
+//        }
+//    }
+//}
 
 
 #[cfg(test)]
