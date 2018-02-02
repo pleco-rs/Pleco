@@ -7,8 +7,6 @@ pub mod prng;
 pub mod eval;
 pub mod tt;
 pub mod timer;
-
-#[doc(hidden)]
 pub mod pleco_arc;
 
 use core::piece_move::BitMove;

@@ -17,7 +17,7 @@ UCI (Universal Chess Interface) compatible Engine & AI, and `pleco`, which conta
 The overall goal for this project is to utilize the efficiency of Rust to create a Chess AI matching the speed of modern chess engines.
 
 - [Documentation](https://docs.rs/pleco_engine)
-- [crates.io](https://crates.io/crates/pleco_engne)
+- [crates.io](https://crates.io/crates/pleco_engine)
 
 Planned & Implemented features
 -------

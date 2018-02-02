@@ -52,7 +52,7 @@ impl RmManager {
     fn allocate(&mut self) {
         unsafe {
             let layout = Layout::array::<RawRootMoveList>(MAX_THREADS).unwrap();
-            let result = Heap.alloc(layout);
+            let result = Heap.alloc_zeroed(layout);
             let new_ptr = match result {
                 Ok(ptr) => ptr,
                 Err(err) => Heap.oom(err),
