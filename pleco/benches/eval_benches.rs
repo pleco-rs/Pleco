@@ -7,8 +7,7 @@ extern crate rand;
 extern crate lazy_static;
 
 use pleco::tools::eval::Eval;
-use pleco::{Board,Player};
-use pleco::core::mono_traits::WhiteType;
+use pleco::{Board};
 use test::{black_box, Bencher};
 
 lazy_static! {

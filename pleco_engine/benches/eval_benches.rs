@@ -7,7 +7,6 @@ extern crate rand;
 #[macro_use]
 extern crate lazy_static;
 
-use pleco::tools::eval::Eval;
 use pleco::{Board,Player};
 use pleco_engine::tables::pawn_table::{Entry,PawnTable};
 use pleco::core::mono_traits::WhiteType;

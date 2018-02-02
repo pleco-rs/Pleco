@@ -167,3 +167,21 @@ pub fn eval_board(board: &Board) -> BestMove {
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn minimax_equality() {
+        let b = Board::default();
+        let b2 = b.shallow_clone();
+        assert_eq!(MiniMaxSearcher::best_move_depth(b, 5), ParallelMiniMaxSearcher::best_move_depth(b2, 5));
+    }
+
+    #[test]
+    fn alpha_equality() {
+        let b = Board::default();
+        let b2 = b.shallow_clone();
+        assert_eq!(AlphaBetaSearcher::best_move_depth(b, 5), JamboreeSearcher::best_move_depth(b2, 5));
+    }
+}

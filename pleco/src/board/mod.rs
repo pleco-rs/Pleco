@@ -16,6 +16,7 @@ pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
 pub mod fen;
+pub mod perft;
 mod pgn;
 
 use std::option::*;
@@ -2263,6 +2264,7 @@ mod tests {
 
     extern crate rand;
     use board::Board;
+    use {BitMove,SQ,Piece};
 
     #[test]
     fn random_move_apply() {
@@ -2343,5 +2345,23 @@ mod tests {
         while !boards_1.is_empty() {
             assert_eq!(boards_1.pop(), boards_2.pop());
         }
+    }
+
+    #[test]
+    fn uci_move() {
+        let mut b = Board::default();
+        assert!(!b.apply_uci_move("a1a5"));
+    }
+
+    #[test]
+    fn check_state() {
+        let b = Board::default();
+        assert_eq!(b.count_all_pieces(), 32);
+        assert!(!b.checkmate());
+        assert!(!b.stalemate());
+
+        let bmove: BitMove = BitMove::make_pawn_push(SQ::A2,SQ::A4);
+        assert_eq!(b.moved_piece(bmove), Piece::P);
+        assert_eq!(b.captured_piece(bmove), None);
     }
 }
