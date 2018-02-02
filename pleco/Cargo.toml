@@ -69,6 +69,8 @@ name = "pleco"
 bench = true
 path = "src/lib.rs"
 doctest = true
+crate_type = ["staticlib", "rlib"]
+
 
 
 [dependencies]
@@ -87,3 +89,4 @@ features = ["nightly"]
 [features]
 default = []
 dev = ["clippy"]
+

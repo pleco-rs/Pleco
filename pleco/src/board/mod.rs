@@ -4,15 +4,13 @@
 //!
 //! This module also contains structures used by the board, such as [`CastlingRights`] for
 //! determining castling rights throughout a game. Other utilities that may be of use
-//! are [`Eval`], which takes a board and evaluates it, and `PGN` (unstable as of now), which
-//! parses a PGN File into a [`Board`].
+//! are [`PieceLocations`], which maps squares on a chessboard to pieces and players.
 //!
 //! [`Board`]: struct.Board.html
 //! [`CastlingRights`]: castle_rights/struct.Castling.html
-//! [`Eval`]: eval/struct.Eval.html
+//! [`PieceLocations`]: piece_locations/struct.Eval.html
 
 
-use failure;
 pub mod movegen;
 pub mod castle_rights;
 pub mod piece_locations;
@@ -20,9 +18,13 @@ pub mod board_state;
 pub mod fen;
 mod pgn;
 
-extern crate rand;
+use std::option::*;
+use tools::pleco_arc::{Arc,UniqueArc};
+use std::{fmt, char,num};
+use std::cmp::{PartialEq,max,min};
 
-
+use rand;
+use failure;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
@@ -42,15 +44,7 @@ use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
 
-use std::option::*;
-//use std::sync::Arc;
-use tools::pleco_arc::{Arc,UniqueArc};
-use std::{fmt, char,num};
-use std::cmp::{PartialEq,max,min};
-
 pub type Error = failure::Error;
-
-
 
 
 lazy_static! {
@@ -1408,6 +1402,10 @@ impl Board {
     }
 
     /// Get the current ply of the board.
+    ///
+    /// A ply is determined as the number of moves that have been played on the
+    /// current `Board`. A simpler way to explain it would be counting the number
+    /// of times `Board::undo_move()` can be legally applied.
     #[inline(always)]
     pub fn ply(&self) -> u16 {
         self.state.ply

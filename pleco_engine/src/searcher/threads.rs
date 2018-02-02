@@ -1,12 +1,13 @@
 //! Contains the ThreadPool and the individual Threads.
 
 // TODO: use `parking_lot::RwLock`
-use std::sync::{Arc,RwLock};
+use std::sync::{RwLock};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
 use std::time;
 
+use pleco::tools::pleco_arc::Arc;
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 

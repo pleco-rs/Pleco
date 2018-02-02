@@ -1,5 +1,7 @@
 
+#[allow(unused_imports)]
 use pleco::{Board,BitBoard,SQ,Rank,File,Player};
+#[allow(unused_imports)]
 use pleco::core::mono_traits::*;
 use pleco::core::score::*;
 
@@ -12,10 +14,12 @@ pub struct Evaluation<'a> {
 
 impl <'a> Evaluation <'a> {
     pub fn evaluate(board: &Board, pawn_table: &mut PawnTable) -> i16 {
+        #[allow(unused_variables)]
         let score: Score = Score(0,0);
 
         let pawn_entry = { pawn_table.probe(&board) };
-        let mut eval = Evaluation {
+
+        let mut _eval = Evaluation {
             board,
             pawn_entry: pawn_entry
         };

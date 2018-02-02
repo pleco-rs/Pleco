@@ -6,7 +6,6 @@ This project aims to utilize the efficiency of Rust to create a Chess Library & 
 
 
 [![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
-[![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
 [![Coverage Status](https://coveralls.io/repos/github/sfleischman105/Pleco/badge.svg?branch=master)](https://coveralls.io/github/sfleischman105/Pleco?branch=master)
 
@@ -33,17 +32,7 @@ The Library aims to have the following features upon completion
 Use
 -------
 
-To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco) Simply include the following in your Cargo.toml:
-
-```
-[dependencies]
-pleco = "0.3.3"
-```
-
-And add the following to a `main.rs` or `lib.rs`:
-```rust
-extern crate pleco;
-```
+To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco) `nightly` rust is required to use. 
 
 ### Basic Usage
 Setting up a board position is extremely simple.

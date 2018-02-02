@@ -145,7 +145,6 @@ impl fmt::Display for BitMove {
 
 // https://chessprogramming.wikispaces.com/Encoding+Moves
 impl BitMove {
-
     pub const FLAG_QUIET: u16 = 0;
     pub const FLAG_DOUBLE_PAWN: u16 = 1;
     pub const FLAG_CAPTURE: u16 = 4;
@@ -161,25 +160,31 @@ impl BitMove {
         BitMove { data: input }
     }
 
+    /// Makes a quiet `BitMove` from a source and destination square.
     #[inline(always)]
     pub fn make_quiet(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_QUIET,src,dst)
     }
 
+    /// Makes a pawn-push `BitMove` from a source and destination square.
     #[inline(always)]
     pub fn make_pawn_push(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_DOUBLE_PAWN,src,dst)
     }
 
+    /// Makes a non-enpassant `BitMove` from a source and destination square.
     #[inline(always)]
     pub fn make_capture(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_CAPTURE,src,dst)
     }
 
+    /// Creates a `BitMove` from a source and destination square, as well as the current
+    /// flag.
     #[inline]
     pub fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
         BitMove { data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6) }
     }
+
 
     #[inline(always)]
     fn promotion_piece_flag(piece: Piece) -> u16 {
@@ -362,7 +367,7 @@ impl BitMove {
 
 
     // TODO: Simply with (m >> 4) & 3
-    /// Returns the [MoveType] of a [BitMove].
+    /// Returns the `MoveType` of a `BitMove`.
     #[inline(always)]
     pub fn move_type(&self) -> MoveType {
         if self.is_castle() {
@@ -377,7 +382,7 @@ impl BitMove {
         MoveType::Normal
     }
 
-    /// Returns a String representation of a [BitMove].
+    /// Returns a String representation of a `BitMove`.
     ///
     /// Format goes "Source Square, Destination Square, (Promo Piece)". Moving a Queen from A1 to B8
     /// will stringify to "a1b8". If there is a pawn promotion involved, the piece promoted to will be

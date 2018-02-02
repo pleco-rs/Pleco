@@ -1,14 +1,22 @@
+//! A faster version of `std::sync::Arc`.
+//!
+//! This is mostly copied from [servo_arc](https://doc.servo.org/servo_arc/index.html), so see
+//! that documentation for more information.
+
 #[allow(unused_imports)]
 use std::sync::atomic;
 use std::ops::{Deref, DerefMut};
-use std::sync::atomic::Ordering::{Acquire, Relaxed, Release, SeqCst};
+use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use std::ptr::NonNull;
 
+/// The Inner structure of an `Arc`.
 pub struct ArcInner<T: ?Sized> {
     count: atomic::AtomicUsize,
     data: T
 }
 
+/// An `Arc` that ensures a single reference to it. Allows for modification to the
+/// state inside, and also transformation into an `Arc`.
 pub struct UniqueArc<T: ?Sized>(Arc<T>);
 
 unsafe impl<T: ?Sized + Sync + Send> Send for ArcInner<T> {}
@@ -42,6 +50,7 @@ impl<T> DerefMut for UniqueArc<T> {
     }
 }
 
+/// Reference counting pointer, sharable between threads.
 pub struct Arc<T: ?Sized> {
     p: NonNull<ArcInner<T>>
 }
@@ -51,6 +60,7 @@ unsafe impl<T: ?Sized + Sync + Send> Sync for Arc<T> {}
 
 impl<T> Arc<T> {
 
+    /// Creates a new `Arc`.
     #[inline]
     pub fn new(data: T) -> Self {
         let x = Box::new(ArcInner {
@@ -81,6 +91,7 @@ impl<T: ?Sized> Arc<T> {
         unsafe { &*self.ptr() }
     }
 
+    /// Gets a `& mut T` of the inner value if there is only one reference.
     #[inline]
     pub fn get_mut(this: &mut Self) -> Option<&mut T> {
         if this.is_unique() {
@@ -93,6 +104,7 @@ impl<T: ?Sized> Arc<T> {
         }
     }
 
+    /// Allows for determining if the reference count is zero.
     #[inline]
     pub fn is_unique(&self) -> bool {
         // We can use Relaxed here, but the justification is a bit subtle.

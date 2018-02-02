@@ -3,13 +3,13 @@ use time::uci_timer::*;
 
 use std::cmp::{min,max};
 use std::sync::atomic::{Ordering,AtomicBool};
-use std::sync::Arc;
 
 use pleco::{MoveList,Board,BitMove};
 use pleco::core::*;
 use pleco::tools::tt::*;
 use pleco::core::score::*;
 use pleco::tools::eval::Eval;
+use pleco::tools::pleco_arc::Arc;
 
 use MAX_PLY;
 use TT_TABLE;

@@ -2,7 +2,7 @@
 
 pub mod threads;
 pub mod search;
-pub mod eval;
+mod eval;
 
 use pleco::Board;
 use pleco::BitMove;
