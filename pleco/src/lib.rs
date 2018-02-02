@@ -77,8 +77,7 @@
 #![feature(allocator_api)]
 #![feature(const_fn)]
 #![feature(const_indexing)]
-#![feature(core_intrinsics)]
-#![feature(lang_items)]
+//#![feature(core_intrinsics)]
 
 #![allow(dead_code)]
 
@@ -101,6 +100,7 @@ extern crate test;
 extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
+extern crate prefetch;
 
 
 pub mod core;

@@ -224,7 +224,7 @@ impl ThreadSearcher {
 
         if moves.is_empty() {
             if self.board.in_check() {
-                return MATE as i32 + (ply as i32);
+                return MATE as i32 - (ply as i32);
             } else {
                 return DRAW as i32;
             }

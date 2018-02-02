@@ -28,6 +28,7 @@ impl RawRootMoveList {
         self.depth_completed = AtomicU16::new(0);
         self.stop.store(true, Ordering::SeqCst);
         self.kill.store(false, Ordering::SeqCst);
+        self.len = 0;
         unsafe {
             let f = &mut self.finished;
             ptr::write_volatile(f, GuardedBool::new(true));
