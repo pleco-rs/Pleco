@@ -1,7 +1,7 @@
 [package]
 name = "pleco"
-# REMINDER TO CHANGE IN README
-version = "0.3.3"
+# REMINDER TO CHANGE IN MAIN README
+version = "0.3.4"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast chess library."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -69,6 +69,8 @@ name = "pleco"
 bench = true
 path = "src/lib.rs"
 doctest = true
+crate_type = ["staticlib", "rlib"]
+
 
 
 [dependencies]
@@ -87,3 +89,4 @@ features = ["nightly"]
 [features]
 default = []
 dev = ["clippy"]
+

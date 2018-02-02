@@ -269,16 +269,31 @@ pub enum File {
 }
 
 impl File {
+
+    /// Returns the bit-set of all files to the left of the current file.
     #[inline(always)]
     pub fn left_side_mask(self) -> u8 {
         (1 << self as u8) - 1
     }
 
+    /// Returns the bit-set of all files to the right of the current file.
     #[inline(always)]
     pub fn right_side_mask(self) -> u8 {
         !((1 << (self as u16 + 1)) - 1) as u8
     }
 
+    /// Returns the minimum file.
+    ///
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::core::File;
+    ///
+    /// let file_a = File::A;
+    ///
+    /// assert_eq!(file_a.min(File::C), File::A);
+    /// ```
     pub fn min(self, other: File) -> File {
         if (self as u8) < (other as u8) {
             self
@@ -287,6 +302,17 @@ impl File {
         }
     }
 
+    /// Returns the maximum file.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::core::File;
+    ///
+    /// let file_a = File::A;
+    ///
+    /// assert_eq!(file_a.max(File::C), File::C);
+    /// ```
     pub fn max(self, other: File) -> File {
         if (self as u8) > (other as u8) {
             self

@@ -4,25 +4,28 @@
 //!
 //! This module also contains structures used by the board, such as [`CastlingRights`] for
 //! determining castling rights throughout a game. Other utilities that may be of use
-//! are [`Eval`], which takes a board and evaluates it, and `PGN` (unstable as of now), which
-//! parses a PGN File into a [`Board`].
+//! are [`PieceLocations`], which maps squares on a chessboard to pieces and players.
 //!
 //! [`Board`]: struct.Board.html
 //! [`CastlingRights`]: castle_rights/struct.Castling.html
-//! [`Eval`]: eval/struct.Eval.html
+//! [`PieceLocations`]: piece_locations/struct.Eval.html
 
 
-use failure;
 pub mod movegen;
 pub mod castle_rights;
 pub mod piece_locations;
 pub mod board_state;
 pub mod fen;
+pub mod perft;
 mod pgn;
 
-extern crate rand;
+use std::option::*;
+use tools::pleco_arc::{Arc,UniqueArc};
+use std::{fmt, char,num};
+use std::cmp::{PartialEq,max,min};
 
-
+use rand;
+use failure;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
@@ -42,15 +45,7 @@ use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
 
-use std::option::*;
-//use std::sync::Arc;
-use tools::pleco_arc::{Arc,UniqueArc};
-use std::{fmt, char,num};
-use std::cmp::{PartialEq,max,min};
-
 pub type Error = failure::Error;
-
-
 
 
 lazy_static! {
@@ -1408,6 +1403,10 @@ impl Board {
     }
 
     /// Get the current ply of the board.
+    ///
+    /// A ply is determined as the number of moves that have been played on the
+    /// current `Board`. A simpler way to explain it would be counting the number
+    /// of times `Board::undo_move()` can be legally applied.
     #[inline(always)]
     pub fn ply(&self) -> u16 {
         self.state.ply
@@ -2265,6 +2264,7 @@ mod tests {
 
     extern crate rand;
     use board::Board;
+    use {BitMove,SQ,Piece};
 
     #[test]
     fn random_move_apply() {
@@ -2345,5 +2345,23 @@ mod tests {
         while !boards_1.is_empty() {
             assert_eq!(boards_1.pop(), boards_2.pop());
         }
+    }
+
+    #[test]
+    fn uci_move() {
+        let mut b = Board::default();
+        assert!(!b.apply_uci_move("a1a5"));
+    }
+
+    #[test]
+    fn check_state() {
+        let b = Board::default();
+        assert_eq!(b.count_all_pieces(), 32);
+        assert!(!b.checkmate());
+        assert!(!b.stalemate());
+
+        let bmove: BitMove = BitMove::make_pawn_push(SQ::A2,SQ::A4);
+        assert_eq!(b.moved_piece(bmove), Piece::P);
+        assert_eq!(b.captured_piece(bmove), None);
     }
 }

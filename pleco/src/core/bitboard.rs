@@ -146,6 +146,7 @@ impl BitBoard {
     pub fn msb(self) -> BitBoard {
         BitBoard(msb(self.0))
     }
+
     /// Returns the least significant bit as a u64.
     #[inline(always)]
     pub fn lsb_u64(self) -> u64 {
@@ -161,6 +162,7 @@ impl BitBoard {
         sq
     }
 
+    /// Returns the least significant bit of a `BitBoard`, if it has any.
     #[inline(always)]
     pub fn pop_some_lsb(&mut self) -> Option<SQ> {
         if self.is_empty() {
@@ -184,6 +186,7 @@ impl BitBoard {
     /// # Safety
     ///
     /// panics if the `BitBoard` is empty.
+    #[inline]
     pub fn frontmost_sq(self, player: Player) -> SQ {
         match player {
             Player::White => self.msb().to_sq(),
@@ -196,6 +199,7 @@ impl BitBoard {
     /// # Safety
     ///
     /// panics if the `BitBoard` is empty.
+    #[inline]
     pub fn backmost_sq(self, player: Player) -> SQ {
         match player {
             Player::White => self.bit_scan_forward(),

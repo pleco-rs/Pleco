@@ -25,7 +25,6 @@ pub trait PlayerTrait {
     /// Returns the index of the player
     fn player_idx() -> usize;
 
-
     /// Given a `SQ`, return a square that is down relative to the current player.
     fn down(sq: SQ) -> SQ;
 
@@ -52,11 +51,14 @@ pub trait PlayerTrait {
 
     /// Return the same BitBoard shifted "down" relative to the current player.
     fn shift_down(bb: BitBoard) -> BitBoard;
+
     /// Return the same BitBoard shifted "up" relative to the current player.
     fn shift_up(bb: BitBoard) -> BitBoard;
+
     /// Return the same BitBoard shifted "left" relative to the current player. Does not
     /// include the left-most file in the result.
     fn shift_left(bb: BitBoard) -> BitBoard;
+
     /// Return the same BitBoard shifted "right" relative to the current player. Does not
     /// include the left-most file in the result.
     fn shift_right(bb: BitBoard) -> BitBoard;

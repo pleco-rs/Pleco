@@ -14,7 +14,7 @@ use core::piece_move::BitMove;
 use tools::{Searcher,UCILimit};
 use board::Board;
 use tools::eval::*;
-use core::score::Value;
+use core::score::*;
 
 use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
 
@@ -54,8 +54,8 @@ impl Searcher for AlphaBetaSearcher {
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        let alpha = NEG_INFINITY;
-        let beta = INFINITY;
+        let alpha = NEG_INFINITE;
+        let beta = INFINITE;
         alphabeta::alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
             .best_move
             .unwrap()
@@ -80,8 +80,8 @@ impl Searcher for JamboreeSearcher {
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        let alpha = NEG_INFINITY;
-        let beta = INFINITY;
+        let alpha = NEG_INFINITE;
+        let beta = INFINITE;
         jamboree::jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)
             .best_move
             .unwrap()
@@ -131,7 +131,7 @@ impl BestMove {
 
     #[inline(always)]
     pub fn negate(mut self) -> Self {
-        self.score = Value(self.score.0.wrapping_neg());
+        self.score = self.score.wrapping_neg();
         self
     }
 
@@ -167,3 +167,21 @@ pub fn eval_board(board: &Board) -> BestMove {
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn minimax_equality() {
+        let b = Board::default();
+        let b2 = b.shallow_clone();
+        assert_eq!(MiniMaxSearcher::best_move_depth(b, 5), ParallelMiniMaxSearcher::best_move_depth(b2, 5));
+    }
+
+    #[test]
+    fn alpha_equality() {
+        let b = Board::default();
+        let b2 = b.shallow_clone();
+        assert_eq!(AlphaBetaSearcher::best_move_depth(b, 5), JamboreeSearcher::best_move_depth(b2, 5));
+    }
+}

@@ -140,6 +140,7 @@ impl Castling {
             !self.contains(Castling::BLACK_Q)
     }
 
+
     #[inline]
     pub fn update_castling(&mut self, to: SQ, from: SQ) -> u8 {
         let mask_change: u8 = to.castle_rights_mask() | from.castle_rights_mask();
@@ -148,6 +149,16 @@ impl Castling {
         to_return
     }
 
+    /// Adds the Right to castle based on an `char`.
+    ///
+    /// `K` -> Add White King-side Castling bit.
+    /// `Q` -> Add White Queen-side Castling bit.
+    /// `k` -> Add Black King-side Castling bit.
+    /// `q` -> Add Black Queen-side Castling bit.
+    ///
+    /// # Panics
+    ///
+    /// Panics of the char is not `K`, `Q`, `k`, or `q`.
     pub fn add_castling_char(&mut self, c: char) {
         self.bits |= match c {
             'K' => Castling::WHITE_K.bits,

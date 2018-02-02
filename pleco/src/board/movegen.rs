@@ -525,7 +525,7 @@ impl<'a> MoveGen<'a> {
     }
 
     // Return the moves Bitboard
-    #[inline(always)]
+    #[inline]
     fn moves_bb(&self, piece: Piece, square: SQ) -> BitBoard {
         debug_assert!(square.is_okay());
         debug_assert_ne!(piece, Piece::P);
