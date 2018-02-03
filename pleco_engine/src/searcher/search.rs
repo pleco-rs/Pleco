@@ -345,7 +345,7 @@ fn mvv_lva_sort(moves: &mut MoveList, board: &Board) {
             piece.value() - board.captured_piece(*a).unwrap().value()
         } else if a.is_castle() {
             1
-        } else if piece == Piece::P {
+        } else if piece == PieceType::P {
             if a.is_double_push().0 {
                 2
             } else {

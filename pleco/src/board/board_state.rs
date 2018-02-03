@@ -44,11 +44,11 @@ pub struct BoardState {
     // These fields MUST be Recomputed after a move
     pub zobrast: u64,
     pub pawn_key: u64,
-    pub captured_piece: Option<Piece>,
+    pub captured_piece: Option<PieceType>,
     pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
     pub blockers_king: [BitBoard; PLAYER_CNT],
     pub pinners_king: [BitBoard; PLAYER_CNT],
-    pub check_sqs: [BitBoard; PIECE_CNT],
+    pub check_sqs: [BitBoard; PIECE_TYPE_CNT],
 
     pub prev_move: BitMove,
 
@@ -90,7 +90,7 @@ impl BoardState {
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
             pinners_king: [BitBoard(0); PLAYER_CNT],
-            check_sqs: [BitBoard(0); PIECE_CNT],
+            check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
             prev_move: BitMove::null(),
             prev: None,
         }
@@ -109,7 +109,7 @@ impl BoardState {
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
             pinners_king: [BitBoard(0); PLAYER_CNT],
-            check_sqs: [BitBoard(0); PIECE_CNT],
+            check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
             prev_move: BitMove::null(),
             prev: None,
         }
@@ -131,7 +131,7 @@ impl BoardState {
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
             pinners_king: [BitBoard(0); PLAYER_CNT],
-            check_sqs: [BitBoard(0); PIECE_CNT],
+            check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
             prev_move: BitMove::null(),
             prev: self.get_prev(),
         }

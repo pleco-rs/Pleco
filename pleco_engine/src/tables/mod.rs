@@ -1,5 +1,6 @@
 
 pub mod pawn_table;
+pub mod material;
 
 use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};

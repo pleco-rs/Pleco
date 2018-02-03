@@ -13,6 +13,9 @@ pub const MAX_THREADS: usize = 256;
 
 pub const DEFAULT_TT_SIZE: usize = 256;
 
+pub const PAWN_TABLE_SIZE: usize = 16384;
+pub const MATERIAL_TABLE_SIZE: usize = 8192;
+
 static INITALIZED: AtomicBool = AtomicBool::new(false);
 /// Global Timer
 //pub static TIMER: TimeManager = TimeManager::uninitialized();

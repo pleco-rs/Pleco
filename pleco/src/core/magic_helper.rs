@@ -36,7 +36,7 @@ const ZOBRIST_SEED: u64 = 23_081;
 /// Structure for helping determine Zobrist hashes for a given position.
 pub struct Zobrist {
     /// Zobrist key for each piece on each square.
-    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
+    pub sq_piece: [[u64; PIECE_TYPE_CNT]; SQ_CNT], // 8 * 6 * 8
     /// Zobrist key for each possible en-passant capturable file.
     pub en_p: [u64; FILE_CNT], // 8 * 8
     /// Zobrist key for each possible castling rights.
@@ -51,7 +51,7 @@ impl Zobrist {
     /// Returns a Zobrist object.
     fn default() -> Zobrist {
         let mut zob = Zobrist {
-            sq_piece: [[0; PIECE_CNT]; SQ_CNT],
+            sq_piece: [[0; PIECE_TYPE_CNT]; SQ_CNT],
             en_p: [0; FILE_CNT],
             castle: [0; ALL_CASTLING_RIGHTS],
             side: 0,
@@ -60,7 +60,7 @@ impl Zobrist {
         let mut rng = PRNG::init(ZOBRIST_SEED);
 
         for i in 0..SQ_CNT {
-            for j in 0..PIECE_CNT {
+            for j in 0..PIECE_TYPE_CNT {
                 zob.sq_piece[i][j] = rng.rand();
             }
         }
@@ -291,7 +291,7 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
     /// Returns the Zobrist Hash for a given piece as a given Square
     #[inline(always)]
-    pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
+    pub fn z_piece_at_sq(&self, piece: PieceType, square: SQ) -> u64 {
         debug_assert!(square.is_okay());
         unsafe {
             *(self.zobrist.sq_piece.get_unchecked(square.0 as usize)).get_unchecked(piece as usize)

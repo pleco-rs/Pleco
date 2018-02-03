@@ -4,7 +4,7 @@
 //! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
 //! unique to a pawn structure, but it's very likely that there will be no collisions.
 
-use pleco::{Player,File,SQ,BitBoard,Board,Piece,Rank};
+use pleco::{Player, File, SQ, BitBoard, Board, PieceType, Rank};
 use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
 use pleco::core::mono_traits::*;
@@ -15,6 +15,9 @@ use pleco::core::CastleType;
 use super::TableBase;
 
 use std::mem::transmute;
+
+
+
 // isolated pawn penalty
 const ISOLATED: Score = Score(13, 18);
 
@@ -114,7 +117,7 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
 
 /// Table to hold information about the pawn structure.
 pub struct PawnTable {
-    table: TableBase<Entry>,
+    table: TableBase<PawnEntry>,
 }
 
 impl PawnTable {
@@ -131,7 +134,7 @@ impl PawnTable {
 
     /// Retrieves the entry of a specified key. This method won't evaluate the resulting entry at all,
     /// so use sparingly.
-    pub fn get(&mut self, key: u64) -> &mut Entry {
+    pub fn get(&mut self, key: u64) -> &mut PawnEntry {
         self.table.get_mut(key)
     }
 
@@ -144,7 +147,7 @@ impl PawnTable {
 
     /// Retrieves the entry of a specified key. If the `Entry` doesn't a matching key,
     /// the `Entry` will be evaluated for its pawn structure.
-    pub fn probe(&mut self, board: &Board) -> &mut Entry {
+    pub fn probe(&mut self, board: &Board) -> &mut PawnEntry {
         let key: u64 = board.pawn_key();
         let entry = self.get(key);
 
@@ -163,7 +166,7 @@ impl PawnTable {
 /// Information on a the pawn structure for a given position.
 ///
 /// This information is computed upon access.
-pub struct Entry {
+pub struct PawnEntry {
     key: u64,
     score: Score,
     passed_pawns: [BitBoard; PLAYER_CNT],
@@ -180,7 +183,7 @@ pub struct Entry {
     open_files: u8
 }
 
-impl Entry {
+impl PawnEntry {
 
     /// Returns the current score of the pawn scructure.
     pub fn pawns_score(&self) -> Score {
@@ -257,7 +260,7 @@ impl Entry {
         self.castling_rights[P::player_idx()] = board.player_can_castle(P::player());
         let mut min_king_distance = 0;
 
-        let pawns: BitBoard = board.piece_bb(P::player(),Piece::P);
+        let pawns: BitBoard = board.piece_bb(P::player(), PieceType::P);
         if !pawns.is_empty() {
             while (board.magic_helper.ring_distance(ksq, min_king_distance as u8) & pawns).is_empty() {
                 min_king_distance += 1;
@@ -279,7 +282,7 @@ impl Entry {
 
 
     fn shelter_storm<P: PlayerTrait>(&self, board: &Board, ksq: SQ) -> Value {
-        let mut b: BitBoard = board.piece_bb_both_players(Piece::P)
+        let mut b: BitBoard = board.piece_bb_both_players(PieceType::P)
             & (board.magic_helper.forward_rank_bb(P::player(), ksq.rank()) | ksq.rank_bb());
 
         let our_pawns: BitBoard = b & board.get_occupied_player(P::player());
@@ -342,8 +345,8 @@ impl Entry {
         let mut backward: bool;
 
         let mut score: Score = Score::ZERO;
-        let our_pawns: BitBoard = board.piece_bb(P::player(), Piece::P);
-        let their_pawns: BitBoard = board.piece_bb(P::opp_player(), Piece::P);
+        let our_pawns: BitBoard = board.piece_bb(P::player(), PieceType::P);
+        let their_pawns: BitBoard = board.piece_bb(P::opp_player(), PieceType::P);
 
         let mut p1: BitBoard = our_pawns;
 
@@ -356,13 +359,13 @@ impl Entry {
 
         let pawns_on_dark: u8 = (our_pawns & BitBoard::DARK_SQUARES).count_bits();
         self.pawns_on_squares[P::player() as usize][Player::Black as usize] = pawns_on_dark;
-        if pawns_on_dark > board.count_piece(P::player(),Piece::P) {
-            println!("Error: pawns on dark: {}, total: {}",pawns_on_dark, board.count_piece(P::player(),Piece::P));
+        if pawns_on_dark > board.count_piece(P::player(), PieceType::P) {
+            println!("Error: pawns on dark: {}, total: {}",pawns_on_dark, board.count_piece(P::player(), PieceType::P));
         }
-        self.pawns_on_squares[P::player() as usize][Player::White as usize] = board.count_piece(P::player(),Piece::P) - pawns_on_dark;
+        self.pawns_on_squares[P::player() as usize][Player::White as usize] = board.count_piece(P::player(), PieceType::P) - pawns_on_dark;
 
         while let Some(s) = p1.pop_some_lsb() {
-            assert_eq!(board.piece_at_sq(s).unwrap(),Piece::P);
+            assert_eq!(board.piece_at_sq(s).unwrap(), PieceType::P);
 
             let f: File = s.file();
 

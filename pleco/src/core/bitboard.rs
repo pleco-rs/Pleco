@@ -208,7 +208,7 @@ impl BitBoard {
     }
 
     /// Array containing all the `BitBoards` for of the starting position, for each player and piece.
-    pub const fn start_bbs() -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
+    pub const fn start_bbs() -> [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] {
         [[
             BitBoard(START_W_PAWN),
             BitBoard(START_W_KNIGHT),
@@ -229,8 +229,8 @@ impl BitBoard {
     /// Returns a clone of a `[[BitBoard; 6]; 2]`. Used to duplicate occupancy `BitBoard`s of each
     /// piece for each player.
     #[inline(always)]
-    pub fn clone_all_occ(bbs: &[[BitBoard; PIECE_CNT]; PLAYER_CNT], ) -> [[BitBoard; PIECE_CNT]; PLAYER_CNT] {
-        let new_bbs: [[BitBoard; PIECE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
+    pub fn clone_all_occ(bbs: &[[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT], ) -> [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] {
+        let new_bbs: [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
         new_bbs
     }
 

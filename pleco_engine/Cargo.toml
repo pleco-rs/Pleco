@@ -1,6 +1,6 @@
 [package]
 name = "pleco_engine"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"

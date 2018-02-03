@@ -1,7 +1,7 @@
 use super::{RootMove, MAX_MOVES};
 use sync::GuardedBool;
 
-use pleco::{MoveList,Board,Piece,BitMove};
+use pleco::{MoveList, Board, PieceType, BitMove};
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
@@ -147,7 +147,7 @@ impl RootMoveList {
                 piece.value() - board.captured_piece(a).unwrap().value()
             } else if a.is_castle() {
                 1
-            } else if piece == Piece::P {
+            } else if piece == PieceType::P {
                 if a.is_double_push().0 {
                     2
                 } else {

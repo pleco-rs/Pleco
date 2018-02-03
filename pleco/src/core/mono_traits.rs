@@ -6,7 +6,7 @@
 //!
 //! We are awaiting the stabilization of `const fn` to remove these traits.
 
-use super::{Player,Piece,GenTypes};
+use super::{Player, PieceType, GenTypes};
 use super::sq::SQ;
 use super::bitboard::BitBoard;
 
@@ -297,7 +297,7 @@ impl GenTypeTrait for NonEvasionsGenType {
 /// elsewhere.
 pub trait PieceTrait {
     /// Returns the `Piece` of an object.
-    fn piece_type() -> Piece;
+    fn piece_type() -> PieceType;
 }
 
 /// Dummy type to represent a `Piece::P` which implements `PieceTrait`.
@@ -315,42 +315,42 @@ pub struct KingType {}
 
 impl PieceTrait for PawnType {
     #[inline(always)]
-    fn piece_type() -> Piece {
-        Piece::P
+    fn piece_type() -> PieceType {
+        PieceType::P
     }
 }
 
 impl PieceTrait for KnightType {
     #[inline(always)]
-    fn piece_type() -> Piece {
-        Piece::N
+    fn piece_type() -> PieceType {
+        PieceType::N
     }
 }
 
 impl PieceTrait for BishopType {
     #[inline(always)]
-    fn piece_type() -> Piece {
-        Piece::B
+    fn piece_type() -> PieceType {
+        PieceType::B
     }
 }
 
 impl PieceTrait for RookType {
     #[inline(always)]
-    fn piece_type() -> Piece {
-        Piece::R
+    fn piece_type() -> PieceType {
+        PieceType::R
     }
 }
 
 impl PieceTrait for QueenType {
     #[inline(always)]
-    fn piece_type() -> Piece {
-        Piece::Q
+    fn piece_type() -> PieceType {
+        PieceType::Q
     }
 }
 
 impl PieceTrait for KingType {
     #[inline(always)]
-    fn piece_type() -> Piece {
-        Piece::K
+    fn piece_type() -> PieceType {
+        PieceType::K
     }
 }

@@ -5,7 +5,7 @@ use super::sq::SQ;
 /// The total number of players on a chessboard.
 pub const PLAYER_CNT: usize = 2;
 /// The total number of types of pieces on a chessboard.
-pub const PIECE_CNT: usize = 6;
+pub const PIECE_TYPE_CNT: usize = 6;
 /// The total number of squares on a chessboard.
 pub const SQ_CNT: usize = 64;
 /// The total number of files on a chessboard.
@@ -110,7 +110,7 @@ pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
 
 /// Array for all pieces and players that is zeroed.
-pub const BLANK_BIT_BOARDS: [[u64; PIECE_CNT]; PLAYER_CNT] =
+pub const BLANK_BIT_BOARDS: [[u64; PIECE_TYPE_CNT]; PLAYER_CNT] =
     [[0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]];
 
 /// Array for starting occupancy boards for both players.
@@ -239,7 +239,7 @@ pub const SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
     0,  1,   2,  3,  4,  5,  6,  7];
 
 /// Characters for each combination of player and piece.
-pub const PIECE_DISPLAYS: [[char; PIECE_CNT]; PLAYER_CNT] = [
+pub const PIECE_DISPLAYS: [[char; PIECE_TYPE_CNT]; PLAYER_CNT] = [
     ['P', 'N', 'B', 'R', 'Q', 'K'],
     ['p', 'n', 'b', 'r', 'q', 'k'],
 ];
