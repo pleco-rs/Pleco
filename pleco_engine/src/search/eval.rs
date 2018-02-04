@@ -5,11 +5,11 @@ use pleco::{Board,BitBoard,SQ,Rank,File,Player};
 use pleco::core::mono_traits::*;
 use pleco::core::score::*;
 
-use tables::pawn_table::{Entry,PawnTable};
+use tables::pawn_table::{PawnEntry, PawnTable};
 
 pub struct Evaluation<'a> {
     board: &'a Board,
-    pawn_entry: &'a mut Entry,
+    pawn_entry: &'a mut PawnEntry,
 }
 
 impl <'a> Evaluation <'a> {

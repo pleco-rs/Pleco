@@ -112,7 +112,7 @@ impl Legality for PseudoLegal {
 
 
 // Pieces to generate moves with inter-changably
-const STANDARD_PIECES: [Piece; 4] = [Piece::B, Piece::N, Piece::R, Piece::Q];
+const STANDARD_PIECES: [PieceType; 4] = [PieceType::B, PieceType::N, PieceType::R, PieceType::Q];
 const DEFAULT_MOVES_LENGTH: usize = 32;
 
 /// Structure to generate moves from. Stores the current state of the board, and other
@@ -214,10 +214,10 @@ impl<'a> MoveGen<'a> {
 
         while disc_check.is_not_empty() {
             let from: SQ = disc_check.pop_lsb();
-            let piece: Piece = self.board.piece_at_sq(from).unwrap();
-            if piece != Piece::P {
+            let piece: PieceType = self.board.piece_at_sq(from).unwrap();
+            if piece != PieceType::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
-                if piece == Piece::K {
+                if piece == PieceType::K {
                     b &= self.magic.queen_moves(BitBoard(0),self.board.king_sq(P::opp_player()))
                 }
                 self.move_append_from_bb::<L>(&mut b, from, MoveFlag::QuietMove);
@@ -235,7 +235,7 @@ impl<'a> MoveGen<'a> {
         let mut slider_attacks: BitBoard = BitBoard(0);
 
         // Pieces that could possibly attack the king with sliding attacks
-        let mut sliders: BitBoard = self.board.checkers() & !self.board.piece_two_bb_both_players(Piece::P, Piece::N);
+        let mut sliders: BitBoard = self.board.checkers() & !self.board.piece_two_bb_both_players(PieceType::P, PieceType::N);
 
         // This is getting all the squares that are attacked by sliders
         while sliders.is_not_empty() {
@@ -278,7 +278,7 @@ impl<'a> MoveGen<'a> {
         // Make sure we can castle AND the space between the king / rook is clear AND the piece at castling_side is a Rook
         if !self.board.castle_impeded(side) && self.board.can_castle(P::player(), side) &&
             self.board
-                .piece_at_sq(self.board.castling_rook_square(side)) == Some(Piece::R)
+                .piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R)
         {
 
             let king_side: bool = { side == CastleType::KingSide };
@@ -354,7 +354,7 @@ impl<'a> MoveGen<'a> {
             (BitBoard::RANK_1, BitBoard::RANK_2, BitBoard::RANK_6)
         };
 
-        let all_pawns: BitBoard = self.board.piece_bb(P::player(), Piece::P);
+        let all_pawns: BitBoard = self.board.piece_bb(P::player(), PieceType::P);
 
         let mut empty_squares = BitBoard(0);
 
@@ -490,7 +490,7 @@ impl<'a> MoveGen<'a> {
     // Helper function for creating promotions
     #[inline]
     fn create_all_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        let prom_pieces = [Piece::Q, Piece::N, Piece::R, Piece::B];
+        let prom_pieces = [PieceType::Q, PieceType::N, PieceType::R, PieceType::B];
         for piece in &prom_pieces {
             self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                 src, dst,
@@ -508,7 +508,7 @@ impl<'a> MoveGen<'a> {
             src, dst,
             flags: MoveFlag::Promotion {
                 capture: is_capture,
-                prom: Piece::N,
+                prom: PieceType::N,
             },
         }));
     }
@@ -519,23 +519,23 @@ impl<'a> MoveGen<'a> {
             src, dst,
             flags: MoveFlag::Promotion {
                 capture: is_capture,
-                prom: Piece::Q,
+                prom: PieceType::Q,
             },
         }));
     }
 
     // Return the moves Bitboard
     #[inline]
-    fn moves_bb(&self, piece: Piece, square: SQ) -> BitBoard {
+    fn moves_bb(&self, piece: PieceType, square: SQ) -> BitBoard {
         debug_assert!(square.is_okay());
-        debug_assert_ne!(piece, Piece::P);
+        debug_assert_ne!(piece, PieceType::P);
         match piece {
-            Piece::P => panic!(),
-            Piece::N => self.magic.knight_moves(square),
-            Piece::B => self.magic.bishop_moves(self.occ, square),
-            Piece::R => self.magic.rook_moves(self.occ, square),
-            Piece::Q => self.magic.queen_moves(self.occ, square),
-            Piece::K => self.magic.king_moves(square),
+            PieceType::P => panic!(),
+            PieceType::N => self.magic.knight_moves(square),
+            PieceType::B => self.magic.bishop_moves(self.occ, square),
+            PieceType::R => self.magic.rook_moves(self.occ, square),
+            PieceType::Q => self.magic.queen_moves(self.occ, square),
+            PieceType::K => self.magic.king_moves(square),
         }
     }
 

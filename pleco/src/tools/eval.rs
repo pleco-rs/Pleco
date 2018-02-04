@@ -96,7 +96,7 @@ const MATE: i16 = -25_000;
 const CHECK: i16 = 14;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
-pub const PIECE_VALS: [i16; PIECE_CNT] = [
+pub const PIECE_VALS: [i16; PIECE_TYPE_CNT] = [
     PAWN_VALUE,
     KNIGHT_VALUE,
     BISHOP_VALUE,
@@ -136,11 +136,11 @@ fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
 
 
 fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i16 {
-    board.count_piece(P::player(), Piece::P) as i16 * PAWN_VALUE +
-    board.count_piece(P::player(), Piece::N) as i16 * KNIGHT_VALUE +
-    board.count_piece(P::player(), Piece::B) as i16 * BISHOP_VALUE +
-    board.count_piece(P::player(), Piece::R) as i16 * ROOK_VALUE +
-    board.count_piece(P::player(), Piece::Q) as i16 * QUEEN_VALUE
+    board.count_piece(P::player(), PieceType::P) as i16 * PAWN_VALUE +
+    board.count_piece(P::player(), PieceType::N) as i16 * KNIGHT_VALUE +
+    board.count_piece(P::player(), PieceType::B) as i16 * BISHOP_VALUE +
+    board.count_piece(P::player(), PieceType::R) as i16 * ROOK_VALUE +
+    board.count_piece(P::player(), PieceType::Q) as i16 * QUEEN_VALUE
 }
 
 fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
@@ -177,14 +177,14 @@ fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
 
 fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
-    let mut us_b = board.piece_bb(P::player(), Piece::B);
+    let mut us_b = board.piece_bb(P::player(), PieceType::B);
     while us_b.is_not_empty() {
         let lsb = us_b.lsb();
         score += BISHOP_POS[P::player() as usize][lsb.to_sq().0 as usize];
         us_b &= !lsb;
     }
 
-    if board.count_piece(P::player(), Piece::B) > 1 {
+    if board.count_piece(P::player(), PieceType::B) > 1 {
         score += 19
     }
 
@@ -194,7 +194,7 @@ fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
 
 fn eval_knight_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
-    let mut us_b = board.piece_bb(P::player(), Piece::N);
+    let mut us_b = board.piece_bb(P::player(), PieceType::N);
     while us_b.is_not_empty() {
         let lsb = us_b.lsb();
         score += KNIGHT_POS[P::player() as usize][lsb.to_sq().0 as usize];
@@ -224,7 +224,7 @@ fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_pawns<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
 
-    let pawns_bb: BitBoard = board.piece_bb(P::player(), Piece::P);
+    let pawns_bb: BitBoard = board.piece_bb(P::player(), PieceType::P);
     let mut bb = pawns_bb;
     let mut file_counts: [u8; FILE_CNT] = [0; FILE_CNT];
 

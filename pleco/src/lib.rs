@@ -69,6 +69,7 @@
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
+#![crate_type = "rlib"]
 
 #![feature(fused)]
 #![feature(trusted_len)]
@@ -77,11 +78,10 @@
 #![feature(allocator_api)]
 #![feature(const_fn)]
 #![feature(const_indexing)]
-//#![feature(core_intrinsics)]
+
 
 #![allow(dead_code)]
 
-//#![crate_type = "rlib"]
 
 // [`Vec<T>`]: ../../std/vec/struct.Vec.html
 // [`new`]: ../../std/vec/struct.Vec.html#method.new
@@ -93,9 +93,6 @@
 extern crate bitflags;
 #[macro_use]
 extern crate lazy_static;
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 extern crate test;
 extern crate rayon;
 extern crate num_cpus;
@@ -120,4 +117,4 @@ pub use core::sq::SQ;
 #[doc(no_inline)]
 pub use core::bitboard::BitBoard;
 #[doc(no_inline)]
-pub use core::{Player,Piece,Rank,File};
+pub use core::{Player, PieceType, Rank, File};

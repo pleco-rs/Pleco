@@ -299,7 +299,7 @@ fn mvv_lva_sort(moves: &mut [BitMove], board: &Board) {
 
         if a.is_capture() {
             board.captured_piece(*a).unwrap().value() - piece.value()
-        } else if piece == Piece::P {
+        } else if piece == PieceType::P {
             if a.is_double_push().0 {
                 -2
             } else {

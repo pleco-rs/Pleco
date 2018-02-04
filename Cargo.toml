@@ -11,6 +11,7 @@ rpath = false
 debug-assertions = false
 codegen-units = 1
 lto = true
+panic = "abort"
 
 [profile.bench]
 opt-level = 3
@@ -19,6 +20,7 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
+panic = "abort"
 
 [profile.test]
 opt-level = 3

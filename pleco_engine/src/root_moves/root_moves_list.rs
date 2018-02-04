@@ -1,7 +1,7 @@
 use super::{RootMove, MAX_MOVES};
 use sync::GuardedBool;
 
-use pleco::{MoveList,Board,Piece,BitMove};
+use pleco::{MoveList, Board, PieceType, BitMove};
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
@@ -9,18 +9,18 @@ use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator
 use std::ptr;
 
 use std::mem::transmute;
-use std::sync::atomic::{AtomicU16,Ordering,fence,AtomicBool};
+use std::sync::atomic::{AtomicU16,Ordering,fence,AtomicBool,AtomicUsize};
 
 use rand;
 use rand::Rng;
 
 pub struct RawRootMoveList {
-    len: u32, // 4 bytes
-    depth_completed: AtomicU16, // 2 bytes
+    len: AtomicUsize,
+    depth_completed: AtomicU16,
     stop: AtomicBool,
     kill: AtomicBool,
-    pub finished: GuardedBool, // 1 byte
-    moves: [RootMove; MAX_MOVES], // 4096 bytes
+    pub finished: GuardedBool,
+    moves: [RootMove; MAX_MOVES],
 }
 
 impl RawRootMoveList {
@@ -28,7 +28,7 @@ impl RawRootMoveList {
         self.depth_completed = AtomicU16::new(0);
         self.stop.store(true, Ordering::SeqCst);
         self.kill.store(false, Ordering::SeqCst);
-        self.len = 0;
+        self.len = AtomicUsize::new(0);
         unsafe {
             let f = &mut self.finished;
             ptr::write_volatile(f, GuardedBool::new(true));
@@ -57,12 +57,12 @@ impl RootMoveList {
 
     #[inline]
     pub fn len(&self) -> usize {
-        unsafe {(*self.moves).len as usize}
+        unsafe {(*self.moves).len.load(Ordering::Acquire)}
     }
 
     pub fn clone_from_other(&mut self, other: &RootMoveList) {
         unsafe {
-            (*self.moves).len = other.len() as u32;
+            (*self.moves).len.store(other.len(), Ordering::Release);
             let self_moves: *mut [RootMove; MAX_MOVES] = transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>((*self.moves).moves.as_mut_ptr());
             let other_moves: *mut [RootMove; MAX_MOVES] =  transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>((*other.moves).moves.as_mut_ptr());
             ptr::copy_nonoverlapping(other_moves, self_moves, 1);
@@ -71,7 +71,7 @@ impl RootMoveList {
 
     pub fn replace(&mut self, moves: &MoveList) {
         unsafe {
-            (*self.moves).len = moves.len() as u32;
+            (*self.moves).len.store(moves.len(), Ordering::Release);
             for (i, mov) in moves.iter().enumerate() {
                 self[i] = RootMove::new(*mov);
             }
@@ -121,13 +121,13 @@ impl RootMoveList {
 
     pub fn set_stop(&mut self, stop: bool) {
         unsafe {
-            (*self.moves).stop.store(stop, Ordering::Relaxed);
+            (*self.moves).stop.store(stop, Ordering::Release);
         }
     }
 
     pub fn kill(&mut self) {
         unsafe {
-            (*self.moves).kill.store(true, Ordering::Relaxed);
+            (*self.moves).kill.store(true, Ordering::Release);
         }
     }
 
@@ -147,7 +147,7 @@ impl RootMoveList {
                 piece.value() - board.captured_piece(a).unwrap().value()
             } else if a.is_castle() {
                 1
-            } else if piece == Piece::P {
+            } else if piece == PieceType::P {
                 if a.is_double_push().0 {
                     2
                 } else {

@@ -25,7 +25,6 @@ use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 use rand;
-use failure;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
@@ -35,6 +34,7 @@ use core::masks::*;
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
+use core::score::*;
 
 use tools::prng::PRNG;
 use bot_prelude::{IterativeSearcher,JamboreeSearcher};
@@ -44,8 +44,6 @@ use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
-
-pub type Error = failure::Error;
 
 
 lazy_static! {
@@ -58,33 +56,19 @@ lazy_static! {
 }
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
-#[derive(Fail, Debug)]
 pub enum FenBuildError {
-    #[fail(display = "invalid number of fen sections: {}, expected 6", sections)]
     NotEnoughSections {sections: usize},
-    #[fail(display = "invalid number of ranks: {}, expected 8", ranks)]
     IncorrectRankAmounts {ranks: usize},
-    #[fail(display = "invalid turn: {}, expected 'w' or 'b'", turn)]
     UnrecognizedTurn {turn: String},
-    #[fail(display = "unreadable En-passant square: {}", ep)]
     EPSquareUnreadable {ep: String},
-    #[fail(display = "invalid En-passant square: {}", ep)]
     EPSquareInvalid {ep: String},
-    #[fail(display = "square number too small for rank, rank: {} square: {},", rank, square)]
     SquareSmallerRank {rank: usize, square: String},
-    #[fail(display = "square number too large for rank, rank: {} square: {},", rank, square)]
     SquareLargerRank {rank: usize, square: String},
-    #[fail(display = "unrecognized piece: {}", piece)]
     UnrecognizedPiece {piece: char},
-    #[fail(display = "An unknown error has occurred.")]
     UnreadableMoves(num::ParseIntError),
-    #[fail(display = "too many checking piece: {}",num)]
     IllegalNumCheckingPieces{num: u8},
-    #[fail(display = "these two pieces cannot check the king at the same time: {}, {}",piece_1, piece_2)]
-    IllegalCheckState{piece_1: Piece, piece_2: Piece},
-    #[fail(display = "Too many pawns for player: player: {}, # pawns {}",player, num)]
+    IllegalCheckState{piece_1: PieceType, piece_2: PieceType },
     TooManyPawns{player: Player, num: u8},
-    #[fail(display = "Pawn on first or last row")]
     PawnOnLastRow
 }
 
@@ -93,6 +77,27 @@ impl From<num::ParseIntError> for FenBuildError {
         FenBuildError::UnreadableMoves(err)
     }
 }
+
+impl fmt::Debug for FenBuildError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FenBuildError::NotEnoughSections{sections} => writeln!(f, "invalid number of fen sections: {}, expected 6", sections),
+            FenBuildError::IncorrectRankAmounts{ranks} => writeln!(f, "invalid number of ranks: {}, expected 8", ranks),
+            FenBuildError::UnrecognizedTurn {ref turn} => writeln!(f, "invalid turn: {}, expected 'w' or 'b'", turn),
+            FenBuildError::EPSquareUnreadable{ref ep} => writeln!(f, "unreadable En-passant square: {}", ep),
+            FenBuildError::EPSquareInvalid{ref ep} => writeln!(f, "invalid En-passant square: {}", ep),
+            FenBuildError::SquareSmallerRank{rank, ref square} => writeln!(f, "square number too small for rank, rank: {} square: {},", rank, square),
+            FenBuildError::SquareLargerRank{rank, ref square} => writeln!(f, "square number too large for rank, rank: {} square: {},", rank, square),
+            FenBuildError::UnrecognizedPiece{piece} => writeln!(f, "unrecognized piece: {}", piece),
+            FenBuildError::UnreadableMoves(ref err) =>  writeln!(f, "An unknown error has occurred {:?}", err),
+            FenBuildError::IllegalNumCheckingPieces{num} => writeln!(f, "too many checking piece: {}", num),
+            FenBuildError::IllegalCheckState{piece_1, piece_2} => writeln!(f, "these two pieces cannot check the king at the same time: {}, {}",piece_1, piece_2),
+            FenBuildError::TooManyPawns{player, num} => writeln!(f, "Too many pawns for player: player: {}, # pawns {}",player, num),
+            FenBuildError::PawnOnLastRow => writeln!(f,  "Pawn on first or last row"),
+        }
+    }
+}
+
 
 /// Represents a Chessboard through a `Board`.
 ///
@@ -141,12 +146,12 @@ impl From<num::ParseIntError> for FenBuildError {
 /// ```
 pub struct Board {
     turn: Player, // Current turn
-    bit_boards: [[BitBoard; PIECE_CNT]; PLAYER_CNT], // Occupancy per player per piece
+    bit_boards: [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT], // Occupancy per player per piece
     occ: [BitBoard; PLAYER_CNT], // Occupancy per Player
     occ_all: BitBoard, // BitBoard of all pieces
     half_moves: u16, // Total moves played
     depth: u16, // Current depth since last shallow_copy
-    piece_counts: [[u8; PIECE_CNT]; PLAYER_CNT], // Count of each Piece
+    piece_counts: [[u8; PIECE_TYPE_CNT]; PLAYER_CNT], // Count of each Piece
     piece_locations: PieceLocations, // Mapping Squares to Pieces and Plauers
 
     // State of the Board, Un modifiable.
@@ -214,6 +219,7 @@ impl Board {
         // Create the Zobrist hash & set the Piece Locations structure
         b.set_zob_hash();
         b.set_piece_states();
+        b.set_material_key();
         b
     }
 
@@ -343,9 +349,9 @@ impl Board {
     fn set_piece_states(&mut self) {
         // Loop each piece and player and count all the pieces per player
         for player in &ALL_PLAYERS {
-            for piece in &ALL_PIECES {
-                self.piece_counts[*player as usize][*piece as usize] =
-                    self.piece_bb(*player, *piece).count_bits();
+            for piece in &ALL_PIECE_TYPES {
+                let count = self.piece_bb(*player, *piece).count_bits();
+                self.piece_counts[*player as usize][*piece as usize] = count;
             }
         }
 
@@ -359,18 +365,18 @@ impl Board {
                 } else {
                     Player::Black
                 };
-                let piece = if (self.piece_bb(player, Piece::P) & bb).is_not_empty() {
-                    Piece::P
-                } else if (self.piece_bb(player, Piece::N) & bb).is_not_empty() {
-                    Piece::N
-                } else if (self.piece_bb(player, Piece::B) & bb).is_not_empty() {
-                    Piece::B
-                } else if (self.piece_bb(player, Piece::R) & bb).is_not_empty() {
-                    Piece::R
-                } else if (self.piece_bb(player, Piece::Q) & bb).is_not_empty() {
-                    Piece::Q
-                } else if (self.piece_bb(player, Piece::K) & bb).is_not_empty() {
-                    Piece::K
+                let piece = if (self.piece_bb(player, PieceType::P) & bb).is_not_empty() {
+                    PieceType::P
+                } else if (self.piece_bb(player, PieceType::N) & bb).is_not_empty() {
+                    PieceType::N
+                } else if (self.piece_bb(player, PieceType::B) & bb).is_not_empty() {
+                    PieceType::B
+                } else if (self.piece_bb(player, PieceType::R) & bb).is_not_empty() {
+                    PieceType::R
+                } else if (self.piece_bb(player, PieceType::Q) & bb).is_not_empty() {
+                    PieceType::Q
+                } else if (self.piece_bb(player, PieceType::K) & bb).is_not_empty() {
+                    PieceType::K
                 } else {
                     panic!()
                 };
@@ -383,6 +389,26 @@ impl Board {
         }
     }
 
+    /// Sets the material key for the board. CAN ONLY BE DONE ONCE THE BITBOARDS ARE SET.
+    fn set_material_key(&mut self) {
+        let mut material_key: u64 = 0;
+        let mut nonpawn_material: [Value; PLAYER_CNT] = [0; PLAYER_CNT];
+        for player in &ALL_PLAYERS {
+            for piece in &ALL_PIECE_TYPES {
+                let count = self.piece_bb(*player, *piece).count_bits();
+                for n in 0..count {
+                    material_key ^= self.magic_helper.z_piece_at_sq(*piece, SQ(n), *player);
+                }
+                if *piece != PieceType::P && *piece != PieceType::K {
+                    nonpawn_material[*player as usize] +=
+                        count as i16 * self.magic_helper.piece_value(*piece, false);
+                }
+            }
+        }
+        let state =  Arc::get_mut(&mut self.state).unwrap();
+        state.material_key = material_key;
+        state.nonpawn_material = nonpawn_material;
+    }
 
     /// Helper method for setting the BitBoards from a fully created PieceLocations.
     ///
@@ -401,7 +427,7 @@ impl Board {
         }
         self.occ_all = self.occupied_black() | self.occupied_white();
         for player in &ALL_PLAYERS {
-            for piece in &ALL_PIECES {
+            for piece in &ALL_PIECE_TYPES {
                 self.piece_counts[*player as usize][*piece as usize] =
                     self.piece_bb(*player, *piece).count_bits();
             }
@@ -517,11 +543,13 @@ impl Board {
             ep_square: ep_sq,
             zobrast: 0,
             pawn_key: 0,
+            material_key: 0,
+            nonpawn_material: [0; PLAYER_CNT],
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
             pinners_king: [BitBoard(0); PLAYER_CNT],
-            check_sqs: [BitBoard(0); PIECE_CNT],
+            check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
             prev_move: BitMove::null(),
             prev: None,
         });
@@ -529,7 +557,7 @@ impl Board {
         // Create the Board
         let mut b = Board {
             turn: turn,
-            bit_boards: [[BitBoard(0); PIECE_CNT]; PLAYER_CNT],
+            bit_boards: [[BitBoard(0); PIECE_TYPE_CNT]; PLAYER_CNT],
             occ: [BitBoard(0), BitBoard(0)],
             occ_all: BitBoard(0),
             half_moves: total_moves,
@@ -548,6 +576,7 @@ impl Board {
         }
         b.state = board_s.shareable();
         b.set_zob_hash();
+        b.set_material_key();
 
         fen::is_valid_fen(b)
     }
@@ -671,6 +700,7 @@ impl Board {
         // Zobrist Hash
         let mut pawn_key: u64 = self.state.pawn_key;
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
+        let mut material_key: u64 = self.state.material_key;
 
 
         // New Arc for the board to have by making a partial clone of the current state
@@ -696,10 +726,10 @@ impl Board {
             let them = us.other_player();
             let from: SQ = bit_move.get_src();
             let mut to: SQ = bit_move.get_dest();
-            let piece: Piece = self.piece_at_sq(from).unwrap();
+            let piece: PieceType = self.piece_at_sq(from).unwrap();
 
-            let captured: Option<Piece> = if bit_move.is_en_passant() {
-                Some(Piece::P)
+            let captured: Option<PieceType> = if bit_move.is_en_passant() {
+                Some(PieceType::P)
             } else {
                 self.piece_at_sq(to)
             };
@@ -711,8 +741,8 @@ impl Board {
 
                 // Sanity Checks, moved piece should be K, "captured" should be R
                 // As this is the encoding of Castling
-                assert_eq!(captured.unwrap(), Piece::R);
-                assert_eq!(piece, Piece::K);
+                assert_eq!(captured.unwrap(), PieceType::R);
+                assert_eq!(piece, PieceType::K);
 
                 let mut r_src: SQ = SQ(0);
                 let mut r_dst: SQ = SQ(0);
@@ -720,42 +750,44 @@ impl Board {
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
 
-                zob ^= self.magic_helper.z_piece_at_sq(Piece::R, r_src) ^
-                    self.magic_helper.z_piece_at_sq(Piece::R, r_dst);
+                zob ^= self.magic_helper.z_piece_at_sq(PieceType::R, r_src, us) ^
+                    self.magic_helper.z_piece_at_sq(PieceType::R, r_dst, us);
                 new_state.captured_piece = None;
                 new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
                 let mut cap_sq: SQ = to;
-                if cap_p == Piece::P {
-                    pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq);
+                if cap_p == PieceType::P {
                     if bit_move.is_en_passant() {
                         assert_eq!(cap_sq, self.state.ep_square);
                         match us {
                             Player::White => cap_sq -= SQ(8),
                             Player::Black => cap_sq += SQ(8),
                         };
-                        assert_eq!(piece, Piece::P);
+                        assert_eq!(piece, PieceType::P);
                         assert_eq!(us.relative_rank( Rank::R6), to.rank());
                         assert!(self.piece_at_sq(to).is_none());
-                        assert_eq!(self.piece_at_sq(cap_sq).unwrap(), Piece::P);
+                        assert_eq!(self.piece_at_sq(cap_sq).unwrap(), PieceType::P);
                         assert_eq!(self.player_at_sq(cap_sq).unwrap(), them);
-                        self.remove_piece_c(Piece::P, cap_sq, them);
+                        self.remove_piece_c(PieceType::P, cap_sq, them);
                     } else {
                         self.remove_piece_c(cap_p, cap_sq, them);
                     }
+                    pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
                 } else {
+                    new_state.nonpawn_material[them as usize] -= self.magic_helper.piece_value(cap_p, false);
                     self.remove_piece_c(cap_p, cap_sq, them);
                 }
-                zob ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq);
-
+                zob ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
+                let cap_count = self.count_piece(them, cap_p);
+                material_key ^= self.magic_helper.z_piece_at_sq(cap_p, SQ(cap_count), them);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = Some(cap_p);
             }
 
             // Update hash for moving piece
-            zob ^= self.magic_helper.z_piece_at_sq(piece, to) ^
-                self.magic_helper.z_piece_at_sq(piece, from);
+            zob ^= self.magic_helper.z_piece_at_sq(piece, to, us) ^
+                self.magic_helper.z_piece_at_sq(piece, from, us);
 
             if self.state.ep_square != NO_SQ {
                 zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
@@ -774,27 +806,34 @@ impl Board {
             }
 
             // Pawn Moves need special help :(
-            if piece == Piece::P {
+            if piece == PieceType::P {
                 if self.magic_helper.distance_of_sqs(to, from) == 2 {
                     // Double Push
                     new_state.ep_square = (to + from) / SQ(2);
                     zob ^= self.magic_helper.z_ep_file(new_state.ep_square);
                 } else if bit_move.is_promo() {
-                    let promo_piece: Piece = bit_move.promo_piece();
+                    let promo_piece: PieceType = bit_move.promo_piece();
 
                     self.remove_piece_c(piece, to, us);
                     self.put_piece_c(promo_piece, to, us);
-                    zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to) ^
-                        self.magic_helper.z_piece_at_sq(Piece::P, from);
-                    pawn_key ^= self.magic_helper.z_piece_at_sq(piece, to);
+                    zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to, us) ^
+                        self.magic_helper.z_piece_at_sq(PieceType::P, from, us);
+                    pawn_key ^= self.magic_helper.z_piece_at_sq(piece, to, us);
+
+                    let promo_count = self.count_piece(us, promo_piece);
+                    let pawn_count = self.count_piece(us, PieceType::P);
+                    material_key ^= self.magic_helper.z_piece_at_sq(promo_piece, SQ(promo_count - 1), us)
+                        ^ self.magic_helper.z_piece_at_sq(PieceType::P, SQ(pawn_count), us);
+                    new_state.nonpawn_material[us as usize] += self.magic_helper.piece_value(promo_piece, false);
                 }
-                pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from) ^ self.magic_helper.z_piece_at_sq(piece, to);
+                pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from, us) ^ self.magic_helper.z_piece_at_sq(piece, to, us);
                 new_state.rule_50 = 0;
             }
 
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
+            new_state.material_key = material_key;
 
             new_state.checkers_bb = if gives_check {
                 self.attackers_to(self.king_sq(them), self.get_occupied()) &
@@ -874,7 +913,7 @@ impl Board {
         let us: Player = self.turn;
         let from: SQ = undo_move.get_src();
         let to: SQ = undo_move.get_dest();
-        let mut piece_on: Option<Piece> = self.piece_at_sq(to);
+        let mut piece_on: Option<PieceType> = self.piece_at_sq(to);
 
         // Make sure the piece moved from is not there, or there is a castle
         assert!(self.piece_at_sq(from).is_none() || undo_move.is_castle());
@@ -883,8 +922,8 @@ impl Board {
             assert_eq!(piece_on.unwrap(), undo_move.promo_piece());
 
             self.remove_piece_c(piece_on.unwrap(), to, us);
-            self.put_piece_c(Piece::P, to, us);
-            piece_on = Some(Piece::P);
+            self.put_piece_c(PieceType::P, to, us);
+            piece_on = Some(PieceType::P);
 
         }
 
@@ -1125,14 +1164,14 @@ impl Board {
         let ksq: SQ = self.king_sq(self.turn.other_player());
         let occupied = self.get_occupied();
 
-        board_state.check_sqs[Piece::P as usize] = self.magic_helper
-                                                       .pawn_attacks_from(ksq, self.turn.other_player());
-        board_state.check_sqs[Piece::N as usize] = self.magic_helper.knight_moves(ksq);
-        board_state.check_sqs[Piece::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
-        board_state.check_sqs[Piece::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
-        board_state.check_sqs[Piece::Q as usize] = board_state.check_sqs[Piece::B as usize] |
-            board_state.check_sqs[Piece::R as usize];
-        board_state.check_sqs[Piece::K as usize] = BitBoard(0);
+        board_state.check_sqs[PieceType::P as usize] = self.magic_helper
+                                                           .pawn_attacks_from(ksq, self.turn.other_player());
+        board_state.check_sqs[PieceType::N as usize] = self.magic_helper.knight_moves(ksq);
+        board_state.check_sqs[PieceType::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
+        board_state.check_sqs[PieceType::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
+        board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize] |
+            board_state.check_sqs[PieceType::R as usize];
+        board_state.check_sqs[PieceType::K as usize] = BitBoard(0);
     }
 
 
@@ -1142,7 +1181,7 @@ impl Board {
     /// # Panics
     ///
     /// Panics if there is not piece at the given square.
-    fn remove_piece(&mut self, piece: Piece, square: SQ) {
+    fn remove_piece(&mut self, piece: PieceType, square: SQ) {
         let player = self.color_of_sq(square).unwrap();
         self.remove_piece_c(piece, square, player);
     }
@@ -1153,7 +1192,7 @@ impl Board {
     /// # Panics
     ///
     /// Panics if there is not piece at the given square.
-    fn move_piece(&mut self, piece: Piece, from: SQ, to: SQ) {
+    fn move_piece(&mut self, piece: PieceType, from: SQ, to: SQ) {
         let player = self.color_of_sq(from).unwrap();
         self.move_piece_c(piece, from, to, player);
     }
@@ -1164,7 +1203,7 @@ impl Board {
     ///
     /// Assumes there is not already a piece at that square. If there already is,
     /// Undefined Behavior will result.
-    fn put_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
+    fn put_piece_c(&mut self, piece: PieceType, square: SQ, player: Player) {
         let bb = square.to_bb();
         self.occ_all |= bb;
         self.occ[player as usize] |= bb;
@@ -1180,7 +1219,7 @@ impl Board {
     /// # Panics
     ///
     /// Panics if there is a piece at the given square.
-    fn remove_piece_c(&mut self, piece: Piece, square: SQ, player: Player) {
+    fn remove_piece_c(&mut self, piece: PieceType, square: SQ, player: Player) {
         assert_eq!(self.piece_at_sq(square).unwrap(), piece);
         let bb = square.to_bb();
         self.occ_all ^= bb;
@@ -1197,7 +1236,7 @@ impl Board {
     /// # Panics
     ///
     /// Panics if the two and from square are equal
-    fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ, player: Player) {
+    fn move_piece_c(&mut self, piece: PieceType, from: SQ, to: SQ, player: Player) {
         assert_ne!(from, to);
         let comb_bb: BitBoard = from.to_bb() | to.to_bb();
 
@@ -1236,8 +1275,8 @@ impl Board {
             *to_r_orig = player.relative_square( SQ(2));
             *r_dst = player.relative_square( SQ(3));
         }
-        self.move_piece_c(Piece::K, k_src, *to_r_orig, player);
-        self.move_piece_c(Piece::R, *r_src, *r_dst, player);
+        self.move_piece_c(PieceType::K, k_src, *to_r_orig, player);
+        self.move_piece_c(PieceType::R, *r_src, *r_dst, player);
     }
 
     /// Helper function to remove a Castling for a given player.
@@ -1256,8 +1295,8 @@ impl Board {
             player.relative_square(SQ(3))
         };
 
-        self.move_piece_c(Piece::K, k_dst, k_src, player);
-        self.move_piece_c(Piece::R, r_dst, r_src, player);
+        self.move_piece_c(PieceType::K, k_dst, k_src, player);
+        self.move_piece_c(PieceType::R, r_dst, r_src, player);
     }
 
     /// Helper function to that outputs the Blockers of a given square
@@ -1268,9 +1307,9 @@ impl Board {
 
         let mut snipers: BitBoard = sliders &
             ((self.magic_helper.rook_moves(BitBoard(0), s) &
-                (self.piece_two_bb_both_players(Piece::R, Piece::Q))) |
+                (self.piece_two_bb_both_players(PieceType::R, PieceType::Q))) |
                 (self.magic_helper.bishop_moves(BitBoard(0), s) &
-                    (self.piece_two_bb_both_players(Piece::B, Piece::Q))));
+                    (self.piece_two_bb_both_players(PieceType::B, PieceType::Q))));
 
 
         while snipers.is_not_empty() {
@@ -1302,12 +1341,11 @@ impl Board {
         let mut zob: u64 = 0;
         let mut pawn_key: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
-        while b.is_not_empty() {
-            let sq: SQ = b.pop_lsb();
-            let piece = self.piece_at_sq(sq).unwrap();
-            let key = self.magic_helper.z_piece_at_sq(piece, sq);
+        while let Some(sq) = b.pop_some_lsb() {
+            let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
+            let key = self.magic_helper.z_piece_at_sq(piece, sq, player);
             zob ^= key;
-            if piece == Piece::P {
+            if piece == PieceType::P {
                 pawn_key ^= key;
             }
         }
@@ -1322,6 +1360,7 @@ impl Board {
             Player::White => {}
         };
         let state =  Arc::get_mut(&mut self.state).unwrap();
+
 
         state.zobrast = zob;
         state.pawn_key = pawn_key;
@@ -1393,7 +1432,7 @@ impl Board {
 
     /// Return the Piece, if any, that was last captured.
     #[inline(always)]
-    pub fn piece_captured_last_turn(&self) -> Option<Piece> {
+    pub fn piece_captured_last_turn(&self) -> Option<PieceType> {
         self.state.captured_piece
     }
 
@@ -1468,13 +1507,13 @@ impl Board {
     ///
     /// ```
     /// use pleco::Board;
-    /// use pleco::{Player,Piece};
+    /// use pleco::{Player,PieceType};
     ///
     /// let chessboard = Board::default();
-    /// assert_eq!(chessboard.piece_bb(Player::White,Piece::P).0, 0x000000000000FF00);
+    /// assert_eq!(chessboard.piece_bb(Player::White,PieceType::P).0, 0x000000000000FF00);
     /// ```
     #[inline]
-    pub fn piece_bb(&self, player: Player, piece: Piece) -> BitBoard {
+    pub fn piece_bb(&self, player: Player, piece: PieceType) -> BitBoard {
         self.bit_boards[player as usize][piece as usize]
     }
 
@@ -1491,8 +1530,8 @@ impl Board {
     /// ```
     #[inline]
     pub fn sliding_piece_bb(&self, player: Player) -> BitBoard {
-        self.bit_boards[player as usize][Piece::R as usize] ^
-            self.bit_boards[player as usize][Piece::Q as usize]
+        self.bit_boards[player as usize][PieceType::R as usize] ^
+            self.bit_boards[player as usize][PieceType::Q as usize]
     }
     /// Returns the BitBoard of the Queens and Bishops of a given player.
     ///
@@ -1507,8 +1546,8 @@ impl Board {
     /// ```
     #[inline]
     pub fn diagonal_piece_bb(&self, player: Player) -> BitBoard {
-        self.bit_boards[player as usize][Piece::B as usize] ^
-            self.bit_boards[player as usize][Piece::Q as usize]
+        self.bit_boards[player as usize][PieceType::B as usize] ^
+            self.bit_boards[player as usize][PieceType::Q as usize]
     }
 
     /// Returns the combined BitBoard of both players for a given piece.
@@ -1516,13 +1555,13 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::{Board,Piece};
+    /// use pleco::{Board,PieceType};
     ///
     /// let chessboard = Board::default();
-    /// assert_eq!(chessboard.piece_bb_both_players(Piece::P).0, 0x00FF00000000FF00);
+    /// assert_eq!(chessboard.piece_bb_both_players(PieceType::P).0, 0x00FF00000000FF00);
     /// ```
     #[inline(always)]
-    pub fn piece_bb_both_players(&self, piece: Piece) -> BitBoard {
+    pub fn piece_bb_both_players(&self, piece: PieceType) -> BitBoard {
         self.bit_boards[Player::White as usize][piece as usize] ^
             self.bit_boards[Player::Black as usize][piece as usize]
     }
@@ -1532,21 +1571,21 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::{Board,Piece,BitBoard};
+    /// use pleco::{Board,PieceType,BitBoard};
     /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
-    /// assert_eq!(chessboard.piece_two_bb_both_players(Piece::Q,Piece::K).count_bits(), 4);
+    /// assert_eq!(chessboard.piece_two_bb_both_players(PieceType::Q,PieceType::K).count_bits(), 4);
     /// ```
     #[inline]
-    pub fn piece_two_bb_both_players(&self, piece: Piece, piece2: Piece) -> BitBoard {
+    pub fn piece_two_bb_both_players(&self, piece: PieceType, piece2: PieceType) -> BitBoard {
         self.piece_bb_both_players(piece) | self.piece_bb_both_players(piece2)
     }
 
     /// Returns the `BitBoard` containing the locations of two given types of pieces for the given
     /// player.
     #[inline(always)]
-    pub fn piece_two_bb(&self, piece: Piece, piece2: Piece, player: Player) -> BitBoard {
+    pub fn piece_two_bb(&self, piece: PieceType, piece2: PieceType, player: Player) -> BitBoard {
         self.bit_boards[player as usize][piece as usize] | self.bit_boards[player as usize][piece2 as usize]
     }
 
@@ -1555,13 +1594,13 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::{Board,Player,Piece};
+    /// use pleco::{Board,Player,PieceType};
     ///
     /// let chessboard = Board::default();
-    /// assert_eq!(chessboard.count_piece(Player::White, Piece::P), 8);
+    /// assert_eq!(chessboard.count_piece(Player::White, PieceType::P), 8);
     /// ```
     #[inline(always)]
-    pub fn count_piece(&self, player: Player, piece: Piece) -> u8 {
+    pub fn count_piece(&self, player: Player, piece: PieceType) -> u8 {
         self.piece_counts[player as usize][piece as usize]
     }
 
@@ -1570,7 +1609,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::{Board,Player,Piece};
+    /// use pleco::{Board,Player,PieceType};
     /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -1585,7 +1624,7 @@ impl Board {
     /// # Examples
     ///
     /// ```
-    /// use pleco::{Board,Player,Piece};
+    /// use pleco::{Board,Player,PieceType};
     /// use pleco::core::bit_twiddles::*;
     ///
     /// let chessboard = Board::default();
@@ -1596,13 +1635,13 @@ impl Board {
         self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
     }
 
-    /// Returns the Piece, if any, at the square.
+    /// Returns the PieceType, if any, at the square.
     ///
     /// # Panics
     ///
     /// Panics if the square is not a legal square.
     #[inline]
-    pub fn piece_at_sq(&self, sq: SQ) -> Option<Piece> {
+    pub fn piece_at_sq(&self, sq: SQ) -> Option<PieceType> {
         assert!(sq.is_okay());
         self.piece_locations.piece_at(sq)
     }
@@ -1627,7 +1666,7 @@ impl Board {
     /// Returns the square of the King for a given player.
     #[inline(always)]
     pub fn king_sq(&self, player: Player) -> SQ {
-        (self.bit_boards[player as usize][Piece::K as usize]).to_sq()
+        (self.bit_boards[player as usize][PieceType::K as usize]).to_sq()
     }
 
     /// Returns the pinned pieces of the given player.
@@ -1700,8 +1739,20 @@ impl Board {
     /// Returns if the piece (if any) that was captured last move. This method does not
     /// distinguish between not having any last move played and not having a piece last captured.
     #[inline(always)]
-    pub fn piece_last_captured(&self) -> Option<Piece> {
+    pub fn piece_last_captured(&self) -> Option<PieceType> {
         self.state.captured_piece
+    }
+
+    /// Returns the material key of the board.
+    #[inline(always)]
+    pub fn material_key(&self) -> u64 {
+        self.state.material_key
+    }
+
+    /// Returns the current non-pawn material value of a player.
+    #[inline(always)]
+    pub fn non_pawn_material(&self, player: Player) -> Value {
+        self.state.nonpawn_material[player as usize]
     }
 
     //  ------- CHECKING  -------
@@ -1753,15 +1804,15 @@ impl Board {
     /// Includes pieces from both players.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
         (self.magic_helper.pawn_attacks_from(sq, Player::Black) &
-            self.piece_bb(Player::White, Piece::P)) |
+            self.piece_bb(Player::White, PieceType::P)) |
             (self.magic_helper.pawn_attacks_from(sq, Player::White) &
-                self.piece_bb(Player::Black, Piece::P)) |
-            (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(Piece::N)) |
+                self.piece_bb(Player::Black, PieceType::P)) |
+            (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(PieceType::N)) |
             (self.magic_helper.rook_moves(occupied, sq) &
                 (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black))) |
             (self.magic_helper.bishop_moves(occupied, sq) &
                 (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
-            (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(Piece::K))
+            (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(PieceType::K))
     }
 
 //  ------- Move Testing -------
@@ -1802,7 +1853,7 @@ impl Board {
             return false;
         }
 
-        if piece.unwrap() == Piece::K {
+        if piece.unwrap() == PieceType::K {
             return m.move_type() == MoveType::Castle ||
                 (self.attackers_to(dst, self.get_occupied()) & self.get_occupied_player(them)).is_empty();
         }
@@ -1851,16 +1902,16 @@ impl Board {
             MoveType::Promotion => {
                 // check if the Promo Piece attacks king
                 let attacks_bb = match m.promo_piece() {
-                    Piece::N => self.magic_helper.knight_moves(dst),
-                    Piece::B => {
+                    PieceType::N => self.magic_helper.knight_moves(dst),
+                    PieceType::B => {
                         self.magic_helper
                             .bishop_moves(self.get_occupied() ^ src_bb, dst)
                     }
-                    Piece::R => {
+                    PieceType::R => {
                         self.magic_helper
                             .rook_moves(self.get_occupied() ^ src_bb, dst)
                     }
-                    Piece::Q => {
+                    PieceType::Q => {
                         self.magic_helper
                             .queen_moves(self.get_occupied() ^ src_bb, dst)
                     }
@@ -1904,7 +1955,7 @@ impl Board {
     ///
     /// Assumes the move is legal for the current board.
     #[inline]
-    pub fn moved_piece(&self, m: BitMove) -> Piece {
+    pub fn moved_piece(&self, m: BitMove) -> PieceType {
         let src = m.get_src();
         self.piece_at_sq(src).unwrap() // panics if no piece here :)
     }
@@ -1915,9 +1966,9 @@ impl Board {
     ///
     /// Assumes the move is legal for the current board.
     #[inline]
-    pub fn captured_piece(&self, m: BitMove) -> Option<Piece> {
+    pub fn captured_piece(&self, m: BitMove) -> Option<PieceType> {
         if m.is_en_passant() {
-            return Some(Piece::P);
+            return Some(PieceType::P);
         }
         let dst = m.get_dest();
         self.piece_at_sq(dst)
@@ -1967,13 +2018,13 @@ impl Board {
         println!("{}", self.state.checkers_bb);
 
         println!("Bishop check sqs");
-        println!("{}", self.state.check_sqs[Piece::B as usize]);
+        println!("{}", self.state.check_sqs[PieceType::B as usize]);
 
         println!("Rook check sqs");
-        println!("{}", self.state.check_sqs[Piece::R as usize]);
+        println!("{}", self.state.check_sqs[PieceType::R as usize]);
 
         println!("Queen check sqs");
-        println!("{}", self.state.check_sqs[Piece::Q as usize]);
+        println!("{}", self.state.check_sqs[PieceType::Q as usize]);
     }
 
     /// Prints a prettified representation of the board.
@@ -2009,17 +2060,23 @@ impl Board {
 // TODO: Error Propagation
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
-#[derive(Fail, Debug)]
 pub enum BoardError {
-    #[fail(display = "incorrect number of kings for {}: {}", player, num)]
     IncorrectKingNum {player: Player, num: u8},
+}
+
+impl fmt::Debug for BoardError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            BoardError::IncorrectKingNum{player, num} => writeln!(f, "incorrect number of kings for {}: {}", player, num),
+        }
+    }
 }
 
 impl Board {
     /// Checks the basic status of the board, returning false if something is wrong.
     pub fn is_ok_quick(&self) -> bool {
-        self.piece_at_sq(self.king_sq(Player::White)).unwrap() == Piece::K
-            && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == Piece::K
+        self.piece_at_sq(self.king_sq(Player::White)).unwrap() == PieceType::K
+            && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == PieceType::K
             && (self.state.ep_square == NO_SQ
             || self.turn.relative_rank_of_sq(self.state.ep_square) == Rank::R6)
     }
@@ -2032,8 +2089,8 @@ impl Board {
 
     fn check_king(&self) -> Result<(), BoardError> {
         // TODO: Implement attacks to opposing king must be zero
-        let w_king_num = self.count_piece(Player::White, Piece::K);
-        let b_king_num = self.count_piece(Player::Black, Piece::K);
+        let w_king_num = self.count_piece(Player::White, PieceType::K);
+        let b_king_num = self.count_piece(Player::Black, PieceType::K);
         if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::White, num: w_king_num}); }
         if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::Black, num: b_king_num}); }
         Ok(())
@@ -2264,7 +2321,7 @@ mod tests {
 
     extern crate rand;
     use board::Board;
-    use {BitMove,SQ,Piece};
+    use {BitMove, SQ, PieceType};
 
     #[test]
     fn random_move_apply() {
@@ -2361,7 +2418,7 @@ mod tests {
         assert!(!b.stalemate());
 
         let bmove: BitMove = BitMove::make_pawn_push(SQ::A2,SQ::A4);
-        assert_eq!(b.moved_piece(bmove), Piece::P);
+        assert_eq!(b.moved_piece(bmove), PieceType::P);
         assert_eq!(b.captured_piece(bmove), None);
     }
 }

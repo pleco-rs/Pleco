@@ -129,7 +129,7 @@ fn test_move_permutations() {
 fn bit_move_promoions() {
     let move_flag = MoveFlag::Promotion {
         capture: true,
-        prom: Piece::P,
+        prom: PieceType::P,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -139,11 +139,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::Q);
+    assert_eq!(move_info.promo_piece(), PieceType::Q);
 
     let move_flag = MoveFlag::Promotion {
         capture: true,
-        prom: Piece::N,
+        prom: PieceType::N,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -153,11 +153,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::N);
+    assert_eq!(move_info.promo_piece(), PieceType::N);
 
     let move_flag = MoveFlag::Promotion {
         capture: true,
-        prom: Piece::B,
+        prom: PieceType::B,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -167,11 +167,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::B);
+    assert_eq!(move_info.promo_piece(), PieceType::B);
 
     let move_flag = MoveFlag::Promotion {
         capture: true,
-        prom: Piece::R,
+        prom: PieceType::R,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -181,11 +181,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::R);
+    assert_eq!(move_info.promo_piece(), PieceType::R);
 
     let move_flag = MoveFlag::Promotion {
         capture: true,
-        prom: Piece::K,
+        prom: PieceType::K,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -195,11 +195,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::Q);
+    assert_eq!(move_info.promo_piece(), PieceType::Q);
 
     let move_flag = MoveFlag::Promotion {
         capture: true,
-        prom: Piece::Q,
+        prom: PieceType::Q,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -209,11 +209,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::Q);
+    assert_eq!(move_info.promo_piece(), PieceType::Q);
 
     let move_flag = MoveFlag::Promotion {
         capture: false,
-        prom: Piece::P,
+        prom: PieceType::P,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -223,11 +223,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::Q);
+    assert_eq!(move_info.promo_piece(), PieceType::Q);
 
     let move_flag = MoveFlag::Promotion {
         capture: false,
-        prom: Piece::N,
+        prom: PieceType::N,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -237,11 +237,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::N);
+    assert_eq!(move_info.promo_piece(), PieceType::N);
 
     let move_flag = MoveFlag::Promotion {
         capture: false,
-        prom: Piece::B,
+        prom: PieceType::B,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -251,11 +251,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::B);
+    assert_eq!(move_info.promo_piece(), PieceType::B);
 
     let move_flag = MoveFlag::Promotion {
         capture: false,
-        prom: Piece::R,
+        prom: PieceType::R,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -265,11 +265,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::R);
+    assert_eq!(move_info.promo_piece(), PieceType::R);
 
     let move_flag = MoveFlag::Promotion {
         capture: false,
-        prom: Piece::K,
+        prom: PieceType::K,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -279,11 +279,11 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::Q);
+    assert_eq!(move_info.promo_piece(), PieceType::Q);
 
     let move_flag = MoveFlag::Promotion {
         capture: false,
-        prom: Piece::Q,
+        prom: PieceType::Q,
     };
     let pre_move_info = PreMoveInfo {
         src: SQ(9),
@@ -293,58 +293,58 @@ fn bit_move_promoions() {
     let move_info = BitMove::init(pre_move_info);
     assert!(!move_info.is_capture());
     assert!(move_info.is_promo());
-    assert_eq!(move_info.promo_piece(), Piece::Q);
+    assert_eq!(move_info.promo_piece(), PieceType::Q);
 }
 
 fn all_move_flags() -> Vec<MoveFlag> {
     let mut move_flags = Vec::new();
     move_flags.push(MoveFlag::Promotion {
         capture: true,
-        prom: Piece::P,
+        prom: PieceType::P,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: true,
-        prom: Piece::N,
+        prom: PieceType::N,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: true,
-        prom: Piece::B,
+        prom: PieceType::B,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: true,
-        prom: Piece::R,
+        prom: PieceType::R,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: true,
-        prom: Piece::K,
+        prom: PieceType::K,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: true,
-        prom: Piece::Q,
+        prom: PieceType::Q,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: false,
-        prom: Piece::P,
+        prom: PieceType::P,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: false,
-        prom: Piece::N,
+        prom: PieceType::N,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: false,
-        prom: Piece::B,
+        prom: PieceType::B,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: false,
-        prom: Piece::R,
+        prom: PieceType::R,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: false,
-        prom: Piece::K,
+        prom: PieceType::K,
     });
     move_flags.push(MoveFlag::Promotion {
         capture: false,
-        prom: Piece::Q,
+        prom: PieceType::Q,
     });
     move_flags.push(MoveFlag::Castle { king_side: true });
     move_flags.push(MoveFlag::Castle { king_side: false });

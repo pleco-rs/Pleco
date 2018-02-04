@@ -14,7 +14,7 @@ use super::bitboard::BitBoard;
 use tools::prng::PRNG;
 use std::{mem, slice};
 use super::*;
-
+use super::score::*;
 
 /// Size of the magic rook table.
 const ROOK_M_SIZE: usize = 102_400;
@@ -25,18 +25,123 @@ const B_DELTAS: [i8; 4] = [7, 9, -9, -7];
 const R_DELTAS: [i8; 4] = [8, 1, -8, -1];
 const DELTAS: [[i8; 4]; 2] = [B_DELTAS, R_DELTAS];
 
-/// Seeds for the `PRNG`.
+/// Seeds for the `MagicHelper's` pseudo-random number generator.
 const SEEDS: [[u64; 8]; 2] = [
     [8977, 44_560, 54_343, 38_998, 5731, 95_205, 104_912, 17_020],
     [728, 10_316, 55_013, 32_803, 12_281, 15_100, 16_645, 255],
 ];
 
+/// Seed for the Zobrist's pseudo-random number generator.
 const ZOBRIST_SEED: u64 = 23_081;
+
+
+
+const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
+    [ // Pawn
+        [ Score(  0, 0), Score(  0, 0), Score(  0, 0), Score( 0, 0) ],
+        [ Score(-11, 7), Score(  6,-4), Score(  7, 8), Score( 3,-2) ],
+        [ Score(-18,-4), Score( -2,-5), Score( 19, 5), Score(24, 4) ],
+        [ Score(-17, 3), Score( -9, 3), Score( 20,-8), Score(35,-3) ],
+        [ Score( -6, 8), Score(  5, 9), Score(  3, 7), Score(21,-6) ],
+        [ Score( -6, 8), Score( -8,-5), Score( -6, 2), Score(-2, 4) ],
+        [ Score( -4, 3), Score( 20,-9), Score( -8, 1), Score(-4,18) ],
+        [ Score(  0, 0), Score(  0, 0), Score(  0, 0), Score( 0, 0) ]
+    ],
+    [ // Knight
+        [ Score(-161,-105), Score(-96,-82), Score(-80,-46), Score(-73,-14) ],
+        [ Score( -83, -69), Score(-43,-54), Score(-21,-17), Score(-10,  9) ],
+        [ Score( -71, -50), Score(-22,-39), Score(  0, -7), Score(  9, 28) ],
+        [ Score( -25, -41), Score( 18,-25), Score( 43,  6), Score( 47, 38) ],
+        [ Score( -26, -46), Score( 16,-25), Score( 38,  3), Score( 50, 40) ],
+        [ Score( -11, -54), Score( 37,-38), Score( 56, -7), Score( 65, 27) ],
+        [ Score( -63, -65), Score(-19,-50), Score(  5,-24), Score( 14, 13) ],
+        [ Score(-195,-109), Score(-67,-89), Score(-42,-50), Score(-29,-13) ]
+    ],
+    [ // Bishop
+        [ Score(-44,-58), Score(-13,-31), Score(-25,-37), Score(-34,-19) ],
+        [ Score(-20,-34), Score( 20, -9), Score( 12,-14), Score(  1,  4) ],
+        [ Score( -9,-23), Score( 27,  0), Score( 21, -3), Score( 11, 16) ],
+        [ Score(-11,-26), Score( 28, -3), Score( 21, -5), Score( 10, 16) ],
+        [ Score(-11,-26), Score( 27, -4), Score( 16, -7), Score(  9, 14) ],
+        [ Score(-17,-24), Score( 16, -2), Score( 12,  0), Score(  2, 13) ],
+        [ Score(-23,-34), Score( 17,-10), Score(  6,-12), Score( -2,  6) ],
+        [ Score(-35,-55), Score(-11,-32), Score(-19,-36), Score(-29,-17) ]
+    ],
+        [ // Rook
+        [ Score(-25, 0), Score(-16, 0), Score(-16, 0), Score(-9, 0) ],
+        [ Score(-21, 0), Score( -8, 0), Score( -3, 0), Score( 0, 0) ],
+        [ Score(-21, 0), Score( -9, 0), Score( -4, 0), Score( 2, 0) ],
+        [ Score(-22, 0), Score( -6, 0), Score( -1, 0), Score( 2, 0) ],
+        [ Score(-22, 0), Score( -7, 0), Score(  0, 0), Score( 1, 0) ],
+        [ Score(-21, 0), Score( -7, 0), Score(  0, 0), Score( 2, 0) ],
+        [ Score(-12, 0), Score(  4, 0), Score(  8, 0), Score(12, 0) ],
+        [ Score(-23, 0), Score(-15, 0), Score(-11, 0), Score(-5, 0) ]
+    ],
+    [ // Queen
+        [ Score( 0,-71), Score(-4,-56), Score(-3,-42), Score(-1,-29) ],
+        [ Score(-4,-56), Score( 6,-30), Score( 9,-21), Score( 8, -5) ],
+        [ Score(-2,-39), Score( 6,-17), Score( 9, -8), Score( 9,  5) ],
+        [ Score(-1,-29), Score( 8, -5), Score(10,  9), Score( 7, 19) ],
+        [ Score(-3,-27), Score( 9, -5), Score( 8, 10), Score( 7, 21) ],
+        [ Score(-2,-40), Score( 6,-16), Score( 8,-10), Score(10,  3) ],
+        [ Score(-2,-55), Score( 7,-30), Score( 7,-21), Score( 6, -6) ],
+        [ Score(-1,-74), Score(-4,-55), Score(-1,-43), Score( 0,-30) ]
+    ],
+    [ // King
+        [ Score(267,  0), Score(320, 48), Score(270, 75), Score(195, 84) ],
+        [ Score(264, 43), Score(304, 92), Score(238,143), Score(180,132) ],
+        [ Score(200, 83), Score(245,138), Score(176,167), Score(110,165) ],
+        [ Score(177,106), Score(185,169), Score(148,169), Score(110,179) ],
+        [ Score(149,108), Score(177,163), Score(115,200), Score( 66,203) ],
+        [ Score(118, 95), Score(159,155), Score( 84,176), Score( 41,174) ],
+        [ Score( 87, 50), Score(128, 99), Score( 63,122), Score( 20,139) ],
+        [ Score( 63,  9), Score( 88, 55), Score( 47, 80), Score(  0, 90) ]
+    ]
+];
+
+
+
+pub struct PSQT {
+    psq: [[[Score; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT],  // [player][piece][sq]
+    piece_val: [[Value; PHASE_CNT]; PIECE_TYPE_CNT], // [piece][eg value?]
+}
+
+impl PSQT {
+    pub fn init() -> Self {
+        let mut psq: [[[Score; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT]
+            = [[[Score::new(0,0); SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT];
+
+        let piece_val: [[Value; PHASE_CNT]; PIECE_TYPE_CNT]
+            = [[ PAWN_MG,    PAWN_EG],  // White Pawn
+                [ KNIGHT_MG,  KNIGHT_EG],// White Knight
+                [ BISHOP_MG,  BISHOP_EG],// White Bishop
+                [ ROOK_MG,    ROOK_EG],  // White Rook
+                [ QUEEN_MG,   QUEEN_MG], // White Queen
+                [ NONE,       NONE]];    // White King
+
+
+        for piece in 0..PIECE_TYPE_CNT {
+            let v: Score = Score(piece_val[piece][0], piece_val[piece][1]);
+            for s in 0..SQ_CNT {
+                let sq: SQ = SQ(s as u8);
+                let f: File = sq.file().min(!sq.file());
+                let score = v + BONUS[piece][sq.rank() as usize][f as usize];
+                psq[Player::White as usize][piece][s] = score;
+                psq[Player::Black as usize][piece][sq.flip().0 as usize] = -score;
+            }
+        }
+
+        PSQT {
+            psq,
+            piece_val
+        }
+    }
+}
 
 /// Structure for helping determine Zobrist hashes for a given position.
 pub struct Zobrist {
     /// Zobrist key for each piece on each square.
-    pub sq_piece: [[u64; PIECE_CNT]; SQ_CNT], // 8 * 6 * 8
+    pub sq_piece: [[[u64; PIECE_TYPE_CNT]; PLAYER_CNT]; SQ_CNT], // 8 * 6 * 8
     /// Zobrist key for each possible en-passant capturable file.
     pub en_p: [u64; FILE_CNT], // 8 * 8
     /// Zobrist key for each possible castling rights.
@@ -51,7 +156,7 @@ impl Zobrist {
     /// Returns a Zobrist object.
     fn default() -> Zobrist {
         let mut zob = Zobrist {
-            sq_piece: [[0; PIECE_CNT]; SQ_CNT],
+            sq_piece: [[[0; PIECE_TYPE_CNT]; PLAYER_CNT]; SQ_CNT],
             en_p: [0; FILE_CNT],
             castle: [0; ALL_CASTLING_RIGHTS],
             side: 0,
@@ -60,8 +165,9 @@ impl Zobrist {
         let mut rng = PRNG::init(ZOBRIST_SEED);
 
         for i in 0..SQ_CNT {
-            for j in 0..PIECE_CNT {
-                zob.sq_piece[i][j] = rng.rand();
+            for j in 0..PIECE_TYPE_CNT {
+                zob.sq_piece[i][0][j] = rng.rand();
+                zob.sq_piece[i][1][j] = rng.rand();
             }
         }
 
@@ -135,6 +241,7 @@ pub struct MagicHelper<'a, 'b> {
     forward_ranks_bb: [[u64; PLAYER_CNT]; RANK_CNT],
     /// Zobrist hasher.
     pub zobrist: Zobrist,
+    pub psqt: PSQT,
 }
 
 unsafe impl<'a, 'b> Send for MagicHelper<'a, 'b> {}
@@ -176,10 +283,24 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             passed_pawn_mask: [[0; 64]; 2],
             forward_ranks_bb: [[0; PLAYER_CNT]; RANK_CNT],
             zobrist: Zobrist::default(),
+            psqt: PSQT::init(),
         }
     }
 
+    /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+    /// it'll return the midgame value.
+    pub fn piece_value(&self, piece: PieceType, eg: bool) -> Value {
+        unsafe {
+            (*(self.psqt.piece_val.get_unchecked(piece as usize)).get_unchecked(eg as usize))
+        }
+    }
 
+    /// Returns the score for a player's piece being at a particular square.
+    pub fn psq(&self, piece: PieceType, player: Player, sq: SQ) -> Score {
+        unsafe {
+            (*(*(self.psqt.psq.get_unchecked(player as usize)).get_unchecked(piece as usize)).get_unchecked(sq.0 as usize))
+        }
+    }
 
     /// Generate Knight Moves `BitBoard` from a source square.
     #[inline(always)]
@@ -291,10 +412,10 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
     /// Returns the Zobrist Hash for a given piece as a given Square
     #[inline(always)]
-    pub fn z_piece_at_sq(&self, piece: Piece, square: SQ) -> u64 {
+    pub fn z_piece_at_sq(&self, piece: PieceType, square: SQ, player: Player) -> u64 {
         debug_assert!(square.is_okay());
         unsafe {
-            *(self.zobrist.sq_piece.get_unchecked(square.0 as usize)).get_unchecked(piece as usize)
+            *(*(self.zobrist.sq_piece.get_unchecked(square.0 as usize)).get_unchecked(player as usize)).get_unchecked(piece as usize)
         }
 //        self.zobrist.sq_piece[square.0 as usize][piece as usize]
     }

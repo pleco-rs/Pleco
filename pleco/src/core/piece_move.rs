@@ -6,7 +6,7 @@
 //! ```md,ignore
 //! bits  0 - 5:  destination square (from 0 to 63)
 //! bits  6 - 11: origin square (from 0 to 63)
-//! bits 12 - 13: promotion piece type - 2 (from KNIGHT-2 to QUEEN-2)
+//! bits 12 - 13: promotion piece type - 2 (from KNIGHT-0 to QUEEN-4)
 //! bits 14 - 15: special move flag: promotion (1), en passant (2), castling (3)
 //! ```
 //!
@@ -93,7 +93,7 @@ pub enum MoveFlag {
         /// Marks the move as a capturing promotion.
         capture: bool,
         /// The piece that the move promotes to.
-        prom: Piece
+        prom: PieceType
     },
     /// The move is a castle.
     Castle {
@@ -187,12 +187,12 @@ impl BitMove {
 
 
     #[inline(always)]
-    fn promotion_piece_flag(piece: Piece) -> u16 {
+    fn promotion_piece_flag(piece: PieceType) -> u16 {
         match piece {
-            Piece::R => 2,
-            Piece::B => 1,
-            Piece::N => 0,
-            Piece::Q | _ => 3,
+            PieceType::R => 2,
+            PieceType::B => 1,
+            PieceType::N => 0,
+            PieceType::Q | _ => 3,
         }
     }
 
@@ -356,12 +356,12 @@ impl BitMove {
     ///
     /// Method should only be used if the [BitMove] is a promotion. Otherwise, Undefined Behavior may result.
     #[inline(always)]
-    pub fn promo_piece(&self) -> Piece {
+    pub fn promo_piece(&self) -> PieceType {
         match (self.data >> 12) & 0b0011 {
-            0 => Piece::N,
-            1 => Piece::B,
-            2 => Piece::R,
-            3 | _ => Piece::Q,
+            0 => PieceType::N,
+            1 => PieceType::B,
+            2 => PieceType::R,
+            3 | _ => PieceType::Q,
         }
     }
 

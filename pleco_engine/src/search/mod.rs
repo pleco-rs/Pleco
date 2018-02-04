@@ -1,5 +1,7 @@
 //! The main searching function.
-use time::uci_timer::*;
+
+pub mod eval;
+
 
 use std::cmp::{min,max};
 use std::sync::atomic::{Ordering,AtomicBool};
@@ -15,17 +17,19 @@ use MAX_PLY;
 use TT_TABLE;
 
 use time::time_management::TimeManager;
-use super::threads::TIMER;
+use time::uci_timer::*;
+use threadpool::TIMER;
 use root_moves::root_moves_list::RootMoveList;
 use consts::*;
 
 const THREAD_DIST: usize = 20;
+
 //                                      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
 static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4];
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
 
 
-pub struct ThreadSearcher {
+pub struct Searcher {
     pub limit: Limits,
     pub board: Board,
     pub time_man: &'static TimeManager,
@@ -35,7 +39,7 @@ pub struct ThreadSearcher {
     pub use_stdout: Arc<AtomicBool>,
 }
 
-impl ThreadSearcher {
+impl Searcher {
     pub fn search_root(&mut self) {
         assert!(self.board.depth() == 0);
         self.root_moves.set_finished(false);
@@ -280,7 +284,7 @@ impl ThreadSearcher {
                             alpha = value;
                         } else {
 //                            assert!(value >= beta);
-                           break;
+                            break;
                         }
                     }
                 }
@@ -345,7 +349,7 @@ fn mvv_lva_sort(moves: &mut MoveList, board: &Board) {
             piece.value() - board.captured_piece(*a).unwrap().value()
         } else if a.is_castle() {
             1
-        } else if piece == Piece::P {
+        } else if piece == PieceType::P {
             if a.is_double_push().0 {
                 2
             } else {

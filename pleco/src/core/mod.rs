@@ -24,8 +24,8 @@ use std::mem;
 use std::ops::Not;
 
 /// Array of all possible pieces, indexed by their enum value.
-pub const ALL_PIECES: [Piece; PIECE_CNT] =
-    [Piece::P, Piece::N, Piece::B, Piece::R, Piece::Q, Piece::K];
+pub const ALL_PIECE_TYPES: [PieceType; PIECE_TYPE_CNT] =
+    [PieceType::P, PieceType::N, PieceType::B, PieceType::R, PieceType::Q, PieceType::K];
 
 
 /// Array of both players, indexed by their enum value.
@@ -137,8 +137,6 @@ impl Player {
     pub fn relative_rank(&self, rank: Rank) -> Rank {
         ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
     }
-
-
 }
 
 
@@ -185,10 +183,10 @@ pub enum GenTypes {
     NonEvasions
 }
 
-/// All possible Pieces on a chessboard.
+/// All possible Types of Pieces on a chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub enum Piece {
+pub enum PieceType {
     K = 5,
     Q = 4,
     R = 3,
@@ -197,18 +195,18 @@ pub enum Piece {
     P = 0,
 }
 
-impl Piece {
+impl PieceType {
     /// Returns the relative value of a piece.
     ///
     /// Used for sorting moves.
     #[inline]
     pub fn value(&self) -> i8 {
         match *self {
-            Piece::P => 1,
-            Piece::N | Piece::B => 3,
-            Piece::R => 5,
-            Piece::Q => 8,
-            Piece::K => 0,
+            PieceType::P => 1,
+            PieceType::N | PieceType::B => 3,
+            PieceType::R => 5,
+            PieceType::Q => 8,
+            PieceType::K => 0,
         }
     }
 
@@ -216,12 +214,12 @@ impl Piece {
     #[inline]
     pub fn char_lower(&self) -> char {
         match *self {
-            Piece::P => 'p',
-            Piece::N => 'n',
-            Piece::B => 'b',
-            Piece::R => 'r',
-            Piece::Q => 'q',
-            Piece::K => 'k',
+            PieceType::P => 'p',
+            PieceType::N => 'n',
+            PieceType::B => 'b',
+            PieceType::R => 'r',
+            PieceType::Q => 'q',
+            PieceType::K => 'k',
         }
     }
 
@@ -229,26 +227,26 @@ impl Piece {
     #[inline]
     pub fn char_upper(&self) -> char {
         match *self {
-            Piece::P => 'P',
-            Piece::N => 'N',
-            Piece::B => 'B',
-            Piece::R => 'R',
-            Piece::Q => 'Q',
-            Piece::K => 'K',
+            PieceType::P => 'P',
+            PieceType::N => 'N',
+            PieceType::B => 'B',
+            PieceType::R => 'R',
+            PieceType::Q => 'Q',
+            PieceType::K => 'K',
         }
     }
 
 }
 
-impl fmt::Display for Piece {
+impl fmt::Display for PieceType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match *self {
-            Piece::P => "Pawn",
-            Piece::N => "Knight",
-            Piece::B => "Bishop",
-            Piece::R => "Rook",
-            Piece::Q => "Queen",
-            Piece::K => "King"
+            PieceType::P => "Pawn",
+            PieceType::N => "Knight",
+            PieceType::B => "Bishop",
+            PieceType::R => "Rook",
+            PieceType::Q => "Queen",
+            PieceType::K => "King"
         };
         f.pad(s)
     }
@@ -349,9 +347,17 @@ pub enum Rank { // eg a specific row
 
 /// Types of Castling available to a player.
 #[derive(Copy, Clone, PartialEq, Debug)]
+#[repr(u8)]
 pub enum CastleType {
     KingSide = 0,
     QueenSide = 1,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[repr(u8)]
+pub enum Phase {
+    MG = 0,
+    EG = 1
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the

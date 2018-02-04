@@ -34,7 +34,7 @@
 #![feature(const_indexing)]
 #![feature(const_fn)]
 
-//#![crate_type = "bin"]
+#![crate_type = "staticlib"]
 
 #[macro_use]
 extern crate lazy_static;
@@ -45,12 +45,14 @@ extern crate rand;
 extern crate pleco;
 extern crate chrono;
 
-pub mod searcher;
+pub mod threadpool;
 pub mod sync;
 pub mod time;
 pub mod consts;
 pub mod uci;
 pub mod root_moves;
 pub mod tables;
+pub mod engine;
+pub mod search;
 
 pub use consts::*;

@@ -2,7 +2,7 @@
 
 
 use super::{Board,FenBuildError};
-use {BitBoard,Piece,Player,Rank};
+use {BitBoard, PieceType, Player, Rank};
 use super::super::core::sq::NO_SQ;
 
 pub const OPENING_POS_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -103,24 +103,24 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
         let sq_1 = sq_1bb.to_sq();
         let piece_1 = board.piece_at_sq(sq_1).unwrap();
         let piece_2 = board.piece_at_sq(sq_2).unwrap();
-        if piece_1 == Piece::P {
-            if piece_2 == Piece::B || piece_2 == Piece::N || piece_2 == Piece::P {
+        if piece_1 == PieceType::P {
+            if piece_2 == PieceType::B || piece_2 == PieceType::N || piece_2 == PieceType::P {
                 return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
             }
-        } else if piece_1 == Piece::B && (piece_2 == Piece::P || piece_2 == Piece::B) {
+        } else if piece_1 == PieceType::B && (piece_2 == PieceType::P || piece_2 == PieceType::B) {
             return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
-        } else if piece_1 == Piece::N && (piece_2 == Piece::P || piece_2 == Piece::N) {
+        } else if piece_1 == PieceType::N && (piece_2 == PieceType::P || piece_2 == PieceType::N) {
             return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
         }
     }
 
-    let all_pawns: BitBoard = board.piece_bb_both_players(Piece::P) & (BitBoard::RANK_1 | BitBoard::RANK_8 );
+    let all_pawns: BitBoard = board.piece_bb_both_players(PieceType::P) & (BitBoard::RANK_1 | BitBoard::RANK_8 );
     if all_pawns.is_not_empty() {
         return Err(FenBuildError::PawnOnLastRow);
     }
 
-    let white_pawns = board.count_piece(Player::White,Piece::P);
-    let black_pawns = board.count_piece(Player::Black,Piece::P);
+    let white_pawns = board.count_piece(Player::White, PieceType::P);
+    let black_pawns = board.count_piece(Player::Black, PieceType::P);
     if white_pawns > 8 {
         return Err(FenBuildError::TooManyPawns { player: Player::White, num: white_pawns });
     }

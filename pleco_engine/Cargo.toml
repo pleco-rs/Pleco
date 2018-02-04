@@ -1,6 +1,6 @@
 [package]
 name = "pleco_engine"
-version = "0.0.8"
+version = "0.0.9"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -24,14 +24,13 @@ include = [
 travis-ci = { repository = "sfleischman105/Pleco", branch = "master" }
 coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = "github" }
 
-[profile.dev]
-opt-level = 3
-debug = true
+#[profile.dev]
+#opt-level = 3
+#debug = true
 
 [profile.release]
 opt-level = 3
 debug = false
-rpath = false
 debug-assertions = false
 panic = "panic"
 codegen-units = 1
@@ -49,7 +48,6 @@ panic = "panic"
 [profile.test]
 opt-level = 3
 debug = true
-rpath = false
 debug-assertions = true
 codegen-units = 1
 panic = "unwind"
@@ -57,7 +55,6 @@ panic = "unwind"
 [profile.doc]
 opt-level = 0
 debug = true
-rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 4

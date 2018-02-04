@@ -2,7 +2,7 @@
 
 //use super::Board;
 use core::sq::SQ;
-use core::{Piece,File,Rank};
+use core::{PieceType, File, Rank};
 use std::fmt;
 
 
@@ -271,10 +271,10 @@ pub struct PGNMoveSpecifier {
 // (capture) => x if capture
 //
 pub struct PGNRegMove {
-    piece: Option<Piece>,
+    piece: Option<PieceType>,
     specifier: Option<PGNMoveSpecifier>,
     dest: SQ,
-    promo: Option<Piece>,
+    promo: Option<PieceType>,
     capture: bool,
 }
 

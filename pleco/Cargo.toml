@@ -27,33 +27,29 @@ coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = 
 
 [profile.dev]
 opt-level = 3
-debug = true
 
 [profile.release]
 opt-level = 3
 debug = false
 debug-assertions = false
-panic = "panic"
+panic = "abort"
 codegen-units = 1
 lto = true
 
 [profile.bench]
 opt-level = 3
 debug = false
-rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-panic = "panic"
+panic = "abort"
 
 [profile.test]
-opt-level = 2
+opt-level = 3
 debug = true
-rpath = false
-lto = false
 debug-assertions = true
 codegen-units = 4
-panic = 'unwind'
+panic = "unwind"
 
 [profile.doc]
 opt-level = 0
@@ -62,15 +58,13 @@ rpath = false
 lto = false
 debug-assertions = true
 codegen-units = 1
-panic = 'unwind'
+panic = "unwind"
 
 [lib]
 name = "pleco"
 bench = true
 path = "src/lib.rs"
 doctest = true
-crate_type = ["staticlib", "rlib"]
-
 
 
 [dependencies]
@@ -79,8 +73,6 @@ bitflags = "1.0.1"
 rand = "0.4.2"
 rayon = "0.9.0"
 num_cpus = "1.8.0"
-failure = "0.1.1"
-failure_derive = "0.1.1"
 prefetch = "0.2.0"
 
 [dependencies.lazy_static]
