@@ -12,6 +12,9 @@ pub const SQ_CNT: usize = 64;
 pub const FILE_CNT: usize = 8;
 /// The total number of ranks on a chessboard.
 pub const RANK_CNT: usize = 8;
+
+/// The total number of game phases, being middle and end game
+pub const PHASE_CNT: usize = 2;
 /// The total number of types of castling a player can perform: king side and
 /// queen side.
 pub const CASTLING_SIDES: usize = 2;

@@ -20,8 +20,8 @@ pub struct MaterialEntry {
     value: Value
 }
 
-//impl Material {
-//    pub fn probe(&mut self, board: &Board) -> &mut MaterialEntry {
-//
-//    }
-//}
+impl Material {
+    pub fn probe(&mut self, board: &Board) -> &mut MaterialEntry {
+        unimplemented!()
+    }
+}

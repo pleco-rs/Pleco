@@ -25,7 +25,6 @@ use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 use rand;
-use failure;
 
 use core::magic_helper::MagicHelper;
 use core::piece_move::{BitMove, MoveType};
@@ -45,8 +44,6 @@ use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
 
-pub type Error = failure::Error;
-
 
 lazy_static! {
     /// Statically initialized lookup tables created when first ran.
@@ -58,33 +55,19 @@ lazy_static! {
 }
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
-#[derive(Fail, Debug)]
 pub enum FenBuildError {
-    #[fail(display = "invalid number of fen sections: {}, expected 6", sections)]
     NotEnoughSections {sections: usize},
-    #[fail(display = "invalid number of ranks: {}, expected 8", ranks)]
     IncorrectRankAmounts {ranks: usize},
-    #[fail(display = "invalid turn: {}, expected 'w' or 'b'", turn)]
     UnrecognizedTurn {turn: String},
-    #[fail(display = "unreadable En-passant square: {}", ep)]
     EPSquareUnreadable {ep: String},
-    #[fail(display = "invalid En-passant square: {}", ep)]
     EPSquareInvalid {ep: String},
-    #[fail(display = "square number too small for rank, rank: {} square: {},", rank, square)]
     SquareSmallerRank {rank: usize, square: String},
-    #[fail(display = "square number too large for rank, rank: {} square: {},", rank, square)]
     SquareLargerRank {rank: usize, square: String},
-    #[fail(display = "unrecognized piece: {}", piece)]
     UnrecognizedPiece {piece: char},
-    #[fail(display = "An unknown error has occurred.")]
     UnreadableMoves(num::ParseIntError),
-    #[fail(display = "too many checking piece: {}",num)]
     IllegalNumCheckingPieces{num: u8},
-    #[fail(display = "these two pieces cannot check the king at the same time: {}, {}",piece_1, piece_2)]
     IllegalCheckState{piece_1: PieceType, piece_2: PieceType },
-    #[fail(display = "Too many pawns for player: player: {}, # pawns {}",player, num)]
     TooManyPawns{player: Player, num: u8},
-    #[fail(display = "Pawn on first or last row")]
     PawnOnLastRow
 }
 
@@ -93,6 +76,27 @@ impl From<num::ParseIntError> for FenBuildError {
         FenBuildError::UnreadableMoves(err)
     }
 }
+
+impl fmt::Debug for FenBuildError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            FenBuildError::NotEnoughSections{sections} => writeln!(f, "invalid number of fen sections: {}, expected 6", sections),
+            FenBuildError::IncorrectRankAmounts{ranks} => writeln!(f, "invalid number of ranks: {}, expected 8", ranks),
+            FenBuildError::UnrecognizedTurn {ref turn} => writeln!(f, "invalid turn: {}, expected 'w' or 'b'", turn),
+            FenBuildError::EPSquareUnreadable{ref ep} => writeln!(f, "unreadable En-passant square: {}", ep),
+            FenBuildError::EPSquareInvalid{ref ep} => writeln!(f, "invalid En-passant square: {}", ep),
+            FenBuildError::SquareSmallerRank{rank, ref square} => writeln!(f, "square number too small for rank, rank: {} square: {},", rank, square),
+            FenBuildError::SquareLargerRank{rank, ref square} => writeln!(f, "square number too large for rank, rank: {} square: {},", rank, square),
+            FenBuildError::UnrecognizedPiece{piece} => writeln!(f, "unrecognized piece: {}", piece),
+            FenBuildError::UnreadableMoves(ref err) =>  writeln!(f, "An unknown error has occurred {:?}", err),
+            FenBuildError::IllegalNumCheckingPieces{num} => writeln!(f, "too many checking piece: {}", num),
+            FenBuildError::IllegalCheckState{piece_1, piece_2} => writeln!(f, "these two pieces cannot check the king at the same time: {}, {}",piece_1, piece_2),
+            FenBuildError::TooManyPawns{player, num} => writeln!(f, "Too many pawns for player: player: {}, # pawns {}",player, num),
+            FenBuildError::PawnOnLastRow => writeln!(f,  "Pawn on first or last row"),
+        }
+    }
+}
+
 
 /// Represents a Chessboard through a `Board`.
 ///
@@ -214,6 +218,7 @@ impl Board {
         // Create the Zobrist hash & set the Piece Locations structure
         b.set_zob_hash();
         b.set_piece_states();
+        b.set_material_key();
         b
     }
 
@@ -344,8 +349,8 @@ impl Board {
         // Loop each piece and player and count all the pieces per player
         for player in &ALL_PLAYERS {
             for piece in &ALL_PIECE_TYPES {
-                self.piece_counts[*player as usize][*piece as usize] =
-                    self.piece_bb(*player, *piece).count_bits();
+                let count = self.piece_bb(*player, *piece).count_bits();
+                self.piece_counts[*player as usize][*piece as usize] = count;
             }
         }
 
@@ -383,6 +388,20 @@ impl Board {
         }
     }
 
+    /// Sets the material key for the board. CAN ONLY BE DONE ONCE THE BITBOARDS ARE SET.
+    fn set_material_key(&mut self) {
+        let mut material_key: u64 = 0;
+        for player in &ALL_PLAYERS {
+            for piece in &ALL_PIECE_TYPES {
+                let count = self.piece_bb(*player, *piece).count_bits();
+                for n in 0..count {
+                    material_key ^= self.magic_helper.z_piece_at_sq(*piece, SQ(n), *player);
+                }
+            }
+        }
+        let state =  Arc::get_mut(&mut self.state).unwrap();
+        state.material_key ^= material_key;
+    }
 
     /// Helper method for setting the BitBoards from a fully created PieceLocations.
     ///
@@ -517,6 +536,7 @@ impl Board {
             ep_square: ep_sq,
             zobrast: 0,
             pawn_key: 0,
+            material_key: 0,
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -548,6 +568,7 @@ impl Board {
         }
         b.state = board_s.shareable();
         b.set_zob_hash();
+        b.set_material_key();
 
         fen::is_valid_fen(b)
     }
@@ -671,6 +692,7 @@ impl Board {
         // Zobrist Hash
         let mut pawn_key: u64 = self.state.pawn_key;
         let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
+        let mut material_key: u64 = self.state.material_key;
 
 
         // New Arc for the board to have by making a partial clone of the current state
@@ -720,14 +742,13 @@ impl Board {
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
 
-                zob ^= self.magic_helper.z_piece_at_sq(PieceType::R, r_src) ^
-                    self.magic_helper.z_piece_at_sq(PieceType::R, r_dst);
+                zob ^= self.magic_helper.z_piece_at_sq(PieceType::R, r_src, us) ^
+                    self.magic_helper.z_piece_at_sq(PieceType::R, r_dst, us);
                 new_state.captured_piece = None;
                 new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
                 let mut cap_sq: SQ = to;
                 if cap_p == PieceType::P {
-                    pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq);
                     if bit_move.is_en_passant() {
                         assert_eq!(cap_sq, self.state.ep_square);
                         match us {
@@ -743,19 +764,21 @@ impl Board {
                     } else {
                         self.remove_piece_c(cap_p, cap_sq, them);
                     }
+                    pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
                 } else {
                     self.remove_piece_c(cap_p, cap_sq, them);
                 }
-                zob ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq);
-
+                zob ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
+                let cap_count = self.count_piece(them, cap_p);
+                material_key ^= self.magic_helper.z_piece_at_sq(cap_p, SQ(cap_count), them);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = Some(cap_p);
             }
 
             // Update hash for moving piece
-            zob ^= self.magic_helper.z_piece_at_sq(piece, to) ^
-                self.magic_helper.z_piece_at_sq(piece, from);
+            zob ^= self.magic_helper.z_piece_at_sq(piece, to, us) ^
+                self.magic_helper.z_piece_at_sq(piece, from, us);
 
             if self.state.ep_square != NO_SQ {
                 zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
@@ -784,17 +807,23 @@ impl Board {
 
                     self.remove_piece_c(piece, to, us);
                     self.put_piece_c(promo_piece, to, us);
-                    zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to) ^
-                        self.magic_helper.z_piece_at_sq(PieceType::P, from);
-                    pawn_key ^= self.magic_helper.z_piece_at_sq(piece, to);
+                    zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to, us) ^
+                        self.magic_helper.z_piece_at_sq(PieceType::P, from, us);
+                    pawn_key ^= self.magic_helper.z_piece_at_sq(piece, to, us);
+
+                    let promo_count = self.count_piece(us, promo_piece);
+                    let pawn_count = self.count_piece(us, PieceType::P);
+                    material_key ^= self.magic_helper.z_piece_at_sq(promo_piece, SQ(promo_count - 1), us)
+                        ^ self.magic_helper.z_piece_at_sq(PieceType::P, SQ(pawn_count), us);
                 }
-                pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from) ^ self.magic_helper.z_piece_at_sq(piece, to);
+                pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from, us) ^ self.magic_helper.z_piece_at_sq(piece, to, us);
                 new_state.rule_50 = 0;
             }
 
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
+            new_state.material_key = material_key;
 
             new_state.checkers_bb = if gives_check {
                 self.attackers_to(self.king_sq(them), self.get_occupied()) &
@@ -1302,10 +1331,9 @@ impl Board {
         let mut zob: u64 = 0;
         let mut pawn_key: u64 = 0;
         let mut b: BitBoard = self.get_occupied();
-        while b.is_not_empty() {
-            let sq: SQ = b.pop_lsb();
-            let piece = self.piece_at_sq(sq).unwrap();
-            let key = self.magic_helper.z_piece_at_sq(piece, sq);
+        while let Some(sq) = b.pop_some_lsb() {
+            let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
+            let key = self.magic_helper.z_piece_at_sq(piece, sq, player);
             zob ^= key;
             if piece == PieceType::P {
                 pawn_key ^= key;
@@ -1322,6 +1350,7 @@ impl Board {
             Player::White => {}
         };
         let state =  Arc::get_mut(&mut self.state).unwrap();
+
 
         state.zobrast = zob;
         state.pawn_key = pawn_key;
@@ -2009,10 +2038,16 @@ impl Board {
 // TODO: Error Propagation
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
-#[derive(Fail, Debug)]
 pub enum BoardError {
-    #[fail(display = "incorrect number of kings for {}: {}", player, num)]
     IncorrectKingNum {player: Player, num: u8},
+}
+
+impl fmt::Debug for BoardError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            BoardError::IncorrectKingNum{player, num} => writeln!(f, "incorrect number of kings for {}: {}", player, num),
+        }
+    }
 }
 
 impl Board {

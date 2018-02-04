@@ -347,9 +347,17 @@ pub enum Rank { // eg a specific row
 
 /// Types of Castling available to a player.
 #[derive(Copy, Clone, PartialEq, Debug)]
+#[repr(u8)]
 pub enum CastleType {
     KingSide = 0,
     QueenSide = 1,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[repr(u8)]
+pub enum Phase {
+    MG = 0,
+    EG = 1
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the

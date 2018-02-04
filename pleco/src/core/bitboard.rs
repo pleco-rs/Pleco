@@ -143,6 +143,7 @@ impl BitBoard {
     }
 
     /// Returns the most significant bit
+    #[inline(always)]
     pub fn msb(self) -> BitBoard {
         BitBoard(msb(self.0))
     }

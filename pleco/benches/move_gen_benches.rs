@@ -141,7 +141,7 @@ fn bench_movegen_in_check_legal_evasions(b: &mut Bencher) {
 }
 
 #[bench]
-fn  bench_movegen_in_check_pslegal_evasions(b: &mut Bencher) {
+fn bench_movegen_in_check_pslegal_evasions(b: &mut Bencher) {
     b.iter(|| {
         for board in RAND_BOARDS_CHECKS.iter() {
             black_box(board.generate_pseudolegal_moves());

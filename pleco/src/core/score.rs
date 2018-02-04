@@ -92,3 +92,11 @@ impl SubAssign for Score {
         *self = Score(other.0 - self.0, other.1 - self.1);
     }
 }
+
+impl Neg for Score {
+    type Output = Score;
+
+    fn neg(self) -> Score {
+        Score(-self.0, -self.1)
+    }
+}

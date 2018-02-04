@@ -248,6 +248,12 @@ impl SQ {
     pub fn square_color_index(self) -> usize {
         ((self.0 + 1) % 2) as usize
     }
+
+    /// Flips the square, so `SQ::A1` -> `SQ::A8`.
+    #[inline(always)]
+    pub fn flip(self) -> SQ {
+        SQ(self.0 ^ 0b111000)
+    }
 }
 
 // constants
