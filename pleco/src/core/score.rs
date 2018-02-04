@@ -35,6 +35,9 @@ pub const BISHOP_EG: Value = 891;
 pub const ROOK_EG: Value = 1373;
 pub const QUEEN_EG: Value = 2646;
 
+pub const MID_GAME_LIMIT: Value = 15258;
+pub const END_GAME_LIMIT: Value = 3915;
+
 
 /// Struct to define the value of a mid-game / end-game evaluation.
 #[derive(Copy, Clone)]

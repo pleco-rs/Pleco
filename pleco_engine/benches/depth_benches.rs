@@ -5,7 +5,7 @@ extern crate pleco_engine;
 
 use pleco::Board;
 
-use pleco_engine::searcher::PlecoSearcher;
+use pleco_engine::engine::PlecoSearcher;
 use pleco_engine::time::uci_timer::PreLimits;
 
 

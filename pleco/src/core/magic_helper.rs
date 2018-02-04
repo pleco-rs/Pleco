@@ -103,7 +103,7 @@ const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
 
 pub struct PSQT {
     psq: [[[Score; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT],  // [player][piece][sq]
-    piece_val: [[[Value; PHASE_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT], // [player][piece][eg value?]
+    piece_val: [[Value; PHASE_CNT]; PIECE_TYPE_CNT], // [piece][eg value?]
 }
 
 impl PSQT {
@@ -111,23 +111,17 @@ impl PSQT {
         let mut psq: [[[Score; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT]
             = [[[Score::new(0,0); SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT];
 
-        let piece_val: [[[Value; PHASE_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT]
-            = [[[ PAWN_MG,    PAWN_EG],  // White Pawn
+        let piece_val: [[Value; PHASE_CNT]; PIECE_TYPE_CNT]
+            = [[ PAWN_MG,    PAWN_EG],  // White Pawn
                 [ KNIGHT_MG,  KNIGHT_EG],// White Knight
                 [ BISHOP_MG,  BISHOP_EG],// White Bishop
                 [ ROOK_MG,    ROOK_EG],  // White Rook
                 [ QUEEN_MG,   QUEEN_MG], // White Queen
-                [ NONE,       NONE]],    // White King
-               [[-PAWN_MG,   -PAWN_EG],  // Black Pawn
-                [-KNIGHT_MG, -KNIGHT_EG],// Black Knight
-                [-BISHOP_MG, -BISHOP_EG],// Black Bishop
-                [-ROOK_MG,   -ROOK_EG],  // Black Rook
-                [-QUEEN_MG,  -QUEEN_MG], // Black Queen
-                [-NONE,      -NONE]]     // Black King
-        ];
+                [ NONE,       NONE]];    // White King
+
 
         for piece in 0..PIECE_TYPE_CNT {
-            let v: Score = Score(piece_val[0][piece][0], piece_val[0][piece][1]);
+            let v: Score = Score(piece_val[piece][0], piece_val[piece][1]);
             for s in 0..SQ_CNT {
                 let sq: SQ = SQ(s as u8);
                 let f: File = sq.file().min(!sq.file());
@@ -295,9 +289,9 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 
     /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
     /// it'll return the midgame value.
-    pub fn piece_value(&self, piece: PieceType, player: Player, eg: bool) -> Value {
+    pub fn piece_value(&self, piece: PieceType, eg: bool) -> Value {
         unsafe {
-            (*(*(self.psqt.piece_val.get_unchecked(player as usize)).get_unchecked(piece as usize)).get_unchecked(eg as usize))
+            (*(self.psqt.piece_val.get_unchecked(piece as usize)).get_unchecked(eg as usize))
         }
     }
 

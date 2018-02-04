@@ -9,6 +9,7 @@ extern crate lazy_static;
 
 use pleco::{Board,Player};
 use pleco_engine::tables::pawn_table::{PawnEntry, PawnTable};
+use pleco_engine::tables::material::{Material, MaterialEntry};
 use pleco::core::mono_traits::WhiteType;
 use test::{black_box, Bencher};
 
@@ -45,6 +46,20 @@ fn bench_100_pawn_king_evals(b: &mut Bencher) {
             let entry: &mut PawnEntry = black_box(t.probe(board));
             score += black_box(entry.pawns_score()).0 as i64;
             score +=  black_box(entry.king_safety::<WhiteType>(&board, board.king_sq(Player::White))).0 as i64;
+        }
+    })
+}
+
+#[bench]
+fn bench_100_material(b: &mut Bencher) {
+    let mut t: Material = black_box(Material::new(1 << 11));
+    b.iter(|| {
+        t.clear();
+        #[allow(unused_variables)]
+        let mut score: i64 = 0;
+        for board in RAND_BOARDS.iter() {
+            let entry: &mut MaterialEntry = black_box(t.probe(board));
+            score += black_box(entry.value) as i64;
         }
     })
 }

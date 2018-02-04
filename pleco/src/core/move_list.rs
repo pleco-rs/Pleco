@@ -85,6 +85,7 @@ impl MoveList {
     }
 }
 
+
 impl Deref for MoveList {
     type Target = [BitMove];
 

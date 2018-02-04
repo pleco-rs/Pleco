@@ -34,6 +34,7 @@ use core::masks::*;
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
+use core::score::*;
 
 use tools::prng::PRNG;
 use bot_prelude::{IterativeSearcher,JamboreeSearcher};
@@ -391,16 +392,22 @@ impl Board {
     /// Sets the material key for the board. CAN ONLY BE DONE ONCE THE BITBOARDS ARE SET.
     fn set_material_key(&mut self) {
         let mut material_key: u64 = 0;
+        let mut nonpawn_material: [Value; PLAYER_CNT] = [0; PLAYER_CNT];
         for player in &ALL_PLAYERS {
             for piece in &ALL_PIECE_TYPES {
                 let count = self.piece_bb(*player, *piece).count_bits();
                 for n in 0..count {
                     material_key ^= self.magic_helper.z_piece_at_sq(*piece, SQ(n), *player);
                 }
+                if *piece != PieceType::P && *piece != PieceType::K {
+                    nonpawn_material[*player as usize] +=
+                        count as i16 * self.magic_helper.piece_value(*piece, false);
+                }
             }
         }
         let state =  Arc::get_mut(&mut self.state).unwrap();
-        state.material_key ^= material_key;
+        state.material_key = material_key;
+        state.nonpawn_material = nonpawn_material;
     }
 
     /// Helper method for setting the BitBoards from a fully created PieceLocations.
@@ -537,6 +544,7 @@ impl Board {
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
+            nonpawn_material: [0; PLAYER_CNT],
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -766,6 +774,7 @@ impl Board {
                     }
                     pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
                 } else {
+                    new_state.nonpawn_material[them as usize] -= self.magic_helper.piece_value(cap_p, false);
                     self.remove_piece_c(cap_p, cap_sq, them);
                 }
                 zob ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
@@ -815,6 +824,7 @@ impl Board {
                     let pawn_count = self.count_piece(us, PieceType::P);
                     material_key ^= self.magic_helper.z_piece_at_sq(promo_piece, SQ(promo_count - 1), us)
                         ^ self.magic_helper.z_piece_at_sq(PieceType::P, SQ(pawn_count), us);
+                    new_state.nonpawn_material[us as usize] += self.magic_helper.piece_value(promo_piece, false);
                 }
                 pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from, us) ^ self.magic_helper.z_piece_at_sq(piece, to, us);
                 new_state.rule_50 = 0;
@@ -1731,6 +1741,18 @@ impl Board {
     #[inline(always)]
     pub fn piece_last_captured(&self) -> Option<PieceType> {
         self.state.captured_piece
+    }
+
+    /// Returns the material key of the board.
+    #[inline(always)]
+    pub fn material_key(&self) -> u64 {
+        self.state.material_key
+    }
+
+    /// Returns the current non-pawn material value of a player.
+    #[inline(always)]
+    pub fn non_pawn_material(&self, player: Player) -> Value {
+        self.state.nonpawn_material[player as usize]
     }
 
     //  ------- CHECKING  -------

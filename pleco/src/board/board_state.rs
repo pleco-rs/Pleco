@@ -17,6 +17,7 @@ use core::piece_move::BitMove;
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::masks::*;
+use core::score::Value;
 
 //use std::sync::Arc;
 use tools::pleco_arc::Arc;
@@ -45,6 +46,7 @@ pub struct BoardState {
     pub zobrast: u64,
     pub pawn_key: u64,
     pub material_key: u64,
+    pub nonpawn_material: [Value; PLAYER_CNT],
     pub captured_piece: Option<PieceType>,
     pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
     pub blockers_king: [BitBoard; PLAYER_CNT],
@@ -88,6 +90,7 @@ impl BoardState {
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
+            nonpawn_material: [0; PLAYER_CNT],
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -108,6 +111,7 @@ impl BoardState {
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
+            nonpawn_material: [0; PLAYER_CNT],
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -131,6 +135,7 @@ impl BoardState {
             zobrast: self.zobrast,
             pawn_key: self.pawn_key,
             material_key: self.material_key,
+            nonpawn_material: self.nonpawn_material.clone(),
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],

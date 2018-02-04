@@ -4,7 +4,7 @@ extern crate test;
 extern crate pleco_engine;
 
 
-use pleco_engine::searcher::PlecoSearcher;
+use pleco_engine::engine::PlecoSearcher;
 
 
 use test::{black_box, Bencher};

@@ -1,15 +1,11 @@
 //! The main searching structure.
 
-pub mod threads;
-pub mod search;
-mod eval;
+use std::io;
 
 use pleco::Board;
 use pleco::BitMove;
 
-use std::io;
-
-use self::threads::ThreadPool;
+use threadpool::ThreadPool;
 use time::uci_timer::{PreLimits};
 use uci::options::{OptionsMap,OptionWork};
 use uci::parse;
@@ -103,7 +99,7 @@ impl PlecoSearcher {
         let limit = parse::parse_time(&args);
 
         let poss_board = self.board.as_ref()
-            .map(|b| b.shallow_clone());
+                             .map(|b| b.shallow_clone());
         if let Some(board) = poss_board {
             self.search(&board, &limit);
         } else {
@@ -136,9 +132,9 @@ impl PlecoSearcher {
         'nv: while let Some(ref partial_name) = args.next(){
             if *partial_name == "value" {
                 value = args.map(|s| s.to_string() + " ")
-                                            .collect::<String>()
-                                            .trim()
-                                            .to_string();
+                            .collect::<String>()
+                            .trim()
+                            .to_string();
                 if &value == "" {
                     println!("forgot a value!");
                     return;
