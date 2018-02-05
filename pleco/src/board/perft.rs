@@ -32,7 +32,7 @@ impl Default for PerftNodes {
 /// Returns the number of leaf nodes from generating moves to a certain depth.
 pub fn perft(board: &Board, depth: u16) -> u64 {
     if depth == 0 {
-        return 1;
+        1
     } else {
         let mut pos = board.shallow_clone();
         inner_perft(&mut pos, depth)

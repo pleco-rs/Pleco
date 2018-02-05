@@ -39,44 +39,43 @@ pub struct BoardState {
     pub castling: Castling,
     /// Rule 50 for the current board. Tracks the moves since a capture, pawn move, or castle.
     pub rule_50: i16,
+    /// Returns how many plies deep the current Board is. In simpler terms, how many moves have been played since
+    /// the `Board` was created.
     pub ply: u16,
+    /// If the last move was a double pawn push, this will be equal to the square behind.
+    /// the push. So, `ep_square = abs(sq_to - sq_from) / 2`. If the last move was not
+    /// a double pawn push, then `ep_square = NO_SQ`.
     pub ep_square: SQ,
 
     // These fields MUST be Recomputed after a move
+
+    /// The Zobrist key of the board.
     pub zobrast: u64,
+    /// The Hash key of the current pawn configuration.
     pub pawn_key: u64,
+    /// The Hash key of the current material configuration.
     pub material_key: u64,
+    /// The value of each player's non-pawn pieces.
     pub nonpawn_material: [Value; PLAYER_CNT],
+    /// The last captured Piece, if any.
     pub captured_piece: Option<PieceType>,
-    pub checkers_bb: BitBoard, // What squares is the current player receiving check from?
+    /// A `BitBoard` of the current pieces giving check.
+    pub checkers_bb: BitBoard,
+    /// Per each player, `BitBoard` of pieces blocking an attack on a that player's king.
+    /// This field can contain opponents pieces. E.g. a Black Pawn can block an attack of a white king
+    /// if there is a queen (or some other sliding piece) on the same line.
     pub blockers_king: [BitBoard; PLAYER_CNT],
+    /// Per each player, `BitBoard` of pieces currently pinning the opponent's king.
+    //  e.g:, a Black Queen pinning a piece (of either side) to White's King
     pub pinners_king: [BitBoard; PLAYER_CNT],
+    /// Array of BitBoards where for Each Piece, gives a spot the piece can move to where
+    /// the opposing player's king would be in check.
     pub check_sqs: [BitBoard; PIECE_TYPE_CNT],
-
+    /// returns the previous move, if any, that was played. Returns `BitMove::NULL` if there was no
+    /// previous move played.
     pub prev_move: BitMove,
-
-    // Previous State of the board ( one move ago)
+    /// Previous State of the board (from one move ago).
     pub prev: Option<Arc<BoardState>>,
-
-    //  castling      ->  Castling Bit Structure, keeping track of if either player can castle.
-    //                    as well as if they have castled.
-    //  rule50        ->  Moves since last capture, pawn move or castle. Used for Draws.
-    //  ply           ->  How many moves deep this current thread is.
-    //                    ** NOTE: CURRENTLY UNUSED **
-    //  ep_square     ->  If the last move was a double pawn push, this will be equal to the square behind.
-    //                    the push. ep_square =  abs(sq_to - sq_from) / 2
-    //                    If last move was not a double push, this will equal NO_SQ (which is 64).
-    //  zobrast       ->  Zobrist Key of the current board.
-    //  capture_piece ->  The Piece (if any) that was last captured
-    //  checkers_bb   ->  Bitboard of all pieces who currently check the king
-
-    //  blockers_king ->  Per each player, bitboard of pieces blocking an attack on a that player's king.
-    //                    NOTE: Can contain opponents pieces. E.g. a Black Pawn can block an attack of a white king
-    //                    if there is a queen (or some other sliding piece) on the same line.
-    //  pinners_king  ->  Per each player, bitboard of pieces currently pinning the opponent's king.
-    //                    e.g:, a Black Queen pinning a piece (of either side) to White's King
-    //  check_sqs     ->  Array of BitBoards where for Each Piece, gives a spot the piece can move to where
-    //                    the opposing player's king would be in check.
 }
 
 impl BoardState {
@@ -135,7 +134,7 @@ impl BoardState {
             zobrast: self.zobrast,
             pawn_key: self.pawn_key,
             material_key: self.material_key,
-            nonpawn_material: self.nonpawn_material.clone(),
+            nonpawn_material: self.nonpawn_material,
             captured_piece: None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
@@ -171,9 +170,6 @@ impl BoardState {
         }
         println!();
     }
-
-//    #[doc(hidden)]
-//    pub fn
 }
 
 impl PartialEq for BoardState {

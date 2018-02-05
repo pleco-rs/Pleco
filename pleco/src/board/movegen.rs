@@ -151,7 +151,7 @@ impl<'a> MoveGen<'a> {
 
     /// Directly generates the moves.
     fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board) -> MoveList {
-        let mut movegen = MoveGen::get_self(&chessboard);
+        let mut movegen = MoveGen::get_self(chessboard);
         let gen_type = G::gen_type();
         if gen_type == GenTypes::Evasions {
             movegen.generate_evasions::<L,P>();

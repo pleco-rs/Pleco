@@ -2,7 +2,7 @@
 use std::time::Instant;
 
 // Structure to keep track of time for two players.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Timer {
     start: Instant,   // when the current timer was created
     milli_seconds_remaining: [i64; 2],

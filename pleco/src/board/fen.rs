@@ -105,11 +105,10 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
         let piece_2 = board.piece_at_sq(sq_2).unwrap();
         if piece_1 == PieceType::P {
             if piece_2 == PieceType::B || piece_2 == PieceType::N || piece_2 == PieceType::P {
-                return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
+                return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
             }
-        } else if piece_1 == PieceType::B && (piece_2 == PieceType::P || piece_2 == PieceType::B) {
-            return Err(FenBuildError::IllegalCheckState {piece_1, piece_2});
-        } else if piece_1 == PieceType::N && (piece_2 == PieceType::P || piece_2 == PieceType::N) {
+        } else if piece_1 == PieceType::B && (piece_2 == PieceType::P || piece_2 == PieceType::B)
+            || piece_1 == PieceType::N && (piece_2 == PieceType::P || piece_2 == PieceType::N) {
             return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
         }
     }

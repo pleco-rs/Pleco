@@ -301,7 +301,7 @@ impl Board {
             occ_all: self.occ_all,
             half_moves: self.half_moves,
             depth: self.depth,
-            piece_counts: self.piece_counts.clone(),
+            piece_counts: self.piece_counts,
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
             magic_helper: &MAGIC_HELPER,
