@@ -137,7 +137,6 @@ impl Searcher {
             // check for time
             if let Some(_) = self.limit.use_time_management() {
                 if !self.stop() {
-//                    let prev_best = self.thread.root_moves.first().prev_score;
                     let ideal = TIMER.ideal_time();
                     let elapsed = TIMER.elapsed();
                     let stability: f64 = f64::powi(0.92, best_move_stability as i32);
@@ -283,7 +282,6 @@ impl Searcher {
                         if is_pv && value < beta {
                             alpha = value;
                         } else {
-//                            assert!(value >= beta);
                             break;
                         }
                     }
@@ -341,6 +339,13 @@ impl Searcher {
 
 }
 
+
+impl Drop for Searcher {
+    fn drop(&mut self) {
+        self.root_moves.set_finished(true);
+    }
+}
+
 fn mvv_lva_sort(moves: &mut MoveList, board: &Board) {
     moves.sort_by_key(|a| {
         let piece = board.piece_at_sq((*a).get_src()).unwrap();
@@ -376,6 +381,7 @@ fn correct_bound(tt_value: i32, val: i32, bound: NodeBound) -> bool {
         bound as u8 & NodeBound::UpperBound as u8 != 0
     }
 }
+
 
 
 fn futility_margin(depth: u16) -> i32 {

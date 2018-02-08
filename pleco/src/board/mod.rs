@@ -52,7 +52,7 @@ lazy_static! {
     /// See [`MagicHelper`] for more information.
     ///
     /// [`MagicHelper`]: ../core/magic_helper/struct.MagicHelper.html
-    pub static ref MAGIC_HELPER: MagicHelper<'static,'static> = MagicHelper::new();
+    pub static ref MAGIC_HELPER: MagicHelper = MagicHelper::new();
 }
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
@@ -161,7 +161,7 @@ pub struct Board {
 
     /// Reference to the pre-computed lookup tables.
     #[doc(hidden)]
-    pub magic_helper: &'static MagicHelper<'static, 'static>,
+    pub magic_helper: &'static MagicHelper,
 }
 
 impl fmt::Display for Board {

@@ -6,13 +6,14 @@
 
 #![cfg_attr(feature="clippy", allow(invalid_ref))]
 #![cfg_attr(feature="clippy", allow(needless_range_loop))]
+use std::mem;
+use std::ptr;
 
 use super::bit_twiddles::*;
 use super::masks::*;
 use super::sq::SQ;
 use super::bitboard::BitBoard;
 use tools::prng::PRNG;
-use std::{mem, slice};
 use super::*;
 use super::score::*;
 
@@ -34,7 +35,10 @@ const SEEDS: [[u64; 8]; 2] = [
 /// Seed for the Zobrist's pseudo-random number generator.
 const ZOBRIST_SEED: u64 = 23_081;
 
-
+static mut ROOK_MAGICS: [SMagic; 64] = [SMagic::init(); 64];
+static mut BISHOP_MAGICS: [SMagic; 64] = [SMagic::init(); 64];
+static mut ROOK_TABLE: [u64; ROOK_M_SIZE] = [0; ROOK_M_SIZE];
+static mut BISHOP_TABLE: [u64; BISHOP_M_SIZE] = [0; BISHOP_M_SIZE];
 
 const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
     [ // Pawn
@@ -214,11 +218,7 @@ impl Zobrist {
 ///      - Adjacent Files `BitBoard`.
 ///      - Pawn Attacks from a certain square
 ///      - Zobrist Structure for Zobrist Hashing
-pub struct MagicHelper<'a, 'b> {
-    /// Magic Bitboard structure for the rook.
-    magic_rook: MagicTable<'a>,
-    /// Magic Bitboard structure for the bishop.
-    magic_bishop: MagicTable<'b>,
+pub struct MagicHelper {
     /// Fast lookup Knight moves for each square.
     knight_table: [u64; 64],
     /// Fast lookup King moves for each square.
@@ -244,19 +244,19 @@ pub struct MagicHelper<'a, 'b> {
     pub psqt: PSQT,
 }
 
-unsafe impl<'a, 'b> Send for MagicHelper<'a, 'b> {}
+unsafe impl Send for MagicHelper {}
 
-unsafe impl<'a, 'b> Sync for MagicHelper<'a, 'b> {}
+unsafe impl Sync for MagicHelper {}
 
-impl<'a, 'b> Default for MagicHelper<'a, 'b> {
-    fn default() -> MagicHelper<'a, 'b> {
+impl Default for MagicHelper{
+    fn default() -> MagicHelper {
         MagicHelper::new()
     }
 }
 
-impl<'a, 'b> MagicHelper<'a, 'b> {
+impl MagicHelper {
     /// Create a new Magic Helper.
-    pub fn new() -> MagicHelper<'a, 'b> {
+    pub fn new() -> MagicHelper {
         MagicHelper::init()
             .gen_between_and_line_bbs()
             .gen_adjacent_file_bbs()
@@ -266,10 +266,17 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
             .gen_pawn_attacks_span()
     }
 
-    fn init() -> MagicHelper<'a, 'b> {
+    fn init() -> MagicHelper {
+        let magic_rook = unsafe { MagicTable::init(ROOK_M_SIZE,&R_DELTAS, ROOK_MAGICS.as_mut_ptr(), ROOK_TABLE.as_ptr()) };
+        let magic_bishop = unsafe{ MagicTable::init(BISHOP_M_SIZE,&B_DELTAS, BISHOP_MAGICS.as_mut_ptr(), BISHOP_TABLE.as_ptr())};
+        unsafe {
+            let r_magic_table = ROOK_TABLE.as_mut_ptr();
+            ptr::copy::<u64>(magic_rook.attacks.as_ptr(), r_magic_table, ROOK_M_SIZE);
+            let b_magic_table = BISHOP_TABLE.as_mut_ptr();
+            ptr::copy::<u64>(magic_bishop.attacks.as_ptr(), b_magic_table, BISHOP_M_SIZE);
+        }
+
         MagicHelper {
-            magic_rook: MagicTable::init(ROOK_M_SIZE,&R_DELTAS),
-            magic_bishop: MagicTable::init(BISHOP_M_SIZE,&B_DELTAS),
             knight_table: gen_knight_moves(),
             king_table: gen_king_moves(),
             dist_table: init_distance_table(),
@@ -324,22 +331,22 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-        BitBoard(self.magic_bishop.attacks(occupied.0, sq.0))
+        BitBoard(bishop_attacks(occupied.0, sq.0))
     }
 
     /// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-        BitBoard(self.magic_rook.attacks(occupied.0, sq.0))
+        BitBoard(rook_attacks(occupied.0, sq.0))
     }
 
     /// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         debug_assert!(sq.is_okay());
-        BitBoard(self.magic_rook.attacks(occupied.0, sq.0) |
-            self.magic_bishop.attacks(occupied.0, sq.0))
+        BitBoard(rook_attacks(occupied.0, sq.0) |
+            bishop_attacks(occupied.0, sq.0))
     }
 
     /// Get the distance of two squares.
@@ -511,13 +518,13 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
     #[inline(always)]
     fn bishop_moves_bb(&self, occupied: u64, square: u8) -> u64 {
         debug_assert!(square < 64);
-        self.magic_bishop.attacks(occupied, square)
+        bishop_attacks(occupied, square)
     }
 
     #[inline(always)]
     fn rook_moves_bb(&self, occupied: u64, square: u8) -> u64 {
         debug_assert!(square < 64);
-        self.magic_rook.attacks(occupied, square)
+        rook_attacks(occupied, square)
     }
 
 
@@ -625,16 +632,27 @@ impl<'a, 'b> MagicHelper<'a, 'b> {
 /// Structure inside a `MagicTable` for a specific hash. For a certain square,
 /// contains a mask,  magic number, number to shift by, and a pointer into the array slice
 /// where the position is held.
-#[warn(dead_code)]
-struct SMagic<'a> {
-    ptr: &'a [u64],
+#[derive(Copy, Clone)]
+struct SMagic {
+    ptr: usize,
     mask: u64,
     magic: u64,
     shift: u32,
 }
 
+impl SMagic {
+    pub const fn init() -> Self {
+        SMagic {
+            ptr: 0,
+            mask: 0,
+            magic: 0,
+            shift: 0,
+        }
+    }
+}
+
+
 /// Temporary struct used to create an actual `SMagic` Object.
-#[warn(dead_code)]
 struct PreSMagic {
     start: usize,
     len: usize,
@@ -668,16 +686,16 @@ impl PreSMagic {
 
 /// Contains the actual data of pre-computed tables for a given
 /// piece (either rook or bishop).
-struct MagicTable<'a> {
-    sq_magics: [SMagic<'a>; 64],
-    attacks: Vec<u64>
+struct MagicTable {
+    pub sq_magics: [SMagic; 64],
+    pub attacks: Vec<u64>
 }
 
-impl<'a> MagicTable<'a> {
+impl MagicTable {
     /// Simple version that creates the table with an empty array.
     /// used for testing purposes where MagicStruct is not needed.
-    pub fn simple() -> MagicTable<'a> {
-        let sq_table: [SMagic<'a>; 64] = unsafe { mem::uninitialized() };
+    pub fn simple() -> MagicTable {
+        let sq_table: [SMagic; 64] = unsafe { mem::uninitialized() };
         MagicTable {
             sq_magics: sq_table,
             attacks: Vec::new(),
@@ -686,7 +704,7 @@ impl<'a> MagicTable<'a> {
 
     /// Creates the `MagicTable` struct. The table size is relative to the piece for computation,
     /// and the deltas are the directions on the board the piece can go.
-    pub fn init(table_size: usize, deltas: &[i8; 4]) -> MagicTable<'a> {
+    pub fn init(table_size: usize, deltas: &[i8; 4], static_magics: *mut SMagic, static_table: *const u64) -> MagicTable {
         // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
         let mut pre_sq_table: [PreSMagic; 64] = unsafe { PreSMagic::init64() };
 
@@ -805,21 +823,28 @@ impl<'a> MagicTable<'a> {
         // UNSAFE as we are initializing raw memory, AND creating a Slice of our array from raw pointers. scary!
         unsafe {
             // Make Memory for our SMagics!
-            let mut sq_table: [SMagic<'a>; 64] = mem::uninitialized();
+            let mut sq_table: [SMagic; 64] = mem::uninitialized();
 
             // size = running total of total size
             let mut size = 0;
             for i in 0..64 {
                 // begin ptr points to the beginning of the current slice in the vector
                 let beginptr = attacks.as_ptr().offset(size as isize);
+                let staticbeginptr = static_table.offset(size as isize);
+
+                // points to the static entry
+                let staticptr: *mut SMagic = static_magics.offset(i as isize);
                 let mut table_i: SMagic = SMagic {
-                    ptr: mem::uninitialized(),
+                    ptr: mem::transmute::<*const u64, usize>(staticbeginptr),
                     mask: pre_sq_table[i].mask,
                     magic: pre_sq_table[i].magic,
                     shift: pre_sq_table[i].shift,
                 };
+
+                ptr::copy::<SMagic>(&table_i, staticptr, 1);
+
                 // Create the pointer to the slice with begin_ptr / length
-                table_i.ptr = slice::from_raw_parts(beginptr, pre_sq_table[i].len);
+                table_i.ptr = mem::transmute::<*const u64, usize>(beginptr);
                 size += pre_sq_table[i].len;
                 sq_table[i] = table_i;
             }
@@ -837,12 +862,30 @@ impl<'a> MagicTable<'a> {
     /// the returned u64 also contains bits where the piece can capture it's own pieces.
     #[inline(always)]
     pub fn attacks(&self, mut occupied: u64, square: u8) -> u64 {
-        let magic_entry = unsafe { self.sq_magics.get_unchecked(square as usize)};
+        let magic_entry: &SMagic = unsafe { self.sq_magics.get_unchecked(square as usize)};
         occupied &= magic_entry.mask;
         occupied = occupied.wrapping_mul(magic_entry.magic);
         occupied = occupied.wrapping_shr(magic_entry.shift);
-        unsafe { *magic_entry.ptr.get_unchecked(occupied as usize) }
+        unsafe { *(mem::transmute::<usize, *const u64>(magic_entry.ptr)).add(occupied as usize) }
     }
+}
+
+#[inline(always)]
+pub fn bishop_attacks(mut occupied: u64, square: u8) -> u64 {
+    let magic_entry: &SMagic = unsafe { BISHOP_MAGICS.get_unchecked(square as usize)};
+    occupied &= magic_entry.mask;
+    occupied = occupied.wrapping_mul(magic_entry.magic);
+    occupied = occupied.wrapping_shr(magic_entry.shift);
+    unsafe { *(mem::transmute::<usize, *const u64>(magic_entry.ptr)).add(occupied as usize) }
+}
+
+#[inline(always)]
+pub fn rook_attacks(mut occupied: u64, square: u8) -> u64 {
+    let magic_entry: &SMagic = unsafe { ROOK_MAGICS.get_unchecked(square as usize)};
+    occupied &= magic_entry.mask;
+    occupied = occupied.wrapping_mul(magic_entry.magic);
+    occupied = occupied.wrapping_shr(magic_entry.shift);
+    unsafe { *(mem::transmute::<usize, *const u64>(magic_entry.ptr)).add(occupied as usize) }
 }
 
 
@@ -1004,13 +1047,6 @@ mod tests {
         assert_eq!(popcount64(sliding_attack(&rook_deltas, 19, 0)), 14);
     }
 
-    #[test]
-    fn rmagics() {
-        let mstruct = MagicTable::init(ROOK_M_SIZE, &R_DELTAS);
-        assert_eq!(mem::size_of_val(&mstruct), 2584);
-        let bstruct = MagicTable::init(BISHOP_M_SIZE, &B_DELTAS);
-        assert_eq!(mem::size_of_val(&bstruct), 2584);
-    }
 
 
 }

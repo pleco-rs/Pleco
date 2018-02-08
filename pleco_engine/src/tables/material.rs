@@ -45,6 +45,15 @@ pub struct MaterialEntry {
     pub phase: u16
 }
 
+
+impl MaterialEntry {
+    pub fn score(&self) -> Score {
+        Score(self.value, self.value)
+    }
+}
+
+
+
 pub struct Material {
     table: TableBase<MaterialEntry>,
 }

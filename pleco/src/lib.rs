@@ -78,6 +78,7 @@
 #![feature(allocator_api)]
 #![feature(const_fn)]
 #![feature(const_indexing)]
+#![feature(pointer_methods)]
 
 
 #![allow(dead_code)]

@@ -120,7 +120,7 @@ const DEFAULT_MOVES_LENGTH: usize = 32;
 pub struct MoveGen<'a> {
     movelist: MoveList,
     board: &'a Board,
-    magic: &'static MagicHelper<'static, 'static>,
+    magic: &'static MagicHelper,
     occ: BitBoard, // Squares occupied by all
     us_occ: BitBoard, // squares occupied by player to move
     them_occ: BitBoard, // Squares occupied by the opposing player
