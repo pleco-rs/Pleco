@@ -2041,7 +2041,7 @@ impl Board {
 
 // TODO: Error Propagation
 
-/// Represents possible Errors encountered while building a `Board` from a fen string.
+/// Errors concerning the current `Board` position.
 pub enum BoardError {
     IncorrectKingNum {player: Player, num: u8},
 }

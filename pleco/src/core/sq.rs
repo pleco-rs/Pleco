@@ -98,7 +98,7 @@ impl SQ {
     /// assert!(!no_sq.is_okay());
     /// ```
     #[inline(always)]
-    pub fn is_okay(self) -> bool {
+    pub const fn is_okay(self) -> bool {
         self.0 < 64
     }
 
@@ -164,7 +164,7 @@ impl SQ {
 
     /// Returns the rank index (number) of a `SQ`.
     #[inline(always)]
-    pub fn rank_idx_of_sq(self) -> u8 {
+    pub const fn rank_idx_of_sq(self) -> u8 {
         (self.0 >> 3) as u8
     }
 
@@ -233,20 +233,20 @@ impl SQ {
     #[inline(always)]
     /// Returns if the `SQ` is a dark square.
     pub fn on_dark_square(self) -> bool {
-        self.0 % 2 == 0
+        (self.to_bb() & BitBoard::DARK_SQUARES).is_empty()
     }
 
     /// Returns if the `SQ` is a dark square.
     #[inline(always)]
     pub fn on_light_square(self) -> bool {
-        self.0 % 2 == 1
+        (self.to_bb() & BitBoard::DARK_SQUARES).is_not_empty()
     }
 
     // 0 = white squares, 1 = black square
     /// Returns the player index of the color of the square.
     #[inline(always)]
     pub fn square_color_index(self) -> usize {
-        ((self.0 + 1) % 2) as usize
+        self.on_dark_square() as usize
     }
 
     /// Flips the square, so `SQ::A1` -> `SQ::A8`.
