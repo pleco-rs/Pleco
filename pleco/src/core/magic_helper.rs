@@ -402,10 +402,6 @@ impl MagicHelper {
         unsafe {
             BitBoard (
                 *self.pawn_attacks_from.get_unchecked(player as usize).get_unchecked(sq.0 as usize)
-//                match player {
-//                    Player::White => self.pawn_attacks_from.get_unchecked(0).get_unchecked(sq.0 as usize),
-//                    Player::Black => self.pawn_attacks_from[1][sq.0 as usize],
-//                }
             )
         }
     }

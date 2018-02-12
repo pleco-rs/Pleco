@@ -106,7 +106,7 @@ pub mod board;
 pub mod tools;
 pub mod bots;
 pub mod bot_prelude;
-
+pub mod helper;
 #[doc(no_inline)]
 pub use board::Board;
 #[doc(no_inline)]

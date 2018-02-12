@@ -1,0 +1,171 @@
+mod magic;
+mod boards;
+mod zobrist;
+mod psqt;
+pub mod prelude;
+
+
+use {SQ,BitBoard,Player,PieceType,File,Rank};
+use core::score::{Score,Value};
+
+pub struct MagicHelper {}
+
+impl MagicHelper {
+    pub fn new() -> Self {
+        prelude::init_statics();
+        MagicHelper {}
+    }
+
+    #[inline(always)]
+    pub fn bishop_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
+        prelude::bishop_moves(occupied,sq)
+    }
+
+    #[inline(always)]
+    pub fn rook_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
+        prelude::rook_moves(occupied,sq)
+    }
+
+    #[inline(always)]
+    pub fn queen_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
+        prelude::queen_moves(occupied,sq)
+    }
+
+    #[inline(always)]
+    pub fn knight_moves(&self, sq: SQ) -> BitBoard {
+        prelude::knight_moves(sq)
+    }
+
+    #[inline(always)]
+    pub fn king_moves(&self, sq: SQ) -> BitBoard {
+        prelude::king_moves(sq)
+    }
+
+    /// Get the distance of two squares.
+    #[inline(always)]
+    pub fn distance_of_sqs(&self, sq_one: SQ, sq_two: SQ) -> u8 {
+        prelude::distance_of_sqs(sq_one, sq_two)
+    }
+
+    /// Get the line (diagonal / file / rank) `BitBoard` that two squares both exist on, if it exists.
+    #[inline(always)]
+    pub fn line_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
+        prelude::line_bb(sq_one, sq_two)
+    }
+
+    /// Get the line (diagonal / file / rank) `BitBoard` between two squares, not including the squares, if it exists.
+    #[inline(always)]
+    pub fn between_bb(&self, sq_one: SQ, sq_two: SQ) -> BitBoard {
+        prelude::between_bb(sq_one, sq_two)
+    }
+
+    /// Gets the adjacent files `BitBoard` of the square
+    #[inline(always)]
+    pub fn adjacent_sq_file(&self, sq: SQ) -> BitBoard {
+        prelude::adjacent_sq_file(sq)
+    }
+
+    /// Gets the adjacent files `BitBoard` of the file
+    #[inline(always)]
+    pub fn adjacent_file(&self, f: File) -> BitBoard {
+        prelude::adjacent_file(f)
+    }
+
+    /// Pawn attacks `BitBoard` from a given square, per player.
+    /// Basically, given square x, returns the BitBoard of squares a pawn on x attacks.
+    #[inline(always)]
+    pub fn pawn_attacks_from(&self, sq: SQ, player: Player) -> BitBoard {
+        prelude::pawn_attacks_from(sq,player)
+    }
+
+    /// Returns if three Squares are in the same diagonal, file, or rank.
+    #[inline(always)]
+    pub fn aligned(&self, s1: SQ, s2: SQ, s3: SQ) -> bool {
+        prelude::aligned(s1,s2,s3)
+    }
+
+    /// Returns the ring of bits surrounding the square sq at a specified distance.
+    ///
+    /// # Safety
+    ///
+    /// distance must be less than 8, or else a panic will occur.
+    #[inline(always)]
+    pub fn ring_distance(&self, sq: SQ, distance: u8) -> BitBoard {
+        prelude::ring_distance(sq,distance)
+    }
+
+    /// Returns the BitBoard of all squares in the rank in front of the given one.
+    #[inline(always)]
+    pub fn forward_rank_bb(&self, player: Player, rank: Rank) -> BitBoard {
+        prelude::forward_rank_bb(player,rank)
+    }
+
+    /// Returns the `BitBoard` of all squares that can be attacked by a pawn
+    /// of the same color when it moves along its file, starting from the
+    /// given square. Basically, if the pawn progresses along the same file
+    /// for the entire game, this bitboard would contain all possible forward squares
+    /// it could attack
+    ///
+    /// # Safety
+    ///
+    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+    #[inline(always)]
+    pub fn pawn_attacks_span(&self, player: Player, sq: SQ) -> BitBoard {
+        prelude::pawn_attacks_span(player,sq)
+    }
+
+    /// Returns the BitBoard of all squares in the file in front of the given one.
+    ///
+    /// # Safety
+    ///
+    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+    #[inline(always)]
+    pub fn forward_file_bb(&self, player: Player, sq: SQ) -> BitBoard {
+        prelude::forward_file_bb(player,sq)
+    }
+
+    /// Returns a `BitBoard` allowing for testing of the a pawn being a
+    /// "passed pawn".
+    ///
+    /// # Safety
+    ///
+    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+    #[inline(always)]
+    pub fn passed_pawn_mask(&self, player: Player, sq: SQ) -> BitBoard {
+        prelude::passed_pawn_mask(player, sq)
+    }
+
+    #[inline(always)]
+    pub fn z_square(&self, sq: SQ, player: Player, piece: PieceType) -> u64 {
+        prelude::z_square(sq, player, piece)
+    }
+
+    #[inline(always)]
+    pub fn z_ep(&self, sq: SQ) -> u64 {
+        prelude::z_ep(sq)
+    }
+
+    #[inline(always)]
+    pub fn z_castle(&self, castle: u8) -> u64 {
+        prelude::z_castle(castle)
+    }
+
+    #[inline(always)]
+    pub fn z_side(&self) -> u64 {
+        prelude::z_side()
+    }
+
+    /// Returns the score for a player's piece being at a particular square.
+    #[inline(always)]
+    pub fn psq(&self, piece: PieceType, player: Player, sq: SQ) -> Score {
+        prelude::psq(piece, player, sq)
+    }
+
+    /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+    /// it'll return the midgame value.
+    #[inline(always)]
+    pub fn piece_value(&self, piece: PieceType, eg: bool) -> Value {
+        prelude::piece_value(piece, eg)
+    }
+}
+

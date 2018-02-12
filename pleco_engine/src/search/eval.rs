@@ -29,7 +29,6 @@ pub struct Evaluation<'a> {
 impl <'a> Evaluation <'a> {
     pub fn evaluate(board: &Board, pawn_table: &mut PawnTable, material: &mut Material) -> Value {
         #[allow(unused_variables)]
-        let mut score: Score = Score(0,0);
 
         let pawn_entry = { pawn_table.probe(&board) };
         let material_entry = { material.probe(&board) };
@@ -52,7 +51,7 @@ impl <'a> Evaluation <'a> {
     }
 
     fn value(&mut self) -> Value {
-        let mut score = self.pawn_entry.pawns_score() + self.material_entry.score();
+        let score = self.pawn_entry.pawns_score() + self.material_entry.score();
         let v = (score.0 + score.1) / 2;
         if v.abs() > LAZY_THRESHOLD {
             if self.board.turn() == Player::White {return v;}
