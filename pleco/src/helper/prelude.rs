@@ -3,11 +3,13 @@
 //! # Safety
 //!
 //! Using any of these methods is inherently unsafe, as it is not guaranteed that they'll be
-//! initiated correctly. Consider using the `Helper` structure to garuntee initalization
+//! initiated correctly. Consider using the [`Helper`] structure to guarantee initialization.
 //!
 //! # Documentation
 //!
-//! These functions are documented in `Helper`, rather than here.
+//! These functions are documented in [`Helper`] , rather than here.
+//!
+//! [`Helper`]: ../struct.Helper.html
 
 use super::psqt;
 use super::zobrist;
@@ -37,19 +39,6 @@ pub fn init_statics() {
         fence(Ordering::SeqCst);
         compiler_fence(Ordering::SeqCst);
     });
-
-//    if !INITIALIZED.load(Ordering::SeqCst) {
-//        compiler_fence(Ordering::SeqCst);
-//        fence(Ordering::SeqCst);
-//        zobrist::init_zobrist();
-//        psqt::init_psqt();
-//        magic::init_magics();
-//        compiler_fence(Ordering::SeqCst);
-//        boards::init_boards();
-//        INITIALIZED.store(true, Ordering::SeqCst);
-//        fence(Ordering::SeqCst);
-//        compiler_fence(Ordering::SeqCst);
-//    }
 }
 
 // MAGIC FUNCTIONS

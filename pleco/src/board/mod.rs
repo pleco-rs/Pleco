@@ -259,15 +259,15 @@ impl Board {
 
     /// Constructs a parallel clone of the Board.
     ///
-    /// Similar to [Board::shallow_clone()], but keeps the current search depth the same.
+    /// Similar to `Board::shallow_clone()`, but keeps the current search depth the same.
     /// Should be used when implementing a searcher, and want to search a list of moves
     /// in parallel with different threads.
     ///
     /// # Safety
     ///
-    /// After this method has called, [Board::undo_move()] cannot be called immediately after.
+    /// After this method has called, `Board::undo_move()` cannot be called immediately after.
     /// Undoing moves can only be done once a move has been played, and cannot be called more
-    /// times than moves have been played since calling [Board::parallel_clone()].
+    /// times than moves have been played since calling `Board::parallel_clone()`.
     ///
     /// # Examples
     ///
@@ -650,13 +650,13 @@ impl Board {
     ///
     /// # Safety
     ///
-    /// The passed in [BitMove] must be a legal move for the current position.
+    /// The passed in `BitMove` must be a legal move for the current position.
     ///
     /// # Panics
     ///
     /// The supplied BitMove must be both a valid move for that position, as well as a
-    /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
-    /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
+    /// valid `BitMove`, Otherwise, a panic will occur. Valid BitMoves can be generated with
+    /// `Board::generate_moves()`, which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
         let gives_check: bool = self.gives_check(bit_move);
         self.apply_unknown_move(bit_move, gives_check);
@@ -668,13 +668,13 @@ impl Board {
     ///
     /// # Safety
     ///
-    /// The passed in [BitMove] must be a legal move for the current position.
+    /// The passed in `BitMove` must be a legal move for the current position.
     ///
     /// # Panics
     ///
     /// The supplied BitMove must be both a valid move for that position, as well as a
-    /// valid [BitMove], Otherwise, a panic will occur. Valid BitMoves can be generated with
-    /// [Board::generate_moves()], which guarantees that only Legal moves will be created.
+    /// valid `BitMove`, Otherwise, a panic will occur. Valid BitMoves can be generated with
+    /// `Board::generate_moves()`, which guarantees that only Legal moves will be created.
     ///
     /// The second parameter, `gives_check`, must be true if the move gives check, or false
     /// if the move doesn't give check. If an incorrect `gives_check` is supplied, undefined

@@ -20,6 +20,9 @@ pub mod prelude;
 use {SQ,BitBoard,Player,PieceType,File,Rank};
 use core::score::{Score,Value};
 
+/// Helper structure for accessing statically-initialized tables and other constants.
+///
+/// Guarantees that the tables will be initialized upon access through a `Helper`.
 #[derive(Copy, Clone)]
 pub struct Helper {}
 

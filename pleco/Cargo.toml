@@ -77,7 +77,7 @@ prefetch = "0.2.0"
 
 [dependencies.lazy_static]
 version = "1.0.0"
-#features = ["nightly"]
+features = ["nightly"]
 
 [features]
 default = []
