@@ -69,7 +69,7 @@ impl UCILimit {
 
     /// Returns the Timer for the UCILimit, if there is one to be sent.
     pub fn timer(&self) -> Option<Timer> {
-        if let UCILimit::Time(timer) = *self {
+        if let UCILimit::Time(ref timer) = *self {
             Some(timer.clone())
         } else {
             None

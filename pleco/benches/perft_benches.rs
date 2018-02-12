@@ -21,6 +21,7 @@ lazy_static! {
 
 #[bench]
 fn perft_3(b: &mut Bencher) {
+    lazy_static::initialize(&RAND_BOARDS);
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
             black_box(perft(board, 3));
@@ -30,6 +31,7 @@ fn perft_3(b: &mut Bencher) {
 
 #[bench]
 fn perft_4(b: &mut Bencher) {
+    lazy_static::initialize(&RAND_BOARDS);
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
             black_box(perft(board, 4));

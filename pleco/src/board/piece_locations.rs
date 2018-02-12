@@ -255,9 +255,6 @@ impl PieceLocations {
     }
 }
 
-// TODO: Make iterator
-
-
 impl Clone for PieceLocations {
     // Need to use transmute copy as [_;64] does not automatically implement Clone.
     fn clone(&self) -> PieceLocations {

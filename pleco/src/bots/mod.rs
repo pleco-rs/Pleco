@@ -69,7 +69,7 @@ impl Searcher for IterativeSearcher {
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        iterative_parallel_mvv_lva::iterative_deepening(board, max_depth)
+        iterative_parallel_mvv_lva::iterative_deepening(&mut board.shallow_clone(), max_depth)
     }
 }
 

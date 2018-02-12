@@ -11,34 +11,8 @@ use core::mono_traits::*;
 use core::score::Value;
 
 lazy_static! {
-    pub static ref BISHOP_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(BISHOP_POS_ARRAY)), flatten(BISHOP_POS_ARRAY) ];
-    pub static ref KNIGHT_POS: [[i16; SQ_CNT]; PLAYER_CNT] = [ flatten(flip(KNIGHT_POS_ARRAY)), flatten(KNIGHT_POS_ARRAY) ];
     pub static ref PAWN_POS:   [[i16; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
 }
-
-
-
-const BISHOP_POS_ARRAY: [[i16; FILE_CNT]; RANK_CNT] = [
-    [-5, -5, -5, -5, -5, -5, -5, -5], // RANK_8
-    [-5, 10, 5, 8, 8, 5, 10, -5],
-    [-5, 5, 3, 8, 8, 3, 5, -5],
-    [-5, 3, 10, 3, 3, 10, 3, -5],
-    [-5, 3, 10, 3, 3, 10, 3, -5],
-    [-5, 5, 3, 8, 8, 3, 5, -5],
-    [-5, 10, 5, 8, 8, 5, 10, -5],
-    [-5, -5, -5, -5, -5, -5, -5, -5], // RANK_1
-];
-
-const KNIGHT_POS_ARRAY: [[i16; FILE_CNT]; RANK_CNT] = [
-    [-10, -5, -5, -5, -5, -5, -5, -10], // RANK_8
-    [-8, 0, 0, 3, 3, 0, 0, -8],
-    [-8, 0, 10, 8, 8, 10, 0, -8],
-    [-8, 0, 8, 10, 10, 8, 0, -8],
-    [-8, 0, 8, 10, 10, 8, 0, -8],
-    [-8, 0, 10, 8, 8, 10, 0, -8],
-    [-8, 0, 0, 3, 3, 0, 0, -8],
-    [-10, -5, -5, -5, -5, -5, -5, -10], // RANK_1
-];
 
 const PAWN_POS_ARRAY: [[i16; FILE_CNT]; RANK_CNT] = [
     [0, 0, 0, 0, 0, 0, 0, 0], // RANK_8
@@ -124,23 +98,23 @@ fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
     if board.rule_50() >= 50 {
         return MATE;
     }
-    let pre_value = eval_piece_counts::<P>(board) +
+    eval_piece_counts::<P>(board) +
     eval_castling::<P>(board) +
     eval_king_pos::<P>(board) +
     eval_bishop_pos::<P>(board) +
-    eval_knight_pos::<P>(board) +
     eval_king_blockers_pinners::<P>(board) +
-    eval_pawns::<P>(board);
-    pre_value
+    eval_pawns::<P>(board)
+
 }
 
 
 fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i16 {
     board.count_piece(P::player(), PieceType::P) as i16 * PAWN_VALUE +
-    board.count_piece(P::player(), PieceType::N) as i16 * KNIGHT_VALUE +
-    board.count_piece(P::player(), PieceType::B) as i16 * BISHOP_VALUE +
-    board.count_piece(P::player(), PieceType::R) as i16 * ROOK_VALUE +
-    board.count_piece(P::player(), PieceType::Q) as i16 * QUEEN_VALUE
+    if P::player() == Player::White {
+        board.non_pawn_material(Player::White)
+    } else {
+        -board.non_pawn_material(Player::Black)
+    }
 }
 
 fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
@@ -161,9 +135,6 @@ fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
 fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
     let us_ksq = board.king_sq(P::player());
-    if us_ksq.rank() == Rank::R1 || us_ksq.rank() == Rank::R8 {
-        score += KING_BOTTOM
-    }
 
     if board.in_check() && P::player() == board.turn() {
         score -= CHECK
@@ -177,28 +148,9 @@ fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
 
 fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
     let mut score: i16 = 0;
-    let mut us_b = board.piece_bb(P::player(), PieceType::B);
-    while us_b.is_not_empty() {
-        let lsb = us_b.lsb();
-        score += BISHOP_POS[P::player() as usize][lsb.to_sq().0 as usize];
-        us_b &= !lsb;
-    }
 
     if board.count_piece(P::player(), PieceType::B) > 1 {
         score += 19
-    }
-
-    score
-}
-
-
-fn eval_knight_pos<P: PlayerTrait>(board: &Board) -> i16 {
-    let mut score: i16 = 0;
-    let mut us_b = board.piece_bb(P::player(), PieceType::N);
-    while us_b.is_not_empty() {
-        let lsb = us_b.lsb();
-        score += KNIGHT_POS[P::player() as usize][lsb.to_sq().0 as usize];
-        us_b &= !lsb;
     }
 
     score

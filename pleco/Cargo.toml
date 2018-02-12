@@ -1,7 +1,7 @@
 [package]
 name = "pleco"
 # REMINDER TO CHANGE IN MAIN README
-version = "0.3.4"
+version = "0.3.5"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast chess library."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -68,7 +68,7 @@ doctest = true
 
 
 [dependencies]
-clippy = {version = "0.0.179", optional = true}
+clippy = {version = "0.0.186", optional = true}
 bitflags = "1.0.1"
 rand = "0.4.2"
 rayon = "0.9.0"

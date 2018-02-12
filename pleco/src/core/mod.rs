@@ -1,13 +1,11 @@
 //! Contains various components and structures supporting the creation of a chessboard. This
-//! includes `SQ`, `BitBoard`, `Player`, `Piece`, `GenTypes`, `Rank`, and `File`. Also holds
-//! the statically created `MagicHelper`, which at runtime creates various lookup tables.
+//! includes `SQ`, `BitBoard`, `Player`, `Piece`, `GenTypes`, `Rank`, and `File`.
 
 #[macro_use]
 mod macros;
 
 pub mod bit_twiddles;
 pub mod piece_move;
-pub mod magic_helper;
 pub mod masks;
 pub mod mono_traits;
 pub mod sq;

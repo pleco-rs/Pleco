@@ -20,7 +20,7 @@ const DIVISOR_SEQ: usize = 5;
 //                            0   1   2   3   4   5   6   7   8   9
 static PLYS_SEQ: [u16; 10] = [0, 1, 2, 2, 2, 2, 2, 3, 3, 3];
 
-pub fn iterative_deepening(board: Board, max_depth: u16) -> BitMove {
+pub fn iterative_deepening(board: &mut Board, max_depth: u16) -> BitMove {
     // for each level from 1 to max depth, search the node and return the best move and score
     // Once we have reached ply 2, keep the score (say x), c
     //       continue onto previous ply with alpha = x - 33 and beta = x + 33

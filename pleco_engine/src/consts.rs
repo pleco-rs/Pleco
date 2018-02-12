@@ -54,6 +54,21 @@ impl PVNode for NonPV {
     }
 }
 
+pub trait CheckState {
+    fn in_check() -> bool;
+}
+
+
+pub struct InCheck {}
+pub struct NoCheck {}
+
+impl CheckState for InCheck {
+    fn in_check() -> bool { true}
+}
+
+impl CheckState for NoCheck {
+    fn in_check() -> bool { false}
+}
 
 //
 //#[cfg(test)]

@@ -62,6 +62,12 @@ impl MoveList {
         self.len += 1;
     }
 
+    /// Returns true if empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     /// Creates a vector from this `MoveList`.
     pub fn vec(&self) -> Vec<BitMove> {
         let mut vec = Vec::with_capacity(self.len);
@@ -159,7 +165,7 @@ impl<'a> IntoIterator for &'a MoveList {
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         MoveIter {
-            movelist: &self,
+            movelist: self,
             idx: 0,
         }
     }
