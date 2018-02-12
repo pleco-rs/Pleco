@@ -1,3 +1,15 @@
+//! Statically initialized lookup tables.
+//!
+//! Whenever a `Board` is created, these are also created as well. Calling `Hepler::new()` will
+//! initialize the tables the first time it's called, and successive calls won't waste time
+//! initializing the table.
+//!
+//! It is highly recommended to go through a `Helper` to access these tables, as the access will
+//! guarantee that the tables are initialized in the first place.
+//!
+//! If you want the same functions, but can ensure the Tables are initalized, see `helper::prelude`
+//! for those raw functions.
+
 mod magic;
 mod boards;
 mod zobrist;
@@ -8,34 +20,51 @@ pub mod prelude;
 use {SQ,BitBoard,Player,PieceType,File,Rank};
 use core::score::{Score,Value};
 
-pub struct MagicHelper {}
+#[derive(Copy, Clone)]
+pub struct Helper {}
 
-impl MagicHelper {
+unsafe impl Send for Helper {}
+
+unsafe impl Sync for Helper {}
+
+
+impl Helper {
     pub fn new() -> Self {
         prelude::init_statics();
-        MagicHelper {}
+        Helper {}
     }
 
+    /// Generate Bishop Moves `BitBoard` from a bishop square and all occupied squares on the board.
+    /// This function will return captures to pieces on both sides. The resulting `BitBoard` must be
+    /// AND'd with the inverse of the intending moving player's pieces.
     #[inline(always)]
     pub fn bishop_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         prelude::bishop_moves(occupied,sq)
     }
 
+    /// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
+    /// This function will return captures to pieces on both sides. The resulting `BitBoard` must be
+    /// AND'd with the inverse of the intending moving player's pieces.
     #[inline(always)]
     pub fn rook_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         prelude::rook_moves(occupied,sq)
     }
 
+    /// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
+    /// This function will return captures to pieces on both sides. The resulting `BitBoard` must be
+    /// AND'd with the inverse of the intending moving player's pieces.
     #[inline(always)]
     pub fn queen_moves(&self, occupied: BitBoard, sq: SQ) -> BitBoard {
         prelude::queen_moves(occupied,sq)
     }
 
+    /// Generate Knight Moves `BitBoard` from a source square.
     #[inline(always)]
     pub fn knight_moves(&self, sq: SQ) -> BitBoard {
         prelude::knight_moves(sq)
     }
 
+    /// Generate King moves `BitBoard` from a source square.
     #[inline(always)]
     pub fn king_moves(&self, sq: SQ) -> BitBoard {
         prelude::king_moves(sq)
@@ -135,21 +164,25 @@ impl MagicHelper {
         prelude::passed_pawn_mask(player, sq)
     }
 
+    /// Returns the zobrist hash of a specific player's piece being at a particular square.
     #[inline(always)]
     pub fn z_square(&self, sq: SQ, player: Player, piece: PieceType) -> u64 {
         prelude::z_square(sq, player, piece)
     }
 
+    /// Returns the zobrist hash of a given file having an en-passant square.
     #[inline(always)]
     pub fn z_ep(&self, sq: SQ) -> u64 {
         prelude::z_ep(sq)
     }
 
+    /// Returns a zobrast hash of the castling rights, as defined by the Board.
     #[inline(always)]
     pub fn z_castle(&self, castle: u8) -> u64 {
         prelude::z_castle(castle)
     }
 
+    /// Returns Zobrist Hash of flipping sides.
     #[inline(always)]
     pub fn z_side(&self) -> u64 {
         prelude::z_side()
@@ -169,3 +202,19 @@ impl MagicHelper {
     }
 }
 
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn init_helper() {
+        Helper::new();
+    }
+
+
+
+
+}

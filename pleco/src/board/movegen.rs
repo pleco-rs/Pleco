@@ -55,7 +55,8 @@ use board::*;
 
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo};
 use core::*;
-use core::magic_helper::MagicHelper;
+
+use helper::prelude::*;
 use core::mono_traits::*;
 use core::sq::SQ;
 use core::bitboard::BitBoard;
@@ -120,7 +121,6 @@ const DEFAULT_MOVES_LENGTH: usize = 32;
 pub struct MoveGen<'a> {
     movelist: MoveList,
     board: &'a Board,
-    magic: &'static MagicHelper,
     occ: BitBoard, // Squares occupied by all
     us_occ: BitBoard, // squares occupied by player to move
     them_occ: BitBoard, // Squares occupied by the opposing player
@@ -134,7 +134,6 @@ impl<'a> MoveGen<'a> {
         MoveGen {
             movelist: MoveList::default(),
             board: chessboard,
-            magic: chessboard.magic_helper,
             occ: chessboard.get_occupied(),
             us_occ: chessboard.get_occupied_player(chessboard.turn()),
             them_occ: chessboard.get_occupied_player(chessboard.turn().other_player()),
@@ -218,7 +217,7 @@ impl<'a> MoveGen<'a> {
             if piece != PieceType::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
                 if piece == PieceType::K {
-                    b &= self.magic.queen_moves(BitBoard(0),self.board.king_sq(P::opp_player()))
+                    b &= queen_moves(BitBoard(0),self.board.king_sq(P::opp_player()))
                 }
                 self.move_append_from_bb::<L>(&mut b, from, MoveFlag::QuietMove);
             }
@@ -240,11 +239,11 @@ impl<'a> MoveGen<'a> {
         // This is getting all the squares that are attacked by sliders
         while sliders.is_not_empty() {
             let (check_sq, check_sq_bb): (SQ, BitBoard) = sliders.pop_lsb_and_bit();
-            slider_attacks |= self.magic.line_bb(check_sq, ksq) ^ check_sq_bb;
+            slider_attacks |= line_bb(check_sq, ksq) ^ check_sq_bb;
         }
 
         // Possible king moves, Where the king cannot move into a slider / own pieces
-        let k_moves: BitBoard = self.magic.king_moves(ksq) & !slider_attacks & !self.us_occ;
+        let k_moves: BitBoard = king_moves(ksq) & !slider_attacks & !self.us_occ;
 
         // Seperate captures and non captures
         let mut captures_bb: BitBoard = k_moves & self.them_occ;
@@ -257,7 +256,7 @@ impl<'a> MoveGen<'a> {
             let checking_sq: SQ = self.board.checkers().bit_scan_forward();
 
             // Squares that allow a block or capture of the sliding piece
-            let target: BitBoard = self.magic.between_bb(checking_sq, ksq) | checking_sq.to_bb();
+            let target: BitBoard = between_bb(checking_sq, ksq) | checking_sq.to_bb();
             self.generate_all::<L, EvasionsGenType, P>(target);
         }
     }
@@ -390,8 +389,8 @@ impl<'a> MoveGen<'a> {
 
             if G::gen_type() == GenTypes::QuietChecks {
                 let ksq: SQ = self.board.king_sq(P::opp_player());
-                push_one &= self.magic.pawn_attacks_from(ksq, P::opp_player());
-                push_two &= self.magic.pawn_attacks_from(ksq, P::opp_player());
+                push_one &= pawn_attacks_from(ksq, P::opp_player());
+                push_two &= pawn_attacks_from(ksq, P::opp_player());
 
                 let dc_candidates: BitBoard = self.board.discovered_check_candidates();
                 if (pawns_not_rank_7 & dc_candidates).is_not_empty() {
@@ -472,7 +471,7 @@ impl<'a> MoveGen<'a> {
                 let ep_sq: SQ = self.board.ep_square();
                 assert_eq!(ep_sq.rank(), P::player().relative_rank( Rank::R6));
                 if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).to_bb()).is_not_empty() {
-                    left_cap = pawns_not_rank_7 & self.magic.pawn_attacks_from(ep_sq, P::opp_player());
+                    left_cap = pawns_not_rank_7 & pawn_attacks_from(ep_sq, P::opp_player());
 
                     while left_cap.is_not_empty() {
                         let src: SQ = left_cap.pop_lsb();
@@ -531,11 +530,11 @@ impl<'a> MoveGen<'a> {
         debug_assert_ne!(piece, PieceType::P);
         match piece {
             PieceType::P => panic!(),
-            PieceType::N => self.magic.knight_moves(square),
-            PieceType::B => self.magic.bishop_moves(self.occ, square),
-            PieceType::R => self.magic.rook_moves(self.occ, square),
-            PieceType::Q => self.magic.queen_moves(self.occ, square),
-            PieceType::K => self.magic.king_moves(square),
+            PieceType::N => knight_moves(square),
+            PieceType::B => bishop_moves(self.occ, square),
+            PieceType::R => rook_moves(self.occ, square),
+            PieceType::Q => queen_moves(self.occ, square),
+            PieceType::K => king_moves(square),
         }
     }
 

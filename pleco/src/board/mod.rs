@@ -26,7 +26,8 @@ use std::cmp::{PartialEq,max,min};
 
 use rand;
 
-use core::magic_helper::MagicHelper;
+use helper::Helper;
+use helper::prelude::*;
 use core::piece_move::{BitMove, MoveType};
 use core::move_list::MoveList;
 use core::mono_traits::*;
@@ -44,16 +45,6 @@ use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
-
-
-lazy_static! {
-    /// Statically initialized lookup tables created when first ran.
-    /// Nothing will ever be mutated in here, so it is safe to pass around.
-    /// See [`MagicHelper`] for more information.
-    ///
-    /// [`MagicHelper`]: ../core/magic_helper/struct.MagicHelper.html
-    pub static ref MAGIC_HELPER: MagicHelper = MagicHelper::new();
-}
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
 pub enum FenBuildError {
@@ -161,7 +152,7 @@ pub struct Board {
 
     /// Reference to the pre-computed lookup tables.
     #[doc(hidden)]
-    pub magic_helper: &'static MagicHelper,
+    pub magic_helper: Helper
 }
 
 impl fmt::Display for Board {
@@ -214,7 +205,7 @@ impl Board {
             piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
             piece_locations: PieceLocations::default(),
             state: Arc::new(BoardState::default()),
-            magic_helper: &MAGIC_HELPER,
+            magic_helper: Helper::new(),
         };
         // Create the Zobrist hash & set the Piece Locations structure
         b.set_zob_hash();
@@ -262,7 +253,7 @@ impl Board {
             piece_counts: self.piece_counts,
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
-            magic_helper: &MAGIC_HELPER,
+            magic_helper: self.magic_helper,
         }
     }
 
@@ -304,7 +295,7 @@ impl Board {
             piece_counts: self.piece_counts,
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
-            magic_helper: &MAGIC_HELPER,
+            magic_helper: self.magic_helper,
         }
     }
 
@@ -397,11 +388,11 @@ impl Board {
             for piece in &ALL_PIECE_TYPES {
                 let count = self.piece_bb(*player, *piece).count_bits();
                 for n in 0..count {
-                    material_key ^= self.magic_helper.z_piece_at_sq(*piece, SQ(n), *player);
+                    material_key ^= z_square(SQ(n), *player, *piece);
                 }
                 if *piece != PieceType::P && *piece != PieceType::K {
                     nonpawn_material[*player as usize] +=
-                        count as i16 * self.magic_helper.piece_value(*piece, false);
+                        count as i16 * piece_value(*piece, false);
                 }
             }
         }
@@ -565,7 +556,7 @@ impl Board {
             piece_counts: piece_cnt,
             piece_locations: piece_loc,
             state: Arc::new(BoardState::default()),
-            magic_helper: &MAGIC_HELPER,
+            magic_helper: Helper::new(),
         };
 
         // Set the BitBoards
@@ -699,7 +690,7 @@ impl Board {
 
         // Zobrist Hash
         let mut pawn_key: u64 = self.state.pawn_key;
-        let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
+        let mut zob: u64 = self.state.zobrast ^ z_side();
         let mut material_key: u64 = self.state.material_key;
 
 
@@ -750,8 +741,8 @@ impl Board {
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
 
-                zob ^= self.magic_helper.z_piece_at_sq(PieceType::R, r_src, us) ^
-                    self.magic_helper.z_piece_at_sq(PieceType::R, r_dst, us);
+                zob ^= z_square(r_src, us, PieceType::R) ^
+                    z_square(r_dst, us, PieceType::R);
                 new_state.captured_piece = None;
                 new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
@@ -772,32 +763,32 @@ impl Board {
                     } else {
                         self.remove_piece_c(cap_p, cap_sq, them);
                     }
-                    pawn_key ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
+                    pawn_key ^= z_square(cap_sq, them, cap_p);
                 } else {
-                    new_state.nonpawn_material[them as usize] -= self.magic_helper.piece_value(cap_p, false);
+                    new_state.nonpawn_material[them as usize] -= piece_value(cap_p, false);
                     self.remove_piece_c(cap_p, cap_sq, them);
                 }
-                zob ^= self.magic_helper.z_piece_at_sq(cap_p, cap_sq, them);
+                zob ^= z_square(cap_sq, them, cap_p);
                 let cap_count = self.count_piece(them, cap_p);
-                material_key ^= self.magic_helper.z_piece_at_sq(cap_p, SQ(cap_count), them);
+                material_key ^= z_square(SQ(cap_count), them, cap_p);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = Some(cap_p);
             }
 
             // Update hash for moving piece
-            zob ^= self.magic_helper.z_piece_at_sq(piece, to, us) ^
-                self.magic_helper.z_piece_at_sq(piece, from, us);
+            zob ^= z_square(to, us, piece) ^
+                z_square(from, us, piece);
 
             if self.state.ep_square != NO_SQ {
-                zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
+                zob ^= z_ep(self.state.ep_square);
                 new_state.ep_square = NO_SQ;
             }
 
             // Update castling rights
             if !new_state.castling.is_empty() && (to.castle_rights_mask() | from.castle_rights_mask()) != 0 {
                 let castle_zob_index = new_state.castling.update_castling(to,from);
-                zob ^= self.magic_helper.z_castle_rights(castle_zob_index);
+                zob ^= z_castle(castle_zob_index);
             }
 
             // Actually move the piece
@@ -807,26 +798,26 @@ impl Board {
 
             // Pawn Moves need special help :(
             if piece == PieceType::P {
-                if self.magic_helper.distance_of_sqs(to, from) == 2 {
+                if distance_of_sqs(to, from) == 2 {
                     // Double Push
                     new_state.ep_square = (to + from) / SQ(2);
-                    zob ^= self.magic_helper.z_ep_file(new_state.ep_square);
+                    zob ^= z_ep(new_state.ep_square);
                 } else if bit_move.is_promo() {
                     let promo_piece: PieceType = bit_move.promo_piece();
 
                     self.remove_piece_c(piece, to, us);
                     self.put_piece_c(promo_piece, to, us);
-                    zob ^= self.magic_helper.z_piece_at_sq(promo_piece, to, us) ^
-                        self.magic_helper.z_piece_at_sq(PieceType::P, from, us);
-                    pawn_key ^= self.magic_helper.z_piece_at_sq(piece, to, us);
+                    zob ^= z_square(to, us, promo_piece) ^
+                        z_square(from, us, PieceType::P);
+                    pawn_key ^= z_square(to, us, PieceType::P);
 
                     let promo_count = self.count_piece(us, promo_piece);
                     let pawn_count = self.count_piece(us, PieceType::P);
-                    material_key ^= self.magic_helper.z_piece_at_sq(promo_piece, SQ(promo_count - 1), us)
-                        ^ self.magic_helper.z_piece_at_sq(PieceType::P, SQ(pawn_count), us);
-                    new_state.nonpawn_material[us as usize] += self.magic_helper.piece_value(promo_piece, false);
+                    material_key ^= z_square(SQ(promo_count - 1), us, promo_piece)
+                        ^ z_square(SQ(pawn_count), us, PieceType::P);
+                    new_state.nonpawn_material[us as usize] += piece_value(promo_piece, false);
                 }
-                pawn_key ^= self.magic_helper.z_piece_at_sq(piece, from, us) ^ self.magic_helper.z_piece_at_sq(piece, to, us);
+                pawn_key ^= z_square(from, us, PieceType::P) ^ z_square(to, us, PieceType::P);
                 new_state.rule_50 = 0;
             }
 
@@ -985,7 +976,7 @@ impl Board {
     pub unsafe fn apply_null_move(&mut self) {
         assert!(self.checkers().is_empty());
 
-        let mut zob: u64 = self.state.zobrast ^ self.magic_helper.zobrist.side;
+        let mut zob: u64 = self.state.zobrast ^ z_side();
 
         self.depth += 1;
         // New Arc for the board to have by making a partial clone of the current state
@@ -1001,7 +992,7 @@ impl Board {
             new_state.prev = Some(Arc::clone(&self.state));
 
             if self.state.ep_square != NO_SQ {
-                zob ^= self.magic_helper.z_ep_file(self.state.ep_square);
+                zob ^= z_ep(self.state.ep_square);
                 new_state.ep_square = NO_SQ;
             }
 
@@ -1164,11 +1155,10 @@ impl Board {
         let ksq: SQ = self.king_sq(self.turn.other_player());
         let occupied = self.get_occupied();
 
-        board_state.check_sqs[PieceType::P as usize] = self.magic_helper
-                                                           .pawn_attacks_from(ksq, self.turn.other_player());
-        board_state.check_sqs[PieceType::N as usize] = self.magic_helper.knight_moves(ksq);
-        board_state.check_sqs[PieceType::B as usize] = self.magic_helper.bishop_moves(occupied, ksq);
-        board_state.check_sqs[PieceType::R as usize] = self.magic_helper.rook_moves(occupied, ksq);
+        board_state.check_sqs[PieceType::P as usize] = pawn_attacks_from(ksq, self.turn.other_player());
+        board_state.check_sqs[PieceType::N as usize] = knight_moves(ksq);
+        board_state.check_sqs[PieceType::B as usize] = bishop_moves(occupied, ksq);
+        board_state.check_sqs[PieceType::R as usize] = rook_moves(occupied, ksq);
         board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize] |
             board_state.check_sqs[PieceType::R as usize];
         board_state.check_sqs[PieceType::K as usize] = BitBoard(0);
@@ -1306,15 +1296,15 @@ impl Board {
         let occupied: BitBoard = self.get_occupied();
 
         let mut snipers: BitBoard = sliders &
-            ((self.magic_helper.rook_moves(BitBoard(0), s) &
+            ((rook_moves(BitBoard(0), s) &
                 (self.piece_two_bb_both_players(PieceType::R, PieceType::Q))) |
-                (self.magic_helper.bishop_moves(BitBoard(0), s) &
+                (bishop_moves(BitBoard(0), s) &
                     (self.piece_two_bb_both_players(PieceType::B, PieceType::Q))));
 
 
         while snipers.is_not_empty() {
             let sniper_sq: SQ = snipers.pop_lsb();
-            let b: BitBoard = self.magic_helper.between_bb(s, sniper_sq) & occupied;
+            let b: BitBoard = between_bb(s, sniper_sq) & occupied;
             if !b.more_than_one() {
                 result |= b;
                 let other_occ = self.get_occupied_player(self.player_at_sq(s).unwrap());
@@ -1343,7 +1333,7 @@ impl Board {
         let mut b: BitBoard = self.get_occupied();
         while let Some(sq) = b.pop_some_lsb() {
             let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
-            let key = self.magic_helper.z_piece_at_sq(piece, sq, player);
+            let key = z_square(sq, player, piece);
             zob ^= key;
             if piece == PieceType::P {
                 pawn_key ^= key;
@@ -1352,11 +1342,11 @@ impl Board {
 
         let ep = self.state.ep_square;
         if ep != NO_SQ && ep.is_okay() {
-            zob ^= self.magic_helper.z_ep_file(ep);
+            zob ^= z_ep(ep);
         }
 
         match self.turn {
-            Player::Black => zob ^= self.magic_helper.z_side(),
+            Player::Black => zob ^= z_side(),
             Player::White => {}
         };
         let state =  Arc::get_mut(&mut self.state).unwrap();
@@ -1434,11 +1424,6 @@ impl Board {
     #[inline(always)]
     pub fn piece_captured_last_turn(&self) -> Option<PieceType> {
         self.state.captured_piece
-    }
-
-    /// Get a reference to the MagicHelper pre-computed BitBoards.
-    pub fn magic_helper(&self) -> &'static MagicHelper {
-        &MAGIC_HELPER
     }
 
     /// Get the current ply of the board.
@@ -1803,16 +1788,16 @@ impl Board {
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
     /// Includes pieces from both players.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
-        (self.magic_helper.pawn_attacks_from(sq, Player::Black) &
+        (pawn_attacks_from(sq, Player::Black) &
             self.piece_bb(Player::White, PieceType::P)) |
-            (self.magic_helper.pawn_attacks_from(sq, Player::White) &
+            (pawn_attacks_from(sq, Player::White) &
                 self.piece_bb(Player::Black, PieceType::P)) |
-            (self.magic_helper.knight_moves(sq) & self.piece_bb_both_players(PieceType::N)) |
-            (self.magic_helper.rook_moves(occupied, sq) &
+            (knight_moves(sq) & self.piece_bb_both_players(PieceType::N)) |
+            (rook_moves(occupied, sq) &
                 (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black))) |
-            (self.magic_helper.bishop_moves(occupied, sq) &
+            (bishop_moves(occupied, sq) &
                 (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
-            (self.magic_helper.king_moves(sq) & self.piece_bb_both_players(PieceType::K))
+            (king_moves(sq) & self.piece_bb_both_players(PieceType::K))
     }
 
 //  ------- Move Testing -------
@@ -1841,9 +1826,9 @@ impl Board {
             let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) |
                 dst_bb;
 
-            return (self.magic_helper.rook_moves(occupied, k_sq) &
+            return (rook_moves(occupied, k_sq) &
                 self.sliding_piece_bb(them)).is_empty() &&
-                (self.magic_helper.queen_moves(occupied, k_sq) & self.diagonal_piece_bb(them)).is_empty();
+                (queen_moves(occupied, k_sq) & self.diagonal_piece_bb(them)).is_empty();
         }
 
         // If Moving the king, check if the square moved to is not being attacked
@@ -1860,7 +1845,7 @@ impl Board {
 
         // Making sure not moving a pinned piece
         (self.pinned_pieces(self.turn) & src_bb).is_empty() ||
-            self.magic_helper.aligned(src, dst, self.king_sq(self.turn))
+            aligned(src, dst, self.king_sq(self.turn))
     }
 
     #[doc(hidden)]
@@ -1893,7 +1878,7 @@ impl Board {
 
         // Discovered (Indirect) checks, where a sniper piece is attacking the king
         if (self.discovered_check_candidates() & src_bb).is_not_empty()  // check if the piece is blocking a sniper
-            && !self.magic_helper.aligned(src, dst, opp_king_sq) { // Make sure the dst square is not aligned
+            && !aligned(src, dst, opp_king_sq) { // Make sure the dst square is not aligned
             return true;
         }
 
@@ -1902,18 +1887,15 @@ impl Board {
             MoveType::Promotion => {
                 // check if the Promo Piece attacks king
                 let attacks_bb = match m.promo_piece() {
-                    PieceType::N => self.magic_helper.knight_moves(dst),
+                    PieceType::N => knight_moves(dst),
                     PieceType::B => {
-                        self.magic_helper
-                            .bishop_moves(self.get_occupied() ^ src_bb, dst)
+                        bishop_moves(self.get_occupied() ^ src_bb, dst)
                     }
                     PieceType::R => {
-                        self.magic_helper
-                            .rook_moves(self.get_occupied() ^ src_bb, dst)
+                        rook_moves(self.get_occupied() ^ src_bb, dst)
                     }
                     PieceType::Q => {
-                        self.magic_helper
-                            .queen_moves(self.get_occupied() ^ src_bb, dst)
+                        queen_moves(self.get_occupied() ^ src_bb, dst)
                     }
                     _ => unreachable!(),
                 };
@@ -1927,8 +1909,8 @@ impl Board {
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
 
-                ((self.magic_helper.rook_moves(b, opp_king_sq) & turn_sliding_p) |
-                    (self.magic_helper.bishop_moves(b, opp_king_sq) & turn_diag_p)).is_not_empty()
+                ((rook_moves(b, opp_king_sq) & turn_sliding_p) |
+                    (bishop_moves(b, opp_king_sq) & turn_diag_p)).is_not_empty()
             }
             MoveType::Castle => {
                 // Check if the rook attacks the King now
@@ -1939,8 +1921,8 @@ impl Board {
                 let r_to: SQ = self.turn.relative_square( { if r_from > k_from { SQ(5) } else { SQ(3) } });
 
                 let opp_k_bb = opp_king_sq.to_bb();
-                (self.magic_helper.rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty() &&
-                    (self.magic_helper.rook_moves(
+                (rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty() &&
+                    (rook_moves(
                         r_to.to_bb() | k_to.to_bb() |
                             (self.get_occupied() ^ k_from.to_bb() ^ r_from.to_bb()),
                         r_to,

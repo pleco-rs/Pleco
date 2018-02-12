@@ -1,3 +1,14 @@
+//! Default functions for accessing the statically computed tables.
+//!
+//! # Safety
+//!
+//! Using any of these methods is inherently unsafe, as it is not guaranteed that they'll be
+//! initiated correctly. Consider using the `Helper` structure to garuntee initalization
+//!
+//! # Documentation
+//!
+//! These functions are documented in `Helper`, rather than here.
+
 use super::psqt;
 use super::zobrist;
 use super::magic;
@@ -6,18 +17,39 @@ use super::boards;
 use {SQ,BitBoard,Player,PieceType,File,Rank};
 use core::score::{Score,Value};
 
-use std::sync::atomic::{AtomicBool,Ordering};
+use std::sync::atomic::{AtomicBool,Ordering,fence,compiler_fence};
+use std::sync::{Once, ONCE_INIT};
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
+static INIT: Once = ONCE_INIT;
+
+/// Initializes the static structures. Guarantees to only allow being called once.
 pub fn init_statics() {
-    if !INITIALIZED.load(Ordering::AcqRel) {
+    INIT.call_once(|| {
+        compiler_fence(Ordering::SeqCst);
+        fence(Ordering::SeqCst);
         zobrist::init_zobrist();
         psqt::init_psqt();
         magic::init_magics();
+        compiler_fence(Ordering::SeqCst);
         boards::init_boards();
-        INITIALIZED.store(true, Ordering::AcqRel);
-    }
+        fence(Ordering::SeqCst);
+        compiler_fence(Ordering::SeqCst);
+    });
+
+//    if !INITIALIZED.load(Ordering::SeqCst) {
+//        compiler_fence(Ordering::SeqCst);
+//        fence(Ordering::SeqCst);
+//        zobrist::init_zobrist();
+//        psqt::init_psqt();
+//        magic::init_magics();
+//        compiler_fence(Ordering::SeqCst);
+//        boards::init_boards();
+//        INITIALIZED.store(true, Ordering::SeqCst);
+//        fence(Ordering::SeqCst);
+//        compiler_fence(Ordering::SeqCst);
+//    }
 }
 
 // MAGIC FUNCTIONS
