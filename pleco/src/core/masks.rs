@@ -67,6 +67,10 @@ pub const RANK_7: u64 = 0x00FF_0000_0000_0000;
 /// Bit representation of rank 8.
 pub const RANK_8: u64 = 0xFF00_0000_0000_0000;
 
+/// Bit representation of rank dark squares.
+pub const DARK_SQUARES: u64 = 0xAA55AA55AA55AA55;
+/// Bit representation of all light squares.
+pub const LIGHT_SQUARES: u64 = !DARK_SQUARES;
 
 /// Array of all files and their corresponding bits, indexed from
 /// file A to file H.

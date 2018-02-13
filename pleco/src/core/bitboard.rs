@@ -78,7 +78,10 @@ impl BitBoard {
     /// BitBoard of Rank 8.
     pub const RANK_8: BitBoard = BitBoard(RANK_8);
 
-    pub const DARK_SQUARES: BitBoard = BitBoard(0xAA55AA55AA55AA55);
+    /// BitBoard of all dark squares.
+    pub const DARK_SQUARES: BitBoard = BitBoard(DARK_SQUARES);
+    /// BitBoard of all light squares.
+    pub const LIGHT_SQUARES: BitBoard = BitBoard(LIGHT_SQUARES);
 
     /// Converts a `BitBoard` to a square.
     ///
