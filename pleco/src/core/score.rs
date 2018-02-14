@@ -103,3 +103,11 @@ impl Neg for Score {
         Score(-self.0, -self.1)
     }
 }
+
+impl Mul<u8> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: u8) -> Score {
+        Score(self.0 * rhs as i16, self.1 * rhs as i16)
+    }
+}

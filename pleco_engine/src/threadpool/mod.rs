@@ -235,8 +235,7 @@ impl Drop for ThreadPool {
         self.all_thread_go.set();
 
         // Join all the handles
-        while !self.threads.is_empty() {
-            let thread_handle = self.threads.pop().unwrap();
+        while let Some(thread_handle) = self.threads.pop() {
             thread_handle.join().unwrap();
         }
         self.main_thread.take().unwrap().join().unwrap();

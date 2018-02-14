@@ -66,7 +66,7 @@ impl RmManager {
     }
 
     pub fn size(&self) -> usize {
-        self.threads.load(Ordering::Relaxed)
+        self.threads.load(Ordering::SeqCst)
     }
 
     pub fn add_thread(&mut self) -> Option<RootMoveList> {
@@ -121,8 +121,8 @@ impl RmManager {
     pub fn wait_for_finish(&self) {
         unsafe {
             for i in 0..self.size() {
-                fence(Ordering::AcqRel);
-                compiler_fence(Ordering::AcqRel);
+                fence(Ordering::SeqCst);
+                compiler_fence(Ordering::SeqCst);
                 let root_moves = self.get_list_unchecked(i).moves;
                 (*root_moves).finished.await(true);
             }
@@ -132,8 +132,8 @@ impl RmManager {
         unsafe {
             let num_threads = self.size();
             for i in 1..num_threads {
-                fence(Ordering::AcqRel);
-                compiler_fence(Ordering::AcqRel);
+                fence(Ordering::SeqCst);
+                compiler_fence(Ordering::SeqCst);
                 let root_moves = self.get_list_unchecked(i).moves;
                 (*root_moves).finished.await(false);
             }

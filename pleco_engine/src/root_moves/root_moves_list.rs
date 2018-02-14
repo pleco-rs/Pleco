@@ -121,13 +121,13 @@ impl RootMoveList {
 
     pub fn set_stop(&mut self, stop: bool) {
         unsafe {
-            (*self.moves).stop.store(stop, Ordering::Release);
+            (*self.moves).stop.store(stop, Ordering::SeqCst);
         }
     }
 
     pub fn kill(&mut self) {
         unsafe {
-            (*self.moves).kill.store(true, Ordering::Release);
+            (*self.moves).kill.store(true, Ordering::SeqCst);
         }
     }
 

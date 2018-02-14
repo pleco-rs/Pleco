@@ -72,6 +72,7 @@ impl MainThread {
         if let Some(timer) = limit.use_time_management() {
             TIMER.init(limit.start.clone(), &timer, board.turn(), board.moves_played());
         }
+
         self.start_threads();
 
         self.per_thread.wait_for_start();
@@ -83,7 +84,7 @@ impl MainThread {
         self.per_thread.wait_for_finish();
 
         // find best move
-        let best_root_move: RootMove = self.per_thread.best_rootmove(self.use_stdout.load(Ordering::Relaxed));
+        let best_root_move: RootMove = self.per_thread.best_rootmove(self.use_stdout.load(Ordering::SeqCst));
 
         self.sender.send(SendData::BestMove(best_root_move)).unwrap();
 

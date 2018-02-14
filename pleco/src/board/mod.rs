@@ -1290,7 +1290,7 @@ impl Board {
     }
 
     /// Helper function to that outputs the Blockers of a given square
-    fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
+    pub fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
         let mut result: BitBoard = BitBoard(0);
         *pinners = BitBoard(0);
         let occupied: BitBoard = self.get_occupied();
@@ -1798,6 +1798,18 @@ impl Board {
             (bishop_moves(occupied, sq) &
                 (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
             (king_moves(sq) & self.piece_bb_both_players(PieceType::K))
+    }
+
+    /// Given a piece, square, and player, returns all squares the piece may move to.
+    pub fn attacks_from(&self, piece: PieceType, sq: SQ, player: Player) -> BitBoard {
+        match piece {
+            PieceType::K => king_moves(sq),
+            PieceType::P => pawn_attacks_from(sq, player),
+            PieceType::N => knight_moves(sq),
+            PieceType::B => bishop_moves(self.occ_all, sq),
+            PieceType::R => rook_moves(self.occ_all, sq),
+            PieceType::Q => queen_moves(self.occ_all, sq)
+        }
     }
 
 //  ------- Move Testing -------
