@@ -10,7 +10,7 @@ use pleco::core::masks::*;
 use pleco::helper::prelude::*;
 
 use tables::pawn_table::{PawnEntry, PawnTable};
-use tables::material::{MaterialEntry,Material};
+use tables::material::*;
 
 const CENTER: BitBoard = BitBoard((FILE_D | FILE_E) & (RANK_4 | RANK_5));
 const QUEEN_SIDE: BitBoard = BitBoard(FILE_A | FILE_B | FILE_C | FILE_D);
@@ -142,7 +142,7 @@ impl <'a> Evaluation <'a> {
 
     fn value(&mut self) -> Value {
         let mut score = self.pawn_entry.pawns_score() + self.material_entry.score();
-        let v = (score.0 + score.1) / 2;
+        let mut v = (score.0 + score.1) / 2;
         if v.abs() > LAZY_THRESHOLD {
             if self.board.turn() == Player::White {return v;}
             else {return -v;}
@@ -160,7 +160,18 @@ impl <'a> Evaluation <'a> {
 
         score += self.evaluate_king::<WhiteType>() - self.evaluate_king::<BlackType>();
 
-        return v;
+        let phase = self.material_entry.phase as i32;
+
+        v =   score.mg() * phase
+            + score.eg() * (PHASE_MID_GAME as i32 - phase);
+
+        v /= PHASE_MID_GAME as i32;
+
+        if self.board.turn() == Player::White {
+            v
+        } else {
+            -v
+        }
     }
 
     fn initialize<P: PlayerTrait>(&mut self) {
@@ -278,7 +289,7 @@ impl <'a> Evaluation <'a> {
                     let k_file = ksq_us.file();
                     if !((k_file < File::F) && (s.file() < k_file))
                         && !self.pawn_entry.semiopen_side(us, k_file, s.file() < k_file) {
-                        score -= (TRAPPED_ROOK - Score(mob as i16 * 22, 0)) * (1 + (self.board.player_can_castle(us).bits() == 0) as u8);
+                        score -= (TRAPPED_ROOK - Score(mob as i32 * 22, 0)) * (1 + (self.board.player_can_castle(us).bits() == 0) as u8);
                     }
                 }
 
@@ -377,8 +388,8 @@ impl <'a> Evaluation <'a> {
             if king_danger > 0 {
                 let mobility_danger = (self.mobility[them as usize] - self.mobility[us as usize]).mg() as i32;
                 king_danger = (king_danger + mobility_danger).max(0);
-                let mg: Value = ((king_danger * king_danger) / 4096) as i16;
-                let eg: Value = (king_danger / 16) as i16;
+                let mg: Value = (king_danger * king_danger) / 4096;
+                let eg: Value = king_danger / 16;
                 score -= Score(mg, eg);
             }
         }

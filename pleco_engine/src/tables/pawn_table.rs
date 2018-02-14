@@ -87,8 +87,8 @@ lazy_static!{
                     for r in 1..7 {
                         let mut v: i32 = 17 * support;
                         v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
-                        let eg: i16 = (v * (r as i32 - 2) / 4) as i16;
-                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v as i16, eg);
+                        let eg: i32 = v * (r as i32 - 2) / 4;
+                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
                     }
                 }
             }
@@ -106,8 +106,8 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
                 for r in 1..7 {
                     let mut v: i32 = 17 * support;
                     v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
-                    let eg: i16 = (v * (r as i32 - 2) / 4) as i16;
-                    a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v as i16, eg);
+                    let eg: i32 = v * (r as i32 - 2) / 4;
+                    a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
                 }
             }
         }

@@ -16,7 +16,7 @@ const DIVISOR_SEQ: usize = 4;
 // depth: depth from given
 // half_moves: total moves
 
-pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
+pub fn jamboree(board: &mut Board, mut alpha: i32, beta: i32,
                 max_depth: u16, plys_seq: u16) -> BestMove
 {
     assert!(alpha <= beta);
@@ -31,7 +31,7 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + board.depth() as i16);
+            return BestMove::new_none(MATE + board.depth() as i32);
         } else {
             return BestMove::new_none(DRAW);
         }
@@ -41,7 +41,7 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     let (seq, non_seq) = moves.split_at(amount_seq);
 
     let mut best_move: Option<BitMove> = None;
-    let mut best_value: i16 = NEG_INFINITE;
+    let mut best_value: i32 = NEG_INFINITE;
     for mov in seq {
         board.apply_move(*mov);
         let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
@@ -81,8 +81,8 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
 fn parallel_task(
     slice: &[BitMove],
     board: &mut Board,
-    mut alpha: i16,
-    beta: i16,
+    mut alpha: i32,
+    beta: i32,
     max_depth: u16,
     plys_seq: u16,
 ) -> BestMove {
@@ -133,7 +133,7 @@ fn parallel_task(
 
 
 
-fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
+fn alpha_beta_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u16) -> BestMove {
     if board.depth() == max_depth {
         return eval_board(board);
     }
@@ -142,7 +142,7 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + (board.depth() as i16));
+            return BestMove::new_none(MATE + (board.depth() as i32));
         } else {
             return BestMove::new_none(DRAW);
         }

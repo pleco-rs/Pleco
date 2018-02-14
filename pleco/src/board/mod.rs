@@ -392,7 +392,7 @@ impl Board {
                 }
                 if *piece != PieceType::P && *piece != PieceType::K {
                     nonpawn_material[*player as usize] +=
-                        count as i16 * piece_value(*piece, false);
+                        count as i32 * piece_value(*piece, false);
                 }
             }
         }

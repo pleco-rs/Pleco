@@ -27,7 +27,7 @@ pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            BestMove::new_none(MATE + (board.depth() as i16))
+            BestMove::new_none(MATE + (board.depth() as i32))
         } else {
             BestMove::new_none(DRAW)
         }
