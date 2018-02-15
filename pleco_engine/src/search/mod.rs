@@ -10,7 +10,6 @@ use pleco::{MoveList,Board,BitMove};
 use pleco::core::*;
 use pleco::tools::tt::*;
 use pleco::core::score::*;
-use pleco::tools::eval::Eval;
 use pleco::tools::pleco_arc::Arc;
 
 use MAX_PLY;
@@ -20,6 +19,8 @@ use time::time_management::TimeManager;
 use time::uci_timer::*;
 use threadpool::TIMER;
 use root_moves::root_moves_list::RootMoveList;
+use tables::material::Material;
+use tables::pawn_table::PawnTable;
 use consts::*;
 
 const THREAD_DIST: usize = 20;
@@ -34,6 +35,8 @@ pub struct Searcher {
     pub board: Board,
     pub time_man: &'static TimeManager,
     pub tt: &'static TranspositionTable,
+    pub pawns: PawnTable,
+    pub material: Material,
     pub id: usize,
     pub root_moves: RootMoveList,
     pub use_stdout: Arc<AtomicBool>,
@@ -174,7 +177,7 @@ impl Searcher {
         }
 
         if ply >= max_depth || self.stop() {
-            return Eval::eval_low(&self.board) as i32;
+            return self.eval();
         }
 
         let plys_to_zero = max_depth - ply;
@@ -198,13 +201,13 @@ impl Searcher {
         } else {
             if tt_hit {
                 if tt_entry.eval == 0 {
-                    pos_eval = Eval::eval_low(&self.board) as i32;
+                    pos_eval = self.eval();
                 }
                 if tt_value != 0 && correct_bound(tt_value, pos_eval, tt_entry.node_type()) {
                     pos_eval = tt_value;
                 }
             } else {
-                pos_eval = Eval::eval_low(&self.board) as i32;
+                pos_eval = self.eval();
                 tt_entry.place(zob, BitMove::null(), 0, pos_eval as i16, 0, NodeBound::NoBound);
             }
         }
@@ -307,6 +310,12 @@ impl Searcher {
     }
 
     // TODO: Qscience search
+
+    pub fn eval(&mut self) -> Value {
+        let pawns = &mut self.pawns;
+        let material = &mut self.material;
+        eval::Evaluation::evaluate(&self.board, pawns, material)
+    }
 
     fn main_thread(&self) -> bool {
         self.id == 0
