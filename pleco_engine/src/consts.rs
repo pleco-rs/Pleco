@@ -4,8 +4,11 @@ use lazy_static;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+use pleco::Board;
 use pleco::tools::tt::TranspositionTable;
 //use time::time_management::TimeManager;
+
+use time::uci_timer::Limits;
 
 pub const MAX_PLY: u16 = 126;
 pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -20,7 +23,7 @@ static INITALIZED: AtomicBool = AtomicBool::new(false);
 /// Global Timer
 //pub static TIMER: TimeManager = TimeManager::uninitialized();
 //pub static TT_TABLE: TranspositionTable = unsafe {TranspositionTable::uninitialized()};
-//pub static mut POSITION: Board = unsafe {Board::uninitialized()};
+pub static mut POSITION: Option<Board> = None;
 
 lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);

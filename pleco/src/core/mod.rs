@@ -380,7 +380,7 @@ pub enum Phase {
 /// corresponding rank as a u64.
 #[inline(always)]
 pub fn rank_bb(s: u8) -> u64 {
-    RANK_BB[rank_of_sq(s) as usize]
+    RANK_BB[rank_idx_of_sq(s) as usize]
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the

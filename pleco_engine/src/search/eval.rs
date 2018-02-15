@@ -1,8 +1,11 @@
 //! Evaluation function!
+//!
+//!
+
+
+use std::ops::Add;
 use std::mem;
-#[allow(unused_imports)]
 use pleco::{Board,BitBoard,SQ,Rank,File,Player,PieceType};
-#[allow(unused_imports)]
 use pleco::core::mono_traits::*;
 use pleco::core::score::*;
 use pleco::core::masks::*;
@@ -128,6 +131,46 @@ const KNIGHT_SAFE_CHECK: i32 = 790;
 const LAZY_THRESHOLD: Value = 1500;
 const SPACE_THRESHOLD: Value = 12222;
 
+trait Tracing {
+    fn trace() -> bool;
+}
+
+struct NoTrace {}
+struct Trace {}
+
+impl Tracing for NoTrace {
+    fn trace() -> bool {false}
+}
+
+impl Tracing for Trace {
+    fn trace() -> bool {true}
+}
+
+#[derive(Copy, Clone)]
+struct Term {
+    white: Score,
+    black: Score,
+}
+
+
+fn displ_scores(score: Score, score2: Score) {
+    let both = score + score2;
+    print!("{:>8} {:>8} | ", score.0, score.1);
+    print!("{:>8} {:>8} | ", score2.0, score2.1);
+    println!("{:>8} {:>8} ", both.0, both.1);
+}
+
+impl Add for Term {
+    type Output = Term;
+
+    fn add(self, rhs: Term) -> Term {
+        Term {
+            white: self.white + rhs.white,
+            black: self.black + rhs.black,
+        }
+    }
+}
+
 pub struct Evaluation<'a> {
     board: &'a Board,
     pawn_entry: &'a mut PawnEntry,
@@ -212,6 +255,119 @@ impl <'a> Evaluation <'a> {
             -v
         }
     }
+
+    pub fn trace(board: &Board) {
+        let mut pawn_table = PawnTable::new(1 << 4);
+        let mut material = Material::new(1 << 4);
+        let pawn_entry = { pawn_table.probe(&board) };
+        let material_entry = { material.probe(&board) };
+        let mut eval = Evaluation {
+            board,
+            pawn_entry,
+            material_entry,
+            king_ring: [BitBoard(0); PLAYER_CNT],
+            mobility_area: [BitBoard(0); PLAYER_CNT],
+            mobility: [Score(0,0); PLAYER_CNT],
+            attacked_by: [[BitBoard(0); PIECE_TYPE_CNT];PLAYER_CNT],
+            attacked_by_all: [BitBoard(0); PLAYER_CNT],
+            attacked_by_queen_diagonal: [BitBoard(0); PLAYER_CNT],
+            attacked_by2: [BitBoard(0) ;PLAYER_CNT],
+            king_attackers_count: [0; PLAYER_CNT],
+            king_attackers_weight: [0; PLAYER_CNT],
+            king_adjacent_zone_attacks_count: [0; PLAYER_CNT],
+        };
+        eval.tracing();
+    }
+
+    fn tracing(&mut self) {
+        let mut score = self.pawn_entry.pawns_score();
+
+        let pawns = self.pawn_entry.pawns_score();
+        let mat = self.material_entry.score();
+        print!("Pawns    ");
+        displ_scores(pawns, -pawns);
+        print!("Material ");
+        displ_scores(mat, -mat);
+        score += pawns + mat;
+
+        self.initialize::<WhiteType>();
+        self.initialize::<BlackType>();
+
+        let mut white =  self.evaluate_pieces::<WhiteType,KnightType>();
+        let mut black =  self.evaluate_pieces::<BlackType,KnightType>();
+        print!("Knight    ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white =  self.evaluate_pieces::<WhiteType,BishopType>();
+        black =  self.evaluate_pieces::<BlackType,BishopType>();
+        print!("Bishop    ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white =  self.evaluate_pieces::<WhiteType,RookType>();
+        black =  self.evaluate_pieces::<BlackType,RookType>();
+        print!("Rook      ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white =  self.evaluate_pieces::<WhiteType,QueenType>();
+        black =  self.evaluate_pieces::<BlackType,QueenType>();
+        print!("Queen     ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white = self.mobility[Player::White as usize];
+        black = self.mobility[Player::Black as usize];
+        print!("Mobility  ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white = self.evaluate_king::<WhiteType>();
+        black = self.evaluate_king::<BlackType>();
+        print!("King      ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white = self.evaluate_threats::<WhiteType>();
+        black = self.evaluate_threats::<BlackType>();
+        print!("Threats   ");
+        displ_scores(white, black);
+        score += white - black;
+
+        white = self.evaluate_passed_pawns::<WhiteType>();
+        black = self.evaluate_passed_pawns::<BlackType>();
+        print!("Passed P  ");
+        displ_scores(white, black);
+        score += white - black;
+
+        let white_s = self.board.non_pawn_material(Player::White);
+        let black_s = self.board.non_pawn_material(Player::Black);
+
+        white = self.evaluate_space::<WhiteType>();
+        black = self.evaluate_space::<BlackType>();
+
+
+        if white_s + black_s >= SPACE_THRESHOLD {
+            score += white - black;
+        }
+
+        println!("Non-P mat - w: {}, b: {}", white_s, black_s);
+        print!("Space Thr  ");
+        displ_scores(white, black);
+        println!("all: mg: {}, eg: {}",score.mg(), score.eg());
+
+        let phase = self.material_entry.phase as i32;
+        println!("phase: {}", phase);
+        let mut v: i32 =   score.mg() * phase
+            + score.eg() * (PHASE_MID_GAME as i32 - phase);
+
+        v /= PHASE_MID_GAME as i32;
+
+        println!("final: {}", v);
+
+    }
+
 
     fn initialize<P: PlayerTrait>(&mut self) {
         let us: Player = P::player();
@@ -361,7 +517,6 @@ impl <'a> Evaluation <'a> {
 
         // King shelter and enemy pawns storm
         let mut score = self.pawn_entry.king_safety::<P>(self.board, ksq_us);
-
         // Main king safety evaluation
         if self.king_attackers_count[them as usize] as i32 > (1 - self.board.count_piece(them, PieceType::Q) as i32) {
             // Attacked squares defended at most once by our queen or king
@@ -439,6 +594,7 @@ impl <'a> Evaluation <'a> {
 
         b = (b & self.attacked_by2[them as usize] & !self.attacked_by[us as usize][PieceType::P as usize]) |
             if us == Player::White {b << 4} else {b >> 4};
+
 
         score -= CLOSE_ENEMIES * b.count_bits();
 
@@ -690,6 +846,19 @@ impl <'a> Evaluation <'a> {
         let v: i32 = ((eg > 0) as i32 - (eg < 0) as i32) * initiative.max(-eg.abs());
 
         return Score(0, v);
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trace_eval() {
+        let board = Board::default();
+        Evaluation::trace(&board);
     }
 
 

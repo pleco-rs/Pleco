@@ -9,7 +9,6 @@ use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
 use pleco::core::mono_traits::*;
 use pleco::board::castle_rights::Castling;
-use pleco::core::masks::FILE_DISPLAYS;
 use pleco::core::CastleType;
 
 use super::TableBase;
@@ -300,6 +299,7 @@ impl PawnEntry {
                 P::player().relative_rank_of_sq(b.backmost_sq(P::player()))
             };
 
+
             b = their_pawns & SQ(file).file_bb();
             let rk_them: Rank = if b.is_empty() {
                 Rank::R1
@@ -322,10 +322,7 @@ impl PawnEntry {
             } else {
                 3  // Unblocked
             };
-            if d >= File::E {
-                println!("file: {}, num: {}",FILE_DISPLAYS[file as usize], file);
-                println!("flip: {}", FILE_DISPLAYS[d as usize]);
-            }
+
             safety -= SHELTER_WEAKNESS[r as usize][d as usize][rk_us as usize];
             if rk_them <= Rank::R5 {
                 safety -= STORM_DANGER[storm_danger_idx][d as usize][rk_them as usize];

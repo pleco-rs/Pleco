@@ -264,8 +264,8 @@ impl Searcher {
                     value = -self.search::<PV>(-beta, -alpha, max_depth);
                 }
                 self.board.undo_move();
-                assert!(value > NEG_INFINITE as i32);
-                assert!(value < INFINITE as i32);
+                assert!(value > NEG_INFINITE);
+                assert!(value < INFINITE );
                 if self.stop() {
                     return 0;
                 }
@@ -303,6 +303,7 @@ impl Searcher {
         let node_bound = if best_value as i32 >= beta {NodeBound::LowerBound}
             else if is_pv && !best_move.is_null() {NodeBound::Exact}
                 else {NodeBound::UpperBound};
+
 
         tt_entry.place(zob, best_move, best_value as i16, pos_eval as i16, plys_to_zero as u8, node_bound);
 

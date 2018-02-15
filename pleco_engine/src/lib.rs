@@ -34,7 +34,7 @@
 #![feature(const_indexing)]
 #![feature(const_fn)]
 
-#![crate_type = "staticlib"]
+//#![crate_type = "staticlib"]
 
 #[macro_use]
 extern crate lazy_static;

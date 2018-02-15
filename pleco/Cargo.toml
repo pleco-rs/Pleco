@@ -32,7 +32,7 @@ opt-level = 3
 opt-level = 3
 debug = false
 debug-assertions = false
-panic = "abort"
+panic = "unwind"
 codegen-units = 1
 lto = true
 
