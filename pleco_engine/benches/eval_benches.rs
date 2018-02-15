@@ -13,6 +13,8 @@ use pleco_engine::tables::material::{Material, MaterialEntry};
 use pleco::core::mono_traits::WhiteType;
 use test::{black_box, Bencher};
 
+use pleco_engine::search::eval::Evaluation;
+
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         RAND_BOARD_NON_CHECKS_100.iter()
@@ -51,7 +53,7 @@ fn bench_100_pawn_king_evals(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_100_material(b: &mut Bencher) {
+fn bench_100_material_eval(b: &mut Bencher) {
     let mut t: Material = black_box(Material::new(1 << 11));
     b.iter(|| {
         t.clear();
@@ -60,6 +62,21 @@ fn bench_100_material(b: &mut Bencher) {
         for board in RAND_BOARDS.iter() {
             let entry: &mut MaterialEntry = black_box(t.probe(board));
             score += black_box(entry.value) as i64;
+        }
+    })
+}
+
+#[bench]
+fn bench_100_eval(b: &mut Bencher) {
+    let mut tp: PawnTable = black_box(PawnTable::new(1 << 10));
+    let mut tm: Material = black_box(Material::new(1 << 11));
+    b.iter(|| {
+        tp.clear();
+        tm.clear();
+        #[allow(unused_variables)]
+        let mut score: i64 = 0;
+        for board in RAND_BOARDS.iter() {
+            score += black_box(Evaluation::evaluate(&board, &mut tp, &mut tm)) as i64;
         }
     })
 }

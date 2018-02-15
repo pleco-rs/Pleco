@@ -1801,6 +1801,7 @@ impl Board {
     }
 
     /// Given a piece, square, and player, returns all squares the piece may move to.
+    #[inline]
     pub fn attacks_from(&self, piece: PieceType, sq: SQ, player: Player) -> BitBoard {
         match piece {
             PieceType::K => king_moves(sq),
@@ -1810,6 +1811,11 @@ impl Board {
             PieceType::R => rook_moves(self.occ_all, sq),
             PieceType::Q => queen_moves(self.occ_all, sq)
         }
+    }
+
+    #[inline(always)]
+    pub fn pawn_passed(&self, player: Player, sq: SQ) -> bool {
+        (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
     }
 
 //  ------- Move Testing -------

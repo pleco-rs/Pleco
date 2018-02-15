@@ -111,3 +111,28 @@ impl Mul<u8> for Score {
         Score(self.0 * rhs as i32, self.1 * rhs as i32)
     }
 }
+
+impl Mul<u16> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: u16) -> Score {
+        Score(self.0 * rhs as i32, self.1 * rhs as i32)
+    }
+}
+
+
+impl Mul<i16> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: i16) -> Score {
+        Score(self.0 * rhs as i32, self.1 * rhs as i32)
+    }
+}
+
+impl Mul<i32> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: i32) -> Score {
+        Score(self.0 * rhs, self.1 * rhs)
+    }
+}

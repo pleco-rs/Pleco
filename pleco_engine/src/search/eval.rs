@@ -69,6 +69,36 @@ const OUTPOST: [[Score; 2]; 2] = [
 
 const ROOK_ON_FILE: [Score; 2] = [Score(20, 7), Score(45, 20)];
 
+// ThreatByMinor/ByRook[attacked PieceType] contains bonuses according to
+// which piece type attacks which one. Attacks on lesser pieces which are
+// pawn-defended are not considered.
+const THREAT_BY_MINOR: [Score; PIECE_TYPE_CNT] = [
+    Score(0, 0), Score(0, 33), Score(45, 43), Score(46, 47), Score(72, 107), Score(48, 118)
+];
+
+const THREAT_BY_ROOK: [Score; PIECE_TYPE_CNT] = [
+    Score(0, 0), Score(0, 25), Score(40, 62), Score(40, 59), Score(0, 34), Score(35, 48)
+];
+
+// ThreatByKing[on one/on many] contains bonuses for king attacks on
+// pawns or pieces which are not pawn-defended.
+const THREAT_BY_KING: [Score; 2] = [Score(3, 62), Score(9, 138) ];
+
+// Passed[mg/eg][Rank] contains midgame and endgame bonuses for passed pawns.
+// We don't use a Score because we process the two components independently.
+const PASSED: [[Value; RANK_CNT]; 2] = [
+    [ 0, 5,  5, 31, 73, 166, 252, 0 ],
+    [ 0, 7, 14, 38, 73, 166, 252, 0 ]
+];
+
+// PassedFile[File] contains a bonus according to the file of a passed pawn
+const PASSED_FILE: [Score; FILE_CNT] = [
+Score(  9, 10), Score( 2, 10), Score( 1, -8), Score(-20,-12),
+Score(-20,-12), Score( 1, -8), Score( 2, 10), Score(  9, 10)
+];
+
+const RANK_FACTOR: [i32; RANK_CNT] = [ 0, 0, 0, 2, 6, 11, 16, 0];
+
 // Assorted bonuses and penalties used by evaluation
 const MINOR_BEHIND_PAWN: Score = Score( 16,  0);
 const BISHOP_PAWNS          : Score = Score(  8, 12);
@@ -79,7 +109,7 @@ const WEAK_QUEEN            : Score = Score( 50, 10);
 const CLOSE_ENEMIES         : Score = Score(  7,  0);
 const PAWNLESS_FLANK        : Score = Score( 20, 80);
 const THREAT_BY_SAFE_PAWN     : Score = Score(192,175);
-const THREAT_BY_PAWN         : Score = Score( 16,  3);
+const THREAT_BY_RANK         : Score = Score( 16,  3);
 const HANGING              : Score = Score( 48, 27);
 const WEAK_UNOPOSSED_PAWN    : Score = Score(  5, 25);
 const THREAT_BY_PAWN_PUSH     : Score = Score( 38, 22);
@@ -160,6 +190,9 @@ impl <'a> Evaluation <'a> {
 
         score += self.evaluate_king::<WhiteType>() - self.evaluate_king::<BlackType>();
 
+        score += self.evaluate_threats::<WhiteType>() - self.evaluate_threats::<BlackType>();
+
+        score += self.evaluate_passed_pawns::<WhiteType>() - self.evaluate_passed_pawns::<BlackType>();
         let phase = self.material_entry.phase as i32;
 
         v =   score.mg() * phase
@@ -409,5 +442,193 @@ impl <'a> Evaluation <'a> {
         }
 
         score
+    }
+
+    fn evaluate_threats<P: PlayerTrait>(&self) -> Score {
+        let us: Player = P::player();
+        let them: Player = P::opp_player();
+        let t_rank_3_bb = if us == Player::White {BitBoard::RANK_3} else {BitBoard::RANK_6};
+
+        let mut b: BitBoard;
+        let mut weak: BitBoard;
+        let defended: BitBoard;
+        let strongly_protected: BitBoard;
+        let mut safe_threats: BitBoard;
+
+        let mut score: Score = Score::ZERO;
+
+        // Non-pawn enemies attacked by a pawn
+        weak = (self.board.get_occupied_player(them) ^ self.board.piece_bb( them, PieceType::P))
+                & self.attacked_by[us as usize][PieceType::P as usize];
+
+        if weak.is_not_empty() {
+            b = self.board.piece_bb(us, PieceType::P)
+                & (!self.attacked_by_all[them as usize] | self.attacked_by_all[us as usize]);
+            safe_threats = (P::shift_up_right(b) | P::shift_up_left(b)) & weak;
+
+            score += THREAT_BY_SAFE_PAWN * safe_threats.count_bits();
+        }
+
+        // Squares strongly protected by the opponent, either because they attack the
+        // square with a pawn, or because they attack the square twice and we don't.
+        strongly_protected = self.attacked_by[them as usize][PieceType::P as usize]
+                            | (self.attacked_by2[them as usize] & ! self.attacked_by2[us as usize]);
+
+        // Non-pawn enemies, strongly protected
+        defended = (self.board.get_occupied_player(them) ^ self.board.piece_bb( them, PieceType::P)) & strongly_protected;
+
+        // Enemies not strongly protected and under our attack
+        weak = self.board.get_occupied_player(them) & !strongly_protected & self.attacked_by_all[us as usize];
+
+        // Add a bonus according to the kind of attacking pieces
+        if (defended | weak).is_not_empty() {
+            b = (defended | weak) &  (self.attacked_by[us as usize][PieceType::N as usize]
+                                    | self.attacked_by[us as usize][PieceType::B as usize]);
+
+            while let Some(s) = b.pop_some_lsb() {
+                let piece = self.board.piece_at_sq(s).unwrap();
+                score += THREAT_BY_MINOR[piece as usize];
+                if piece != PieceType::P {
+                    score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
+                }
+            }
+
+            b = (self.board.piece_bb(them, PieceType::Q) | weak) & self.attacked_by[us as usize][PieceType::R as usize];
+            while let Some(s) = b.pop_some_lsb() {
+                let piece = self.board.piece_at_sq(s).unwrap();
+                score += THREAT_BY_ROOK[piece as usize];
+                if piece != PieceType::P {
+                    score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
+                }
+            }
+
+            score += HANGING * (weak & !self.attacked_by_all[them as usize]).count_bits();
+
+            b = weak & self.attacked_by[us as usize][PieceType::K as usize];
+            if b.is_not_empty() {
+                score += THREAT_BY_KING[b.more_than_one() as usize];
+            }
+        }
+
+        // Bonus for opponent unopposed weak pawns
+        if self.board.piece_two_bb(PieceType::R, PieceType::Q, us).is_not_empty() {
+            score += WEAK_UNOPOSSED_PAWN * self.pawn_entry.weak_unopposed(them);
+        }
+
+        // Find squares where our pawns can push on the next move
+        b  = P::shift_up(self.board.piece_bb(them, PieceType::P)) & ! self.board.get_occupied();
+        b |= P::shift_up(b & t_rank_3_bb) & ! self.board.get_occupied();
+
+        // Add a bonus for each new pawn threats from those squares
+        b = (P::shift_up_left(b) | P::shift_up_right(b))
+            & self.board.get_occupied_player(them)
+            & !self.attacked_by[us as usize][PieceType::P as usize];
+
+        score += THREAT_BY_PAWN_PUSH * b.count_bits();
+
+        // Add a bonus for safe slider attack threats on opponent queen
+        safe_threats = !self.board.get_occupied_player(us)
+            & !self.attacked_by2[us as usize]
+            & !self.attacked_by2[them as usize];
+
+        b =  (self.attacked_by[us as usize][PieceType::B as usize]
+                    & self.attacked_by_queen_diagonal[them as usize])
+            | (self.attacked_by[us as usize][PieceType::R as usize]
+                & self.attacked_by[us as usize][PieceType::B as usize]
+                & !self.attacked_by_queen_diagonal[them as usize]);
+
+        score += THREAT_BY_ATTACK_ON_QUEEN * (b & safe_threats).count_bits();
+        score
+    }
+
+    fn evaluate_passed_pawns<P: PlayerTrait>(&self) -> Score {
+        let us: Player = P::player();
+        let them: Player = P::opp_player();
+
+        let mut b: BitBoard;
+        let mut bb: BitBoard;
+        let mut squares_to_queen: BitBoard;
+        let mut defended_squares: BitBoard;
+        let mut unsafe_squares: BitBoard;
+
+        let mut score: Score = Score::ZERO;
+
+        b = self.pawn_entry.passed_pawns(us);
+
+        while let Some((s,bits)) = b.pop_some_lsb_and_bit() {
+            bb = forward_file_bb(us, s) & (self.attacked_by_all[them as usize] | self.board.get_occupied_player(them));
+            score -= HINDER_PASSED_PAWN * bb.count_bits();
+
+            let r: Rank = us.relative_rank_of_sq(s);
+            let rr: i32 = RANK_FACTOR[r as usize];
+
+            let mut mbonus: Value = PASSED[0][r as usize];
+            let mut ebonus: Value = PASSED[1][r as usize];
+
+            if rr > 0 {
+                let block_sq: SQ = P::up(s);
+
+                ebonus += (self.king_distance(them, block_sq) as i32 * 5 - self.king_distance(us, block_sq) as i32 * 2) * rr;
+
+                if r != Rank::R7 {
+                    ebonus -= self.king_distance(us, P::up(block_sq)) as i32 * rr;
+                }
+
+                if self.board.piece_at_sq(block_sq).is_none() {
+                    // If there is a rook or queen attacking/defending the pawn from behind,
+                    // consider all the squaresToQueen. Otherwise consider only the squares
+                    // in the pawn's path attacked or occupied by the enemy.
+                    defended_squares = forward_file_bb(us, s);
+                    unsafe_squares = forward_file_bb(us, s);
+                    squares_to_queen = forward_file_bb(us, s);
+
+                    bb = self.board.piece_two_bb_both_players(PieceType::R, PieceType::Q)
+                        & rook_moves(self.board.get_occupied(),s)  & forward_file_bb(them, s);
+
+                    if (self.board.get_occupied_player(us) & bb).is_empty() {
+                        defended_squares &= self.attacked_by_all[us as usize];
+                    }
+
+                    if (self.board.get_occupied_player(them) & bb).is_empty() {
+                        unsafe_squares &= self.attacked_by_all[them as usize] | self.board.get_occupied_player(them);
+                    }
+
+                    // If there aren't any enemy attacks, assign a big bonus. Otherwise
+                    // assign a smaller bonus if the block square isn't attacked.
+                    let mut k: i32 = if unsafe_squares.is_empty() {18} else if (unsafe_squares & bits).is_empty() {8} else {0};
+
+                    // If the path to the queen is fully defended, assign a big bonus.
+                    // Otherwise assign a smaller bonus if the block square is defended.
+                    if defended_squares == squares_to_queen {
+                        k += 6;
+                    } else if (defended_squares & bits).is_not_empty() {
+                        k += 4;
+                    }
+
+                    mbonus += k * rr;
+                    ebonus += k * rr;
+                } else if (self.board.get_occupied_player(us) & bits).is_not_empty() {
+                    mbonus += rr + r as i32 * 2;
+                    ebonus += rr + r as i32 * 2;
+                }
+            }
+
+            // Scale down bonus for candidate passers which need more than one
+            // pawn push to become passed or have a pawn in front of them.
+            if !self.board.pawn_passed(us, P::up(s))
+                || (self.board.piece_bb_both_players(PieceType::P) & forward_file_bb(us, s)).is_not_empty() {
+                mbonus /= 2;
+                ebonus /= 2;
+            }
+
+            score += Score(mbonus, ebonus) + PASSED_FILE[s.file() as usize];
+        }
+
+        score
+    }
+    // king_distance() returns an estimate of the distance that the king
+    // of the given color has to run to reach square s.
+    fn king_distance(&self, player: Player, sq: SQ) -> u8 {
+        distance_of_sqs(self.board.king_sq(player),sq).min(5)
     }
 }
