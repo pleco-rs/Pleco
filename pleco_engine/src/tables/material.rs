@@ -59,6 +59,8 @@ pub struct Material {
     table: TableBase<MaterialEntry>,
 }
 
+unsafe impl Send for Material {}
+
 impl Material {
     /// Creates a new `Material` of `size` entries.
     ///

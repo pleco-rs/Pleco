@@ -316,6 +316,14 @@ impl File {
             other
         }
     }
+
+    pub fn distance(self, other: File) -> u8 {
+        if self > other {
+            self as u8 - other as u8
+        } else {
+            other as u8 - self as u8
+        }
+    }
 }
 
 impl Not for File {
@@ -341,6 +349,16 @@ pub enum Rank { // eg a specific row
     R6 = 5,
     R7 = 6,
     R8 = 7,
+}
+
+impl Rank {
+    pub fn distance(self, other: Rank) -> u8 {
+        if self > other {
+            self as u8 - other as u8
+        } else {
+            other as u8 - self as u8
+        }
+    }
 }
 
 /// Types of Castling available to a player.

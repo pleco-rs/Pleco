@@ -120,6 +120,8 @@ pub struct PawnTable {
     table: TableBase<PawnEntry>,
 }
 
+unsafe impl Send for PawnTable {}
+
 impl PawnTable {
     /// Creates a new `PawnTable` of `size` entries.
     ///

@@ -22,6 +22,8 @@ use sync::LockLatch;
 use time::uci_timer::*;
 use time::time_management::TimeManager;
 use search::Searcher;
+use tables::pawn_table::PawnTable;
+use tables::material::Material;
 
 use self::threads::*;
 
@@ -100,6 +102,8 @@ impl ThreadPool {
             board: Board::default(),
             time_man: &TIMER,
             tt: &TT_TABLE,
+            pawns: PawnTable::new(16384),
+            material: Material::new(8192),
             id,
             root_moves: root_moves.clone(),
             use_stdout: Arc::clone(&self.use_stdout),

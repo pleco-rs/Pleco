@@ -1,4 +1,4 @@
-
+//! Evaluation function!
 use std::mem;
 #[allow(unused_imports)]
 use pleco::{Board,BitBoard,SQ,Rank,File,Player,PieceType};
@@ -193,8 +193,14 @@ impl <'a> Evaluation <'a> {
         score += self.evaluate_threats::<WhiteType>() - self.evaluate_threats::<BlackType>();
 
         score += self.evaluate_passed_pawns::<WhiteType>() - self.evaluate_passed_pawns::<BlackType>();
-        let phase = self.material_entry.phase as i32;
 
+        if self.board.non_pawn_material(Player::White) + self.board.non_pawn_material(Player::Black) >= SPACE_THRESHOLD {
+            score += self.evaluate_space::<WhiteType>() - self.evaluate_space::<BlackType>();
+        }
+
+        score += self.evaluate_initiative(score.eg());
+
+        let phase = self.material_entry.phase as i32;
         v =   score.mg() * phase
             + score.eg() * (PHASE_MID_GAME as i32 - phase);
 
@@ -631,4 +637,60 @@ impl <'a> Evaluation <'a> {
     fn king_distance(&self, player: Player, sq: SQ) -> u8 {
         distance_of_sqs(self.board.king_sq(player),sq).min(5)
     }
+
+
+    // evaluate_space() computes the space evaluation for a given side. The
+    // space evaluation is a simple bonus based on the number of safe squares
+    // available for minor pieces on the central four files on ranks 2--4. Safe
+    // squares one, two or three squares behind a friendly pawn are counted
+    // twice. Finally, the space bonus is multiplied by a weight. The aim is to
+    // improve play on game opening.
+    fn evaluate_space<P: PlayerTrait>(&self) -> Score {
+        let us: Player = P::player();
+        let them: Player = P::opp_player();
+
+        let space_mask = if us == Player::White { CENTER_FILES & (BitBoard::RANK_2 | BitBoard::RANK_3 | BitBoard::RANK_4)}
+            else {CENTER_FILES & (BitBoard::RANK_7 | BitBoard::RANK_6 | BitBoard::RANK_5) };
+
+        let safe: BitBoard = space_mask & !self.board.piece_bb(us, PieceType::P)
+            & !self.attacked_by[them as usize][PieceType::P as usize]
+            & (self.attacked_by_all[us as usize] | !self.attacked_by_all[them as usize]);
+
+        let mut behind: BitBoard = self.board.piece_bb(us, PieceType::P);
+        behind |= P::shift_down(behind);
+        behind |= P::shift_down(behind);
+
+        let sh_safe: BitBoard = if us == Player::White { safe << 32 } else {safe >> 32};
+
+        let bonus: i32 = (sh_safe | (behind & safe)).count_bits() as i32;
+        let weight: i32 = self.board.count_pieces_player(us) as i32 - 2 * self.pawn_entry.open_files() as i32;
+
+        Score(bonus * weight * weight / 16, 0)
+    }
+
+
+    // evaluate_initiative() computes the initiative correction value for the
+    // position, i.e., second order bonus/malus based on the known attacking/defending
+    // status of the players.
+    fn evaluate_initiative(&self, eg: Value) -> Score {
+        let w_ksq = self.board.king_sq(Player::White);
+        let b_ksq = self.board.king_sq(Player::Black);
+        let king_distance: i32 = w_ksq.file().distance(b_ksq.file()) as i32 - w_ksq.rank().distance(b_ksq.rank()) as i32;
+        let both_flanks: bool = (self.board.piece_bb_both_players(PieceType::P) & QUEEN_SIDE).is_not_empty()
+                                && (self.board.piece_bb_both_players(PieceType::P) & KING_SIDE).is_not_empty();
+        let pawn_count: u8 = self.board.count_piece(Player::White, PieceType::P) + self.board.count_piece(Player::Black,PieceType::P);
+        // Compute the initiative bonus for the attacking side
+        let initiative: i32 =     8 * (self.pawn_entry.asymmetry() as i32 + king_distance - 17)
+                                + 12 * pawn_count as i32
+                                + 16 * both_flanks as i32;
+
+        // Now apply the bonus: note that we find the attacking side by extracting
+        // the sign of the endgame value, and that we carefully cap the bonus so
+        // that the endgame score will never change sign after the bonus.
+        let v: i32 = ((eg > 0) as i32 - (eg < 0) as i32) * initiative.max(-eg.abs());
+
+        return Score(0, v);
+    }
+
+
 }
