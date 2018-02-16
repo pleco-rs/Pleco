@@ -263,6 +263,7 @@ impl Searcher {
                 if is_pv && (moves_played == 1 || (value > alpha && (at_root || value < beta))) {
                     value = -self.search::<PV>(-beta, -alpha, max_depth);
                 }
+                value = -self.search::<PV>(-beta, -alpha, max_depth);
                 self.board.undo_move();
                 assert!(value > NEG_INFINITE);
                 assert!(value < INFINITE );

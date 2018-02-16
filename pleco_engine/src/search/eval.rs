@@ -154,7 +154,7 @@ struct Term {
 
 
 fn displ_scores(score: Score, score2: Score) {
-    let both = score + score2;
+    let both = score - score2;
     print!("{:>8} {:>8} | ", score.0, score.1);
     print!("{:>8} {:>8} | ", score2.0, score2.1);
     println!("{:>8} {:>8} ", both.0, both.1);
@@ -858,6 +858,12 @@ mod tests {
     #[test]
     fn trace_eval() {
         let board = Board::default();
+        Evaluation::trace(&board);
+        let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
+        Evaluation::trace(&board);
+        let mut board = Board::default();
+        board.apply_uci_move("e2e3");
+        board.apply_uci_move("d1g4");
         Evaluation::trace(&board);
     }
 
