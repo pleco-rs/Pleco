@@ -69,7 +69,7 @@
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
-#![crate_type = "rlib"]
+//#![crate_type = "rlib"]
 
 #![feature(fused)]
 #![feature(trusted_len)]

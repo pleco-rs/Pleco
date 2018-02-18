@@ -316,6 +316,14 @@ impl File {
             other
         }
     }
+
+    pub fn distance(self, other: File) -> u8 {
+        if self > other {
+            self as u8 - other as u8
+        } else {
+            other as u8 - self as u8
+        }
+    }
 }
 
 impl Not for File {
@@ -343,6 +351,16 @@ pub enum Rank { // eg a specific row
     R8 = 7,
 }
 
+impl Rank {
+    pub fn distance(self, other: Rank) -> u8 {
+        if self > other {
+            self as u8 - other as u8
+        } else {
+            other as u8 - self as u8
+        }
+    }
+}
+
 /// Types of Castling available to a player.
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
@@ -362,7 +380,7 @@ pub enum Phase {
 /// corresponding rank as a u64.
 #[inline(always)]
 pub fn rank_bb(s: u8) -> u64 {
-    RANK_BB[rank_of_sq(s) as usize]
+    RANK_BB[rank_idx_of_sq(s) as usize]
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the

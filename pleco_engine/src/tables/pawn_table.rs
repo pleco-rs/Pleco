@@ -9,7 +9,6 @@ use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
 use pleco::core::mono_traits::*;
 use pleco::board::castle_rights::Castling;
-use pleco::core::masks::FILE_DISPLAYS;
 use pleco::core::CastleType;
 
 use super::TableBase;
@@ -87,8 +86,8 @@ lazy_static!{
                     for r in 1..7 {
                         let mut v: i32 = 17 * support;
                         v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
-                        let eg: i16 = (v * (r as i32 - 2) / 4) as i16;
-                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v as i16, eg);
+                        let eg: i32 = v * (r as i32 - 2) / 4;
+                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
                     }
                 }
             }
@@ -106,8 +105,8 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
                 for r in 1..7 {
                     let mut v: i32 = 17 * support;
                     v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
-                    let eg: i16 = (v * (r as i32 - 2) / 4) as i16;
-                    a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v as i16, eg);
+                    let eg: i32 = v * (r as i32 - 2) / 4;
+                    a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
                 }
             }
         }
@@ -119,6 +118,8 @@ fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
 pub struct PawnTable {
     table: TableBase<PawnEntry>,
 }
+
+unsafe impl Send for PawnTable {}
 
 impl PawnTable {
     /// Creates a new `PawnTable` of `size` entries.
@@ -298,6 +299,7 @@ impl PawnEntry {
                 P::player().relative_rank_of_sq(b.backmost_sq(P::player()))
             };
 
+
             b = their_pawns & SQ(file).file_bb();
             let rk_them: Rank = if b.is_empty() {
                 Rank::R1
@@ -320,10 +322,7 @@ impl PawnEntry {
             } else {
                 3  // Unblocked
             };
-            if d >= File::E {
-                println!("file: {}, num: {}",FILE_DISPLAYS[file as usize], file);
-                println!("flip: {}", FILE_DISPLAYS[d as usize]);
-            }
+
             safety -= SHELTER_WEAKNESS[r as usize][d as usize][rk_us as usize];
             if rk_them <= Rank::R5 {
                 safety -= STORM_DANGER[storm_danger_idx][d as usize][rk_them as usize];

@@ -6,7 +6,7 @@
 use std::ops::*;
 
 /// Type for `i16` to determine the `Value` of an evaluation.
-pub type Value = i16;
+pub type Value = i32;
 
 
 pub const ZERO: Value = 0;
@@ -101,5 +101,38 @@ impl Neg for Score {
 
     fn neg(self) -> Score {
         Score(-self.0, -self.1)
+    }
+}
+
+impl Mul<u8> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: u8) -> Score {
+        Score(self.0 * rhs as i32, self.1 * rhs as i32)
+    }
+}
+
+impl Mul<u16> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: u16) -> Score {
+        Score(self.0 * rhs as i32, self.1 * rhs as i32)
+    }
+}
+
+
+impl Mul<i16> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: i16) -> Score {
+        Score(self.0 * rhs as i32, self.1 * rhs as i32)
+    }
+}
+
+impl Mul<i32> for Score {
+    type Output = Score;
+
+    fn mul(self, rhs: i32) -> Score {
+        Score(self.0 * rhs, self.1 * rhs)
     }
 }

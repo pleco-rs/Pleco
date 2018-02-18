@@ -3,7 +3,7 @@
 //! This is a VERY basic evaluation, and while decent, it certainly isn't anything exceptional.
 
 use Board;
-use std::i16;
+use std::i32;
 use core::*;
 use core::masks::*;
 use core::bitboard::BitBoard;
@@ -11,10 +11,10 @@ use core::mono_traits::*;
 use core::score::Value;
 
 lazy_static! {
-    pub static ref PAWN_POS:   [[i16; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
+    pub static ref PAWN_POS:   [[i32; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
 }
 
-const PAWN_POS_ARRAY: [[i16; FILE_CNT]; RANK_CNT] = [
+const PAWN_POS_ARRAY: [[i32; FILE_CNT]; RANK_CNT] = [
     [0, 0, 0, 0, 0, 0, 0, 0], // RANK_8
     [5, 10, 15, 20, 20, 15, 10, 5],
     [4, 8, 12, 16, 16, 12, 8, 4],
@@ -26,8 +26,8 @@ const PAWN_POS_ARRAY: [[i16; FILE_CNT]; RANK_CNT] = [
 ];
 
 //  Flips the board, so rank_1 becomes rank_8, rank_8 becomes rank_1, rank_2 becomes rank_7, etc
-fn flip(arr: [[i16; FILE_CNT]; RANK_CNT]) -> [[i16; FILE_CNT]; RANK_CNT] {
-    let mut new_arr: [[i16; FILE_CNT]; RANK_CNT] = [[0; FILE_CNT]; RANK_CNT];
+fn flip(arr: [[i32; FILE_CNT]; RANK_CNT]) -> [[i32; FILE_CNT]; RANK_CNT] {
+    let mut new_arr: [[i32; FILE_CNT]; RANK_CNT] = [[0; FILE_CNT]; RANK_CNT];
     for i in 0..RANK_CNT {
         new_arr[i] = arr[7 - i];
     }
@@ -35,8 +35,8 @@ fn flip(arr: [[i16; FILE_CNT]; RANK_CNT]) -> [[i16; FILE_CNT]; RANK_CNT] {
 }
 
 // Flattens 2D array to a singular 1D array
-fn flatten(arr: [[i16; FILE_CNT]; RANK_CNT]) -> [i16; SQ_CNT] {
-    let mut new_arr: [i16; SQ_CNT] = [0; SQ_CNT];
+fn flatten(arr: [[i32; FILE_CNT]; RANK_CNT]) -> [i32; SQ_CNT] {
+    let mut new_arr: [i32; SQ_CNT] = [0; SQ_CNT];
     for i in 0..SQ_CNT {
         new_arr[i] = arr[i / 8][i % 8];
     }
@@ -46,31 +46,31 @@ fn flatten(arr: [[i16; FILE_CNT]; RANK_CNT]) -> [i16; SQ_CNT] {
 pub struct Eval {}
 
 trait EvalRuns {
-    fn eval_castling<PlayerTrait>(&self) -> i16;
-    fn eval_king_pos<PlayerTrait>(&self) -> i16;
-    fn eval_bishop_pos<PlayerTrait>(&self) -> i16;
-    fn eval_threats<PlayerTrait>(&self) -> i16;
-    fn eval_piece_counts<PlayerTrait,PieceTrait>(&self) -> i16;
+    fn eval_castling<PlayerTrait>(&self) -> i32;
+    fn eval_king_pos<PlayerTrait>(&self) -> i32;
+    fn eval_bishop_pos<PlayerTrait>(&self) -> i32;
+    fn eval_threats<PlayerTrait>(&self) -> i32;
+    fn eval_piece_counts<PlayerTrait,PieceTrait>(&self) -> i32;
 }
 
 
-const INFINITY: i16 = 30_001;
-const NEG_INFINITY: i16 = -30_001;
-const STALEMATE: i16 = 0;
-const PAWN_VALUE: i16 = 100;
-const KNIGHT_VALUE: i16 = 300;
-const BISHOP_VALUE: i16 = 300;
-const ROOK_VALUE: i16 = 500;
-const QUEEN_VALUE: i16 = 800;
-const KING_VALUE: i16 = 350;
-const CASTLE_ABILITY: i16 = 7;
-const CASTLE_BONUS: i16 = 20;
-const KING_BOTTOM: i16 = 8;
-const MATE: i16 = -25_000;
-const CHECK: i16 = 14;
+const INFINITY: i32 = 30_001;
+const NEG_INFINITY: i32 = -30_001;
+const STALEMATE: i32 = 0;
+const PAWN_VALUE: i32 = 100;
+const KNIGHT_VALUE: i32 = 300;
+const BISHOP_VALUE: i32 = 300;
+const ROOK_VALUE: i32 = 500;
+const QUEEN_VALUE: i32 = 800;
+const KING_VALUE: i32 = 350;
+const CASTLE_ABILITY: i32 = 7;
+const CASTLE_BONUS: i32 = 20;
+const KING_BOTTOM: i32 = 8;
+const MATE: i32 = -25_000;
+const CHECK: i32 = 14;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
-pub const PIECE_VALS: [i16; PIECE_TYPE_CNT] = [
+pub const PIECE_VALS: [i32; PIECE_TYPE_CNT] = [
     PAWN_VALUE,
     KNIGHT_VALUE,
     BISHOP_VALUE,
@@ -108,8 +108,8 @@ fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
 }
 
 
-fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i16 {
-    board.count_piece(P::player(), PieceType::P) as i16 * PAWN_VALUE +
+fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i32 {
+    board.count_piece(P::player(), PieceType::P) as i32 * PAWN_VALUE +
     if P::player() == Player::White {
         board.non_pawn_material(Player::White)
     } else {
@@ -117,8 +117,8 @@ fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i16 {
     }
 }
 
-fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
-    let mut score: i16 = 0;
+fn eval_castling<P: PlayerTrait>(board: &Board) -> i32 {
+    let mut score: i32 = 0;
     if board.has_castled(P::player()) {
         score += CASTLE_BONUS
     } else {
@@ -132,8 +132,8 @@ fn eval_castling<P: PlayerTrait>(board: &Board) -> i16 {
     score
 }
 
-fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
-    let mut score: i16 = 0;
+fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i32 {
+    let mut score: i32 = 0;
     let us_ksq = board.king_sq(P::player());
 
     if board.in_check() && P::player() == board.turn() {
@@ -141,13 +141,13 @@ fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i16 {
     }
 
     let bb_around_us: BitBoard = board.magic_helper.king_moves(us_ksq) & board.get_occupied_player(P::player());
-    score += bb_around_us.count_bits() as i16 * 9;
+    score += bb_around_us.count_bits() as i32 * 9;
 
     score
 }
 
-fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
-    let mut score: i16 = 0;
+fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i32 {
+    let mut score: i32 = 0;
 
     if board.count_piece(P::player(), PieceType::B) > 1 {
         score += 19
@@ -156,8 +156,8 @@ fn eval_bishop_pos<P: PlayerTrait>(board: &Board) -> i16 {
     score
 }
 
-fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i16 {
-    let mut score: i16 = 0;
+fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i32 {
+    let mut score: i32 = 0;
 
     let blockers: BitBoard = board.all_pinned_pieces(P::player());
 
@@ -166,15 +166,15 @@ fn eval_king_blockers_pinners<P: PlayerTrait>(board: &Board) -> i16 {
     // Our pieces blocking a check on their king
     let us_blockers: BitBoard = blockers & board.get_occupied_player(P::player());
 
-    score += 18 * us_blockers.count_bits() as i16;
+    score += 18 * us_blockers.count_bits() as i32;
 
-    score += 6 * them_blockers.count_bits() as i16;
+    score += 6 * them_blockers.count_bits() as i32;
 
     score
 }
 
-fn eval_pawns<P: PlayerTrait>(board: &Board) -> i16 {
-    let mut score: i16 = 0;
+fn eval_pawns<P: PlayerTrait>(board: &Board) -> i32 {
+    let mut score: i32 = 0;
 
     let pawns_bb: BitBoard = board.piece_bb(P::player(), PieceType::P);
     let mut bb = pawns_bb;
@@ -192,15 +192,15 @@ fn eval_pawns<P: PlayerTrait>(board: &Board) -> i16 {
     }
 
     // Add score for squares attacked by pawns
-    score += sqs_defended.count_bits() as i16;
+    score += sqs_defended.count_bits() as i32;
 
     // Add score for pawns defending other pawns
     sqs_defended &= pawns_bb;
-    score += 3 * sqs_defended.count_bits() as i16;
+    score += 3 * sqs_defended.count_bits() as i32;
 
     for i in 0..FILE_CNT {
         if file_counts[i] > 1 {
-            score -= (file_counts[i] * 3) as i16;
+            score -= (file_counts[i] * 3) as i32;
         }
         if i > 0 && i < 7 && file_counts[i] > 0 {
             if file_counts[i - 1] != 0 {

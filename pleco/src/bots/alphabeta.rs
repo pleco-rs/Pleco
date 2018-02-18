@@ -13,7 +13,7 @@ use super::{BestMove,eval_board};
 
 const MAX_PLY: u16 = 5;
 
-pub fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> BestMove {
+pub fn alpha_beta_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u16) -> BestMove {
 
     if board.depth() == max_depth {
         return eval_board(board);
@@ -23,7 +23,7 @@ pub fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + board.depth() as i16);
+            return BestMove::new_none(MATE + board.depth() as i32);
         } else {
             return BestMove::new_none(DRAW);
         }

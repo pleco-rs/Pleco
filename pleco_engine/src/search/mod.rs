@@ -10,7 +10,6 @@ use pleco::{MoveList,Board,BitMove};
 use pleco::core::*;
 use pleco::tools::tt::*;
 use pleco::core::score::*;
-use pleco::tools::eval::Eval;
 use pleco::tools::pleco_arc::Arc;
 
 use MAX_PLY;
@@ -20,6 +19,8 @@ use time::time_management::TimeManager;
 use time::uci_timer::*;
 use threadpool::TIMER;
 use root_moves::root_moves_list::RootMoveList;
+use tables::material::Material;
+use tables::pawn_table::PawnTable;
 use consts::*;
 
 const THREAD_DIST: usize = 20;
@@ -34,6 +35,8 @@ pub struct Searcher {
     pub board: Board,
     pub time_man: &'static TimeManager,
     pub tt: &'static TranspositionTable,
+    pub pawns: PawnTable,
+    pub material: Material,
     pub id: usize,
     pub root_moves: RootMoveList,
     pub use_stdout: Arc<AtomicBool>,
@@ -155,16 +158,16 @@ impl Searcher {
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
         let is_pv: bool = N::is_pv();
         let at_root: bool = self.board.depth() == 0;
-        let zob = self.board.zobrist();
+        let zob: u64 = self.board.zobrist();
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
-        let tt_value = if tt_hit {tt_entry.score as i32} else {0};
+        let tt_value: Value = if tt_hit {tt_entry.score as i32} else {0};
         let in_check: bool = self.board.in_check();
-        let ply = self.board.depth();
+        let ply: u16 = self.board.depth();
 
         let mut best_move = BitMove::null();
 
-        let mut value = NEG_INFINITE as i32;
-        let mut best_value = NEG_INFINITE as i32;
+        let mut value: Value = NEG_INFINITE;
+        let mut best_value: Value = NEG_INFINITE;
         let mut moves_played = 0;
 
         let mut pos_eval: i32 = 0;
@@ -174,7 +177,7 @@ impl Searcher {
         }
 
         if ply >= max_depth || self.stop() {
-            return Eval::eval_low(&self.board) as i32;
+            return self.eval();
         }
 
         let plys_to_zero = max_depth - ply;
@@ -198,13 +201,13 @@ impl Searcher {
         } else {
             if tt_hit {
                 if tt_entry.eval == 0 {
-                    pos_eval = Eval::eval_low(&self.board) as i32;
+                    pos_eval = self.eval();
                 }
                 if tt_value != 0 && correct_bound(tt_value, pos_eval, tt_entry.node_type()) {
                     pos_eval = tt_value;
                 }
             } else {
-                pos_eval = Eval::eval_low(&self.board) as i32;
+                pos_eval = self.eval();
                 tt_entry.place(zob, BitMove::null(), 0, pos_eval as i16, 0, NodeBound::NoBound);
             }
         }
@@ -261,13 +264,13 @@ impl Searcher {
                     value = -self.search::<PV>(-beta, -alpha, max_depth);
                 }
                 self.board.undo_move();
-                assert!(value > NEG_INFINITE as i32);
-                assert!(value < INFINITE as i32);
+                assert!(value > NEG_INFINITE);
+                assert!(value < INFINITE );
                 if self.stop() {
                     return 0;
                 }
                 if at_root {
-                    if moves_played == 1 || value as i32 > alpha {
+                    if moves_played == 1 || value > alpha {
                         self.root_moves.insert_score_depth(i,value, max_depth);
                     } else {
                         self.root_moves.insert_score(i, NEG_INFINITE as i32);
@@ -301,12 +304,19 @@ impl Searcher {
             else if is_pv && !best_move.is_null() {NodeBound::Exact}
                 else {NodeBound::UpperBound};
 
+
         tt_entry.place(zob, best_move, best_value as i16, pos_eval as i16, plys_to_zero as u8, node_bound);
 
         best_value
     }
 
     // TODO: Qscience search
+
+    pub fn eval(&mut self) -> Value {
+        let pawns = &mut self.pawns;
+        let material = &mut self.material;
+        eval::Evaluation::evaluate(&self.board, pawns, material)
+    }
 
     fn main_thread(&self) -> bool {
         self.id == 0

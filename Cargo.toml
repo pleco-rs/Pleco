@@ -11,7 +11,7 @@ rpath = false
 debug-assertions = false
 codegen-units = 1
 lto = true
-panic = "abort"
+panic = "unwind"
 
 [profile.bench]
 opt-level = 3

@@ -82,6 +82,8 @@ impl BitBoard {
     pub const DARK_SQUARES: BitBoard = BitBoard(DARK_SQUARES);
     /// BitBoard of all light squares.
     pub const LIGHT_SQUARES: BitBoard = BitBoard(LIGHT_SQUARES);
+    /// BitBoard of all light squares.
+    pub const ALL: BitBoard = BitBoard(!0);
 
     /// Converts a `BitBoard` to a square.
     ///
@@ -183,6 +185,15 @@ impl BitBoard {
         let sq: SQ = self.bit_scan_forward();
         *self &= *self - 1;
         (sq, sq.to_bb())
+    }
+
+    #[inline(always)]
+    pub fn pop_some_lsb_and_bit(&mut self) ->  Option<(SQ, BitBoard)> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self.pop_lsb_and_bit())
+        }
     }
 
     /// Returns the front-most square of a player on the current `BitBoard`.

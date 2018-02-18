@@ -4,8 +4,11 @@ use lazy_static;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+use pleco::Board;
 use pleco::tools::tt::TranspositionTable;
 //use time::time_management::TimeManager;
+
+use time::uci_timer::Limits;
 
 pub const MAX_PLY: u16 = 126;
 pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -20,7 +23,8 @@ static INITALIZED: AtomicBool = AtomicBool::new(false);
 /// Global Timer
 //pub static TIMER: TimeManager = TimeManager::uninitialized();
 //pub static TT_TABLE: TranspositionTable = unsafe {TranspositionTable::uninitialized()};
-//pub static mut POSITION: Board = unsafe {Board::uninitialized()};
+pub static mut POSITION: Option<Board> = None;
+pub static mut LIMIT: Option<Limits> = None;
 
 lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
@@ -33,6 +37,42 @@ pub fn init_globals() {
 //            POSITION.uninitialized_init();
 //        }
     }
+}
+
+pub fn global_limit() -> Option<Limits> {
+    unsafe {
+        if let Some(ref lim) = LIMIT {
+            Some(lim.clone())
+        } else {
+            None
+        }
+    }
+}
+
+pub fn set_limit(limit: Limits) {
+    unsafe {
+        LIMIT = Some(limit);
+    }
+}
+
+pub fn global_board() -> Option<Board> {
+    unsafe {
+        if let Some(ref board) = POSITION {
+            Some(board.shallow_clone())
+        } else {
+            None
+        }
+    }
+}
+
+pub fn set_board(board: Board) {
+    unsafe {
+        POSITION = Some(board);
+    }
+}
+
+pub fn clear_board() {
+    unsafe {POSITION = None;}
 }
 
 pub trait PVNode {

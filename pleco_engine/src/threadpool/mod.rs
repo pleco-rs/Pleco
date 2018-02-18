@@ -2,8 +2,6 @@
 
 pub mod threads;
 
-// TODO: use `parking_lot::RwLock`
-use std::sync::{RwLock};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::mpsc::{channel,Receiver,Sender};
@@ -22,6 +20,8 @@ use sync::LockLatch;
 use time::uci_timer::*;
 use time::time_management::TimeManager;
 use search::Searcher;
+use tables::pawn_table::PawnTable;
+use tables::material::Material;
 
 use self::threads::*;
 
@@ -41,11 +41,6 @@ lazy_static! {
 }
 
 pub struct ThreadPool {
-    // This is the position information we send to each thread upon
-    // starting. Contains stuff like the Board, and the Limit to search
-    // to.
-    pos_state: Arc<RwLock<Option<ThreadGo>>>,
-
     // This is all rootmoves for all treads.
     rm_manager: RmManager,
 
@@ -83,7 +78,6 @@ pub struct ThreadPool {
 impl ThreadPool {
     fn init(rx: Receiver<SendData>) -> Self {
         ThreadPool {
-            pos_state: Arc::new(RwLock::new(None)),
             rm_manager: RmManager::new(),
             main_thread: None,
             receiver: rx,
@@ -100,6 +94,8 @@ impl ThreadPool {
             board: Board::default(),
             time_man: &TIMER,
             tt: &TT_TABLE,
+            pawns: PawnTable::new(16384),
+            material: Material::new(8192),
             id,
             root_moves: root_moves.clone(),
             use_stdout: Arc::clone(&self.use_stdout),
@@ -107,7 +103,6 @@ impl ThreadPool {
         Thread {
             root_moves: root_moves,
             id: id,
-            pos_state: Arc::clone(&self.pos_state),
             cond: Arc::clone(&self.all_thread_go),
             searcher
         }
@@ -192,20 +187,13 @@ impl ThreadPool {
 
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
     /// is true.
-    pub fn uci_search(&mut self, board: &Board, limits: &PreLimits) {
-        {
-            let mut thread_go = self.pos_state.write().unwrap();
-            *thread_go = Some(ThreadGo {
-                board: board.shallow_clone(),
-                limit: (limits.clone()).create()
-            });
-        }
+    pub fn uci_search(&mut self) {
         self.main_thread_go.set();
     }
 
     /// performs a standard search, and blocks waiting for a returned `BitMove`.
-    pub fn search(&mut self, board: &Board, limits: &PreLimits) -> BitMove {
-        self.uci_search(&board, &limits);
+    pub fn search(&mut self) -> BitMove {
+        self.uci_search();
         self.get_move()
     }
 
@@ -235,8 +223,7 @@ impl Drop for ThreadPool {
         self.all_thread_go.set();
 
         // Join all the handles
-        while !self.threads.is_empty() {
-            let thread_handle = self.threads.pop().unwrap();
+        while let Some(thread_handle) = self.threads.pop() {
             thread_handle.join().unwrap();
         }
         self.main_thread.take().unwrap().join().unwrap();

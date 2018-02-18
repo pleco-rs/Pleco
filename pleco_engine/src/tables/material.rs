@@ -50,6 +50,7 @@ impl MaterialEntry {
     pub fn score(&self) -> Score {
         Score(self.value, self.value)
     }
+
 }
 
 
@@ -57,6 +58,8 @@ impl MaterialEntry {
 pub struct Material {
     table: TableBase<MaterialEntry>,
 }
+
+unsafe impl Send for Material {}
 
 impl Material {
     /// Creates a new `Material` of `size` entries.
@@ -85,11 +88,11 @@ impl Material {
         entry.key = key;
         entry.factor = [0; PLAYER_CNT];
 
-        let npm_w: Value= board.non_pawn_material(Player::White);
+        let npm_w: Value = board.non_pawn_material(Player::White);
         let npm_b: Value = board.non_pawn_material(Player::Black);
         let npm: Value = END_GAME_LIMIT.max(MID_GAME_LIMIT.min(npm_w + npm_b));
 
-        entry.phase = (((npm - END_GAME_LIMIT) * PHASE_MID_GAME as i16) / (MID_GAME_LIMIT - END_GAME_LIMIT)) as u16;
+        entry.phase = (((npm - END_GAME_LIMIT) * PHASE_MID_GAME as i32) / (MID_GAME_LIMIT - END_GAME_LIMIT)) as u16;
 
         let w_pawn_count: u8 =   board.count_piece(Player::White, PieceType::P);
         let w_knight_count: u8 = board.count_piece(Player::White, PieceType::N);
@@ -128,7 +131,7 @@ impl Material {
             [w_pair_bish, w_pawn_count, w_knight_count, w_bishop_count, w_rook_count, w_queen_count],
             [b_pair_bish, b_pawn_count, b_knight_count, b_bishop_count, b_rook_count, b_queen_count]];
 
-        entry.value = ((imbalance::<WhiteType>(&piece_counts) - imbalance::<BlackType>(&piece_counts)) /16) as i16;
+        entry.value = (imbalance::<WhiteType>(&piece_counts) - imbalance::<BlackType>(&piece_counts)) /16;
 
         entry
     }

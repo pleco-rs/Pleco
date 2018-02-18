@@ -1,6 +1,6 @@
 use {SQ,File,Player,Rank};
 use core::masks::*;
-use core::{file_of_sq,u8_to_u64,rank_bb,rank_idx_of_sq,file_idx_of_sq};
+use core::{file_of_sq,u8_to_u64,rank_idx_of_sq,file_idx_of_sq};
 
 use super::magic::{rook_attacks,bishop_attacks};
 
@@ -336,7 +336,7 @@ unsafe fn gen_ring_distance_bb() {
 
 unsafe fn gen_forward_ranks_bb() {
     for i in 0..7 {
-        FORWARD_RANKS_BB[i + 1][Player::Black as usize] = FORWARD_RANKS_BB[i][Player::Black as usize] | rank_bb(i as u8);
+        FORWARD_RANKS_BB[i + 1][Player::Black as usize] = FORWARD_RANKS_BB[i][Player::Black as usize] | RANK_BB[i as usize];
         FORWARD_RANKS_BB[i][Player::White as usize] = !FORWARD_RANKS_BB[i + 1][Player::Black as usize];
     }
 }
@@ -349,4 +349,10 @@ unsafe fn gen_pawn_attacks_span() {
             PASSED_PAWN_MASK[p][s] = FORWARD_FILE_BB[p][s] | PAWN_ATTACKS_SPAN[p][s];
         }
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+
 }

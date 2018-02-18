@@ -10,7 +10,7 @@ use time::uci_timer::{PreLimits};
 use uci::options::{OptionsMap,OptionWork};
 use uci::parse;
 use TT_TABLE;
-use init_globals;
+use consts::*;
 
 use num_cpus;
 
@@ -31,8 +31,6 @@ pub struct PlecoSearcher {
     options: OptionsMap,
     thread_pool: ThreadPool,
     search_mode: SearchType,
-    board: Option<Board>,
-    limit: Option<PreLimits>,
 }
 
 impl PlecoSearcher {
@@ -45,8 +43,6 @@ impl PlecoSearcher {
             options: OptionsMap::new(),
             thread_pool: pool,
             search_mode: SearchType::None,
-            board: None,
-            limit: None
         }
     }
 
@@ -66,14 +62,16 @@ impl PlecoSearcher {
                 "ucinewgame" => self.clear_search(),
                 "isready" => println!("readyok"),
                 "position" => {
-                    self.board = parse::position_parse_board(&args[1..]);
-                    if self.board.is_none() {
+                    if let Some(b) = parse::position_parse_board(&args[1..]) {
+                        set_board(b);
+                    } else {
                         println!("unable to parse board");
                     }
                 },
                 "setboard" => {
-                    self.board = parse::setboard_parse_board(&args[1..]);
-                    if self.board.is_none() {
+                    if let Some(b) = parse::setboard_parse_board(&args[1..]) {
+                        set_board(b);
+                    } else {
                         println!("unable to parse board");
                     }
                 }
@@ -92,16 +90,14 @@ impl PlecoSearcher {
 
     pub fn clear_search(&mut self) {
         self.clear_tt();
-        self.board = None;
+        clear_board();
     }
 
     fn uci_go(&mut self, args: &[&str]) {
         let limit = parse::parse_time(&args);
-
-        let poss_board = self.board.as_ref()
-                             .map(|b| b.shallow_clone());
-        if let Some(board) = poss_board {
-            self.search(&board, &limit);
+        if global_board().is_some() {
+            set_limit(limit.create());
+            self.thread_pool.uci_search();
         } else {
             println!("unable to start, no position set!");
         }
@@ -179,7 +175,9 @@ impl PlecoSearcher {
     pub fn search(&mut self, board: &Board, limit: &PreLimits) {
         TT_TABLE.new_search();
         self.search_mode = SearchType::Search;
-        self.thread_pool.uci_search(&board, &limit);
+        set_limit(limit.clone().create());
+        set_board(board.shallow_clone());
+        self.thread_pool.uci_search();
     }
 
     pub fn halt(&mut self) {
