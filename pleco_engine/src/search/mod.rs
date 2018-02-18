@@ -158,16 +158,16 @@ impl Searcher {
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
         let is_pv: bool = N::is_pv();
         let at_root: bool = self.board.depth() == 0;
-        let zob = self.board.zobrist();
+        let zob: u64 = self.board.zobrist();
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
-        let tt_value = if tt_hit {tt_entry.score as i32} else {0};
+        let tt_value: Value = if tt_hit {tt_entry.score as i32} else {0};
         let in_check: bool = self.board.in_check();
-        let ply = self.board.depth();
+        let ply: u16 = self.board.depth();
 
         let mut best_move = BitMove::null();
 
-        let mut value = NEG_INFINITE as i32;
-        let mut best_value = NEG_INFINITE as i32;
+        let mut value: Value = NEG_INFINITE;
+        let mut best_value: Value = NEG_INFINITE;
         let mut moves_played = 0;
 
         let mut pos_eval: i32 = 0;
@@ -263,7 +263,6 @@ impl Searcher {
                 if is_pv && (moves_played == 1 || (value > alpha && (at_root || value < beta))) {
                     value = -self.search::<PV>(-beta, -alpha, max_depth);
                 }
-                value = -self.search::<PV>(-beta, -alpha, max_depth);
                 self.board.undo_move();
                 assert!(value > NEG_INFINITE);
                 assert!(value < INFINITE );
@@ -271,7 +270,7 @@ impl Searcher {
                     return 0;
                 }
                 if at_root {
-                    if moves_played == 1 || value as i32 > alpha {
+                    if moves_played == 1 || value > alpha {
                         self.root_moves.insert_score_depth(i,value, max_depth);
                     } else {
                         self.root_moves.insert_score(i, NEG_INFINITE as i32);

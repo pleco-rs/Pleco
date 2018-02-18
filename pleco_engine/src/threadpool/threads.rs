@@ -4,14 +4,12 @@ use std::sync::atomic::{AtomicBool,Ordering};
 use std::sync::mpsc::Sender;
 
 use pleco::tools::pleco_arc::Arc;
-use pleco::board::*;
 
 
 use root_moves::RootMove;
 use root_moves::root_moves_list::RootMoveList;
 use root_moves::root_moves_manager::RmManager;
 use sync::LockLatch;
-use time::uci_timer::*;
 use search::Searcher;
 
 use consts::{global_board,global_limit};
