@@ -54,10 +54,7 @@
 use board::*;
 
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo};
-use core::*;
 
-use helper::prelude::*;
-use core::mono_traits::*;
 use core::sq::SQ;
 use core::bitboard::BitBoard;
 

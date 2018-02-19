@@ -317,6 +317,7 @@ impl File {
         }
     }
 
+    /// Returns the distance to another `File`.
     pub fn distance(self, other: File) -> u8 {
         if self > other {
             self as u8 - other as u8
@@ -352,6 +353,7 @@ pub enum Rank { // eg a specific row
 }
 
 impl Rank {
+    /// Returns the distance to another `Rank`.
     pub fn distance(self, other: Rank) -> u8 {
         if self > other {
             self as u8 - other as u8

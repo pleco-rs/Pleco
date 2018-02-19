@@ -25,6 +25,8 @@ use tables::material::Material;
 
 use self::threads::*;
 
+//static mut THREADPOOL: Option<&'static ThreadPool> = None;
+
 pub enum SendData {
     BestMove(RootMove)
 }

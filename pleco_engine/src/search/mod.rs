@@ -43,6 +43,7 @@ pub struct Searcher {
 }
 
 impl Searcher {
+
     pub fn search_root(&mut self) {
         assert!(self.board.depth() == 0);
         self.root_moves.set_finished(false);
