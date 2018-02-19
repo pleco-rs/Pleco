@@ -14,7 +14,7 @@ use super::piece_move::BitMove;
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
-use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
+use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 
 
 const MAX_MOVES: usize = 256;
@@ -222,5 +222,17 @@ impl IntoIterator for MoveList {
             movelist: self,
             idx: 0,
         }
+    }
+}
+
+
+
+impl FromIterator<BitMove> for MoveList {
+    fn from_iter<T: IntoIterator<Item=BitMove>>(iter: T) -> Self {
+        let mut list = MoveList::default();
+        for i in iter {
+            list.push(i);
+        }
+        list
     }
 }

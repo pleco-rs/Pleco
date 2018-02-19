@@ -73,6 +73,7 @@ chrono = "0.4.0"
 rand = "0.4.2"
 rayon = "1.0.0"
 num_cpus = "1.8.0"
+crossbeam-utils = "0.2.2"
 
 [dependencies.lazy_static]
 version = "1.0.0"

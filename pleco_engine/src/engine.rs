@@ -1,16 +1,17 @@
 //! The main searching structure.
 
 use std::io;
+use std::sync::atomic::Ordering;
 
 use pleco::Board;
 use pleco::BitMove;
 
-use threadpool::ThreadPool;
 use time::uci_timer::{PreLimits};
 use uci::options::{OptionsMap,OptionWork};
 use uci::parse;
 use TT_TABLE;
 use consts::*;
+use threadpool::threadpool;
 
 use num_cpus;
 
@@ -29,20 +30,19 @@ enum SearchType {
 
 pub struct PlecoSearcher {
     options: OptionsMap,
-    thread_pool: ThreadPool,
     search_mode: SearchType,
+    board: Board
 }
 
 impl PlecoSearcher {
     pub fn init(use_stdout: bool) -> Self {
         init_globals();
-        let mut pool = ThreadPool::new();
-        pool.stdout(use_stdout);
-        pool.set_thread_count(num_cpus::get());
+        USE_STDOUT.store(use_stdout,Ordering::Relaxed);
+        threadpool().set_thread_count(num_cpus::get());
         PlecoSearcher {
             options: OptionsMap::new(),
-            thread_pool: pool,
             search_mode: SearchType::None,
+            board: Board::default()
         }
     }
 
@@ -63,14 +63,14 @@ impl PlecoSearcher {
                 "isready" => println!("readyok"),
                 "position" => {
                     if let Some(b) = parse::position_parse_board(&args[1..]) {
-                        set_board(b);
+                        self.board = b;
                     } else {
                         println!("unable to parse board");
                     }
                 },
                 "setboard" => {
                     if let Some(b) = parse::setboard_parse_board(&args[1..]) {
-                        set_board(b);
+                        self.board = b;
                     } else {
                         println!("unable to parse board");
                     }
@@ -90,17 +90,11 @@ impl PlecoSearcher {
 
     pub fn clear_search(&mut self) {
         self.clear_tt();
-        clear_board();
     }
 
     fn uci_go(&mut self, args: &[&str]) {
         let limit = parse::parse_time(&args);
-        if global_board().is_some() {
-            set_limit(limit.create());
-            self.thread_pool.uci_search();
-        } else {
-            println!("unable to start, no position set!");
-        }
+        threadpool().uci_search(&self.board, &limit.create())
     }
 
     fn apply_option(&mut self, full_command: &str) {
@@ -159,7 +153,7 @@ impl PlecoSearcher {
                 match work {
                     OptionWork::ClearTT => {self.clear_tt()},
                     OptionWork::ResizeTT(mb) => {self.resize_tt(mb)},
-                    OptionWork::Threads(num) => {self.thread_pool.set_thread_count(num)}
+                    OptionWork::Threads(num) => {threadpool().set_thread_count(num)}
                 }
             }
         }
@@ -175,20 +169,21 @@ impl PlecoSearcher {
     pub fn search(&mut self, board: &Board, limit: &PreLimits) {
         TT_TABLE.new_search();
         self.search_mode = SearchType::Search;
-        set_limit(limit.clone().create());
-        set_board(board.shallow_clone());
-        self.thread_pool.uci_search();
+        threadpool().uci_search(board, &(limit.clone().create()));
+
     }
 
     pub fn halt(&mut self) {
-        self.thread_pool.stop_searching();
         self.search_mode = SearchType::None;
+        threadpool().set_stop(true);
     }
 
     pub fn stop_search_get_move(&mut self) -> BitMove {
+        self.search_mode = SearchType::None;
         if self.is_searching() {
-            self.halt();
-            return self.thread_pool.get_move();
+            threadpool().set_stop(true);
+            threadpool().wait_for_finish();
+            threadpool().best_move()
         } else {
             return BitMove::null();
         }
@@ -196,7 +191,10 @@ impl PlecoSearcher {
 
     pub fn await_move(&mut self) -> BitMove {
         if self.is_searching() {
-            return self.thread_pool.get_move();
+            return {
+                threadpool().wait_for_finish();
+                threadpool().best_move()
+            }
         } else {
             return BitMove::null();
         }
@@ -222,8 +220,26 @@ impl PlecoSearcher {
     }
 
     pub fn use_stdout(&mut self, stdout: bool) {
-        self.thread_pool.stdout(stdout);
+        threadpool().stdout(stdout);
     }
 
 
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn engine() {
+        let mut e = PlecoSearcher::init(true);
+        let mut limit = PreLimits::blank();
+        limit.depth = Some(4);
+        let board = Board::default();
+        e.search(&board, &limit);
+        e.await_move();
+        e.use_stdout(false);
+    }
 }

@@ -33,6 +33,7 @@
 #![feature(fused)]
 #![feature(const_indexing)]
 #![feature(const_fn)]
+#![feature(box_into_raw_non_null)]
 
 //#![crate_type = "staticlib"]
 
@@ -44,6 +45,7 @@ extern crate num_cpus;
 extern crate rand;
 extern crate pleco;
 extern crate chrono;
+extern crate crossbeam_utils;
 
 pub mod threadpool;
 pub mod sync;

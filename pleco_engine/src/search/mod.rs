@@ -2,9 +2,12 @@
 
 pub mod eval;
 
-
 use std::cmp::{min,max};
 use std::sync::atomic::{Ordering,AtomicBool};
+use std::cell::UnsafeCell;
+
+use rand;
+use rand::Rng;
 
 use pleco::{MoveList,Board,BitMove};
 use pleco::core::*;
@@ -15,10 +18,12 @@ use pleco::tools::pleco_arc::Arc;
 use MAX_PLY;
 use TT_TABLE;
 
+use threadpool::threadpool;
 use time::time_management::TimeManager;
 use time::uci_timer::*;
 use threadpool::TIMER;
-use root_moves::root_moves_list::RootMoveList;
+use sync::{GuardedBool,LockLatch};
+use root_moves::RootMove;
 use tables::material::Material;
 use tables::pawn_table::PawnTable;
 use consts::*;
@@ -31,34 +36,98 @@ static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 
 
 pub struct Searcher {
+    pub id: usize,
+    pub kill: AtomicBool,
+    pub searching: Arc<GuardedBool>,
+    pub cond: Arc<LockLatch>,
+
+
+    pub depth_completed: u16,
     pub limit: Limits,
     pub board: Board,
     pub time_man: &'static TimeManager,
     pub tt: &'static TranspositionTable,
     pub pawns: PawnTable,
     pub material: Material,
-    pub id: usize,
-    pub root_moves: RootMoveList,
-    pub use_stdout: Arc<AtomicBool>,
+    pub root_moves: UnsafeCell<Vec<RootMove>>,
 }
 
-impl Searcher {
+unsafe impl Send for Searcher {}
+unsafe impl Sync for Searcher {}
 
-    pub fn search_root(&mut self) {
-        assert!(self.board.depth() == 0);
-        self.root_moves.set_finished(false);
+impl Searcher {
+    pub fn new(id: usize, cond: Arc<LockLatch>) -> Self {
+        Searcher {
+            id,
+            kill: AtomicBool::new(false),
+            searching: Arc::new(GuardedBool::new(true)),
+            cond,
+            depth_completed: 0,
+            limit: Limits::blank(),
+            board: Board::default(),
+            time_man: &TIMER,
+            tt: &TT_TABLE,
+            pawns: PawnTable::new(16384),
+            material: Material::new(8192),
+            root_moves: UnsafeCell::new(Vec::new()),
+        }
+    }
+
+    pub fn idle_loop(&mut self) {
+        self.searching.set(false);
+        loop {
+            self.cond.wait();
+            if self.kill.load(Ordering::SeqCst) {
+                return;
+            }
+            self.go();
+        }
+    }
+
+    fn go(&mut self) {
+        self.searching.set(true);
+        if self.main_thread() {
+            self.main_thread_go();
+        } else {
+            self.search_root();
+        }
+        self.searching.set(false);
+    }
+
+    fn main_thread_go(&mut self) {
+        // set the global limit
+        if let Some(timer) = self.limit.use_time_management() {
+            TIMER.init(self.limit.start.clone(), &timer, self.board.turn(), self.board.moves_played());
+        }
+
+        if self.root_moves().is_empty() {
+//            println!("Root moves is empty");
+            return;
+        }
+
+        // Start each of the threads!
+        threadpool().thread_cond.set();
+
+        // Search ourselves
+        self.search_root();
+
+        threadpool().thread_cond.lock();
+        threadpool().set_stop(true);
+        threadpool().wait_for_non_main();
+
+    }
+
+
+    fn search_root(&mut self) {
+        assert_eq!(self.board.depth(), 0);
+
         if self.stop() {
-            self.root_moves.set_finished(true);
             return;
         }
 
         if self.use_stdout() {
             println!("info id {} start", self.id);
         }
-
-//        if self.main_thread() {
-//            println!("info max_time: {}, ideal time: {}", self.time_man.maximum_time(), self.time_man.ideal_time());
-//        }
 
         let max_depth = if let LimitsType::Depth(d) = self.limit.limits_type {
             d
@@ -80,22 +149,25 @@ impl Searcher {
         let mut last_best_move: BitMove = BitMove::null();
         let mut best_move_stability: u32 = 0;
 
-        self.root_moves.shuffle(self.id, &self.board);
+//        self.shuffle();
 
 
         'iterative_deepening: while !self.stop() && depth < max_depth {
-            self.root_moves.rollback();
+            self.root_moves().iter_mut().for_each(|m| m.rollback());
+//            self.root_moves.rollback();
+
+            let prev_best_score = self.root_moves()[0].prev_score;
 
             if depth >= 5 {
                 delta = 18;
-                alpha = max(self.root_moves.prev_best_score() - delta, NEG_INFINITE as i32);
-                beta = min(self.root_moves.prev_best_score() + delta, INFINITE as i32);
+                alpha = max(prev_best_score - delta, NEG_INFINITE as i32);
+                beta = min(prev_best_score + delta, INFINITE as i32);
             }
 
             'aspiration_window: loop {
 
                 best_value = self.search::<PV>(alpha, beta, depth) as i32;
-                self.root_moves.sort();
+                self.root_moves().sort();
 
                 if self.stop() {
                     break 'aspiration_window;
@@ -114,12 +186,12 @@ impl Searcher {
                 assert!(beta <= INFINITE as i32);
             }
 
-            self.root_moves.sort();
+            self.root_moves().sort();
             if self.use_stdout() && self.main_thread() {
                 println!("info depth {}", depth);
             }
             if !self.stop() {
-                self.root_moves.set_depth_completed(depth);
+                self.depth_completed = depth;
             }
             depth += skip_size;
 
@@ -127,7 +199,7 @@ impl Searcher {
                 continue;
             }
 
-            let best_move = self.root_moves.first().bit_move;
+            let best_move = unsafe { self.root_moves().get_unchecked(0).bit_move};
             if best_move != last_best_move {
                 time_reduction = 1.0;
                 best_move_stability = 0;
@@ -146,14 +218,13 @@ impl Searcher {
                     let stability: f64 = f64::powi(0.92, best_move_stability as i32);
                     let new_ideal = (ideal as f64 * stability * time_reduction) as i64;
                     println!("ideal: {}, new_ideal: {}, elapsed: {}", ideal, new_ideal, elapsed);
-                    if self.root_moves.len() == 1 || TIMER.elapsed() >= new_ideal {
+                    if self.root_moves().len() == 1 || TIMER.elapsed() >= new_ideal {
                         break 'iterative_deepening;
                     }
                 }
             }
 
         }
-        self.root_moves.set_finished(true);
     }
 
     fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, max_depth: u16) -> i32 {
@@ -224,7 +295,7 @@ impl Searcher {
 
         #[allow(unused_mut)]
         let mut moves: MoveList = if at_root {
-            self.root_moves.to_list()
+            self.root_moves().iter().map(|r| r.bit_move).collect()
         } else {
             self.board.generate_pseudolegal_moves()
         };
@@ -271,10 +342,14 @@ impl Searcher {
                     return 0;
                 }
                 if at_root {
+                    let rm: &mut RootMove = unsafe { self.root_moves().get_unchecked_mut(i) };
+
                     if moves_played == 1 || value > alpha {
-                        self.root_moves.insert_score_depth(i,value, max_depth);
+                        rm.depth_reached = max_depth;
+                        rm.score = value;
+
                     } else {
-                        self.root_moves.insert_score(i, NEG_INFINITE as i32);
+                        rm.score = NEG_INFINITE;
                     }
                 }
 
@@ -324,16 +399,16 @@ impl Searcher {
     }
 
     fn stop(&self) -> bool {
-        self.root_moves.load_stop()
+        threadpool().stop.load(Ordering::Relaxed)
     }
 
     fn check_time(&mut self) {
         if self.limit.use_time_management().is_some()
             && TIMER.elapsed() >= TIMER.maximum_time() {
-            self.root_moves.set_stop(true);
+            threadpool().set_stop(true);
         } else if let Some(time) = self.limit.use_movetime() {
             if self.limit.elapsed() >= time as i64 {
-                self.root_moves.set_stop(true);
+                threadpool().set_stop(true);
             }
         }
     }
@@ -345,15 +420,52 @@ impl Searcher {
     }
 
     pub fn use_stdout(&self) -> bool {
-        self.use_stdout.load(Ordering::Relaxed)
+        USE_STDOUT.load(Ordering::Relaxed)
     }
 
+    pub fn shuffle(&mut self) {
+        if self.id == 0 || self.id >= 20 {
+            self.rm_mvv_laa_sort();
+        } else {
+            rand::thread_rng().shuffle(self.root_moves().as_mut());
+        }
+
+    }
+
+    pub fn root_moves(&self) -> &mut Vec<RootMove> {
+        unsafe {
+            &mut *self.root_moves.get()
+        }
+    }
+
+    #[inline]
+    fn rm_mvv_laa_sort(&mut self) {
+        let board = &self.board;
+        self.root_moves().sort_by_key(|root_move| {
+            let a = root_move.bit_move;
+            let piece = board.piece_at_sq((a).get_src()).unwrap();
+
+            if a.is_capture() {
+                piece.value() - board.captured_piece(a).unwrap().value()
+            } else if a.is_castle() {
+                1
+            } else if piece == PieceType::P {
+                if a.is_double_push().0 {
+                    2
+                } else {
+                    3
+                }
+            } else {
+                4
+            }
+        });
+    }
 }
 
 
 impl Drop for Searcher {
     fn drop(&mut self) {
-        self.root_moves.set_finished(true);
+        self.searching.set(false);
     }
 }
 

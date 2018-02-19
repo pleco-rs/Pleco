@@ -34,8 +34,9 @@ os:
 script:
   - cargo build --verbose
   - cargo test --verbose
-  - cd pleco/ && cargo bench
-  - cd ../pleco_engine/ && cargo bench --bench eval_benches
+  - cargo bench
+#  - cd pleco/ && cargo bench
+#  - cd ../pleco_engine/ && cargo bench --bench eval_benches
 
 after_success:
   - |

@@ -3,12 +3,15 @@ use lazy_static;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
+use std::sync::{ONCE_INIT,Once};
+use std::sync::atomic::compiler_fence;
 
-use pleco::Board;
 use pleco::tools::tt::TranspositionTable;
+use pleco::helper::prelude;
 //use time::time_management::TimeManager;
 
-use time::uci_timer::Limits;
+
+use threadpool;
 
 pub const MAX_PLY: u16 = 126;
 pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -19,60 +22,27 @@ pub const DEFAULT_TT_SIZE: usize = 256;
 pub const PAWN_TABLE_SIZE: usize = 16384;
 pub const MATERIAL_TABLE_SIZE: usize = 8192;
 
-static INITALIZED: AtomicBool = AtomicBool::new(false);
+static INITALIZED: Once = ONCE_INIT;
+
+pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
 /// Global Timer
 //pub static TIMER: TimeManager = TimeManager::uninitialized();
-pub static mut POSITION: Option<Board> = None;
-pub static mut LIMIT: Option<Limits> = None;
 
 lazy_static! {
     pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
 }
 
 pub fn init_globals() {
-    if !INITALIZED.swap(true, Ordering::SeqCst) {
-//        unsafe {
-            lazy_static::initialize(&TT_TABLE);
-//            POSITION.uninitialized_init();
-//        }
-    }
+    INITALIZED.call_once(|| {
+        prelude::init_statics();
+        compiler_fence(Ordering::SeqCst);
+        lazy_static::initialize(&TT_TABLE);
+        threadpool::init_threadpool();
+
+    });
 }
 
-pub fn global_limit() -> Option<Limits> {
-    unsafe {
-        if let Some(ref lim) = LIMIT {
-            Some(lim.clone())
-        } else {
-            None
-        }
-    }
-}
 
-pub fn set_limit(limit: Limits) {
-    unsafe {
-        LIMIT = Some(limit);
-    }
-}
-
-pub fn global_board() -> Option<Board> {
-    unsafe {
-        if let Some(ref board) = POSITION {
-            Some(board.shallow_clone())
-        } else {
-            None
-        }
-    }
-}
-
-pub fn set_board(board: Board) {
-    unsafe {
-        POSITION = Some(board);
-    }
-}
-
-pub fn clear_board() {
-    unsafe {POSITION = None;}
-}
 
 pub trait PVNode {
     fn is_pv() -> bool;
@@ -109,13 +79,13 @@ impl CheckState for NoCheck {
     fn in_check() -> bool { false}
 }
 
-//
-//#[cfg(test)]
-//mod tests {
-//    use super::*;
-//    #[test]
-//    fn test_da() {
-//        init_globals();
-//
-//    }
-//}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_da() {
+        threadpool::init_threadpool();
+
+    }
+}

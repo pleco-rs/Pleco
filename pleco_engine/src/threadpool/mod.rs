@@ -1,31 +1,53 @@
 //! Contains the ThreadPool and the individual Threads.
 
 pub mod threads;
-
+use std::heap::{Alloc, Layout, Heap};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
-use std::sync::mpsc::{channel,Receiver,Sender};
-use std::time;
+use std::sync::{Once, ONCE_INIT};
+use std::ptr::NonNull;
+use std::ptr;
+use std::cell::UnsafeCell;
+
+use crossbeam_utils::scoped;
 
 use pleco::tools::pleco_arc::Arc;
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 
-
-use TT_TABLE;
 use root_moves::RootMove;
-use root_moves::root_moves_list::RootMoveList;
-use root_moves::root_moves_manager::RmManager;
 use sync::LockLatch;
 use time::uci_timer::*;
 use time::time_management::TimeManager;
 use search::Searcher;
-use tables::pawn_table::PawnTable;
-use tables::material::Material;
 
-use self::threads::*;
+use consts::*;
 
-//static mut THREADPOOL: Option<&'static ThreadPool> = None;
+
+pub static mut THREADPOOL: NonNull<ThreadPool> = unsafe {NonNull::new_unchecked(ptr::null_mut())};
+
+static THREADPOOL_INIT: Once = ONCE_INIT;
+
+pub fn init_threadpool() {
+    THREADPOOL_INIT.call_once(|| {
+        unsafe {
+            let layout = Layout::new::<ThreadPool>();
+            let result = Heap.alloc_zeroed(layout);
+            let new_ptr: *mut ThreadPool = match result {
+                Ok(ptr) => ptr as *mut ThreadPool,
+                Err(err) => Heap.oom(err),
+            };
+            ptr::write(new_ptr, ThreadPool::new());
+            THREADPOOL = NonNull::new_unchecked(new_ptr);
+        }
+    });
+}
+
+pub fn threadpool() -> &'static mut ThreadPool {
+    unsafe {
+        THREADPOOL.as_mut()
+    }
+}
 
 pub enum SendData {
     BestMove(RootMove)
@@ -36,30 +58,20 @@ lazy_static! {
     pub static ref TIMER: TimeManager = TimeManager::uninitialized();
 }
 
+struct SearcherPtr {
+    ptr: UnsafeCell<*mut Searcher>
+}
+
+unsafe impl Sync for SearcherPtr {}
+unsafe impl Send for SearcherPtr {}
+
 pub struct ThreadPool {
     // This is all rootmoves for all treads.
-    rm_manager: RmManager,
-
-    // Join handle for the main thread.
-    main_thread: Option<JoinHandle<()>>,
-
-    // The mainthread will send us information through this! Such as
-    // the best move available.
-    receiver: Receiver<SendData>,
-
-    // CondVar that the mainthread blocks on. We will notif the main thread
-    // to awaken through this.
-    main_thread_go: Arc<LockLatch>,
-
-    // Vector of all non-main threads
-    threads: Vec<JoinHandle<()>>,
-
-    // Tells all threads to go. This is mostly used by the MainThread, we
-    // don't really touch this at all.
-    all_thread_go: Arc<LockLatch>,
-
-    // should we print stuff to stdout?
-    use_stdout: Arc<AtomicBool>,
+    pub threads: Vec<UnsafeCell<*mut Searcher>>,
+    handles: Vec<JoinHandle<()>>,
+    main_cond: Arc<LockLatch>,
+    pub thread_cond: Arc<LockLatch>,
+    pub stop: AtomicBool
 }
 
 // Okay, this all looks like madness, but there is some reason to it all.
@@ -72,69 +84,66 @@ pub struct ThreadPool {
 // The goal of the ThreadPool is to be NON BLOCKING, unless we want to await a
 // result.
 impl ThreadPool {
-    fn init(rx: Receiver<SendData>) -> Self {
-        ThreadPool {
-            rm_manager: RmManager::new(),
-            main_thread: None,
-            receiver: rx,
-            main_thread_go: Arc::new(LockLatch::new()),
-            threads: Vec::with_capacity(8),
-            all_thread_go: Arc::new(LockLatch::new()),
-            use_stdout: Arc::new(AtomicBool::new(false)),
-        }
-    }
-
-    fn create_thread(&self, id: usize, root_moves: RootMoveList) -> Thread {
-        let searcher: Searcher = Searcher {
-            limit: Limits::blank(),
-            board: Board::default(),
-            time_man: &TIMER,
-            tt: &TT_TABLE,
-            pawns: PawnTable::new(16384),
-            material: Material::new(8192),
-            id,
-            root_moves: root_moves.clone(),
-            use_stdout: Arc::clone(&self.use_stdout),
-        };
-        Thread {
-            root_moves: root_moves,
-            id: id,
-            cond: Arc::clone(&self.all_thread_go),
-            searcher
-        }
-    }
-
-    fn spawn_main_thread(&mut self, tx: Sender<SendData>) {
-        let root_moves = self.rm_manager.add_thread().unwrap();
-        let thread = self.create_thread(0, root_moves);
-        let main_thread = MainThread {
-            per_thread: self.rm_manager.clone(),
-            main_thread_go: Arc::clone(&self.main_thread_go),
-            sender: tx,
-            thread,
-            use_stdout: Arc::clone(&self.use_stdout)
-        };
-
-
-        let builder = thread::Builder::new().name(String::from("0"));
-        self.main_thread = Some(
-            builder.spawn(move || {
-                let mut main_thread = main_thread;
-                main_thread.main_idle_loop()
-            }).unwrap());
-    }
 
     /// Creates a new `ThreadPool`
     pub fn new() -> Self {
-        let (tx, rx) = channel();
-        let mut pool = ThreadPool::init(rx);
-        pool.spawn_main_thread(tx);
+        let mut pool: ThreadPool = ThreadPool {
+            threads: Vec::with_capacity(256),
+            handles: Vec::with_capacity(256),
+            main_cond: Arc::new(LockLatch::new()),
+            thread_cond: Arc::new(LockLatch::new()),
+            stop: AtomicBool::new(true)
+        };
+        pool.attach_thread();
         pool
     }
 
+    fn attach_thread(&mut self) {
+         unsafe {
+             let thread_ptr: SearcherPtr = self.create_thread();
+             let builder = thread::Builder::new().name(self.size().to_string());
+             let handle = scoped::builder_spawn_unsafe(builder,
+                move || {
+                     let thread = &mut **thread_ptr.ptr.get();
+                     thread.idle_loop();
+             }).unwrap();
+             self.handles.push(handle);
+        };
+    }
+
+    fn main(&mut self) -> &mut Searcher {
+        unsafe {
+            let main_thread: *mut Searcher = *self.threads.get_unchecked(0).get();
+            return &mut *main_thread;
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.threads.len()
+    }
+
+
+    fn create_thread(&mut self) -> SearcherPtr {
+        let len: usize = self.threads.len();
+        let layout = Layout::new::<Searcher>();
+        let cond = if len == 0 {self.main_cond.clone()} else {self.thread_cond.clone()};
+        unsafe {
+            let s = Searcher::new(len, cond);
+            let result = Heap.alloc_zeroed(layout);
+            let new_ptr: *mut Searcher = match result {
+                Ok(ptr) => ptr as *mut Searcher,
+                Err(err) => Heap.oom(err),
+            };
+            ptr::write(new_ptr, s);
+            self.threads.push(UnsafeCell::new(new_ptr));
+            SearcherPtr {ptr: UnsafeCell::new(new_ptr)}
+        }
+    }
+
+
     /// Sets the use of standard out. This can be changed mid search as well.
     pub fn stdout(&mut self, use_stdout: bool) {
-        self.use_stdout.store(use_stdout, Ordering::Relaxed)
+        USE_STDOUT.store(use_stdout, Ordering::Relaxed);
     }
 
     /// Sets the thread count of the pool. If num is less than 1, nothing will happen.
@@ -143,86 +152,116 @@ impl ThreadPool {
     ///
     /// Completely unsafe to use when the pool is searching.
     pub fn set_thread_count(&mut self, num: usize) {
-        if num > 0 {
-            let curr_size = self.rm_manager.size();
-            if num > curr_size {
-                self.add_threads(num);
-            } else if num < curr_size {
-                self.remove_threads(num)
+        if num > 1 {
+            self.wait_for_finish();
+            self.kill_all();
+            while self.size() < num {
+                self.attach_thread();
             }
         }
     }
 
-    fn add_threads(&mut self, num: usize) {
-        let curr_num: usize = self.rm_manager.size();
-        let mut i: usize = curr_num;
-        while i < num {
-            let root_moves = self.rm_manager.add_thread().unwrap();
-            let thread = self.create_thread(i, root_moves);
-            let builder = thread::Builder::new().name(i.to_string());
-            self.threads.push(builder.spawn(move || {
-                let mut current_thread = thread;
-                current_thread.idle_loop()
-            }).unwrap());
-            i += 1;
+    pub fn kill_all(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        self.wait_for_finish();
+        unsafe {
+            self.threads.iter()
+                .map(|s| &**s.get())
+                .for_each(|s: &Searcher| {
+                    s.kill.store(true, Ordering::SeqCst)
+                });
+            self.threads.iter()
+                .map(|s| &**s.get())
+                .for_each(|s: &Searcher| {
+                    s.cond.clone().set();
+                });
+
+            while let Some(handle) = self.handles.pop() {
+                handle.join().unwrap();
+            }
+            while let Some(_) = self.threads.pop() {}
         }
     }
 
+    pub fn set_stop(&mut self, stop: bool) {
+        self.stop.store(stop, Ordering::Relaxed);
+    }
 
-    fn remove_threads(&mut self, num: usize) {
-        let curr_num: usize = self.rm_manager.size();
-        let mut i: usize = curr_num;
-        while i > num {
-            self.rm_manager.remove_thread();
-            let thread_handle = self.threads.pop().unwrap();
-            thread_handle.join().unwrap();
-            i -= 1;
+    pub fn wait_for_finish(&self) {
+        unsafe {
+            self.threads.iter()
+                .map(|t| &**t.get())
+                .map(|s| s.searching.clone())
+                .for_each(|t| t.await(false));
         }
     }
 
+    pub fn wait_for_start(&self) {
+        unsafe {
+            self.threads.iter()
+                .map(|t| &**t.get())
+                .map(|s| s.searching.clone())
+                .for_each(|t| t.await(true));
+        }
+    }
+
+    pub fn wait_for_non_main(&self) {
+        unsafe {
+            self.threads.iter()
+                .map(|s| &**s.get())
+                .for_each(|t: &Searcher|{
+                    if t.id != 0 {
+                        t.searching.await(false);
+                    }
+            });
+        }
+    }
 
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
     /// is true.
-    pub fn uci_search(&mut self) {
-        self.main_thread_go.set();
+    pub fn uci_search(&mut self, board: &Board, limits: &Limits) {
+        let root_moves: Vec<RootMove> = board.generate_moves()
+            .iter()
+            .map(|m| RootMove::new(*m))
+            .collect();
+
+        assert!(!root_moves.is_empty());
+        self.wait_for_finish();
+        self.stop.store(false, Ordering::Relaxed);
+
+        for thread_ptr in self.threads.iter_mut() {
+            let mut thread: &mut Searcher = unsafe {&mut **(*thread_ptr).get()};
+            thread.depth_completed = 0;
+            thread.root_moves().clear();
+            thread.root_moves().extend_from_slice(&root_moves);
+//            *thread.root_moves() = root_moves.clone();
+            thread.board = board.shallow_clone();
+            thread.limit = limits.clone();
+        }
+
+        self.main_cond.set();
+        self.wait_for_start();
+        self.thread_cond.lock();
+        self.main_cond.lock();
     }
+
 
     /// performs a standard search, and blocks waiting for a returned `BitMove`.
-    pub fn search(&mut self) -> BitMove {
-        self.uci_search();
-        self.get_move()
+    pub fn search(&mut self, board: &Board, limits: &Limits) -> BitMove {
+        self.uci_search(board, limits);
+        self.wait_for_start();
+        self.wait_for_finish();
+        self.main().root_moves().get(0).unwrap().bit_move
     }
 
-    pub fn get_move(&self) -> BitMove {
-        let data = self.receiver.recv().unwrap();
-        match data {
-            SendData::BestMove(t) => t.bit_move
-        }
-    }
-
-    pub fn stop_searching(&mut self) {
-        self.rm_manager.set_stop(true);
+    pub fn best_move(&mut self) -> BitMove {
+        self.main().root_moves().get(0).unwrap().bit_move
     }
 }
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
-        // Store that we are dropping
-        self.rm_manager.kill_all();
-        thread::sleep(time::Duration::new(0,100));
-        self.rm_manager.set_stop(true);
-
-        // Notify the main thread to wakeup and stop
-        self.main_thread_go.set();
-
-        // Notify the other threads to wakeup and stop
-        self.all_thread_go.set();
-
-        // Join all the handles
-        while let Some(thread_handle) = self.threads.pop() {
-            thread_handle.join().unwrap();
-        }
-        self.main_thread.take().unwrap().join().unwrap();
+        self.kill_all();
     }
 }
 
