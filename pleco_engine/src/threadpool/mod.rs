@@ -1,6 +1,5 @@
 //! Contains the ThreadPool and the individual Threads.
 
-pub mod threads;
 use std::heap::{Alloc, Layout, Heap};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
@@ -11,6 +10,7 @@ use std::cell::UnsafeCell;
 
 use crossbeam_utils::scoped;
 
+use pleco::MoveList;
 use pleco::tools::pleco_arc::Arc;
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
@@ -170,10 +170,11 @@ impl ThreadPool {
                 .for_each(|s: &Searcher| {
                     s.kill.store(true, Ordering::SeqCst)
                 });
+
             self.threads.iter()
                 .map(|s| &**s.get())
                 .for_each(|s: &Searcher| {
-                    s.cond.clone().set();
+                    s.cond.set();
                 });
 
             while let Some(handle) = self.handles.pop() {
@@ -191,8 +192,7 @@ impl ThreadPool {
         unsafe {
             self.threads.iter()
                 .map(|t| &**t.get())
-                .map(|s| s.searching.clone())
-                .for_each(|t| t.await(false));
+                .for_each(|t| t.searching.await(false));
         }
     }
 
@@ -200,8 +200,7 @@ impl ThreadPool {
         unsafe {
             self.threads.iter()
                 .map(|t| &**t.get())
-                .map(|s| s.searching.clone())
-                .for_each(|t| t.await(true));
+                .for_each(|t| t.searching.await(true));
         }
     }
 
@@ -220,10 +219,7 @@ impl ThreadPool {
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
     /// is true.
     pub fn uci_search(&mut self, board: &Board, limits: &Limits) {
-        let root_moves: Vec<RootMove> = board.generate_moves()
-            .iter()
-            .map(|m| RootMove::new(*m))
-            .collect();
+        let root_moves: MoveList = board.generate_moves();
 
         assert!(!root_moves.is_empty());
         self.wait_for_finish();
@@ -232,11 +228,9 @@ impl ThreadPool {
         for thread_ptr in self.threads.iter_mut() {
             let mut thread: &mut Searcher = unsafe {&mut **(*thread_ptr).get()};
             thread.depth_completed = 0;
-            thread.root_moves().clear();
-            thread.root_moves().extend_from_slice(&root_moves);
-//            *thread.root_moves() = root_moves.clone();
             thread.board = board.shallow_clone();
             thread.limit = limits.clone();
+            thread.root_moves().replace(&root_moves);
         }
 
         self.main_cond.set();
@@ -249,7 +243,6 @@ impl ThreadPool {
     /// performs a standard search, and blocks waiting for a returned `BitMove`.
     pub fn search(&mut self, board: &Board, limits: &Limits) -> BitMove {
         self.uci_search(board, limits);
-        self.wait_for_start();
         self.wait_for_finish();
         self.main().root_moves().get(0).unwrap().bit_move
     }

@@ -1,48 +1,29 @@
-use super::{RootMove, MAX_MOVES};
-use sync::GuardedBool;
-
-use pleco::{MoveList, Board, PieceType, BitMove};
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
 use std::ptr;
+use std::mem;
 
 use std::mem::transmute;
-use std::sync::atomic::{AtomicU16,Ordering,fence,AtomicBool,AtomicUsize};
+use std::sync::atomic::{Ordering,AtomicUsize};
 
 use rand;
 use rand::Rng;
 
-pub struct RawRootMoveList {
-    len: AtomicUsize,
-    depth_completed: AtomicU16,
-    stop: AtomicBool,
-    kill: AtomicBool,
-    pub finished: GuardedBool,
-    moves: [RootMove; MAX_MOVES],
-}
+use pleco::{MoveList, Board, PieceType, BitMove};
+use super::{RootMove, MAX_MOVES};
 
-impl RawRootMoveList {
-    pub fn init(&mut self) {
-        self.depth_completed = AtomicU16::new(0);
-        self.stop.store(true, Ordering::SeqCst);
-        self.kill.store(false, Ordering::SeqCst);
-        self.len = AtomicUsize::new(0);
-        unsafe {
-            let f = &mut self.finished;
-            ptr::write_volatile(f, GuardedBool::new(true));
-        }
-    }
-}
 
 pub struct RootMoveList {
-    pub moves: *mut RawRootMoveList
+    len: AtomicUsize,
+    moves: [RootMove; MAX_MOVES],
 }
 
 impl Clone for RootMoveList {
     fn clone(&self) -> Self {
         RootMoveList {
+            len: AtomicUsize::new(self.len.load(Ordering::SeqCst)),
             moves: self.moves
         }
     }
@@ -51,30 +32,34 @@ impl Clone for RootMoveList {
 unsafe impl Send for RootMoveList {}
 
 impl RootMoveList {
-    pub unsafe fn init(&mut self) {
-        (*self.moves).init();
+    #[inline]
+    pub fn new() -> Self {
+        unsafe {
+            RootMoveList {
+                len: AtomicUsize::new(0),
+                moves: [mem::uninitialized(); MAX_MOVES],
+            }
+        }
     }
 
     #[inline]
     pub fn len(&self) -> usize {
-        unsafe {(*self.moves).len.load(Ordering::Acquire)}
+        self.len.load(Ordering::SeqCst)
     }
 
     pub fn clone_from_other(&mut self, other: &RootMoveList) {
+        self.len.store(other.len(), Ordering::SeqCst);
         unsafe {
-            (*self.moves).len.store(other.len(), Ordering::Release);
-            let self_moves: *mut [RootMove; MAX_MOVES] = transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>((*self.moves).moves.as_mut_ptr());
-            let other_moves: *mut [RootMove; MAX_MOVES] =  transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>((*other.moves).moves.as_mut_ptr());
+            let self_moves: *mut [RootMove; MAX_MOVES] = transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>(self.moves.as_mut_ptr());
+            let other_moves: *const [RootMove; MAX_MOVES] =  transmute::<*const RootMove, *const [RootMove; MAX_MOVES]>(other.moves.as_ptr());
             ptr::copy_nonoverlapping(other_moves, self_moves, 1);
         }
     }
 
     pub fn replace(&mut self, moves: &MoveList) {
-        unsafe {
-            (*self.moves).len.store(moves.len(), Ordering::Release);
-            for (i, mov) in moves.iter().enumerate() {
-                self[i] = RootMove::new(*mov);
-            }
+        self.len.store(moves.len(), Ordering::SeqCst);
+        for (i, mov) in moves.iter().enumerate() {
+            self[i] = RootMove::new(*mov);
         }
     }
 
@@ -88,52 +73,6 @@ impl RootMoveList {
     pub fn first(&mut self) -> &mut RootMove {
         unsafe {
             self.get_unchecked_mut(0)
-        }
-    }
-
-    #[inline]
-    pub fn depth_completed(self) -> u16 {
-        unsafe {
-            (*self.moves).depth_completed.load(Ordering::SeqCst)
-        }
-    }
-
-    #[inline]
-    pub fn set_depth_completed(&mut self, depth: u16) {
-        unsafe {
-            fence(Ordering::SeqCst);
-            (*self.moves).depth_completed.store(depth, Ordering::SeqCst);
-        }
-    }
-
-    #[inline]
-    pub fn set_finished(&mut self, finished: bool) {
-        unsafe {
-            (*self.moves).finished.set(finished);
-        }
-    }
-
-    pub fn load_stop(&self) -> bool{
-        unsafe {
-            (*self.moves).stop.load(Ordering::SeqCst)
-        }
-    }
-
-    pub fn set_stop(&mut self, stop: bool) {
-        unsafe {
-            (*self.moves).stop.store(stop, Ordering::SeqCst);
-        }
-    }
-
-    pub fn kill(&mut self) {
-        unsafe {
-            (*self.moves).kill.store(true, Ordering::SeqCst);
-        }
-    }
-
-    pub fn get_kill(&self) -> bool {
-        unsafe {
-            (*self.moves).kill.load(Ordering::SeqCst)
         }
     }
 
@@ -202,7 +141,7 @@ impl Deref for RootMoveList {
     #[inline]
     fn deref(&self) -> &[RootMove] {
         unsafe {
-            let p = (*self.moves).moves.as_ptr();
+            let p = self.moves.as_ptr();
             slice::from_raw_parts(p, self.len())
         }
     }
@@ -212,7 +151,7 @@ impl DerefMut for RootMoveList {
     #[inline]
     fn deref_mut(&mut self) -> &mut [RootMove] {
         unsafe {
-            let p = (*self.moves).moves.as_mut_ptr();
+            let p = self.moves.as_mut_ptr();
             slice::from_raw_parts_mut(p, self.len())
         }
     }

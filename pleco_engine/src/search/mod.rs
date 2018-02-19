@@ -24,6 +24,7 @@ use time::uci_timer::*;
 use threadpool::TIMER;
 use sync::{GuardedBool,LockLatch};
 use root_moves::RootMove;
+use root_moves::root_moves_list::RootMoveList;
 use tables::material::Material;
 use tables::pawn_table::PawnTable;
 use consts::*;
@@ -36,12 +37,13 @@ static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 
 
 pub struct Searcher {
+    // Synchronization primitives
     pub id: usize,
     pub kill: AtomicBool,
     pub searching: Arc<GuardedBool>,
     pub cond: Arc<LockLatch>,
 
-
+    // search data
     pub depth_completed: u16,
     pub limit: Limits,
     pub board: Board,
@@ -49,7 +51,11 @@ pub struct Searcher {
     pub tt: &'static TranspositionTable,
     pub pawns: PawnTable,
     pub material: Material,
-    pub root_moves: UnsafeCell<Vec<RootMove>>,
+    pub root_moves: UnsafeCell<RootMoveList>,
+
+    // MainThread Information
+    pub previous_score: Value,
+
 }
 
 unsafe impl Send for Searcher {}
@@ -69,7 +75,8 @@ impl Searcher {
             tt: &TT_TABLE,
             pawns: PawnTable::new(16384),
             material: Material::new(8192),
-            root_moves: UnsafeCell::new(Vec::new()),
+            root_moves: UnsafeCell::new(RootMoveList::new()),
+            previous_score: 0
         }
     }
 
@@ -110,6 +117,26 @@ impl Searcher {
         threadpool().set_stop(true);
         threadpool().wait_for_non_main();
 
+        let mut best_move = self.root_moves().first().bit_move;
+        let mut best_score = self.root_moves().first().score;
+        if let LimitsType::Depth(_) = self.limit.limits_type  {
+            let mut best_thread: &Searcher = &self;
+            threadpool().threads.iter().map(|u| unsafe {&**u.get()}).for_each(|th| {
+                let depth_diff = th.depth_completed as i32 - best_thread.depth_completed as i32;
+                let score_diff = th.root_moves().first().score - best_thread.root_moves()[0].score;
+                if score_diff > 0 && depth_diff >= 0 {
+                    best_thread = th;
+                }
+            });
+            best_move =  best_thread.root_moves().first().bit_move;
+            best_score = best_thread.root_moves().first().score;
+        }
+
+        self.previous_score = best_score;
+
+        if self.use_stdout() {
+            println!("bestmove {}", best_move.to_string());
+        }
     }
 
 
@@ -119,19 +146,17 @@ impl Searcher {
         if self.stop() {
             return;
         }
-        let root_moves: Vec<RootMove> = self.board.generate_moves()
-                                             .iter()
-                                             .map(|m| RootMove::new(*m))
-                                             .collect();
-
-        self.root_moves = UnsafeCell::new(root_moves);
 
         if self.use_stdout() {
             println!("info id {} start", self.id);
         }
 
-        let max_depth = if let LimitsType::Depth(d) = self.limit.limits_type {
-            d
+        let max_depth = if self.main_thread() {
+            if let LimitsType::Depth(d) = self.limit.limits_type {
+                d
+            } else {
+                MAX_PLY
+            }
         } else {
             MAX_PLY
         };
@@ -150,12 +175,11 @@ impl Searcher {
         let mut last_best_move: BitMove = BitMove::null();
         let mut best_move_stability: u32 = 0;
 
-//        self.shuffle();
+        self.shuffle();
 
 
-        'iterative_deepening: while !self.stop() && depth < max_depth {
-            self.root_moves().iter_mut().for_each(|m| m.rollback());
-//            self.root_moves.rollback();
+        'iterative_deepening: while (!self.stop() || !self.main_thread()) && depth < max_depth {
+            self.root_moves().rollback();
 
             let prev_best_score = self.root_moves()[0].prev_score;
 
@@ -286,7 +310,6 @@ impl Searcher {
         }
 
         if !in_check {
-
             if ply > 3
                 && ply < 7
                 && pos_eval - futility_margin(ply) >= beta && pos_eval < 10000 {
@@ -430,10 +453,9 @@ impl Searcher {
         } else {
             rand::thread_rng().shuffle(self.root_moves().as_mut());
         }
-
     }
 
-    pub fn root_moves(&self) -> &mut Vec<RootMove> {
+    pub fn root_moves(&self) -> &mut RootMoveList {
         unsafe {
             &mut *self.root_moves.get()
         }
