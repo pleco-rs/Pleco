@@ -100,11 +100,6 @@ impl Searcher {
             TIMER.init(self.limit.start.clone(), &timer, self.board.turn(), self.board.moves_played());
         }
 
-        if self.root_moves().is_empty() {
-//            println!("Root moves is empty");
-            return;
-        }
-
         // Start each of the threads!
         threadpool().thread_cond.set();
 
@@ -124,6 +119,12 @@ impl Searcher {
         if self.stop() {
             return;
         }
+        let root_moves: Vec<RootMove> = self.board.generate_moves()
+                                             .iter()
+                                             .map(|m| RootMove::new(*m))
+                                             .collect();
+
+        self.root_moves = UnsafeCell::new(root_moves);
 
         if self.use_stdout() {
             println!("info id {} start", self.id);
