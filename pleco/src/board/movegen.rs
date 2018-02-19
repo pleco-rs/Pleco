@@ -211,8 +211,7 @@ impl<'a> MoveGen<'a> {
         assert!(!self.board.in_check());
         let mut disc_check: BitBoard = self.board.discovered_check_candidates();
 
-        while disc_check.is_not_empty() {
-            let from: SQ = disc_check.pop_lsb();
+        while let Some(from) = disc_check.pop_some_lsb() {
             let piece: PieceType = self.board.piece_at_sq(from).unwrap();
             if piece != PieceType::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
@@ -237,8 +236,7 @@ impl<'a> MoveGen<'a> {
         let mut sliders: BitBoard = self.board.checkers() & !self.board.piece_two_bb_both_players(PieceType::P, PieceType::N);
 
         // This is getting all the squares that are attacked by sliders
-        while sliders.is_not_empty() {
-            let (check_sq, check_sq_bb): (SQ, BitBoard) = sliders.pop_lsb_and_bit();
+        while let Some((check_sq, check_sq_bb)) = sliders.pop_some_lsb_and_bit() {
             slider_attacks |= line_bb(check_sq, ksq) ^ check_sq_bb;
         }
 
@@ -275,9 +273,8 @@ impl<'a> MoveGen<'a> {
     // Generates castling for a single side
     fn castling_side<L: Legality, P: PlayerTrait>(&mut self, side: CastleType) {
         // Make sure we can castle AND the space between the king / rook is clear AND the piece at castling_side is a Rook
-        if !self.board.castle_impeded(side) && self.board.can_castle(P::player(), side) &&
-            self.board
-                .piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R)
+        if !self.board.castle_impeded(side) && self.board.can_castle(P::player(), side)
+            && self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R)
         {
 
             let king_side: bool = { side == CastleType::KingSide };
@@ -335,8 +332,7 @@ impl<'a> MoveGen<'a> {
     // Get the captures and non-captures for a piece
     fn moves_per_piece<L: Legality, PL: PlayerTrait, P: PieceTrait>(&mut self, target: BitBoard) {
         let mut piece_bb: BitBoard = self.board.piece_bb(PL::player(), P::piece_type());
-        while piece_bb.is_not_empty() {
-            let src: SQ = piece_bb.pop_lsb();
+        while let Some(src) = piece_bb.pop_some_lsb() {
             let moves_bb: BitBoard = self.moves_bb(P::piece_type(), src) & !self.us_occ & target;
             let mut captures_bb: BitBoard = moves_bb & self.them_occ;
             let mut non_captures_bb: BitBoard = moves_bb & !self.them_occ;
@@ -379,7 +375,6 @@ impl<'a> MoveGen<'a> {
                 };
 
             let mut push_one: BitBoard = empty_squares & P::shift_up(pawns_not_rank_7);
-            // double pushes are pawns that can be pushed one and remain on rank3
             let mut push_two: BitBoard = P::shift_up(push_one & rank_3) & empty_squares;
 
             if G::gen_type() == GenTypes::Evasions {
@@ -403,14 +398,12 @@ impl<'a> MoveGen<'a> {
                 }
             }
 
-            while push_one.is_not_empty() {
-                let dst: SQ = push_one.pop_lsb();
+            while let Some(dst) = push_one.pop_some_lsb() {
                 let src: SQ = P::down(dst);
                 self.check_and_add::<L>(BitMove::make_quiet(src, dst));
             }
 
-            while push_two.is_not_empty() {
-                let dst: SQ = push_two.pop_lsb();
+            while let Some(dst) = push_two.pop_some_lsb() {
                 let src: SQ = P::down(P::down(dst));
                 self.check_and_add::<L>(BitMove::make_pawn_push(src, dst));
             }
@@ -428,20 +421,16 @@ impl<'a> MoveGen<'a> {
             let mut left_cap_promo: BitBoard = P::shift_up_left(pawns_rank_7) & enemies;
             let mut right_cap_promo: BitBoard = P::shift_up_right(pawns_rank_7) & enemies;
 
-
-            while no_promo.is_not_empty() {
-                let dst: SQ = no_promo.pop_lsb();
+            while let Some(dst) = no_promo.pop_some_lsb() {
                 self.create_all_promotions::<L>(dst, P::down(dst), false);
             }
 
             if G::gen_type() != GenTypes::Quiets {
-                while left_cap_promo.is_not_empty() {
-                    let dst: SQ = left_cap_promo.pop_lsb();
+                while let Some(dst) = left_cap_promo.pop_some_lsb() {
                     self.create_all_promotions::<L>(dst, P::down_right(dst), true);
                 }
 
-                while right_cap_promo.is_not_empty() {
-                    let dst: SQ = right_cap_promo.pop_lsb();
+                while let Some(dst) = right_cap_promo.pop_some_lsb() {
                     self.create_all_promotions::<L>(dst, P::down_left(dst), true);
                 }
             }
@@ -455,14 +444,12 @@ impl<'a> MoveGen<'a> {
             let mut left_cap: BitBoard = P::shift_up_left(pawns_not_rank_7) & enemies;
             let mut right_cap: BitBoard = P::shift_up_right(pawns_not_rank_7) & enemies;
 
-            while left_cap.is_not_empty() {
-                let dst: SQ = left_cap.pop_lsb();
+            while let Some(dst) = left_cap.pop_some_lsb() {
                 let src: SQ = P::down_right(dst);
                 self.check_and_add::<L>(BitMove::make_capture(src, dst));
             }
 
-            while right_cap.is_not_empty() {
-                let dst: SQ = right_cap.pop_lsb();
+            while let Some(dst) = right_cap.pop_some_lsb() {
                 let src: SQ = P::down_left(dst);
                 self.check_and_add::<L>(BitMove::make_capture(src, dst));
             }
@@ -473,8 +460,7 @@ impl<'a> MoveGen<'a> {
                 if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).to_bb()).is_not_empty() {
                     left_cap = pawns_not_rank_7 & pawn_attacks_from(ep_sq, P::opp_player());
 
-                    while left_cap.is_not_empty() {
-                        let src: SQ = left_cap.pop_lsb();
+                    while let Some(src) = left_cap.pop_some_lsb() {
                         self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                             src: src,
                             dst: ep_sq,
@@ -552,8 +538,7 @@ impl<'a> MoveGen<'a> {
 
     #[inline]
     fn move_append_from_bb_flag<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
-        while bits.is_not_empty() {
-            let dst = bits.pop_lsb();
+        while let Some(dst) = bits.pop_some_lsb() {
             let b_move = BitMove::make(flag_bits, src, dst);
             self.check_and_add::<L>(b_move);
         }

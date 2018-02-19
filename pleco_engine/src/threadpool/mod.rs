@@ -25,12 +25,6 @@ use tables::material::Material;
 
 use self::threads::*;
 
-// Data sent from the main thread to initialize a new search
-pub struct ThreadGo {
-    limit: Limits,
-    board: Board
-}
-
 pub enum SendData {
     BestMove(RootMove)
 }

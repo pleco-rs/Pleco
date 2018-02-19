@@ -63,7 +63,7 @@ impl Ord for RootMove {
                 return CmpOrder::Less;
             }
         } else if value_diff > 0 {
-            return CmpOrder::Less
+            return CmpOrder::Less;
         }
         CmpOrder::Greater
     }

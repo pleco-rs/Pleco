@@ -22,7 +22,6 @@ pub const MATERIAL_TABLE_SIZE: usize = 8192;
 static INITALIZED: AtomicBool = AtomicBool::new(false);
 /// Global Timer
 //pub static TIMER: TimeManager = TimeManager::uninitialized();
-//pub static TT_TABLE: TranspositionTable = unsafe {TranspositionTable::uninitialized()};
 pub static mut POSITION: Option<Board> = None;
 pub static mut LIMIT: Option<Limits> = None;
 

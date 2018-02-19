@@ -10,24 +10,12 @@
 //! [`CastlingRights`]: castle_rights/struct.Castling.html
 //! [`PieceLocations`]: piece_locations/struct.Eval.html
 
-
-pub mod movegen;
-pub mod castle_rights;
-pub mod piece_locations;
-pub mod board_state;
-pub mod fen;
-pub mod perft;
-mod pgn;
-
 use std::option::*;
-use tools::pleco_arc::{Arc,UniqueArc};
 use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 use rand;
 
-use helper::Helper;
-use helper::prelude::*;
 use core::piece_move::{BitMove, MoveType};
 use core::move_list::MoveList;
 use core::mono_traits::*;
@@ -36,15 +24,25 @@ use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
 use core::score::*;
-
+use tools::pleco_arc::{Arc,UniqueArc};
+use helper::Helper;
+use helper::prelude::*;
 use tools::prng::PRNG;
-use bot_prelude::{IterativeSearcher,JamboreeSearcher};
 use tools::Searcher;
+use bot_prelude::{IterativeSearcher,JamboreeSearcher};
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
+
+pub mod movegen;
+pub mod castle_rights;
+pub mod piece_locations;
+pub mod board_state;
+pub mod fen;
+pub mod perft;
+mod pgn;
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
 pub enum FenBuildError {
@@ -170,10 +168,10 @@ impl fmt::Debug for Board {
 
 impl PartialEq for Board {
     fn eq(&self, other: &Board) -> bool {
-        self.turn == other.turn &&
-            self.occ_all == other.occ_all &&
-            *self.state == *other.state &&
-            self.piece_locations == other.piece_locations
+        self.turn == other.turn
+            && self.occ_all == other.occ_all
+            && *self.state == *other.state
+            && self.piece_locations == other.piece_locations
     }
 }
 
@@ -471,6 +469,7 @@ impl Board {
         let turn_char: char = det_split[1].chars()
             .next()
             .ok_or(FenBuildError::UnrecognizedTurn{turn: det_split[1].to_string()})?;
+
         let turn: Player = match turn_char {
             'b' => Player::Black,
             'w' => Player::White,
@@ -502,8 +501,8 @@ impl Board {
             } else {
                 let digit = character.to_digit(10)
                     .ok_or( FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()})? as u8;
-                // must be 3 or 6
 
+                // must be 3 or 6
                 if digit == 3 {
                     ep_sq += SQ(16);  // add two ranks
                 } else if digit == 6 {
@@ -741,8 +740,8 @@ impl Board {
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
 
-                zob ^= z_square(r_src, us, PieceType::R) ^
-                    z_square(r_dst, us, PieceType::R);
+                zob ^= z_square(r_src, us, PieceType::R)
+                        ^ z_square(r_dst, us, PieceType::R);
                 new_state.captured_piece = None;
                 new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
@@ -1302,8 +1301,7 @@ impl Board {
                     (self.piece_two_bb_both_players(PieceType::B, PieceType::Q))));
 
 
-        while snipers.is_not_empty() {
-            let sniper_sq: SQ = snipers.pop_lsb();
+        while let Some(sniper_sq) = snipers.pop_some_lsb() {
             let b: BitBoard = between_bb(s, sniper_sq) & occupied;
             if !b.more_than_one() {
                 result |= b;
@@ -1349,8 +1347,8 @@ impl Board {
             Player::Black => zob ^= z_side(),
             Player::White => {}
         };
-        let state =  Arc::get_mut(&mut self.state).unwrap();
 
+        let state =  Arc::get_mut(&mut self.state).unwrap();
 
         state.zobrast = zob;
         state.pawn_key = pawn_key;
@@ -1788,19 +1786,15 @@ impl Board {
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
     /// Includes pieces from both players.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
-        (pawn_attacks_from(sq, Player::Black) &
-            self.piece_bb(Player::White, PieceType::P)) |
-            (pawn_attacks_from(sq, Player::White) &
-                self.piece_bb(Player::Black, PieceType::P)) |
-            (knight_moves(sq) & self.piece_bb_both_players(PieceType::N)) |
-            (rook_moves(occupied, sq) &
-                (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black))) |
-            (bishop_moves(occupied, sq) &
-                (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
-            (king_moves(sq) & self.piece_bb_both_players(PieceType::K))
+        (pawn_attacks_from(sq, Player::Black)       & self.piece_bb(Player::White, PieceType::P))
+            | (pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, PieceType::P))
+            | (knight_moves(sq)           & self.piece_bb_both_players(PieceType::N))
+            | (rook_moves(occupied, sq)   & (self.sliding_piece_bb(Player::White)  | self.sliding_piece_bb(Player::Black)))
+            | (bishop_moves(occupied, sq) & (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black)))
+            | (king_moves(sq)             & self.piece_bb_both_players(PieceType::K))
     }
 
-    /// Given a piece, square, and player, returns all squares the piece may move to.
+    /// Given a piece, square, and player, returns all squares the piece may possibly move to.
     #[inline]
     pub fn attacks_from(&self, piece: PieceType, sq: SQ, player: Player) -> BitBoard {
         match piece {
@@ -1813,6 +1807,7 @@ impl Board {
         }
     }
 
+    /// Returns if a pawn on a given square is passed.
     #[inline(always)]
     pub fn pawn_passed(&self, player: Player, sq: SQ) -> bool {
         (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
