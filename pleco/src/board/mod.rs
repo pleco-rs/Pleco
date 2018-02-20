@@ -206,8 +206,8 @@ impl Board {
             magic_helper: Helper::new(),
         };
         // Create the Zobrist hash & set the Piece Locations structure
-        b.set_zob_hash();
         b.set_piece_states();
+        b.set_zob_hash();
         b.set_material_key();
         b
     }
@@ -817,7 +817,7 @@ impl Board {
                     material_key ^= z_square(SQ(promo_count - 1), us, promo_piece)
                         ^ z_square(SQ(pawn_count), us, PieceType::P);
 
-                    new_state.psq += psq(promo_piece, us, to) - psq(piece, us, to);
+                    new_state.psq += psq(promo_piece, us, to) - psq(PieceType::P, us, to);
                     new_state.nonpawn_material[us as usize] += piece_value(promo_piece, false);
                 }
                 pawn_key ^= z_square(from, us, PieceType::P) ^ z_square(to, us, PieceType::P);

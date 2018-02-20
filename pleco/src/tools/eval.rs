@@ -85,8 +85,8 @@ impl Eval {
     /// Evaluates the score of a `Board` for the current side to move.
     pub fn eval_low(board: &Board) -> Value {
         match board.turn() {
-            Player::White => eval_all::<WhiteType>(board) - eval_all::<BlackType>(board),
-            Player::Black => eval_all::<BlackType>(board) - eval_all::<WhiteType>(board)
+            Player::White => eval_all::<WhiteType>(board) - eval_all::<BlackType>(board) + board.non_pawn_material(Player::White) - board.non_pawn_material(Player::Black),
+            Player::Black => eval_all::<BlackType>(board) - eval_all::<WhiteType>(board) + board.non_pawn_material(Player::Black) - board.non_pawn_material(Player::White)
         }
     }
 }
@@ -109,12 +109,7 @@ fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
 
 
 fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i32 {
-    board.count_piece(P::player(), PieceType::P) as i32 * PAWN_VALUE +
-    if P::player() == Player::White {
-        board.non_pawn_material(Player::White)
-    } else {
-        -board.non_pawn_material(Player::Black)
-    }
+    board.count_piece(P::player(), PieceType::P) as i32 * PAWN_VALUE
 }
 
 fn eval_castling<P: PlayerTrait>(board: &Board) -> i32 {

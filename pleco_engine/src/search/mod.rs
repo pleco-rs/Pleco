@@ -35,6 +35,10 @@ const THREAD_DIST: usize = 20;
 static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4];
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
 
+pub struct ThreadStack {
+    pv: BitMove,
+    ply: u16,
+}
 
 pub struct Searcher {
     // Synchronization primitives
@@ -296,6 +300,7 @@ impl Searcher {
             && tt_hit
             && tt_entry.depth as u16 >= plys_to_zero
             && tt_entry.eval != 0
+            && tt_value != 0
             && pos_eval != 0
             && correct_bound_eq(tt_value, beta, tt_entry.node_type()) {
             return tt_value;

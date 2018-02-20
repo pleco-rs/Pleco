@@ -79,7 +79,7 @@ static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
 
 pub fn init_psqt() {
     for piece in 0..PIECE_TYPE_CNT {
-        let v: Score = Score(PIECE_VALUE[piece][0], PIECE_VALUE[piece][0]);
+        let v: Score = Score(PIECE_VALUE[piece][0], PIECE_VALUE[piece][1]);
         for s in 0..SQ_CNT {
             let sq: SQ = SQ(s as u8);
             let f: File = sq.file().min(!sq.file());
@@ -108,4 +108,18 @@ pub fn piece_value(piece: PieceType, eg: bool) -> Value {
     unsafe {
         (*(PIECE_VALUE.get_unchecked(piece as usize)).get_unchecked(eg as usize))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn psq_tes() {
+        init_psqt();
+        assert_eq!(psq(PieceType::Q, Player::White, SQ::A1), -psq(PieceType::Q, Player::Black, SQ::A8));
+        println!("{}", psq(PieceType::Q, Player::Black, SQ::A8).mg());
+        println!("{}", psq(PieceType::Q, Player::White, SQ::A1).mg());
+    }
+
 }
