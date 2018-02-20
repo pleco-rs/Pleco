@@ -69,7 +69,7 @@ pub struct ThreadPool {
     // This is all rootmoves for all treads.
     pub threads: Vec<UnsafeCell<*mut Searcher>>,
     handles: Vec<JoinHandle<()>>,
-    main_cond: Arc<LockLatch>,
+    pub main_cond: Arc<LockLatch>,
     pub thread_cond: Arc<LockLatch>,
     pub stop: AtomicBool
 }
@@ -94,6 +94,8 @@ impl ThreadPool {
             thread_cond: Arc::new(LockLatch::new()),
             stop: AtomicBool::new(true)
         };
+        pool.main_cond.lock();
+        pool.thread_cond.lock();
         pool.attach_thread();
         pool
     }
@@ -104,13 +106,15 @@ impl ThreadPool {
              let builder = thread::Builder::new().name(self.size().to_string());
              let handle = scoped::builder_spawn_unsafe(builder,
                 move || {
-                     let thread = &mut **thread_ptr.ptr.get();
-                     thread.idle_loop();
+                    let thread = &mut **thread_ptr.ptr.get();
+                    thread.cond.lock();
+                    thread.idle_loop();
              }).unwrap();
              self.handles.push(handle);
         };
     }
 
+    /// Returns a pointer to the main thread.
     fn main(&mut self) -> &mut Searcher {
         unsafe {
             let main_thread: *mut Searcher = *self.threads.get_unchecked(0).get();
@@ -118,11 +122,12 @@ impl ThreadPool {
         }
     }
 
+    /// Returns the number of threads
     fn size(&self) -> usize {
         self.threads.len()
     }
 
-
+    /// Allocates a thread structure and pushes it to the threadstack.
     fn create_thread(&mut self) -> SearcherPtr {
         let len: usize = self.threads.len();
         let layout = Layout::new::<Searcher>();
@@ -161,6 +166,8 @@ impl ThreadPool {
         }
     }
 
+    /// Kills and deallocates all the threads that are running. This function will also
+    /// block on waiting for the search to finish.
     pub fn kill_all(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
         self.wait_for_finish();
@@ -180,14 +187,21 @@ impl ThreadPool {
             while let Some(handle) = self.handles.pop() {
                 handle.join().unwrap();
             }
-            while let Some(_) = self.threads.pop() {}
+
+            while let Some(unc) = self.threads.pop() {
+                let th = unc.get();
+                let layout = Layout::new::<Searcher>();
+                Heap.dealloc(th as *mut _, layout);
+            }
         }
     }
 
+    /// Sets the threads to stop (or not!).
     pub fn set_stop(&mut self, stop: bool) {
         self.stop.store(stop, Ordering::Relaxed);
     }
 
+    /// Waits for all the threads to finish
     pub fn wait_for_finish(&self) {
         unsafe {
             self.threads.iter()
@@ -196,6 +210,7 @@ impl ThreadPool {
         }
     }
 
+    /// Waits for all the threads to start.
     pub fn wait_for_start(&self) {
         unsafe {
             self.threads.iter()
@@ -204,6 +219,7 @@ impl ThreadPool {
         }
     }
 
+    /// Waits for all non-main threads to finish.
     pub fn wait_for_non_main(&self) {
         unsafe {
             self.threads.iter()
@@ -235,16 +251,15 @@ impl ThreadPool {
 
         self.main_cond.set();
         self.wait_for_start();
-        self.thread_cond.lock();
         self.main_cond.lock();
     }
 
 
-    /// performs a standard search, and blocks waiting for a returned `BitMove`.
+    /// Performs a standard search, and blocks waiting for a returned `BitMove`.
     pub fn search(&mut self, board: &Board, limits: &Limits) -> BitMove {
         self.uci_search(board, limits);
         self.wait_for_finish();
-        self.main().root_moves().get(0).unwrap().bit_move
+        self.best_move()
     }
 
     pub fn best_move(&mut self) -> BitMove {

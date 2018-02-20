@@ -30,6 +30,7 @@ impl Clone for RootMoveList {
 }
 
 unsafe impl Send for RootMoveList {}
+unsafe impl Sync for RootMoveList {}
 
 impl RootMoveList {
     #[inline]
@@ -112,12 +113,14 @@ impl RootMoveList {
         MoveList::from(vec)
     }
 
+    #[inline]
     pub fn prev_best_score(&self) -> i32 {
         unsafe {
             self.get_unchecked(0).prev_score
         }
     }
 
+    #[inline]
     pub fn insert_score_depth(&mut self, index: usize, score: i32, depth: u16) {
         unsafe {
             let rm: &mut RootMove = self.get_unchecked_mut(index);
@@ -127,6 +130,7 @@ impl RootMoveList {
         }
     }
 
+    #[inline]
     pub fn insert_score(&mut self, index: usize, score: i32) {
         unsafe {
             let rm: &mut RootMove = self.get_unchecked_mut(index);

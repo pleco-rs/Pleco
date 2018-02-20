@@ -134,6 +134,10 @@ impl Searcher {
 
         self.previous_score = best_score;
 
+        if best_move != self.root_moves().first().bit_move {
+            println!("info id 0 pv {}",self.root_moves().first().bit_move);
+        }
+
         if self.use_stdout() {
             println!("bestmove {}", best_move.to_string());
         }
@@ -213,7 +217,10 @@ impl Searcher {
 
             self.root_moves().sort();
             if self.use_stdout() && self.main_thread() {
-                println!("info depth {}", depth);
+                println!("info depth {} score {} pv {}",
+                         depth,
+                         best_value,
+                         self.root_moves().first().bit_move.to_string());
             }
             if !self.stop() {
                 self.depth_completed = depth;
@@ -418,10 +425,12 @@ impl Searcher {
         eval::Evaluation::evaluate(&self.board, pawns, material)
     }
 
+    #[inline(always)]
     fn main_thread(&self) -> bool {
         self.id == 0
     }
 
+    #[inline(always)]
     fn stop(&self) -> bool {
         threadpool().stop.load(Ordering::Relaxed)
     }
@@ -437,12 +446,14 @@ impl Searcher {
         }
     }
 
+    #[inline(always)]
     pub fn print_startup(&self) {
         if self.use_stdout() {
             println!("info id {} start", self.id);
         }
     }
 
+    #[inline(always)]
     pub fn use_stdout(&self) -> bool {
         USE_STDOUT.load(Ordering::Relaxed)
     }
@@ -455,6 +466,7 @@ impl Searcher {
         }
     }
 
+    #[inline]
     pub fn root_moves(&self) -> &mut RootMoveList {
         unsafe {
             &mut *self.root_moves.get()
@@ -528,8 +540,7 @@ fn correct_bound(tt_value: i32, val: i32, bound: NodeBound) -> bool {
     }
 }
 
-
-
+#[inline]
 fn futility_margin(depth: u16) -> i32 {
     depth as i32 * 150
 }
