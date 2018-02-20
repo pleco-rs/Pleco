@@ -214,7 +214,9 @@ impl <'a> Evaluation <'a> {
     }
 
     fn value(&mut self) -> Value {
-        let mut score = self.pawn_entry.pawns_score() + self.material_entry.score();
+        let mut score = self.pawn_entry.pawns_score()
+            + self.material_entry.score()
+            + self.board.psq();
         let mut v = (score.0 + score.1) / 2;
         if v.abs() > LAZY_THRESHOLD {
             if self.board.turn() == Player::White {return v;}
@@ -281,12 +283,12 @@ impl <'a> Evaluation <'a> {
 
     fn tracing(&mut self) {
         let mut score = self.pawn_entry.pawns_score();
-
+        println!("               |    White   |        Black      |    Total ");
         let pawns = self.pawn_entry.pawns_score();
         let mat = self.material_entry.score();
-        print!("Pawns    ");
+        print!("Pawns     ");
         displ_scores(pawns, -pawns);
-        print!("Material ");
+        print!("Material  ");
         displ_scores(mat, -mat);
         score += pawns + mat;
 
@@ -352,7 +354,7 @@ impl <'a> Evaluation <'a> {
             score += white - black;
         }
 
-        println!("Non-P mat - w: {}, b: {}", white_s, black_s);
+        println!("Non-P mat      {}         |  {}", white_s, black_s);
         print!("Space Thr  ");
         displ_scores(white, black);
         println!("all: mg: {}, eg: {}",score.mg(), score.eg());
@@ -863,6 +865,7 @@ mod tests {
         Evaluation::trace(&board);
         let mut board = Board::default();
         board.apply_uci_move("e2e3");
+        board.apply_uci_move("e7e6");
         board.apply_uci_move("d1g4");
         Evaluation::trace(&board);
     }

@@ -79,7 +79,7 @@ static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
 
 pub fn init_psqt() {
     for piece in 0..PIECE_TYPE_CNT {
-        let v: Score = Score(PIECE_VALUE[piece][0], PIECE_VALUE[piece][1]);
+        let v: Score = Score(PIECE_VALUE[piece][0], PIECE_VALUE[piece][0]);
         for s in 0..SQ_CNT {
             let sq: SQ = SQ(s as u8);
             let f: File = sq.file().min(!sq.file());

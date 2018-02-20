@@ -295,7 +295,8 @@ impl Searcher {
         if !is_pv
             && tt_hit
             && tt_entry.depth as u16 >= plys_to_zero
-            && tt_value != 0
+            && tt_entry.eval != 0
+            && pos_eval != 0
             && correct_bound_eq(tt_value, beta, tt_entry.node_type()) {
             return tt_value;
         }

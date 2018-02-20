@@ -232,14 +232,14 @@ impl PlecoSearcher {
 mod tests {
     use super::*;
 
-    #[test]
-    fn engine() {
-        let mut e = PlecoSearcher::init(true);
-        let mut limit = PreLimits::blank();
-        limit.depth = Some(4);
-        let board = Board::default();
-        e.search(&board, &limit);
-        e.await_move();
-        e.use_stdout(false);
-    }
+//    #[test]
+//    fn engine() {
+//        let mut e = PlecoSearcher::init(true);
+//        let mut limit = PreLimits::blank();
+//        limit.depth = Some(4);
+//        let board = Board::default();
+//        e.search(&board, &limit);
+//        e.await_move();
+//        e.use_stdout(false);
+//    }
 }

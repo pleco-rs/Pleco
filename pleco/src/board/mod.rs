@@ -531,6 +531,7 @@ impl Board {
             rule_50: rule_50,
             ply: 0,
             ep_square: ep_sq,
+            psq: Score::ZERO,
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
@@ -739,7 +740,7 @@ impl Board {
 
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
-
+                new_state.psq += psq(PieceType::R, us, r_dst) - psq(PieceType::R, us, r_src);
                 zob ^= z_square(r_src, us, PieceType::R)
                         ^ z_square(r_dst, us, PieceType::R);
                 new_state.captured_piece = None;
@@ -770,6 +771,7 @@ impl Board {
                 zob ^= z_square(cap_sq, them, cap_p);
                 let cap_count = self.count_piece(them, cap_p);
                 material_key ^= z_square(SQ(cap_count), them, cap_p);
+                new_state.psq -= psq(cap_p,them, cap_sq);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = Some(cap_p);
@@ -814,12 +816,15 @@ impl Board {
                     let pawn_count = self.count_piece(us, PieceType::P);
                     material_key ^= z_square(SQ(promo_count - 1), us, promo_piece)
                         ^ z_square(SQ(pawn_count), us, PieceType::P);
+
+                    new_state.psq += psq(promo_piece, us, to) - psq(piece, us, to);
                     new_state.nonpawn_material[us as usize] += piece_value(promo_piece, false);
                 }
                 pawn_key ^= z_square(from, us, PieceType::P) ^ z_square(to, us, PieceType::P);
                 new_state.rule_50 = 0;
             }
 
+            new_state.psq += psq(piece, us, to) - psq(piece, us, from);
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
@@ -1328,9 +1333,11 @@ impl Board {
     fn set_zob_hash(&mut self) {
         let mut zob: u64 = 0;
         let mut pawn_key: u64 = 0;
+        let mut psq_s: Score = Score::ZERO;
         let mut b: BitBoard = self.get_occupied();
         while let Some(sq) = b.pop_some_lsb() {
             let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
+            psq_s += psq(piece,player,sq);
             let key = z_square(sq, player, piece);
             zob ^= key;
             if piece == PieceType::P {
@@ -1352,6 +1359,7 @@ impl Board {
 
         state.zobrast = zob;
         state.pawn_key = pawn_key;
+        state.psq = psq_s;
     }
 }
 
@@ -1432,6 +1440,11 @@ impl Board {
     #[inline(always)]
     pub fn ply(&self) -> u16 {
         self.state.ply
+    }
+
+
+    pub fn psq(&self) -> Score {
+        self.state.psq
     }
 
     /// Get the current square of en_passant.
