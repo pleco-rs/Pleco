@@ -138,7 +138,7 @@ impl Searcher {
 
         self.previous_score = best_score;
 
-        if best_move != self.root_moves().first().bit_move {
+        if self.use_stdout() && best_move != self.root_moves().first().bit_move {
             println!("info id 0 pv {}",self.root_moves().first().bit_move);
         }
 

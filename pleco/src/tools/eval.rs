@@ -1,4 +1,4 @@
-//! Module for evaluating the strength of a current position.
+//! Module for simply evaluating the strength of a current position.
 //!
 //! This is a VERY basic evaluation, and while decent, it certainly isn't anything exceptional.
 

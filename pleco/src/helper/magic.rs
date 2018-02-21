@@ -29,6 +29,7 @@ const SEEDS: [[u64; 8]; 2] = [
     [728, 10_316, 55_013, 32_803, 12_281, 15_100, 16_645, 255],
 ];
 
+#[cold]
 pub fn init_magics() {
     unsafe {
         gen_magic_board(BISHOP_M_SIZE, &B_DELTAS, BISHOP_MAGICS.as_mut_ptr(), BISHOP_TABLE.as_mut_ptr());

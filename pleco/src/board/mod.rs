@@ -1320,13 +1320,6 @@ impl Board {
         result
     }
 
-    //    pub struct Zobrist {
-    //      sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
-    //      en_p: [u64; FILE_CNT],
-    //      castle: [u64; CASTLING_CNT],
-    //      side: u64,
-    //    }
-
     /// Sets the Zobrist hash when the board is initialized or created from a FEN string.
     ///
     /// Assumes the rest of the board is initialized.
@@ -1443,6 +1436,8 @@ impl Board {
     }
 
 
+    /// Returns the current positional Score of the board. Positive scores are in favor
+    /// of the white player, while negative scores are in favor of the black player.
     pub fn psq(&self) -> Score {
         self.state.psq
     }

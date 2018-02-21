@@ -1,6 +1,7 @@
 //! Contains all of the currently completed standard bots/searchers/AIs.
 //!
 //! These are mostly for example purposes, to see how one can create a chess AI.
+//!
 
 extern crate rand;
 

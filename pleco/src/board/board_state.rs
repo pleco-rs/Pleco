@@ -47,6 +47,7 @@ pub struct BoardState {
     /// a double pawn push, then `ep_square = NO_SQ`.
     pub ep_square: SQ,
 
+    /// The positional score of the board.
     pub psq: Score,
 
     // These fields MUST be Recomputed after a move

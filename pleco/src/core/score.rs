@@ -44,6 +44,7 @@ pub const END_GAME_LIMIT: Value = 3915;
 pub struct Score(pub Value, pub Value);
 
 impl Score {
+    /// The Score of zero
     pub const ZERO: Score = Score(0,0);
 
     /// Creates a new `Score`.

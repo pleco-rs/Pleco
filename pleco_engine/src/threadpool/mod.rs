@@ -262,6 +262,7 @@ impl ThreadPool {
         self.best_move()
     }
 
+    /// Returns the best move of a search
     pub fn best_move(&mut self) -> BitMove {
         self.main().root_moves().get(0).unwrap().bit_move
     }

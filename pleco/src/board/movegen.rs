@@ -54,9 +54,9 @@
 use board::*;
 
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo};
+use core::move_list::{MoveList,ScoringMoveList,MVPushable};
 
-use core::sq::SQ;
-use core::bitboard::BitBoard;
+use {SQ, BitBoard};
 
 
 //                   Legal    PseudoLegal
@@ -79,7 +79,6 @@ use core::bitboard::BitBoard;
 //    Evasions:   3,930 ns  |  2,649 ns
 //
 // With Full Player MonoMorphization
-
 
 
 /// Determines the if the moves generated are `PseudoLegal` or `Legal` moves.
@@ -108,28 +107,67 @@ impl Legality for PseudoLegal {
     }
 }
 
-
 // Pieces to generate moves with inter-changably
 const STANDARD_PIECES: [PieceType; 4] = [PieceType::B, PieceType::N, PieceType::R, PieceType::Q];
 const DEFAULT_MOVES_LENGTH: usize = 32;
 
+/// Public move generator.
+///
+/// This is a wrapper type around `InnerMoveGen`, allowing for a more friendly API
+pub struct MoveGen {}
+
+impl MoveGen {
+    /// Returns `MoveList` of all moves for a given board, Legality & GenType.
+    #[inline(always)]
+    pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> MoveList {
+        let mut movelist = MoveList::default();
+        InnerMoveGen::<MoveList>::generate::<L,G>(chessboard, &mut movelist);
+        movelist
+    }
+
+    /// Returns a `ScoringMoveList` of all moves for a given board, Legality & GenType.
+    #[inline(always)]
+    pub fn generate_scoring<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> ScoringMoveList {
+        let mut movelist = ScoringMoveList::default();
+        InnerMoveGen::<ScoringMoveList>::generate::<L,G>(chessboard, &mut movelist);
+        movelist
+    }
+}
+
+impl MoveGen {
+    #[inline(always)]
+    pub unsafe fn extend<L: Legality, G: GenTypeTrait, MP: MVPushable>(chessboard: &Board, movelist: &mut MP) {
+        InnerMoveGen::<MP>::generate::<L,G>(chessboard, movelist);
+    }
+}
+
 /// Structure to generate moves from. Stores the current state of the board, and other
 /// references to help generating all possible moves.
-pub struct MoveGen<'a> {
-    movelist: MoveList,
+pub struct InnerMoveGen<'a, MP: MVPushable + 'a> {
+    movelist: &'a mut MP,
     board: &'a Board,
-    occ: BitBoard, // Squares occupied by all
-    us_occ: BitBoard, // squares occupied by player to move
+    occ: BitBoard,
+    // Squares occupied by all
+    us_occ: BitBoard,
+    // squares occupied by player to move
     them_occ: BitBoard, // Squares occupied by the opposing player
 }
 
-impl<'a> MoveGen<'a> {
+impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>  {
+    /// Returns vector of all moves for a given board, Legality & GenType.
+    #[inline(always)]
+    pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board, movelist: &mut MP) {
+        match chessboard.turn() {
+            Player::White => InnerMoveGen::generate_helper::<L, G, WhiteType>(chessboard, movelist),
+            Player::Black => InnerMoveGen::generate_helper::<L, G, BlackType>(chessboard, movelist)
+        }
+    }
 
     // Helper function to setup the MoveGen structure.
-    #[inline]
-    fn get_self(chessboard: &'a Board) -> Self {
-        MoveGen {
-            movelist: MoveList::default(),
+    #[inline(always)]
+    fn get_self(chessboard: &'a Board, movelist: &'a mut MP) -> Self {
+        InnerMoveGen {
+            movelist,
             board: chessboard,
             occ: chessboard.get_occupied(),
             us_occ: chessboard.get_occupied_player(chessboard.turn()),
@@ -137,32 +175,23 @@ impl<'a> MoveGen<'a> {
         }
     }
 
-    /// Returns vector of all moves for a given board, Legality & GenType.
-    pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> MoveList {
-        match chessboard.turn() {
-            Player::White => MoveGen::generate_helper::<L,G, WhiteType>(chessboard),
-            Player::Black => MoveGen::generate_helper::<L,G, BlackType>(chessboard)
-        }
-    }
-
     /// Directly generates the moves.
-    fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board) -> MoveList {
-        let mut movegen = MoveGen::get_self(chessboard);
+    fn generate_helper<L: Legality, G: GenTypeTrait, P: PlayerTrait>(chessboard: &Board, movelist: &mut MP) {
+        let mut movegen = InnerMoveGen::get_self(chessboard, movelist);
         let gen_type = G::gen_type();
         if gen_type == GenTypes::Evasions {
-            movegen.generate_evasions::<L,P>();
+            movegen.generate_evasions::<L, P>();
         } else if gen_type == GenTypes::QuietChecks {
-            movegen.generate_quiet_checks::<L,P>();
+            movegen.generate_quiet_checks::<L, P>();
         } else if gen_type == GenTypes::All {
             if movegen.board.in_check() {
-                movegen.generate_evasions::<L,P>();
+                movegen.generate_evasions::<L, P>();
             } else {
-                movegen.generate_non_evasions::<L, NonEvasionsGenType,P>();
+                movegen.generate_non_evasions::<L, NonEvasionsGenType, P>();
             }
         } else {
-            movegen.generate_non_evasions::<L,G,P>();
+            movegen.generate_non_evasions::<L, G, P>();
         }
-        movegen.movelist
     }
 
     /// Generates non-evasions, ala the board is in check.
@@ -190,17 +219,16 @@ impl<'a> MoveGen<'a> {
         self.moves_per_piece::<L, P, KnightType>(target);
         self.moves_per_piece::<L, P, BishopType>(target);
         self.moves_per_piece::<L, P, RookType>(target);
-        self.moves_per_piece::<L, P ,QueenType>(target);
+        self.moves_per_piece::<L, P, QueenType>(target);
 
         if G::gen_type() != GenTypes::QuietChecks && G::gen_type() != GenTypes::Evasions {
             self.moves_per_piece::<L, P, KingType>(target);
         }
 
         if G::gen_type() != GenTypes::Captures && G::gen_type() != GenTypes::Evasions
-            && (self.board.can_castle(P::player(), CastleType::KingSide) || self.board.can_castle(P::player(), CastleType::QueenSide)){
+            && (self.board.can_castle(P::player(), CastleType::KingSide) || self.board.can_castle(P::player(), CastleType::QueenSide)) {
             self.generate_castling::<L, P>();
         }
-
     }
 
     /// Generates quiet checks.
@@ -208,12 +236,13 @@ impl<'a> MoveGen<'a> {
         assert!(!self.board.in_check());
         let mut disc_check: BitBoard = self.board.discovered_check_candidates();
 
+        // discovered check candidates
         while let Some(from) = disc_check.pop_some_lsb() {
             let piece: PieceType = self.board.piece_at_sq(from).unwrap();
             if piece != PieceType::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
                 if piece == PieceType::K {
-                    b &= queen_moves(BitBoard(0),self.board.king_sq(P::opp_player()))
+                    b &= queen_moves(BitBoard(0), self.board.king_sq(P::opp_player()))
                 }
                 self.move_append_from_bb::<L>(&mut b, from, MoveFlag::QuietMove);
             }
@@ -271,9 +300,7 @@ impl<'a> MoveGen<'a> {
     fn castling_side<L: Legality, P: PlayerTrait>(&mut self, side: CastleType) {
         // Make sure we can castle AND the space between the king / rook is clear AND the piece at castling_side is a Rook
         if !self.board.castle_impeded(side) && self.board.can_castle(P::player(), side)
-            && self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R)
-        {
-
+            && self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R) {
             let king_side: bool = { side == CastleType::KingSide };
 
             let ksq: SQ = self.board.king_sq(P::player());
@@ -313,7 +340,6 @@ impl<'a> MoveGen<'a> {
                     flags: MoveFlag::Castle { king_side: king_side },
                 }));
             }
-
         }
     }
 
@@ -322,7 +348,7 @@ impl<'a> MoveGen<'a> {
         self.moves_per_piece::<L, P, KnightType>(target);
         self.moves_per_piece::<L, P, BishopType>(target);
         self.moves_per_piece::<L, P, RookType>(target);
-        self.moves_per_piece::<L, P ,QueenType>(target);
+        self.moves_per_piece::<L, P, QueenType>(target);
     }
 
 
@@ -435,9 +461,7 @@ impl<'a> MoveGen<'a> {
 
         // Captures
         if G::gen_type() == GenTypes::Captures || G::gen_type() == GenTypes::Evasions ||
-            G::gen_type() == GenTypes::NonEvasions || G::gen_type() == GenTypes::All
-        {
-
+            G::gen_type() == GenTypes::NonEvasions || G::gen_type() == GenTypes::All {
             let mut left_cap: BitBoard = P::shift_up_left(pawns_not_rank_7) & enemies;
             let mut right_cap: BitBoard = P::shift_up_right(pawns_not_rank_7) & enemies;
 
@@ -453,7 +477,7 @@ impl<'a> MoveGen<'a> {
 
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
-                assert_eq!(ep_sq.rank(), P::player().relative_rank( Rank::R6));
+                assert_eq!(ep_sq.rank(), P::player().relative_rank(Rank::R6));
                 if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).to_bb()).is_not_empty() {
                     left_cap = pawns_not_rank_7 & pawn_attacks_from(ep_sq, P::opp_player());
 
@@ -475,7 +499,8 @@ impl<'a> MoveGen<'a> {
         let prom_pieces = [PieceType::Q, PieceType::N, PieceType::R, PieceType::B];
         for piece in &prom_pieces {
             self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                src, dst,
+                src,
+                dst,
                 flags: MoveFlag::Promotion {
                     capture: is_capture,
                     prom: *piece,
@@ -487,7 +512,8 @@ impl<'a> MoveGen<'a> {
     #[inline]
     fn create_knight_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
         self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-            src, dst,
+            src,
+            dst,
             flags: MoveFlag::Promotion {
                 capture: is_capture,
                 prom: PieceType::N,
@@ -498,7 +524,8 @@ impl<'a> MoveGen<'a> {
     #[inline]
     fn create_queen_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
         self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-            src, dst,
+            src,
+            dst,
             flags: MoveFlag::Promotion {
                 capture: is_capture,
                 prom: PieceType::Q,
@@ -526,9 +553,11 @@ impl<'a> MoveGen<'a> {
         while bits.is_not_empty() {
             let dst = bits.pop_lsb();
             let b_move = BitMove::init(
-                PreMoveInfo { src, dst,
-                flags: move_flag,
-            });
+                PreMoveInfo {
+                    src,
+                    dst,
+                    flags: move_flag,
+                });
             self.check_and_add::<L>(b_move);
         }
     }
@@ -546,18 +575,18 @@ impl<'a> MoveGen<'a> {
     fn check_and_add<L: Legality>(&mut self, b_move: BitMove) {
         if L::gen_legal() {
             if self.board.legal_move(b_move) {
-                self.movelist.push(b_move);
+                unsafe {self.movelist.unchecked_push_mv(b_move)};
             }
         } else {
-            self.movelist.push(b_move);
+            unsafe {self.movelist.unchecked_push_mv(b_move)};
+
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-
-    use board::{Board};
+    use board::Board;
 
     #[test]
     fn movegen_legal_pseudo() {
@@ -581,18 +610,18 @@ mod tests {
         let mut m = b.generate_moves();
         let mut i = 0;
         for _d in m.iter() {
-            i+= 1;
+            i += 1;
         }
         {
             let borrow = &m;
-            assert_eq!(i,borrow.len());
+            assert_eq!(i, borrow.len());
         }
         {
             let borrow_mut = &mut m;
-            assert_eq!(i,borrow_mut.len());
+            assert_eq!(i, borrow_mut.len());
         }
 
         let m2 = m.to_vec();
-        assert_eq!(m2.len(),m.len());
+        assert_eq!(m2.len(), m.len());
     }
 }

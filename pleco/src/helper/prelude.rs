@@ -27,6 +27,7 @@ static INITIALIZED: AtomicBool = AtomicBool::new(false);
 static INIT: Once = ONCE_INIT;
 
 /// Initializes the static structures. Guarantees to only allow being called once.
+#[cold]
 pub fn init_statics() {
     INIT.call_once(|| {
         compiler_fence(Ordering::SeqCst);
