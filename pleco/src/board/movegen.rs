@@ -53,7 +53,7 @@
 
 use std::mem;
 use std::ptr;
-use std::ops::{Index};
+use std::ops::Index;
 
 use board::*;
 
@@ -122,7 +122,7 @@ pub struct MoveGen {}
 
 impl MoveGen {
     /// Returns `MoveList` of all moves for a given board, Legality & GenType.
-    #[inline(always)]
+    #[inline]
     pub fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> MoveList {
         let mut movelist = MoveList::default();
         unsafe {
@@ -135,7 +135,7 @@ impl MoveGen {
     }
 
     /// Returns a `ScoringMoveList` of all moves for a given board, Legality & GenType.
-    #[inline(always)]
+    #[inline]
     pub fn generate_scoring<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> ScoringMoveList {
         let mut movelist = ScoringMoveList::default();
         unsafe {
@@ -151,8 +151,8 @@ impl MoveGen {
     ///
     /// # Safety
     ///
-    /// Unsafe due to possible overwriting.
-    #[inline(always)]
+    /// Unsafe due to possible overwriting, as it is unaware of the current list's length.
+    #[inline]
     pub unsafe fn extend<L: Legality, G: GenTypeTrait, MP: MVPushable>(chessboard: &Board, movelist: &mut MP)
         where <MP as Index<usize>>::Output : Sized
     {
@@ -184,8 +184,9 @@ impl MoveGen {
 }
 
 /// Structure to generate moves from. Stores the current state of the board, and other
-/// references to help generating all possible moves.
-pub struct InnerMoveGen<'a, MP: MVPushable + 'a> {
+/// references to help generating all possible moves. This structure shouldn't be used
+/// normally.
+struct InnerMoveGen<'a, MP: MVPushable + 'a> {
     ptr: *mut MP::Output,
     board: &'a Board,
     occ: BitBoard,
@@ -631,6 +632,10 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
 #[cfg(test)]
 mod tests {
     use board::Board;
+    use super::{MoveGen,Legal};
+    use core::mono_traits::AllGenType;
+    use board::fen::ALL_FENS;
+
 
     #[test]
     fn movegen_legal_pseudo() {
@@ -649,7 +654,7 @@ mod tests {
     }
 
     #[test]
-    fn movelist() {
+    fn movelist_basic() {
         let b = Board::default();
         let mut m = b.generate_moves();
         let mut i = 0;
@@ -667,5 +672,30 @@ mod tests {
 
         let m2 = m.to_vec();
         assert_eq!(m2.len(), m.len());
+    }
+
+    #[test]
+    fn movegen_list_sim_basic() {
+        let b = Board::default();
+        let mb = b.generate_moves();
+        let ms = MoveGen::generate_scoring::<Legal, AllGenType>(&b);
+        assert_eq!(mb.len(), ms.len());
+        let iter = mb.iter().zip(ms.iter());
+        iter.for_each(|(mb,ms)| assert_eq!(*mb,ms.bit_move));
+    }
+
+    #[test]
+    fn movegen_list_sim_all() {
+        let boards: Vec<Board> = ALL_FENS.iter()
+            .map(|f| Board::new_from_fen(*f).unwrap())
+            .collect();
+
+        boards.iter().for_each(|b| {
+            let mb = b.generate_moves();
+            let ms = MoveGen::generate_scoring::<Legal, AllGenType>(b);
+            assert_eq!(mb.len(), ms.len());
+            let iter = mb.iter().zip(ms.iter());
+            iter.for_each(|(mb,ms)| assert_eq!(*mb,ms.bit_move));
+        });
     }
 }
