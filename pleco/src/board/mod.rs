@@ -10,24 +10,12 @@
 //! [`CastlingRights`]: castle_rights/struct.Castling.html
 //! [`PieceLocations`]: piece_locations/struct.Eval.html
 
-
-pub mod movegen;
-pub mod castle_rights;
-pub mod piece_locations;
-pub mod board_state;
-pub mod fen;
-pub mod perft;
-mod pgn;
-
 use std::option::*;
-use tools::pleco_arc::{Arc,UniqueArc};
 use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 use rand;
 
-use helper::Helper;
-use helper::prelude::*;
 use core::piece_move::{BitMove, MoveType};
 use core::move_list::MoveList;
 use core::mono_traits::*;
@@ -36,15 +24,25 @@ use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::*;
 use core::score::*;
-
+use tools::pleco_arc::{Arc,UniqueArc};
+use helper::Helper;
+use helper::prelude::*;
 use tools::prng::PRNG;
-use bot_prelude::{IterativeSearcher,JamboreeSearcher};
 use tools::Searcher;
+use bot_prelude::{IterativeSearcher,JamboreeSearcher};
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
 use self::board_state::BoardState;
 use self::movegen::{MoveGen,Legal,PseudoLegal};
+
+pub mod movegen;
+pub mod castle_rights;
+pub mod piece_locations;
+pub mod board_state;
+pub mod fen;
+pub mod perft;
+mod pgn;
 
 /// Represents possible Errors encountered while building a `Board` from a fen string.
 pub enum FenBuildError {
@@ -170,10 +168,10 @@ impl fmt::Debug for Board {
 
 impl PartialEq for Board {
     fn eq(&self, other: &Board) -> bool {
-        self.turn == other.turn &&
-            self.occ_all == other.occ_all &&
-            *self.state == *other.state &&
-            self.piece_locations == other.piece_locations
+        self.turn == other.turn
+            && self.occ_all == other.occ_all
+            && *self.state == *other.state
+            && self.piece_locations == other.piece_locations
     }
 }
 
@@ -208,8 +206,8 @@ impl Board {
             magic_helper: Helper::new(),
         };
         // Create the Zobrist hash & set the Piece Locations structure
-        b.set_zob_hash();
         b.set_piece_states();
+        b.set_zob_hash();
         b.set_material_key();
         b
     }
@@ -471,6 +469,7 @@ impl Board {
         let turn_char: char = det_split[1].chars()
             .next()
             .ok_or(FenBuildError::UnrecognizedTurn{turn: det_split[1].to_string()})?;
+
         let turn: Player = match turn_char {
             'b' => Player::Black,
             'w' => Player::White,
@@ -502,8 +501,8 @@ impl Board {
             } else {
                 let digit = character.to_digit(10)
                     .ok_or( FenBuildError::EPSquareUnreadable{ep: det_split[3].to_string()})? as u8;
-                // must be 3 or 6
 
+                // must be 3 or 6
                 if digit == 3 {
                     ep_sq += SQ(16);  // add two ranks
                 } else if digit == 6 {
@@ -532,6 +531,7 @@ impl Board {
             rule_50: rule_50,
             ply: 0,
             ep_square: ep_sq,
+            psq: Score::ZERO,
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
@@ -740,9 +740,9 @@ impl Board {
 
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
-
-                zob ^= z_square(r_src, us, PieceType::R) ^
-                    z_square(r_dst, us, PieceType::R);
+                new_state.psq += psq(PieceType::R, us, r_dst) - psq(PieceType::R, us, r_src);
+                zob ^= z_square(r_src, us, PieceType::R)
+                        ^ z_square(r_dst, us, PieceType::R);
                 new_state.captured_piece = None;
                 new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
@@ -771,6 +771,7 @@ impl Board {
                 zob ^= z_square(cap_sq, them, cap_p);
                 let cap_count = self.count_piece(them, cap_p);
                 material_key ^= z_square(SQ(cap_count), them, cap_p);
+                new_state.psq -= psq(cap_p,them, cap_sq);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = Some(cap_p);
@@ -815,12 +816,15 @@ impl Board {
                     let pawn_count = self.count_piece(us, PieceType::P);
                     material_key ^= z_square(SQ(promo_count - 1), us, promo_piece)
                         ^ z_square(SQ(pawn_count), us, PieceType::P);
+
+                    new_state.psq += psq(promo_piece, us, to) - psq(PieceType::P, us, to);
                     new_state.nonpawn_material[us as usize] += piece_value(promo_piece, false);
                 }
                 pawn_key ^= z_square(from, us, PieceType::P) ^ z_square(to, us, PieceType::P);
                 new_state.rule_50 = 0;
             }
 
+            new_state.psq += psq(piece, us, to) - psq(piece, us, from);
             new_state.captured_piece = captured;
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
@@ -1302,8 +1306,7 @@ impl Board {
                     (self.piece_two_bb_both_players(PieceType::B, PieceType::Q))));
 
 
-        while snipers.is_not_empty() {
-            let sniper_sq: SQ = snipers.pop_lsb();
+        while let Some(sniper_sq) = snipers.pop_some_lsb() {
             let b: BitBoard = between_bb(s, sniper_sq) & occupied;
             if !b.more_than_one() {
                 result |= b;
@@ -1317,22 +1320,17 @@ impl Board {
         result
     }
 
-    //    pub struct Zobrist {
-    //      sq_piece: [[u64; PIECE_CNT]; SQ_CNT],
-    //      en_p: [u64; FILE_CNT],
-    //      castle: [u64; CASTLING_CNT],
-    //      side: u64,
-    //    }
-
     /// Sets the Zobrist hash when the board is initialized or created from a FEN string.
     ///
     /// Assumes the rest of the board is initialized.
     fn set_zob_hash(&mut self) {
         let mut zob: u64 = 0;
         let mut pawn_key: u64 = 0;
+        let mut psq_s: Score = Score::ZERO;
         let mut b: BitBoard = self.get_occupied();
         while let Some(sq) = b.pop_some_lsb() {
             let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
+            psq_s += psq(piece,player,sq);
             let key = z_square(sq, player, piece);
             zob ^= key;
             if piece == PieceType::P {
@@ -1349,11 +1347,12 @@ impl Board {
             Player::Black => zob ^= z_side(),
             Player::White => {}
         };
-        let state =  Arc::get_mut(&mut self.state).unwrap();
 
+        let state =  Arc::get_mut(&mut self.state).unwrap();
 
         state.zobrast = zob;
         state.pawn_key = pawn_key;
+        state.psq = psq_s;
     }
 }
 
@@ -1434,6 +1433,13 @@ impl Board {
     #[inline(always)]
     pub fn ply(&self) -> u16 {
         self.state.ply
+    }
+
+
+    /// Returns the current positional Score of the board. Positive scores are in favor
+    /// of the white player, while negative scores are in favor of the black player.
+    pub fn psq(&self) -> Score {
+        self.state.psq
     }
 
     /// Get the current square of en_passant.
@@ -1788,19 +1794,15 @@ impl Board {
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
     /// Includes pieces from both players.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
-        (pawn_attacks_from(sq, Player::Black) &
-            self.piece_bb(Player::White, PieceType::P)) |
-            (pawn_attacks_from(sq, Player::White) &
-                self.piece_bb(Player::Black, PieceType::P)) |
-            (knight_moves(sq) & self.piece_bb_both_players(PieceType::N)) |
-            (rook_moves(occupied, sq) &
-                (self.sliding_piece_bb(Player::White) | self.sliding_piece_bb(Player::Black))) |
-            (bishop_moves(occupied, sq) &
-                (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black))) |
-            (king_moves(sq) & self.piece_bb_both_players(PieceType::K))
+        (pawn_attacks_from(sq, Player::Black)       & self.piece_bb(Player::White, PieceType::P))
+            | (pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, PieceType::P))
+            | (knight_moves(sq)           & self.piece_bb_both_players(PieceType::N))
+            | (rook_moves(occupied, sq)   & (self.sliding_piece_bb(Player::White)  | self.sliding_piece_bb(Player::Black)))
+            | (bishop_moves(occupied, sq) & (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black)))
+            | (king_moves(sq)             & self.piece_bb_both_players(PieceType::K))
     }
 
-    /// Given a piece, square, and player, returns all squares the piece may move to.
+    /// Given a piece, square, and player, returns all squares the piece may possibly move to.
     #[inline]
     pub fn attacks_from(&self, piece: PieceType, sq: SQ, player: Player) -> BitBoard {
         match piece {
@@ -1813,6 +1815,7 @@ impl Board {
         }
     }
 
+    /// Returns if a pawn on a given square is passed.
     #[inline(always)]
     pub fn pawn_passed(&self, player: Player, sq: SQ) -> bool {
         (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()

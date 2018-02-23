@@ -214,7 +214,9 @@ impl <'a> Evaluation <'a> {
     }
 
     fn value(&mut self) -> Value {
-        let mut score = self.pawn_entry.pawns_score() + self.material_entry.score();
+        let mut score = self.pawn_entry.pawns_score()
+            + self.material_entry.score()
+            + self.board.psq();
         let mut v = (score.0 + score.1) / 2;
         if v.abs() > LAZY_THRESHOLD {
             if self.board.turn() == Player::White {return v;}
@@ -280,13 +282,13 @@ impl <'a> Evaluation <'a> {
     }
 
     fn tracing(&mut self) {
-        let mut score = self.pawn_entry.pawns_score();
-
+        let mut score = Score::ZERO;
+        println!("               |    White   |        Black      |    Total ");
         let pawns = self.pawn_entry.pawns_score();
         let mat = self.material_entry.score();
-        print!("Pawns    ");
+        print!("Pawns     ");
         displ_scores(pawns, -pawns);
-        print!("Material ");
+        print!("Material  ");
         displ_scores(mat, -mat);
         score += pawns + mat;
 
@@ -352,9 +354,12 @@ impl <'a> Evaluation <'a> {
             score += white - black;
         }
 
-        println!("Non-P mat - w: {}, b: {}", white_s, black_s);
-        print!("Space Thr  ");
+        print!("Space Thr ");
         displ_scores(white, black);
+        println!("Non-P mat      {}         |     {}", white_s, black_s);
+        println!("psq: mg: {}, eg: {}",self.board.psq().mg(), self.board.psq().eg());
+        println!("nps: mg: {}, eg: {}",score.mg(), score.eg());
+        score +=  self.board.psq();
         println!("all: mg: {}, eg: {}",score.mg(), score.eg());
 
         let phase = self.material_entry.phase as i32;
@@ -855,15 +860,51 @@ impl <'a> Evaluation <'a> {
 mod tests {
     use super::*;
 
+//    #[test]
+//    fn eval_stuff() {
+//        init_statics();
+//        let board = Board::default();
+//        let mut score = Score::ZERO;
+//        let mut bb = board.get_occupied();
+//        while let Some(sq) = bb.pop_some_lsb() {
+//            let player = board.player_at_sq(sq).unwrap();
+//            let piece = board.piece_at_sq(sq).unwrap();
+//            let ps = psq(piece, player, sq);
+//            println!("Player: {}, Piece: {}, sq: {}, score mg: {}, eg: {}",player,piece,sq.to_string(),ps.mg(),ps.eg());
+//            score+=ps;
+//        }
+//        println!("mg: {}, eg: {}",score.mg(),score.mg());
+//
+//    }
+
     #[test]
     fn trace_eval() {
-        let board = Board::default();
-        Evaluation::trace(&board);
-        let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1").unwrap();
-        Evaluation::trace(&board);
         let mut board = Board::default();
+        board.pretty_print();
+        Evaluation::trace(&board);
+        println!("\n------------------------------\n");
         board.apply_uci_move("e2e3");
+        board.pretty_print();
+        Evaluation::trace(&board);
+        println!("\n------------------------------\n");
+        board.apply_uci_move("e7e5");
+        board.pretty_print();
+        Evaluation::trace(&board);
+        println!("\n------------------------------\n");
         board.apply_uci_move("d1g4");
+        board.pretty_print();
+        Evaluation::trace(&board);
+        println!("\n------------------------------\n");
+        board.apply_uci_move("d7d6");
+        board.pretty_print();
+        Evaluation::trace(&board);
+        println!("\n------------------------------\n");
+        board.apply_uci_move("g4c8");
+        board.pretty_print();
+        Evaluation::trace(&board);
+        println!("\n------------------------------\n");
+        board.apply_uci_move("d8c8");
+        board.pretty_print();
         Evaluation::trace(&board);
     }
 

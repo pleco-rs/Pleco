@@ -76,7 +76,7 @@ static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
     [ QUEEN_MG,   QUEEN_MG], // White Queen
     [ NONE,       NONE]];    // White King
 
-
+#[cold]
 pub fn init_psqt() {
     for piece in 0..PIECE_TYPE_CNT {
         let v: Score = Score(PIECE_VALUE[piece][0], PIECE_VALUE[piece][1]);
@@ -108,4 +108,19 @@ pub fn piece_value(piece: PieceType, eg: bool) -> Value {
     unsafe {
         (*(PIECE_VALUE.get_unchecked(piece as usize)).get_unchecked(eg as usize))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn psq_tes() {
+        init_psqt();
+        assert_eq!(psq(PieceType::Q, Player::White, SQ::A1), -psq(PieceType::Q, Player::Black, SQ::A8));
+        assert_eq!(psq(PieceType::R, Player::White, SQ::A1), -psq(PieceType::R, Player::Black, SQ::A8));
+        assert_eq!(psq(PieceType::P, Player::White, SQ::B1), -psq(PieceType::P, Player::Black, SQ::B8));
+        assert_eq!(psq(PieceType::N, Player::Black, SQ::B4), -psq(PieceType::N, Player::White, SQ::B5));
+    }
+
 }

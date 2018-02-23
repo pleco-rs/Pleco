@@ -13,9 +13,6 @@ impl PRNG {
     ///
     /// Panics if the seed is zero.
     pub const fn init(s: u64) -> PRNG {
-//        if s == 0 {
-//            panic!();
-//        }
         PRNG { seed: s }
     }
 

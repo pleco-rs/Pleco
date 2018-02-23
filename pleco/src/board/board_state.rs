@@ -17,7 +17,7 @@ use core::piece_move::BitMove;
 use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::masks::*;
-use core::score::Value;
+use core::score::{Value,Score};
 
 //use std::sync::Arc;
 use tools::pleco_arc::Arc;
@@ -46,6 +46,9 @@ pub struct BoardState {
     /// the push. So, `ep_square = abs(sq_to - sq_from) / 2`. If the last move was not
     /// a double pawn push, then `ep_square = NO_SQ`.
     pub ep_square: SQ,
+
+    /// The positional score of the board.
+    pub psq: Score,
 
     // These fields MUST be Recomputed after a move
 
@@ -86,6 +89,7 @@ impl BoardState {
             rule_50: 0,
             ply: 0,
             ep_square: NO_SQ,
+            psq: Score::ZERO,
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
@@ -107,6 +111,7 @@ impl BoardState {
             rule_50: 0,
             ply: 0,
             ep_square: NO_SQ,
+            psq: Score::ZERO,
             zobrast: 0,
             pawn_key: 0,
             material_key: 0,
@@ -131,6 +136,7 @@ impl BoardState {
             rule_50: self.rule_50,
             ply: self.ply,
             ep_square: self.ep_square,
+            psq: self.psq,
             zobrast: self.zobrast,
             pawn_key: self.pawn_key,
             material_key: self.material_key,

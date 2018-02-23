@@ -16,7 +16,7 @@ fn bench_3_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(3);
     let board = Board::default();
-    let mut s = PlecoSearcher::init(false);
+    let mut s = black_box(PlecoSearcher::init(false));
     b.iter(|| {
         black_box(s.clear_tt());
         black_box(s.search(&board, &limit));
@@ -31,7 +31,7 @@ fn bench_4_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(4);
     let board = Board::default();
-    let mut s = PlecoSearcher::init(false);
+    let mut s = black_box(PlecoSearcher::init(false));
     b.iter(|| {
         black_box(s.clear_tt());
         black_box(s.search(&board, &limit));
@@ -45,7 +45,7 @@ fn bench_5_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(5);
     let board = Board::default();
-    let mut s = PlecoSearcher::init(false);
+    let mut s = black_box(PlecoSearcher::init(false));
     b.iter(|| {
         black_box(s.clear_tt());
         black_box(s.search(&board, &limit));

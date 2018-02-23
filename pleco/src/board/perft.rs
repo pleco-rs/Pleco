@@ -48,8 +48,6 @@ pub fn perft_all(board: &Board, depth: u16) -> PerftNodes {
 }
 
 
-
-
 fn inner_perft(board: &mut Board, depth: u16) -> u64 {
     let moves: MoveList = board.generate_moves();
 

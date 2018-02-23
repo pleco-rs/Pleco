@@ -64,7 +64,6 @@ impl LockLatch {
             guard = self.v.wait(guard).unwrap();
         }
     }
-
 }
 
 /// A `GuardedBool` allows for waiting on a specific bool value.

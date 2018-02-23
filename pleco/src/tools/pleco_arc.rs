@@ -76,6 +76,7 @@ impl<T> Arc<T> {
 
 
 impl<T: ?Sized> Arc<T> {
+    /// Returns a pointer to the inner Arc.
     #[inline]
     fn ptr(&self) -> *mut ArcInner<T> {
         self.p.as_ptr()
@@ -153,8 +154,6 @@ impl<T: ?Sized> Drop for Arc<T> {
             return;
         }
 
-        // FIXME(bholley): Use the updated comment when [2] is merged.
-        //
         // This load is needed to prevent reordering of use of the data and
         // deletion of the data.  Because it is marked `Release`, the decreasing
         // of the reference count synchronizes with this `Acquire` load. This

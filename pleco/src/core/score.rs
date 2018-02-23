@@ -40,10 +40,11 @@ pub const END_GAME_LIMIT: Value = 3915;
 
 
 /// Struct to define the value of a mid-game / end-game evaluation.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone,PartialEq,Debug)]
 pub struct Score(pub Value, pub Value);
 
 impl Score {
+    /// The Score of zero
     pub const ZERO: Score = Score(0,0);
 
     /// Creates a new `Score`.
@@ -71,14 +72,14 @@ impl Add for Score {
     type Output = Score;
 
     fn add(self, other: Score) -> Score {
-        Score(other.0 + self.0, other.1 + self.1)
+        Score(self.0 + other.0, self.1 + other.1)
     }
 }
 
 
 impl AddAssign for Score {
     fn add_assign(&mut self, other: Score) {
-        *self = Score(other.0 + self.0, other.1 + self.1);
+        *self = Score(self.0 + other.0, self.1 + other.1);
     }
 }
 
@@ -86,13 +87,13 @@ impl Sub for Score {
     type Output = Score;
 
     fn sub(self, other: Score) -> Score {
-        Score(other.0 - self.0, other.1 - self.1)
+        Score(self.0 - other.0, self.1 - other.1)
     }
 }
 
 impl SubAssign for Score {
     fn sub_assign(&mut self, other: Score) {
-        *self = Score(other.0 - self.0, other.1 - self.1);
+        *self = Score(self.0 - other.0, self.1 - other.1);
     }
 }
 

@@ -94,19 +94,19 @@
 extern crate bitflags;
 #[macro_use]
 extern crate lazy_static;
-extern crate test;
-extern crate rayon;
 extern crate num_cpus;
 extern crate rand;
+extern crate rayon;
 extern crate prefetch;
-
+extern crate test;
 
 pub mod core;
 pub mod board;
-pub mod tools;
 pub mod bots;
 pub mod bot_prelude;
 pub mod helper;
+pub mod tools;
+
 #[doc(no_inline)]
 pub use board::Board;
 #[doc(no_inline)]

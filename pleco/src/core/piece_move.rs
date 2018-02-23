@@ -416,3 +416,46 @@ impl BitMove {
         self.data
     }
 }
+
+/// A move that stores a score as well
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct ScoringBitMove {
+    pub bit_move: BitMove,
+    pub score: i16
+}
+
+impl Default for ScoringBitMove {
+    fn default() -> Self {
+        ScoringBitMove {
+            bit_move: BitMove::null(),
+            score: 0
+        }
+    }
+}
+
+impl ScoringBitMove {
+    pub fn new(m: BitMove) -> Self {
+        ScoringBitMove {
+            bit_move: m,
+            score: 0
+        }
+    }
+
+    pub fn new_score(m: BitMove, score: i16) -> Self {
+        ScoringBitMove {
+            bit_move: m,
+            score,
+        }
+    }
+
+    pub fn bitmove(&self) -> BitMove {
+        self.bit_move
+    }
+
+    pub fn score(&self) -> i16 {
+        self.score
+    }
+}
+
+

@@ -249,7 +249,7 @@ impl SQ {
         self.on_dark_square() as usize
     }
 
-    /// Flips the square, so `SQ::A1` -> `SQ::A8`.
+    /// Flips the square's rank, so `SQ::A1` -> `SQ::A8`.
     #[inline(always)]
     pub fn flip(self) -> SQ {
         SQ(self.0 ^ 0b111000)

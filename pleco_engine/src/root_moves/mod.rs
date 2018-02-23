@@ -2,7 +2,6 @@
 //! alongside information about each of the moves.
 
 pub mod root_moves_list;
-pub mod root_moves_manager;
 
 use std::cmp::Ordering as CmpOrder;
 
@@ -63,7 +62,7 @@ impl Ord for RootMove {
                 return CmpOrder::Less;
             }
         } else if value_diff > 0 {
-            return CmpOrder::Less
+            return CmpOrder::Less;
         }
         CmpOrder::Greater
     }

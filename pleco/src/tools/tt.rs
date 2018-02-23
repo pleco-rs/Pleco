@@ -45,10 +45,6 @@ use core::piece_move::BitMove;
 
 // TODO: investigate potention for SIMD in key lookup
 // Currently, there is now way to do this right now in rust without it being extensive.
-//
-//
-
-// TODO: tt_bench_single_thread_insert* had a significant slowdown in Travis #192
 
 pub type Key = u64;
 

@@ -2,7 +2,7 @@
 
 
 use super::{Board,FenBuildError};
-use {BitBoard, PieceType, Player, Rank};
+use {BitBoard, PieceType, Player, Rank, SQ};
 use super::super::core::sq::NO_SQ;
 
 pub const OPENING_POS_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -96,6 +96,7 @@ lazy_static! {
 pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
     let checks = board.checkers();
     let num_checks = checks.count_bits();
+    // Cant be more than 2 checking pieces at a time
     if num_checks > 2 { return Err(FenBuildError::IllegalNumCheckingPieces {num: num_checks}) }
     if num_checks == 2 {
         let sq_1bb = checks.lsb();
@@ -103,6 +104,8 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
         let sq_1 = sq_1bb.to_sq();
         let piece_1 = board.piece_at_sq(sq_1).unwrap();
         let piece_2 = board.piece_at_sq(sq_2).unwrap();
+
+        // Some combinations of pieces can never check the king at the same time.
         if piece_1 == PieceType::P {
             if piece_2 == PieceType::B || piece_2 == PieceType::N || piece_2 == PieceType::P {
                 return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
@@ -114,10 +117,13 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
     }
 
     let all_pawns: BitBoard = board.piece_bb_both_players(PieceType::P) & (BitBoard::RANK_1 | BitBoard::RANK_8 );
+
+    // No pawns on Rank 1 or 8
     if all_pawns.is_not_empty() {
         return Err(FenBuildError::PawnOnLastRow);
     }
 
+    // Check for more pawns than possible
     let white_pawns = board.count_piece(Player::White, PieceType::P);
     let black_pawns = board.count_piece(Player::Black, PieceType::P);
     if white_pawns > 8 {
@@ -128,24 +134,50 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
         return Err(FenBuildError::TooManyPawns { player: Player::Black, num: black_pawns });
     }
 
+    // check for correct en-passant square rank
     let ep_sq = board.ep_square();
     if ep_sq != NO_SQ {
         match board.turn() {
             Player::White => {
-                if ep_sq.rank() != Rank::R6 {
-                    println!("White turn");
+                if ep_sq.rank() != Rank::R6  {
+                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                }
+
+                let ep_p_sq = ep_sq - SQ(8);
+                let ep_player = board.player_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
+                let ep_piece = board.piece_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
+
+                if ep_player != Player::Black ||  ep_piece != PieceType::P {
                     return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
                 }
             },
             Player::Black => {
-                if ep_sq.rank() != Rank::R3 {
+                if ep_sq.rank() != Rank::R3  {
+                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                }
+
+                let ep_p_sq = ep_sq + SQ(8);
+                let ep_player = board.player_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
+                let ep_piece = board.piece_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
+
+                if ep_player != Player::White ||  ep_piece != PieceType::P {
                     return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
                 }
             },
         }
     }
 
-    // TODO: If EP square, check for legal EP square
-
     Ok(board)
+}
+
+#[cfg(test)]
+mod tests {
+    use Board;
+
+    const EXTRA_PAWNS: &str = "rnbqkbnr/pppppppp/8/8/8/7P/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+    #[test]
+    fn fen_extra_pawns(){
+        assert!(Board::new_from_fen(EXTRA_PAWNS).is_err());
+    }
 }
