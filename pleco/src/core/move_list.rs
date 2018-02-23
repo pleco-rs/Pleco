@@ -15,14 +15,15 @@
 //! [`MoveList`]: struct.MoveList.html
 //! [`ScoreMoveList`]: struct.MoveList.html
 
-use super::piece_move::BitMove;
+use super::piece_move::{BitMove,ScoringBitMove};
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 
 
-pub trait MVPushable: Sized {
+pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> {
+
     /// Adds a `BitMove` to the end of the list.
     ///
     /// # Safety
@@ -36,6 +37,13 @@ pub trait MVPushable: Sized {
     ///
     /// Undefined behavior if pushing to the list when `MoveList::len() = 256`.
     unsafe fn unchecked_push_mv(&mut self, mv: BitMove);
+
+    /// Set the length of the list.
+    ///
+    /// # Safety
+    ///
+    /// Unsafe due to overwriting the length of the list
+    unsafe fn unchecked_set_len(&mut self, len: usize);
 }
 
 const MAX_MOVES: usize = 256;
@@ -69,7 +77,7 @@ impl From<Vec<BitMove>> for MoveList {
 impl From<ScoringMoveList> for MoveList {
     fn from(sc_list: ScoringMoveList) -> Self {
         let mut mv_list = MoveList::default();
-        sc_list.iter().for_each(|m| mv_list.push(m.0));
+        sc_list.iter().for_each(|m| mv_list.push(m.bitmove()));
         mv_list
     }
 }
@@ -218,6 +226,11 @@ impl MVPushable for MoveList {
         *end = mv;
         self.len += 1;
     }
+
+    #[inline(always)]
+    unsafe fn unchecked_set_len(&mut self, len: usize) {
+        self.len = len
+    }
 }
 
 pub struct MoveIter<'a> {
@@ -328,7 +341,7 @@ unsafe impl TrustedLen for MoveIntoIter {}
 
 /// This is similar to a `MoveList`, but also keeps the scores for each move as well.
 pub struct ScoringMoveList {
-    inner: [(BitMove, i32); 256],
+    inner: [ScoringBitMove; 256],
     len: usize,
 }
 
@@ -336,7 +349,7 @@ impl Default for ScoringMoveList {
     #[inline]
     fn default() -> Self {
         ScoringMoveList {
-            inner: [(BitMove::null(),0); 256],
+            inner: [ScoringBitMove::default(); 256],
             len: 0,
         }
     }
@@ -358,9 +371,9 @@ impl From<MoveList> for ScoringMoveList {
     }
 }
 
-impl Into<Vec<(BitMove,i32)>> for ScoringMoveList {
+impl Into<Vec<ScoringBitMove>> for ScoringMoveList {
     #[inline]
-    fn into(self) -> Vec<(BitMove,i32)> {
+    fn into(self) -> Vec<ScoringBitMove> {
         self.vec()
     }
 }
@@ -383,7 +396,7 @@ impl ScoringMoveList {
     }
 
     /// Creates a vector from this `MoveList`.
-    pub fn vec(&self) -> Vec<(BitMove,i32)> {
+    pub fn vec(&self) -> Vec<ScoringBitMove> {
         let mut vec = Vec::with_capacity(self.len);
         for pair in self.iter() {
             vec.push(*pair);
@@ -400,17 +413,17 @@ impl ScoringMoveList {
 
     /// Returns the `MoveList` as a slice.
     #[inline(always)]
-    pub fn as_slice(&self) -> &[(BitMove,i32)] {
+    pub fn as_slice(&self) -> &[ScoringBitMove] {
         self
     }
 }
 
 
 impl Deref for ScoringMoveList {
-    type Target = [(BitMove,i32)];
+    type Target = [ScoringBitMove];
 
     #[inline]
-    fn deref(&self) -> &[(BitMove,i32)] {
+    fn deref(&self) -> &[ScoringBitMove] {
         unsafe {
             let p = self.inner.as_ptr();
             slice::from_raw_parts(p, self.len)
@@ -420,7 +433,7 @@ impl Deref for ScoringMoveList {
 
 impl DerefMut for ScoringMoveList {
     #[inline]
-    fn deref_mut(&mut self) -> &mut [(BitMove,i32)] {
+    fn deref_mut(&mut self) -> &mut [ScoringBitMove] {
         unsafe {
             let ptr = self.inner.as_mut_ptr();
             slice::from_raw_parts_mut(ptr, self.len)
@@ -429,17 +442,17 @@ impl DerefMut for ScoringMoveList {
 }
 
 impl Index<usize> for ScoringMoveList {
-    type Output = (BitMove,i32);
+    type Output = ScoringBitMove;
 
     #[inline(always)]
-    fn index(&self, index: usize) -> &(BitMove,i32) {
+    fn index(&self, index: usize) -> &ScoringBitMove {
         &(**self)[index]
     }
 }
 
 impl IndexMut<usize> for ScoringMoveList {
     #[inline(always)]
-    fn index_mut(&mut self, index: usize) -> &mut (BitMove,i32) {
+    fn index_mut(&mut self, index: usize) -> &mut ScoringBitMove {
         &mut (**self)[index]
     }
 }
@@ -455,8 +468,14 @@ impl MVPushable for ScoringMoveList {
     #[inline(always)]
     unsafe fn unchecked_push_mv(&mut self, mv: BitMove) {
         let end = self.inner.get_unchecked_mut(self.len);
-        *end = (mv,0);
+        *end = ScoringBitMove::new(mv);
         self.len += 1;
+    }
+
+
+    #[inline(always)]
+    unsafe fn unchecked_set_len(&mut self, len: usize) {
+        self.len = len
     }
 }
 
@@ -466,7 +485,7 @@ pub struct ScoreMoveIter<'a> {
 }
 
 impl<'a> Iterator for ScoreMoveIter<'a> {
-    type Item = (BitMove,i32);
+    type Item = ScoringBitMove;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -489,7 +508,7 @@ impl<'a> Iterator for ScoreMoveIter<'a> {
 }
 
 impl<'a> IntoIterator for &'a ScoringMoveList {
-    type Item = (BitMove,i32);
+    type Item = ScoringBitMove;
     type IntoIter = ScoreMoveIter<'a>;
 
     #[inline]
@@ -514,7 +533,7 @@ pub struct ScoreMoveIntoIter {
 }
 
 impl Iterator for ScoreMoveIntoIter {
-    type Item = (BitMove,i32);
+    type Item = ScoringBitMove;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -537,7 +556,7 @@ impl Iterator for ScoreMoveIntoIter {
 }
 
 impl IntoIterator for ScoringMoveList {
-    type Item = (BitMove,i32);
+    type Item = ScoringBitMove;
     type IntoIter = ScoreMoveIntoIter;
 
     #[inline]
