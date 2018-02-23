@@ -22,7 +22,7 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 
 
-pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> {
+pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
 
     /// Adds a `BitMove` to the end of the list.
     ///
@@ -44,6 +44,21 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> {
     ///
     /// Unsafe due to overwriting the length of the list
     unsafe fn unchecked_set_len(&mut self, len: usize);
+
+
+    /// Return a pointer to the first (0-th index) element in the list
+    ///
+    /// # Safety
+    ///
+    /// Unsafe due to allow modification of elements possibly not inside the length.
+    unsafe fn list_ptr(&mut self) -> *mut Self::Output;
+
+    /// Return a pointer to the element next to the last element in the list
+    ///
+    /// # Safety
+    ///
+    /// Unsafe due to allow modification of elements possibly not inside the length.
+    unsafe fn over_bounds_ptr(&mut self) -> *mut Self::Output;
 }
 
 const MAX_MOVES: usize = 256;
@@ -230,6 +245,16 @@ impl MVPushable for MoveList {
     #[inline(always)]
     unsafe fn unchecked_set_len(&mut self, len: usize) {
         self.len = len
+    }
+
+    #[inline(always)]
+    unsafe fn list_ptr(&mut self) -> *mut BitMove {
+        self.as_mut_ptr()
+    }
+
+    #[inline(always)]
+    unsafe fn over_bounds_ptr(&mut self) -> *mut BitMove {
+        self.as_mut_ptr().add(self.len)
     }
 }
 
@@ -476,6 +501,16 @@ impl MVPushable for ScoringMoveList {
     #[inline(always)]
     unsafe fn unchecked_set_len(&mut self, len: usize) {
         self.len = len
+    }
+
+    #[inline(always)]
+    unsafe fn list_ptr(&mut self) -> *mut ScoringBitMove {
+        self.as_mut_ptr()
+    }
+
+    #[inline(always)]
+    unsafe fn over_bounds_ptr(&mut self) -> *mut ScoringBitMove {
+        self.as_mut_ptr().add(self.len)
     }
 }
 

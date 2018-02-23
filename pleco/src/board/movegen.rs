@@ -127,7 +127,7 @@ impl MoveGen {
         let mut movelist = MoveList::default();
         unsafe {
             let ptr: *mut BitMove = movelist.as_mut_ptr();
-            let new_ptr = InnerMoveGen::<MoveList>::generate::<L,G>(chessboard, ptr);
+            let new_ptr = InnerMoveGen::<MoveList>::generate::<L, G>(chessboard, ptr);
             let new_size = (new_ptr as usize - ptr as usize) / mem::size_of::<BitMove>();
             movelist.unchecked_set_len(new_size);
         }
@@ -140,18 +140,47 @@ impl MoveGen {
         let mut movelist = ScoringMoveList::default();
         unsafe {
             let ptr: *mut ScoringBitMove = movelist.as_mut_ptr();
-            let new_ptr = InnerMoveGen::<ScoringMoveList>::generate::<L,G>(chessboard, ptr);
+            let new_ptr = InnerMoveGen::<ScoringMoveList>::generate::<L, G>(chessboard, ptr);
             let new_size = (new_ptr as usize - ptr as usize) / mem::size_of::<ScoringBitMove>();
             movelist.unchecked_set_len(new_size);
         }
         movelist
     }
 
-//    #[inline(always)]
-//    pub unsafe fn extend<L: Legality, G: GenTypeTrait, MP: MVPushable>(chessboard: &Board, movelist: &mut MP) {
-//
-//        InnerMoveGen::<MP>::generate::<L,G>(chessboard, movelist);
-//    }
+    /// Extends the current list of moves of a certain Legality, and Generation type.
+    ///
+    /// # Safety
+    ///
+    /// Unsafe due to possible overwriting.
+    #[inline(always)]
+    pub unsafe fn extend<L: Legality, G: GenTypeTrait, MP: MVPushable>(chessboard: &Board, movelist: &mut MP)
+        where <MP as Index<usize>>::Output : Sized
+    {
+        let begin: *mut MP::Output = movelist.list_ptr();
+        let ptr: *mut MP::Output = movelist.over_bounds_ptr();
+        let new_ptr: *mut MP::Output = InnerMoveGen::<MP>::generate::<L,G>(chessboard, ptr);
+        let new_size = (new_ptr as usize - begin as usize) / mem::size_of::<MP::Output>();
+        movelist.unchecked_set_len(new_size);
+    }
+
+    /// Extends the current list of moves of a certain Legality, and Generation type. Takes in a pointer
+    /// to the next available (empty) index, and returns the pointer to the next open index after generating
+    /// the moves
+    ///
+    /// # Safety
+    ///
+    /// Obviously, this is extremely unsafe to use, as there is a possibility of both overwriting valid memory,
+    /// or otherwise pushing in an invalid pointer.
+    ///
+    /// Also, this does not update the size of the movelist inputted. It's recommended to use the method
+    /// `MVPushable::unchecked_set_len(...)` to set the size manually after this method.
+    #[inline(always)]
+    pub unsafe fn extend_from_ptr<L: Legality, G: GenTypeTrait, MP: MVPushable>(chessboard: &Board, ptr: *mut MP::Output)
+        -> *mut MP::Output
+        where <MP as Index<usize>>::Output : Sized
+    {
+        InnerMoveGen::<MP>::generate::<L,G>(chessboard, ptr)
+    }
 }
 
 /// Structure to generate moves from. Stores the current state of the board, and other
@@ -168,7 +197,7 @@ pub struct InnerMoveGen<'a, MP: MVPushable + 'a> {
 
 impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
     where <MP as Index<usize>>::Output: Sized {
-    /// Returns vector of all moves for a given board, Legality & GenType.
+    /// Returns a pointer to the last element of all moves for a given board, Legality & GenType.
     #[inline(always)]
     fn generate<L: Legality, G: GenTypeTrait>(chessboard: &Board, movelist: *mut MP::Output) -> *mut MP::Output {
         match chessboard.turn() {
