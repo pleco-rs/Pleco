@@ -153,7 +153,7 @@ pub fn setboard_parse_board(args: &[&str]) -> Option<Board> {
                                       .map(|p| (*p).to_string())
                                       .collect::<Vec<String>>()
                                       .join(" ");
-    Board::new_from_fen(&fen_string).ok()
+    Board::from_fen(&fen_string).ok()
 }
 
 pub fn position_parse_board(args: &[&str]) -> Option<Board> {
@@ -166,7 +166,7 @@ pub fn position_parse_board(args: &[&str]) -> Option<Board> {
                                           .map(|p| (*p).to_string())
                                           .collect::<Vec<String>>()
                                           .join(" ");
-        Board::new_from_fen(&fen_string).ok()
+        Board::from_fen(&fen_string).ok()
     } else {
         None
     };

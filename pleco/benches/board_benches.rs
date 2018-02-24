@@ -17,7 +17,7 @@ lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         let mut prng = PRNG::init(SEED);
         let mut boards = RAND_BOARD_FENS.iter()
-            .map(|b| Board::new_from_fen(b).unwrap())
+            .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>();
 
         boards.iter_mut().for_each(|b| {

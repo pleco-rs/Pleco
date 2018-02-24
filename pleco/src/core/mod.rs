@@ -131,9 +131,14 @@ impl Player {
     /// assert_eq!(b.relative_rank(Rank::R8), Rank::R1);
     /// assert_eq!(b.relative_rank(Rank::R1), Rank::R8);
     /// ```
-    #[inline(always)]
+    #[inline]
     pub fn relative_rank(&self, rank: Rank) -> Rank {
-        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
+        let r = (rank as u8) ^ (*self as u8 * 7);
+        debug_assert!(r < 8);
+//        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
+        unsafe {
+            mem::transmute::<u8,Rank>(r)
+        }
     }
 }
 
@@ -267,14 +272,14 @@ pub enum File {
 impl File {
 
     /// Returns the bit-set of all files to the left of the current file.
-    #[inline(always)]
-    pub fn left_side_mask(self) -> u8 {
+    #[inline]
+    pub const fn left_side_mask(self) -> u8 {
         (1 << self as u8) - 1
     }
 
     /// Returns the bit-set of all files to the right of the current file.
-    #[inline(always)]
-    pub fn right_side_mask(self) -> u8 {
+    #[inline]
+    pub const fn right_side_mask(self) -> u8 {
         !((1 << (self as u16 + 1)) - 1) as u8
     }
 
@@ -290,6 +295,7 @@ impl File {
     ///
     /// assert_eq!(file_a.min(File::C), File::A);
     /// ```
+    #[inline]
     pub fn min(self, other: File) -> File {
         if (self as u8) < (other as u8) {
             self
@@ -309,6 +315,7 @@ impl File {
     ///
     /// assert_eq!(file_a.max(File::C), File::C);
     /// ```
+    #[inline]
     pub fn max(self, other: File) -> File {
         if (self as u8) > (other as u8) {
             self

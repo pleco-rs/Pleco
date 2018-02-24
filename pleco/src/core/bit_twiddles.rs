@@ -146,7 +146,7 @@ pub fn lsb(bits: u64) -> u64 {
 }
 
 /// Counts the number of bits in a u64.
-#[inline(always)]
+#[inline]
 pub fn popcount_old(x: u64) -> u8 {
     let x = x as usize;
     if x == 0 {

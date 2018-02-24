@@ -14,19 +14,19 @@ use test::{black_box, Bencher};
 lazy_static! {
     pub static ref RAND_BOARDS_ANY: Vec<Board> = {
         RAND_BOARD_ANY_GEN.iter()
-            .map(|b| Board::new_from_fen(b).unwrap())
+            .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>()
     };
 
     pub static ref RAND_BOARDS_CHECKS: Vec<Board> = {
         RAND_BOARD_IN_CHECKS_GEN.iter()
-            .map(|b| Board::new_from_fen(b).unwrap())
+            .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>()
     };
 
     pub static ref RAND_BOARDS_NON_CHECKS: Vec<Board> = {
         RAND_BOARD_NON_CHECKS_GEN.iter()
-            .map(|b| Board::new_from_fen(b).unwrap())
+            .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>()
     };
 }

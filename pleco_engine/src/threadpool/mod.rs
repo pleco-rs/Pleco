@@ -123,6 +123,7 @@ impl ThreadPool {
     }
 
     /// Returns the number of threads
+    #[inline(always)]
     fn size(&self) -> usize {
         self.threads.len()
     }
@@ -147,6 +148,7 @@ impl ThreadPool {
 
 
     /// Sets the use of standard out. This can be changed mid search as well.
+    #[inline(always)]
     pub fn stdout(&mut self, use_stdout: bool) {
         USE_STDOUT.store(use_stdout, Ordering::Relaxed);
     }
@@ -197,6 +199,7 @@ impl ThreadPool {
     }
 
     /// Sets the threads to stop (or not!).
+    #[inline(always)]
     pub fn set_stop(&mut self, stop: bool) {
         self.stop.store(stop, Ordering::Relaxed);
     }

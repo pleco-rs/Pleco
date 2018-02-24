@@ -187,49 +187,58 @@ pub struct PawnEntry {
 impl PawnEntry {
 
     /// Returns the current score of the pawn scructure.
+    #[inline(always)]
     pub fn pawns_score(&self) -> Score {
         self.score
     }
 
     /// Returns the possible pawn attacks `BitBoard` of a player.
+    #[inline(always)]
     pub fn pawn_attacks(&self, player: Player) -> BitBoard {
         self.pawn_attacks[player as usize]
     }
 
     /// Returns the `BitBoard` of the passed pawns for a specified player. A passed pawn is one that
     /// has no opposing pawns in the same file, or any adjacent file.
+    #[inline(always)]
     pub fn passed_pawns(&self, player: Player) -> BitBoard {
         self.passed_pawns[player as usize]
     }
 
     /// Returns the span of all the pawn's attacks for a given player.
+    #[inline(always)]
     pub fn pawn_attacks_span(&self, player: Player) -> BitBoard {
         self.pawn_attacks_span[player as usize]
     }
 
     /// Returns the weak-unopposed score of the given player. This measures the strength of the pawn
     /// structure when considering isolated and disconnected pawns.
+    #[inline(always)]
     pub fn weak_unopposed(&self, player: Player) -> i16 {
         self.weak_unopposed[player as usize]
     }
 
     /// Assymetric score of a position.
+    #[inline(always)]
     pub fn asymmetry(&self) -> i16 {
         self.asymmetry
     }
 
     /// Returns a bitfield of the current ranks.
+    #[inline(always)]
     pub fn open_files(&self) -> u8 {
         self.open_files
     }
 
     /// Returns if a file is semi-open for a given player, meaning there are no pieces of the
     /// opposing player on that file.
+    #[inline]
     pub fn semiopen_file(&self, player: Player, file: File) -> bool {
         self.semiopen_files[player as usize] & (1 << file as u8) != 0
     }
 
     /// Returns if a side of a file is semi-open, meaning no enemy pieces.
+    #[inline]
     pub fn semiopen_side(&self, player: Player, file: File, left_side: bool) -> bool {
         let side_mask: u8 = if left_side {
             file.left_side_mask()
@@ -240,6 +249,7 @@ impl PawnEntry {
     }
 
     // returns count of pawns of a player on the same color square as the player's color.
+    #[inline]
     pub fn pawns_on_same_color_squares(&self, player: Player, sq: SQ) -> u8 {
         self.pawns_on_squares[player as usize][sq.square_color_index()]
     }

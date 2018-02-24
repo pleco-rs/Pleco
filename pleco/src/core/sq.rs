@@ -193,7 +193,7 @@ impl SQ {
 
     /// Returns the file index (number) of a `SQ`.
     #[inline(always)]
-    pub fn file_idx_of_sq(self) -> u8 {
+    pub const fn file_idx_of_sq(self) -> u8 {
         (self.0 & 0b0000_0111) as u8
     }
 

@@ -18,7 +18,7 @@ use pleco_engine::search::eval::Evaluation;
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         RAND_BOARD_NON_CHECKS_100.iter()
-            .map(|b| Board::new_from_fen(b).unwrap())
+            .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>()
     };
 }

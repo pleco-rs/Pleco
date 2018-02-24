@@ -130,4 +130,14 @@ mod tests {
         assert_eq!(perft.checks, checks);
         assert_eq!(perft.checkmates, checkmates);
     }
+
+    #[test]
+    fn perft_kiwipete() {
+        let b: Board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -").unwrap();
+        assert_eq!(48, perft(&b,1));
+        assert_eq!(2039, perft(&b,2));
+        assert_eq!(97862, perft(&b,3));
+        assert_eq!(4085603, perft(&b,4));
+        assert_eq!(193690690, perft(&b,5));
+    }
 }

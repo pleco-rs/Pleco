@@ -26,6 +26,7 @@ enum TimeCalc {
 }
 
 impl TimeCalc {
+    #[inline(always)]
     pub fn t_max_ratio(&self) -> f64 {
         match *self {
             TimeCalc::Ideal => 1.0,
@@ -33,6 +34,7 @@ impl TimeCalc {
         }
     }
 
+    #[inline(always)]
     pub fn t_steal_ratio(&self) -> f64 {
         match *self {
             TimeCalc::Ideal => 0.0,
@@ -100,7 +102,6 @@ impl TimeManager {
             let start = &*self.start.get();
             start.clone()
         }
-
     }
 
     pub fn elapsed(&self) -> i64 {
@@ -139,12 +140,14 @@ impl TimeManager {
         (my_time as f64 * ratio1.min(ratio2)) as i64
     }
 
+    #[inline(always)]
     pub fn maximum_time(&self) -> i64 {
         unsafe {
             *self.maximum_time.get()
         }
     }
 
+    #[inline(always)]
     pub fn ideal_time(&self) -> i64 {
         unsafe {
             *self.ideal_time.get()

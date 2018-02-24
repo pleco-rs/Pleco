@@ -10,7 +10,7 @@ use pleco::core::{PieceType, Player};
 #[test]
 fn basic_fen() {
     // Test if positions int he right place
-    let board = Board::new_from_fen("k6r/1p2b3/8/8/8/8/P4KPP/1B5R w KQkq - 0 3").unwrap();
+    let board = Board::from_fen("k6r/1p2b3/8/8/8/8/P4KPP/1B5R w KQkq - 0 3").unwrap();
     assert_eq!(board.count_piece(Player::White, PieceType::P), 3);
     assert_eq!(board.count_piece(Player::White, PieceType::N), 0);
     assert_eq!(board.count_piece(Player::White, PieceType::B), 1);
@@ -25,7 +25,7 @@ fn basic_fen() {
     assert_eq!(board.count_piece(Player::Black, PieceType::K), 1);
 
 
-    let board = Board::new_from_fen("8/2Q1pk2/nbpppppp/8/8/2K4N/PPPPPPPP/BBB2BBB w - - 0 10").unwrap();
+    let board = Board::from_fen("8/2Q1pk2/nbpppppp/8/8/2K4N/PPPPPPPP/BBB2BBB w - - 0 10").unwrap();
     assert_eq!(board.count_piece(Player::White, PieceType::P), 8);
     assert_eq!(board.count_piece(Player::White, PieceType::N), 1);
     assert_eq!(board.count_piece(Player::White, PieceType::B), 6);
@@ -43,7 +43,7 @@ fn basic_fen() {
 #[test]
 fn all_fens() {
     for fen in pleco::board::fen::ALL_FENS.iter() {
-        let board = Board::new_from_fen(*fen).unwrap();
+        let board = Board::from_fen(*fen).unwrap();
         assert_eq!(*fen, board.get_fen());
     }
 }
