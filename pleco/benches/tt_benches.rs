@@ -34,7 +34,7 @@ fn tt_bench_single_thread_insert_full(b: &mut Bencher) {
     b.iter(|| {
         let key = prng.rand();
         let (_found, entry) = tt.probe(key);
-        entry.place(key, BitMove::new(0x555), 3, 4, key as i8, NodeBound::Exact, tt.time_age());
+        entry.place(key, BitMove::new(0x555), 3, 4, key as i16, NodeBound::Exact, tt.time_age());
     })
 }
 
