@@ -328,8 +328,12 @@ impl Searcher {
             self.check_time();
         }
 
-        if depth == 0 || self.stop() {
-            return self.eval();
+        if depth == 0 {
+            if in_check {
+                return ZERO;
+            } else {
+                return self.eval();
+            }
         }
 
         if !at_root {
@@ -364,10 +368,8 @@ impl Searcher {
                                0, NodeBound::NoBound,
                                self.tt.time_age());
             }
-        }
 
-        // Futility Pruning
-        if !in_check {
+            // Futility Pruning
             if !at_root
                 && depth < 7
                 && pos_eval - futility_margin(depth) >= beta
@@ -375,6 +377,7 @@ impl Searcher {
                 return pos_eval;
             }
         }
+
 
         #[allow(unused_mut)]
         let mut moves: MoveList = if at_root {
@@ -511,7 +514,7 @@ impl Searcher {
 
 
         if ply >= MAX_PLY {
-            if ply >= MAX_PLY && !in_check {
+            if !in_check {
                 return self.eval();
             } else {
                 return ZERO;
