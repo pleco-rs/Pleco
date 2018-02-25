@@ -434,7 +434,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
+    /// let board = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
     /// assert_eq!(board.count_all_pieces(),32);
     /// ```
     ///
@@ -584,7 +584,7 @@ impl Board {
     /// use pleco::Board;
     ///
     /// let board = Board::default();
-    /// assert_eq!(board.get_fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    /// assert_eq!(board.fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     /// ```
     pub fn fen(&self) -> String {
         let mut s = String::default();
@@ -1036,7 +1036,7 @@ impl Board {
     /// unsafe { chessboard.undo_null_move(); }
     ///
     /// assert_eq!(chessboard.moves_played(), board_clone.moves_played());
-    /// assert_eq!(chessboard.get_fen(), board_clone.get_fen());
+    /// assert_eq!(chessboard.fen(), board_clone.fen());
     /// ```
     pub unsafe fn undo_null_move(&mut self) {
         assert!(self.state.prev_move.is_null());

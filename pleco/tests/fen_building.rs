@@ -44,6 +44,6 @@ fn basic_fen() {
 fn all_fens() {
     for fen in pleco::board::fen::ALL_FENS.iter() {
         let board = Board::from_fen(*fen).unwrap();
-        assert_eq!(*fen, board.get_fen());
+        assert_eq!(*fen, board.fen());
     }
 }
