@@ -97,6 +97,19 @@ fn inner_perft_all(board: &mut Board, depth: u16, perft: &mut PerftNodes) {
 mod tests {
     use super::*;
 
+    fn check_perft(perft: PerftNodes,
+                   nodes: u64,      captures: u64, en_passant: u64,
+                   promotions: u64, checks: u64,   checkmates: u64, castles: u64) {
+
+        assert_eq!(perft.captures, captures);
+        assert_eq!(perft.en_passant, en_passant);
+        assert_eq!(perft.promotions, promotions);
+        assert_eq!(perft.checks, checks);
+        assert_eq!(perft.checkmates, checkmates);
+        assert_eq!(perft.castles, castles);
+        assert_eq!(perft.nodes, nodes);
+    }
+
     #[test]
     fn start_pos_perft() {
         let b: Board = Board::default();
@@ -112,23 +125,11 @@ mod tests {
     fn start_pos_perft_all() {
         let b: Board = Board::default();
         check_perft(perft_all(&b,3),
-                    8902, 34, 0, 0, 12, 0);
+                    8902, 34, 0, 0, 12, 0, 0);
         check_perft(perft_all(&b,4),
-                    197_281, 1576, 0, 0, 469, 8);
+                    197_281, 1576, 0, 0, 469, 8, 0);
         check_perft(perft_all(&b,5),
-                    4_865_609, 82_719, 258, 0, 27351, 347);
-    }
-
-    fn check_perft(perft: PerftNodes,
-                   nodes: u64,      captures: u64, en_passant: u64,
-                   promotions: u64, checks: u64,   checkmates: u64) {
-
-        assert_eq!(perft.nodes, nodes);
-        assert_eq!(perft.captures, captures);
-        assert_eq!(perft.en_passant, en_passant);
-        assert_eq!(perft.promotions, promotions);
-        assert_eq!(perft.checks, checks);
-        assert_eq!(perft.checkmates, checkmates);
+                    4_865_609, 82_719, 258, 0, 27351, 347, 0);
     }
 
     #[test]
@@ -139,5 +140,46 @@ mod tests {
         assert_eq!(97862, perft(&b,3));
         assert_eq!(4085603, perft(&b,4));
         assert_eq!(193690690, perft(&b,5));
+    }
+
+    #[ignore]
+    #[test]
+    fn perft_kiwipete_all() {
+        let b: Board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -").unwrap();
+        check_perft(perft_all(&b,3),
+                    97862, 17102, 45, 0, 993, 1, 3162);
+        check_perft(perft_all(&b,4),
+                    4085603, 757163, 1929, 15172, 25523, 43, 128013);
+        check_perft(perft_all(&b,5),
+                    193690690, 35043416, 73365, 8392, 3309887, 30171, 4993637);
+    }
+
+    #[test]
+    fn perft_board_3() {
+        let b: Board = Board::from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -").unwrap();
+        assert_eq!(14, perft(&b,1));
+        assert_eq!(191, perft(&b,2));
+        assert_eq!(2812, perft(&b,3));
+        assert_eq!(43238, perft(&b,4));
+        assert_eq!(674624, perft(&b,5));
+    }
+
+    #[test]
+    fn perft_board_5() {
+        let b: Board = Board::from_fen("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 ").unwrap();
+        assert_eq!(44, perft(&b,1));
+        assert_eq!(1_486, perft(&b,2));
+        assert_eq!(62_379, perft(&b,3));
+        assert_eq!(2_103_487, perft(&b,4));
+        assert_eq!(89_941_194, perft(&b,5));
+    }
+
+    #[test]
+    fn perft_board_6() {
+        let b: Board = Board::from_fen("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10").unwrap();
+        assert_eq!(46, perft(&b,1));
+        assert_eq!(2_079, perft(&b,2));
+        assert_eq!(89_890, perft(&b,3));
+        assert_eq!(3_894_594, perft(&b,4));
     }
 }

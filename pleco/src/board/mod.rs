@@ -516,12 +516,12 @@ impl Board {
         if ep_sq == SQ(0) {ep_sq = NO_SQ}
 
         // rule 50 counts
-        let rule_50 = if det_split.len() >= 5 { det_split[4].parse::<i16>()?} else {0};
+        let rule_50 = if det_split.len() >= 5 && det_split[4] != "-" { det_split[4].parse::<i16>()?} else {0};
 
 
         // Total Moves Played
         // Moves is defined as everyime White moves, so gotta translate to total moves
-        let mut total_moves = if det_split.len() >= 6 {(det_split[5].parse::<u16>()? - 1) * 2} else {0};
+        let mut total_moves = if det_split.len() >= 6 && det_split[5] != "-" {(det_split[5].parse::<u16>()? - 1) * 2} else {0};
         if turn == Player::Black {
             total_moves += 1
         };

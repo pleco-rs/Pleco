@@ -230,5 +230,17 @@ impl PlecoSearcher {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    #[test]
+    fn ply_3() {
+        let mut limit = PreLimits::blank();
+        limit.depth = Some(3);
+        let board = Board::default();
+        let mut s = PlecoSearcher::init(true);
+        s.search(&board, &limit);
+        s.await_move();
+
+    }
+
 
 }

@@ -15,8 +15,8 @@ use pleco::core::*;
 use pleco::tools::tt::*;
 use pleco::core::score::*;
 use pleco::tools::pleco_arc::Arc;
-use pleco::board::movegen::{MoveGen,PseudoLegal};
-use pleco::core::mono_traits::{QuietChecksGenType};
+//use pleco::board::movegen::{MoveGen,PseudoLegal};
+//use pleco::core::mono_traits::{QuietChecksGenType};
 
 use {MAX_PLY,TT_TABLE,THREAD_STACK_SIZE};
 
@@ -451,10 +451,7 @@ impl Searcher {
                         if is_pv && value < beta {
                             alpha = value;
                         } else {
-                            tt_entry.place(zob, best_move, best_value as i16,
-                                           pos_eval as i16, depth as i16,
-                                           NodeBound::LowerBound, self.tt.time_age());
-                            return value;
+                            break;
                         }
                     }
                 }
@@ -491,7 +488,7 @@ impl Searcher {
         assert!(alpha < beta);
         assert!(rev_depth <= 0);
         assert!(is_pv || (alpha == beta - 1));
-//        assert_eq!(in_check, self.board.in_check());
+        assert_eq!(in_check, self.board.in_check());
 
         if in_check != self.board.in_check() {
             self.board.pretty_print();
@@ -507,20 +504,22 @@ impl Searcher {
 
         let mut value: Value;
         let mut best_value: Value = NEG_INFINITE;
-        let mut pos_eval: Value = NEG_INFINITE;
+        let mut pos_eval: Value = NEG_INFINITE + 1;
         let mut moves_played = 0;
+        let old_alpha = alpha;
         let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
 
-        // increment the next ply
-        ss.incr().ply = ply + 1;
 
         if ply >= MAX_PLY {
             if ply >= MAX_PLY && !in_check {
                 return self.eval();
             } else {
-                return NONE;
+                return ZERO;
             }
         }
+
+        // increment the next ply
+        ss.incr().ply = ply + 1;
 
         if !is_pv
             && tt_hit
@@ -551,7 +550,7 @@ impl Searcher {
             if best_value >= beta {
                 if !tt_hit {
                     tt_entry.place(zob, BitMove::null(), best_value as i16,
-                                   pos_eval as i16, 0,
+                                   pos_eval as i16, -6,
                                    NodeBound::LowerBound, self.tt.time_age());
                 }
                 return best_value;
@@ -565,20 +564,8 @@ impl Searcher {
         let moves: MoveList = if in_check {
             self.board.generate_pseudolegal_moves_of_type(GenTypes::Evasions)
         } else {
-            let mut list = self.board.generate_pseudolegal_moves_of_type(GenTypes::Evasions);
-            unsafe {
-                MoveGen::extend::<PseudoLegal,QuietChecksGenType,MoveList>(&self.board, &mut list);
-            }
-            list
+            self.board.generate_pseudolegal_moves_of_type(GenTypes::Captures)
         };
-
-        if moves.is_empty() {
-            if self.board.in_check() {
-                return -MATE as i32 + (ply as i32);
-            } else {
-                return pos_eval as i32;
-            }
-        }
 
         for  mov in moves.iter() {
             if self.board.legal_move(*mov) {
@@ -586,15 +573,21 @@ impl Searcher {
                 let gives_check: bool = self.board.gives_check(*mov);
                 self.board.apply_unknown_move(*mov, gives_check);
                 self.tt.prefetch(self.board.zobrist());
+                assert_eq!(gives_check, self.board.in_check());
 
                 value = if gives_check {
-                    -self.qsearch::<N,InCheck>(-beta, -alpha, ss.incr(),rev_depth -1)
+                    -self.qsearch::<N,InCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
                 } else {
-                    -self.qsearch::<N,NoCheck>(-beta, -alpha, ss.incr(),rev_depth -1)
+                    -self.qsearch::<N,NoCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
                 };
 
                 self.board.undo_move();
 
+                if value <= NEG_INFINITE {
+                    println!("Value {}, move {}", value, *mov);
+                    self.board.pretty_print();
+
+                }
                 assert!(value > NEG_INFINITE);
                 assert!(value < INFINITE );
 
@@ -602,11 +595,15 @@ impl Searcher {
                     best_value = value;
 
                     if value > alpha {
-                        best_move = *mov;
+
                         if is_pv && value < beta {
+                            best_move = *mov;
                             alpha = value;
                         } else {
-                            break;
+                            tt_entry.place(zob, best_move, best_value as i16,
+                                           pos_eval as i16, tt_depth as i16,
+                                           NodeBound::LowerBound, self.tt.time_age());
+                            return value;
                         }
                     }
                 }
@@ -614,19 +611,24 @@ impl Searcher {
         }
 
         if moves_played == 0 {
-            best_value = 0;
+            if self.board.in_check() {
+                return -MATE as i32 + (ply as i32);
+            } else {
+                return pos_eval as i32;
+            }
         }
 
-        let node_bound = if best_value as i32 >= beta {NodeBound::LowerBound}
-            else if is_pv && !best_move.is_null() {NodeBound::Exact}
+        let node_bound = if  is_pv && best_value > old_alpha {NodeBound::Exact}
                 else {NodeBound::UpperBound};
 
 
         tt_entry.place(zob, best_move, best_value as i16,
-                       pos_eval as i16, rev_depth,
+                       pos_eval as i16, tt_depth,
                        node_bound, self.tt.time_age());
 
 
+        assert!(best_value > NEG_INFINITE);
+        assert!(best_value < INFINITE );
         best_value
     }
 
