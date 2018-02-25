@@ -236,10 +236,9 @@ mod tests {
         let mut limit = PreLimits::blank();
         limit.depth = Some(3);
         let board = Board::default();
-        let mut s = PlecoSearcher::init(true);
+        let mut s = PlecoSearcher::init(false);
         s.search(&board, &limit);
         s.await_move();
-
     }
 
 
