@@ -24,6 +24,11 @@ const DRAW_V: i16 = DRAW as i16;
 const NEG_INF_V: i16 = NEG_INFINITE as i16;
 const INF_V: i16 = INFINITE as i16;
 
+
+struct BoardWrapper<'a> {
+    b: &'a mut Board
+}
+
 /// Searcher that randomly chooses a move. The fastest, yet dumbest, searcher we have to offer.
 pub struct RandomBot {}
 

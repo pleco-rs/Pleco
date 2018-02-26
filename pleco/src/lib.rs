@@ -98,6 +98,7 @@ extern crate num_cpus;
 extern crate rand;
 extern crate rayon;
 extern crate prefetch;
+extern crate mucow;
 extern crate test;
 
 pub mod core;
