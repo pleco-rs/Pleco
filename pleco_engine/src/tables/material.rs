@@ -47,10 +47,10 @@ pub struct MaterialEntry {
 
 
 impl MaterialEntry {
+    #[inline(always)]
     pub fn score(&self) -> Score {
         Score(self.value, self.value)
     }
-
 }
 
 

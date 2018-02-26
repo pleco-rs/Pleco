@@ -32,7 +32,7 @@ impl PRNG {
 
     /// Returns a u64 with exactly one bit set in a random location.
     pub fn singular_bit(&mut self) -> u64 {
-        let num: u64 = 0;
+        let num: u64 = 1;
         num.wrapping_shl(self.rand().count_ones())
     }
 

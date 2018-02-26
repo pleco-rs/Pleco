@@ -12,7 +12,7 @@ use pleco_engine::time::uci_timer::PreLimits;
 use test::{black_box, Bencher};
 
 #[bench]
-fn bench_3_ply(b: &mut Bencher) {
+fn engine_3_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(3);
     let board = Board::default();
@@ -27,7 +27,7 @@ fn bench_3_ply(b: &mut Bencher) {
 
 
 #[bench]
-fn bench_4_ply(b: &mut Bencher) {
+fn engine_4_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(4);
     let board = Board::default();
@@ -41,7 +41,7 @@ fn bench_4_ply(b: &mut Bencher) {
 
 
 #[bench]
-fn bench_5_ply(b: &mut Bencher) {
+fn engine_5_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(5);
     let board = Board::default();
@@ -54,7 +54,7 @@ fn bench_5_ply(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_6_ply(b: &mut Bencher) {
+fn engine_6_ply(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
     limit.depth = Some(6);
     let board = Board::default();

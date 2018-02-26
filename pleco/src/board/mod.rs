@@ -434,7 +434,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let board = Board::new_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
+    /// let board = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
     /// assert_eq!(board.count_all_pieces(),32);
     /// ```
     ///
@@ -445,14 +445,14 @@ impl Board {
     /// There is a possibility of the FEN string representing an unvalid position, with no panics resulting.
     /// The Constructed Board may have some Undefined Behavior as a result. It is up to the user to give a
     /// valid FEN string.
-    pub fn new_from_fen(fen: &str) -> Result<Board,FenBuildError> {
+    pub fn from_fen(fen: &str) -> Result<Board,FenBuildError> {
 
         // split the string by white space
         let det_split: Vec<&str> = fen.split_whitespace().collect();
 
         // must have 6 parts :
         // [ Piece Placement, Side to Move, Castling Ability, En Passant square, Half moves, full moves]
-        if det_split.len() != 6 {
+        if det_split.len() < 4 || det_split.len() > 6{
             return Err(FenBuildError::NotEnoughSections{sections: det_split.len()});
         }
 
@@ -516,11 +516,12 @@ impl Board {
         if ep_sq == SQ(0) {ep_sq = NO_SQ}
 
         // rule 50 counts
-        let rule_50 = det_split[4].parse::<i16>()?;
+        let rule_50 = if det_split.len() >= 5 && det_split[4] != "-" { det_split[4].parse::<i16>()?} else {0};
+
 
         // Total Moves Played
         // Moves is defined as everyime White moves, so gotta translate to total moves
-        let mut total_moves = (det_split[5].parse::<u16>()? - 1) * 2;
+        let mut total_moves = if det_split.len() >= 6 && det_split[5] != "-" {(det_split[5].parse::<u16>()? - 1) * 2} else {0};
         if turn == Player::Black {
             total_moves += 1
         };
@@ -583,9 +584,9 @@ impl Board {
     /// use pleco::Board;
     ///
     /// let board = Board::default();
-    /// assert_eq!(board.get_fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    /// assert_eq!(board.fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     /// ```
-    pub fn get_fen(&self) -> String {
+    pub fn fen(&self) -> String {
         let mut s = String::default();
         let mut blanks = 0;
         for idx in 0..SQ_CNT as u8 {
@@ -1035,7 +1036,7 @@ impl Board {
     /// unsafe { chessboard.undo_null_move(); }
     ///
     /// assert_eq!(chessboard.moves_played(), board_clone.moves_played());
-    /// assert_eq!(chessboard.get_fen(), board_clone.get_fen());
+    /// assert_eq!(chessboard.fen(), board_clone.fen());
     /// ```
     pub unsafe fn undo_null_move(&mut self) {
         assert!(self.state.prev_move.is_null());
@@ -1788,7 +1789,6 @@ impl Board {
     /// if suddenly removed, the player would find itself in check.
     #[inline(always)]
     pub fn pieces_pinned(&self, player: Player) -> BitBoard {
-        // TODO: combine with Board::piece_pinned
         self.state.blockers_king[player as usize] & self.get_occupied_player(player)
     }
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
@@ -1893,7 +1893,7 @@ impl Board {
         assert_eq!(self.color_of_sq(src).unwrap(), self.turn);
 
         // Searches for direct checks from the pre-computed array
-        if (self.state.check_sqs[self.piece_at_sq(src).unwrap() as usize] & dst_bb).is_not_empty() {
+        if (self.state.check_sqs[self.piece_at_sq(src).unwrap() as usize] & dst_bb).is_not_empty()  {
             return true;
         }
 
@@ -1942,12 +1942,8 @@ impl Board {
                 let r_to: SQ = self.turn.relative_square( { if r_from > k_from { SQ(5) } else { SQ(3) } });
 
                 let opp_k_bb = opp_king_sq.to_bb();
-                (rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty() &&
-                    (rook_moves(
-                        r_to.to_bb() | k_to.to_bb() |
-                            (self.get_occupied() ^ k_from.to_bb() ^ r_from.to_bb()),
-                        r_to,
-                    ) & opp_k_bb).is_not_empty()
+                (rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty()
+                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.get_occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to, ) & opp_k_bb).is_not_empty()
             }
         }
     }
@@ -2344,7 +2340,7 @@ mod tests {
         let mut ply = 1000;
         let mut fen_stack = Vec::new();
         while ply > 0 && !board.checkmate() && !board.stalemate() {
-            fen_stack.push(board.get_fen());
+            fen_stack.push(board.fen());
             let moves = board.generate_moves();
             let picked_move = moves[rand::random::<usize>() % moves.len()];
             board.apply_move(picked_move);
@@ -2353,7 +2349,7 @@ mod tests {
 
         while !fen_stack.is_empty() {
             board.undo_move();
-            assert_eq!(board.get_fen(),fen_stack.pop().unwrap());
+            assert_eq!(board.fen(), fen_stack.pop().unwrap());
         }
     }
 

@@ -178,6 +178,6 @@ mod tests {
 
     #[test]
     fn fen_extra_pawns(){
-        assert!(Board::new_from_fen(EXTRA_PAWNS).is_err());
+        assert!(Board::from_fen(EXTRA_PAWNS).is_err());
     }
 }

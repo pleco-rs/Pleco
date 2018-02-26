@@ -5,8 +5,6 @@ use pleco::tools::Searcher;
 use pleco::bot_prelude::*;
 use pleco::board::{Board,RandBoard};
 
-use pleco::tools::eval::Eval;
-
 
 #[test]
 fn test_all_bot() {

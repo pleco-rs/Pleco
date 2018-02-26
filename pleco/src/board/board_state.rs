@@ -152,6 +152,7 @@ impl BoardState {
     }
 
     /// Return the previous BoardState from one move ago.
+    #[inline]
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
         (&self).prev.as_ref().cloned()
     }

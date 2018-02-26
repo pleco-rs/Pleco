@@ -14,7 +14,7 @@ use test::{black_box, Bencher};
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         RAND_BOARDS_ALL.iter()
-            .map(|b| Board::new_from_fen(b).unwrap())
+            .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>()
     };
 }

@@ -66,12 +66,12 @@ use super::sq::SQ;
 use std::fmt;
 
 // Castles have the src as the king bit and the dst as the rook
-static SRC_MASK: u16 = 0b0000_000000_111111;
-static DST_MASK: u16 = 0b0000_111111_000000;
-static PR_MASK: u16 = 0b1000_000000_000000;
-static CP_MASK: u16 = 0b0100_000000_000000;
-static FLAG_MASK: u16 = 0b1111_000000_000000;
-static SP_MASK: u16 = 0b0011_000000_000000;
+const SRC_MASK: u16 = 0b0000_000000_111111;
+const DST_MASK: u16 = 0b0000_111111_000000;
+const PR_MASK: u16 = 0b1000_000000_000000;
+const CP_MASK: u16 = 0b0100_000000_000000;
+const FLAG_MASK: u16 = 0b1111_000000_000000;
+const SP_MASK: u16 = 0b0011_000000_000000;
 
 /// Represents a singular move. 
 ///
@@ -156,32 +156,32 @@ impl BitMove {
     /// Using this method cannot guarantee that the move is legal. The input bits must be encoding a legal
     /// move, or else there is Undefined Behavior if the resulting BitMove is used.
     #[inline]
-    pub fn new(input: u16) -> BitMove {
+    pub const fn new(input: u16) -> BitMove {
         BitMove { data: input }
     }
 
     /// Makes a quiet `BitMove` from a source and destination square.
     #[inline(always)]
-    pub fn make_quiet(src: SQ, dst: SQ) -> BitMove {
+    pub const fn make_quiet(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_QUIET,src,dst)
     }
 
     /// Makes a pawn-push `BitMove` from a source and destination square.
     #[inline(always)]
-    pub fn make_pawn_push(src: SQ, dst: SQ) -> BitMove {
+    pub const fn make_pawn_push(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_DOUBLE_PAWN,src,dst)
     }
 
     /// Makes a non-enpassant `BitMove` from a source and destination square.
     #[inline(always)]
-    pub fn make_capture(src: SQ, dst: SQ) -> BitMove {
+    pub const fn make_capture(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_CAPTURE,src,dst)
     }
 
     /// Creates a `BitMove` from a source and destination square, as well as the current
     /// flag.
     #[inline]
-    pub fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
+    pub const fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
         BitMove { data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6) }
     }
 
@@ -243,73 +243,73 @@ impl BitMove {
     ///
     /// See [BitMove::null()] for more information on Null moves.
     #[inline]
-    pub fn is_null(&self) -> bool {
+    pub const fn is_null(&self) -> bool {
         self.data == 0
     }
 
     /// Returns if a [BitMove] captures an opponent's piece.
     #[inline(always)]
-    pub fn is_capture(&self) -> bool {
+    pub const fn is_capture(&self) -> bool {
         ((self.data & CP_MASK) >> 14) == 1
     }
 
     /// Returns if a [BitMove] is a Quiet Move, meaning it is not any of the following: a capture, promotion, castle, or double pawn push.
     #[inline(always)]
-    pub fn is_quiet_move(&self) -> bool {
+    pub const fn is_quiet_move(&self) -> bool {
         ((self.data & FLAG_MASK) >> 12) == 0
     }
 
     /// Returns if a [BitMove] is a promotion.
     #[inline(always)]
-    pub fn is_promo(&self) -> bool {
+    pub const fn is_promo(&self) -> bool {
         (self.data & PR_MASK) != 0
     }
 
     /// Returns the destination of a [BitMove].
     #[inline(always)]
-    pub fn get_dest(&self) -> SQ {
+    pub const fn get_dest(&self) -> SQ {
         SQ(self.get_dest_u8())
     }
 
     /// Returns the destination of a [BitMove].
     #[inline(always)]
-    pub fn get_dest_u8(&self) -> u8 {
+    pub const fn get_dest_u8(&self) -> u8 {
         ((self.data & DST_MASK) >> 6) as u8
     }
 
     /// Returns the source square of a [BitMove].
     #[inline(always)]
-    pub fn get_src(&self) -> SQ {
+    pub const fn get_src(&self) -> SQ {
         SQ(self.get_src_u8())
     }
 
     /// Returns the source square of a [BitMove].
     #[inline(always)]
-    pub fn get_src_u8(&self) -> u8 {
+    pub const fn get_src_u8(&self) -> u8 {
         (self.data & SRC_MASK) as u8
     }
 
     /// Returns if a [BitMove] is a castle.
     #[inline(always)]
-    pub fn is_castle(&self) -> bool {
+    pub const fn is_castle(&self) -> bool {
         ((self.data & FLAG_MASK) >> 13) == 1
     }
 
     /// Returns if a [BitMove] is a Castle && it is a KingSide Castle.
     #[inline(always)]
-    pub fn is_king_castle(&self) -> bool {
+    pub const fn is_king_castle(&self) -> bool {
         ((self.data & FLAG_MASK) >> 12) == 2
     }
 
     /// Returns if a [BitMove] is a Castle && it is a QueenSide Castle.
     #[inline(always)]
-    pub fn is_queen_castle(&self) -> bool {
+    pub const fn is_queen_castle(&self) -> bool {
         ((self.data & FLAG_MASK) >> 12) == 3
     }
 
     /// Returns if a [BitMove] is an enpassant capture.
     #[inline(always)]
-    pub fn is_en_passant(&self) -> bool {
+    pub const fn is_en_passant(&self) -> bool {
         (self.data & FLAG_MASK) >> 12 == 5
     }
 
@@ -411,8 +411,8 @@ impl BitMove {
     }
 
     /// Returns the raw number representation of the move.
-    #[inline]
-    pub fn get_raw(&self) -> u16 {
+    #[inline(always)]
+    pub const fn get_raw(&self) -> u16 {
         self.data
     }
 }
@@ -426,6 +426,7 @@ pub struct ScoringBitMove {
 }
 
 impl Default for ScoringBitMove {
+    #[inline(always)]
     fn default() -> Self {
         ScoringBitMove {
             bit_move: BitMove::null(),
@@ -435,6 +436,7 @@ impl Default for ScoringBitMove {
 }
 
 impl ScoringBitMove {
+    #[inline(always)]
     pub fn new(m: BitMove) -> Self {
         ScoringBitMove {
             bit_move: m,
@@ -442,6 +444,7 @@ impl ScoringBitMove {
         }
     }
 
+    #[inline(always)]
     pub fn new_score(m: BitMove, score: i16) -> Self {
         ScoringBitMove {
             bit_move: m,
@@ -449,10 +452,12 @@ impl ScoringBitMove {
         }
     }
 
+    #[inline(always)]
     pub fn bitmove(&self) -> BitMove {
         self.bit_move
     }
 
+    #[inline(always)]
     pub fn score(&self) -> i16 {
         self.score
     }

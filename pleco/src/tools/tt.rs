@@ -92,8 +92,8 @@ impl NodeTypeTimeBound {
     }
 
     /// Updates the [NodeType] of an entry.
-    pub fn update_bound(&mut self, node_type: NodeBound) {
-        self.data = (self.data & TIME_MASK) | node_type as u8;
+    pub fn update_bound(&mut self, node_type: NodeBound, gen: u8) {
+        self.data = (self.data & TIME_MASK) | node_type as u8 | gen;
     }
 
     /// Updates the time field of an entry.
@@ -116,7 +116,7 @@ pub struct Entry {
     pub best_move: BitMove, // What was the best move found here?
     pub score: i16, // What was the Score of this node?
     pub eval: i16, // What is the evaluation of this node
-    pub depth: u8, // How deep was this Score Found?
+    pub depth: i8, // How deep was this Score Found?
     pub time_node_bound: NodeTypeTimeBound,
 }
 
@@ -127,19 +127,20 @@ impl Entry {
     }
 
     /// Rewrites over an Entry.
-    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: u8, node_type: NodeBound) {
+    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: i16, node_type: NodeBound, gen: u8) {
         let partial_key = key.wrapping_shr(48) as u16;
 
         if partial_key != self.partial_key {
             self.best_move = best_move;
         }
 
-        if partial_key != self.partial_key || node_type == NodeBound::Exact {
+        if partial_key != self.partial_key
+            || node_type == NodeBound::Exact || depth > self.depth as i16 - 4 {
             self.partial_key = partial_key;
             self.score = score;
             self.eval = eval;
-            self.depth = depth;
-            self.time_node_bound.update_bound(node_type);
+            self.depth = depth as i8;
+            self.time_node_bound.update_bound(node_type, gen);
         }
     }
 
@@ -159,9 +160,9 @@ impl Entry {
     }
 
     /// Returns the value of the node in respect to the depth searched && when it was placed into the TranspositionTable.
-    pub fn time_value(&self, curr_time: u8) -> u16 {
-        let inner: u16 = ((259u16).wrapping_add(curr_time as u16)).wrapping_sub(self.time_node_bound.data as u16) & 0b1111_1100;
-        u16::from(self.depth).wrapping_sub((inner).wrapping_mul(2 as u16))
+    pub fn time_value(&self, curr_time: u8) -> i16 {
+        let inner: i16 = ((259i16).wrapping_add(curr_time as i16)).wrapping_sub(self.time_node_bound.data as i16) & 0b1111_1100;
+        i16::from((self.depth as i16).wrapping_sub(inner).wrapping_mul(2))
     }
 }
 
@@ -266,6 +267,7 @@ impl TranspositionTable {
     }
 
     /// Returns the number of Entries the Transposition Table holds.
+    #[inline(always)]
     pub fn num_entries(&self) -> usize {
         self.num_clusters() * CLUSTER_SIZE
     }
@@ -387,12 +389,12 @@ impl TranspositionTable {
             }
 
             let mut replacement: *mut Entry = init_entry;
-            let mut replacement_score: u16 = (&*replacement).time_value(self.time_age());
+            let mut replacement_score: i16 = (&*replacement).time_value(self.time_age());
 
             // Table is full, find the best replacement based on depth and time placed there
             for i in 1..CLUSTER_SIZE {
                 let entry_ptr: *mut Entry = init_entry.offset(i as isize);
-                let entry_score: u16 = (&*entry_ptr).time_value(self.time_age());
+                let entry_score: i16 = (&*entry_ptr).time_value(self.time_age());
                 if entry_score < replacement_score {
                     replacement = entry_ptr;
                     replacement_score = entry_score;
@@ -534,7 +536,7 @@ mod tests {
             let key: u64 = rand::random::<u64>();
             {
                 let (_found, entry) = tt.probe(key);
-                entry.depth = (x % 0b1111_1111) as u8;
+                entry.depth = (x % 0b1111_1111) as i8;
                 entry.partial_key = key.wrapping_shr(48) as u16;
             }
             tt.new_search();
