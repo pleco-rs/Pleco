@@ -5,6 +5,41 @@ pub mod material;
 use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
 
+
+// TODO: Create StatBoards using const FNs
+// TODO: Create 3DBoard using Const fns
+
+pub trait StatBoardType<T: Sized> {
+    fn size1() -> usize;
+    fn size2() -> usize;
+    const SIZE1: usize;
+    const SIZE2: usize;
+}
+
+//
+//pub struct StatBoards<T, SBT: StatBoardType<T>> {
+//    a: NonNull<T>,
+//    p: PhantomData<SBT>
+//}
+//
+//impl<T> StatBoardType<T> {
+//    pub fn new() -> Self {
+//
+//    }
+//
+//    fn alloc<T, SBT: StatBoardType<T>>() -> NonNull<T> {
+//        unsafe {
+//            let size = SBT::SIZE1 * SBT::SIZE2;
+//            let ptr = Heap.alloc_zeroed(Layout::array::<T>(size).unwrap());
+//            let new_ptr = match ptr {
+//                Ok(ptr) => ptr,
+//                Err(err) => Heap.oom(err),
+//            };
+//            NonNull::new(new_ptr as *mut T).unwrap()
+//        }
+//    }
+//}
+
 // TODO: Performance increase awaiting with const generics: https://github.com/rust-lang/rust/issues/44580
 
 /// Generic Heap-stored array of entries. Used for building more specific abstractions.
@@ -104,7 +139,6 @@ impl<T: Sized> Drop for TableBase<T> {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {

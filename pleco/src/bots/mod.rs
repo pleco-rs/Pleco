@@ -11,15 +11,18 @@ pub mod alphabeta;
 pub mod jamboree;
 pub mod iterative_parallel_mvv_lva;
 
-use core::piece_move::BitMove;
+use core::piece_move::*;
 use tools::{Searcher,UCILimit};
 use board::Board;
 use tools::eval::*;
 use core::score::*;
 
-use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
 
 const MAX_PLY: u16 = 4;
+const MATE_V: i16 = MATE as i16;
+const DRAW_V: i16 = DRAW as i16;
+const NEG_INF_V: i16 = NEG_INFINITE as i16;
+const INF_V: i16 = INFINITE as i16;
 
 /// Searcher that randomly chooses a move. The fastest, yet dumbest, searcher we have to offer.
 pub struct RandomBot {}
@@ -55,11 +58,10 @@ impl Searcher for AlphaBetaSearcher {
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        let alpha = NEG_INFINITE;
-        let beta = INFINITE;
+        let alpha = NEG_INF_V;
+        let beta = INF_V;
         alphabeta::alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
-            .best_move
-            .unwrap()
+            .bit_move
     }
 }
 
@@ -81,11 +83,10 @@ impl Searcher for JamboreeSearcher {
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        let alpha = NEG_INFINITE;
-        let beta = INFINITE;
+        let alpha = NEG_INF_V;
+        let beta = INF_V;
         jamboree::jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)
-            .best_move
-            .unwrap()
+            .bit_move
     }
 }
 
@@ -96,7 +97,7 @@ impl Searcher for MiniMaxSearcher {
 
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        minimax::minimax( &mut board.shallow_clone(),  max_depth).best_move.unwrap()
+        minimax::minimax( &mut board.shallow_clone(),  max_depth).bit_move
     }
 }
 
@@ -109,62 +110,13 @@ impl Searcher for ParallelMiniMaxSearcher {
     fn best_move(board: Board, limit: UCILimit) -> BitMove {
         let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
         parallel_minimax::parallel_minimax(&mut board.shallow_clone(),  max_depth)
-            .best_move
-            .unwrap()
+            .bit_move
     }
 }
-
-/// Used by the Searchers to keep track of a move's strength.
-#[derive(Eq, Copy, Clone)]
-pub struct BestMove {
-    best_move: Option<BitMove>,
-    score: Value,
-}
-
-impl BestMove {
-    #[inline(always)]
-    pub fn new_none(score: Value) -> Self {
-        BestMove {
-            best_move: None,
-            score: score,
-        }
-    }
-
-    #[inline(always)]
-    pub fn negate(mut self) -> Self {
-        self.score = self.score.wrapping_neg();
-        self
-    }
-
-    #[inline(always)]
-    pub fn swap_move(mut self, bitmove: BitMove) -> Self {
-        self.best_move = Some(bitmove);
-        self
-    }
-}
-
-impl Ord for BestMove {
-    fn cmp(&self, other: &BestMove) -> Ordering {
-        self.score.cmp(&other.score)
-    }
-}
-
-impl PartialOrd for BestMove {
-    fn partial_cmp(&self, other: &BestMove) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for BestMove {
-    fn eq(&self, other: &BestMove) -> bool {
-        self.score == other.score
-    }
-}
-
 
 #[doc(hidden)]
-pub fn eval_board(board: &Board) -> BestMove {
-    BestMove::new_none(Eval::eval_low(board))
+pub fn eval_board(board: &Board) -> ScoringMove {
+    ScoringMove::blank(Eval::eval_low(board) as i16)
 }
 
 

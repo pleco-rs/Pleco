@@ -61,9 +61,11 @@
 //! on a `Board` that didn't directly create them, unless it is otherwise known that move
 //! correlates to that specific board position.
 
+use std::fmt;
+use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
+
 use super::*;
 use super::sq::SQ;
-use std::fmt;
 
 // Castles have the src as the king bit and the dst as the rook
 const SRC_MASK: u16 = 0b0000_000000_111111;
@@ -418,27 +420,27 @@ impl BitMove {
 }
 
 /// A move that stores a score as well
-#[derive(Copy, Clone, Debug)]
+#[derive(Eq, Copy, Clone, Debug)]
 #[repr(C)]
-pub struct ScoringBitMove {
+pub struct ScoringMove {
     pub bit_move: BitMove,
     pub score: i16
 }
 
-impl Default for ScoringBitMove {
+impl Default for ScoringMove {
     #[inline(always)]
     fn default() -> Self {
-        ScoringBitMove {
+        ScoringMove {
             bit_move: BitMove::null(),
             score: 0
         }
     }
 }
 
-impl ScoringBitMove {
+impl ScoringMove {
     #[inline(always)]
     pub fn new(m: BitMove) -> Self {
-        ScoringBitMove {
+        ScoringMove {
             bit_move: m,
             score: 0
         }
@@ -446,8 +448,16 @@ impl ScoringBitMove {
 
     #[inline(always)]
     pub fn new_score(m: BitMove, score: i16) -> Self {
-        ScoringBitMove {
+        ScoringMove {
             bit_move: m,
+            score,
+        }
+    }
+
+    #[inline(always)]
+    pub fn blank(score: i16) -> Self {
+        ScoringMove {
+            bit_move: BitMove::null(),
             score,
         }
     }
@@ -460,6 +470,37 @@ impl ScoringBitMove {
     #[inline(always)]
     pub fn score(&self) -> i16 {
         self.score
+    }
+
+    #[inline(always)]
+    pub fn negate(mut self) -> Self {
+        self.score = self.score.wrapping_neg();
+        self
+    }
+
+    #[inline(always)]
+    pub fn swap_move(mut self, mov: BitMove) -> Self {
+        self.bit_move = mov;
+        self
+    }
+
+}
+
+impl Ord for ScoringMove {
+    fn cmp(&self, other: &ScoringMove) -> Ordering {
+        self.score.cmp(&other.score)
+    }
+}
+
+impl PartialOrd for ScoringMove {
+    fn partial_cmp(&self, other: &ScoringMove) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for ScoringMove {
+    fn eq(&self, other: &ScoringMove) -> bool {
+        self.score == other.score
     }
 }
 

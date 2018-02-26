@@ -1,8 +1,10 @@
 //! The parallel minimax algorithm.
 use board::*;
 use core::piece_move::*;
-use super::{BestMove,eval_board};
-use core::score::*;
+use super::*;
+
+
+//use rayon::prelude::*;
 
 use rayon;
 
@@ -19,7 +21,7 @@ const DIVIDE_CUTOFF: usize = 8;
 // depth: depth from given
 // half_moves: total moves
 
-pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
+pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> ScoringMove {
     if board.depth() >= max_depth {
         return eval_board(board);
     }
@@ -27,22 +29,53 @@ pub fn parallel_minimax(board: &mut Board, max_depth: u16) -> BestMove {
     let moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            BestMove::new_none(MATE + (board.depth() as i32))
+            ScoringMove::blank(-MATE_V + (board.depth() as i16))
         } else {
-            BestMove::new_none(DRAW)
+            ScoringMove::blank(DRAW_V)
         }
     } else {
         parallel_task(&moves, board, max_depth)
     }
 }
+//
+//fn parallel_task2(board: Board, depth: u16) -> i16 {
+//    board.generate_moves()
+//        .as_mut_slice()
+//        .par_iter_mut()
+//        .with_max_len(6)
+//        .map_with(board, |b: &mut Board, m: ScoringMove | {
+//            b.apply_move(m.bit_move);
+//            m.score = parallel_task2(b, depth - 1);
+//            b.undo_move();
+//            m.score
+//        }).max().unwrap()
+//}
 
-fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> BestMove {
+
+//fn minimax_evaluate(board: &mut ChessBoard, depth: u16) -> i16 {
+//    if depth == 0 {
+//        return board.evaluate_strength();
+//    }
+//
+//    board.generate_moves()
+//         .as_mut_slice()
+//         .par_iter_mut()
+//         .map_with(board, |b: &mut ChessBoard, m: ChessMove | {
+//             b.apply_move(*m);
+//             let score = -parallel_task2(b, depth - 1);
+//             b.undo_move();
+//             score
+//         }).max()
+//        .unwrap()
+//}
+
+fn parallel_task(slice: &[BitMove], board: &mut Board, max_depth: u16) -> ScoringMove {
     if board.depth() == max_depth - 2 || slice.len() <= DIVIDE_CUTOFF {
-        let mut best_move = BestMove::new_none(NEG_INFINITE);
+        let mut best_move = ScoringMove::blank(NEG_INF_V);
 
         for mov in slice {
             board.apply_move(*mov);
-            let returned_move: BestMove = parallel_minimax(board, max_depth)
+            let returned_move: ScoringMove = parallel_minimax(board, max_depth)
                 .negate()
                 .swap_move(*mov);
             board.undo_move();

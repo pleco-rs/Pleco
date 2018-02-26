@@ -17,7 +17,7 @@ use std::cmp::{PartialEq,max,min};
 use rand;
 
 use core::piece_move::{BitMove, MoveType};
-use core::move_list::MoveList;
+use core::move_list::{MoveList,ScoringMoveList};
 use core::mono_traits::*;
 use core::masks::*;
 use core::sq::{SQ,NO_SQ};
@@ -1063,6 +1063,10 @@ impl Board {
         MoveGen::generate::<Legal, AllGenType>(self)
     }
 
+    pub fn generate_scoring_moves(&self) -> ScoringMoveList {
+        MoveGen::generate_scoring::<Legal, AllGenType>(self)
+    }
+
     /// Get a List of all PseudoLegal `BitMove`s for the player whose turn it is to move.
     /// Works exactly the same as `Board::generate_moves()`, but doesn't guarantee that all
     /// the moves are legal for the current position. Moves need to be checked with a
@@ -1819,6 +1823,13 @@ impl Board {
     #[inline(always)]
     pub fn pawn_passed(&self, player: Player, sq: SQ) -> bool {
         (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
+    }
+
+    /// Checks if a move is an advanced pawn push, meaning it passes into enemy territory.
+    #[inline(always)]
+    pub fn advanced_pawn_push(&self, mov: BitMove) -> bool {
+        self.piece_at_sq(mov.get_src()) == Some(PieceType::P)
+            && self.turn().relative_rank_of_sq(mov.get_src()) > Rank::R4
     }
 
 //  ------- Move Testing -------

@@ -57,7 +57,7 @@ use std::ops::Index;
 
 use board::*;
 
-use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringBitMove};
+use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringMove};
 use core::move_list::{MoveList,ScoringMoveList,MVPushable};
 
 use {SQ, BitBoard};
@@ -139,9 +139,9 @@ impl MoveGen {
     pub fn generate_scoring<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> ScoringMoveList {
         let mut movelist = ScoringMoveList::default();
         unsafe {
-            let ptr: *mut ScoringBitMove = movelist.as_mut_ptr();
+            let ptr: *mut ScoringMove = movelist.as_mut_ptr();
             let new_ptr = InnerMoveGen::<ScoringMoveList>::generate::<L, G>(chessboard, ptr);
-            let new_size = (new_ptr as usize - ptr as usize) / mem::size_of::<ScoringBitMove>();
+            let new_size = (new_ptr as usize - ptr as usize) / mem::size_of::<ScoringMove>();
             movelist.unchecked_set_len(new_size);
         }
         movelist
