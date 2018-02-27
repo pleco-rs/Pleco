@@ -162,7 +162,7 @@ impl Entry {
     /// Returns the value of the node in respect to the depth searched && when it was placed into the TranspositionTable.
     pub fn time_value(&self, curr_time: u8) -> i16 {
         let inner: i16 = ((259i16).wrapping_add(curr_time as i16)).wrapping_sub(self.time_node_bound.data as i16) & 0b1111_1100;
-        i16::from((self.depth as i16).wrapping_sub(inner).wrapping_mul(2))
+        (self.depth as i16).wrapping_sub(inner).wrapping_mul(2)
     }
 }
 

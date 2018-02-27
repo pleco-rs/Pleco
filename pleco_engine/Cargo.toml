@@ -68,7 +68,7 @@ doctest = true
 
 [dependencies]
 pleco = { path = "../pleco", version = "0.3.8" }
-clippy = {version = "0.0.179", optional = true}
+clippy = {version = "0.0.187", optional = true}
 chrono = "0.4.0"
 rand = "0.4.2"
 rayon = "1.0.0"

@@ -332,7 +332,7 @@ impl PGN {
             tags = tags.add(line)?;
         }
         Ok(PGN {
-            tags: tags,
+            tags,
             moves: Vec::new()
         })
     }

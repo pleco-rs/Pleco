@@ -66,6 +66,7 @@ use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
 
 use super::*;
 use super::sq::SQ;
+use super::mono_traits::{PieceTrait};
 
 // Castles have the src as the king bit and the dst as the rook
 const SRC_MASK: u16 = 0b0000_000000_111111;
@@ -151,6 +152,17 @@ impl BitMove {
     pub const FLAG_DOUBLE_PAWN: u16 = 1;
     pub const FLAG_CAPTURE: u16 = 4;
     pub const FLAG_EP: u16 = 5;
+
+    pub const FLAG_PROMO_N: u16 = 0b1000;
+    pub const FLAG_PROMO_B: u16 = 0b1001;
+    pub const FLAG_PROMO_R: u16 = 0b1010;
+    pub const FLAG_PROMO_Q: u16 = 0b1011;
+
+    pub const FLAG_PROMO_CAP_N: u16 = 0b1100;
+    pub const FLAG_PROMO_CAP_B: u16 = 0b1101;
+    pub const FLAG_PROMO_CAP_R: u16 = 0b1110;
+    pub const FLAG_PROMO_CAP_Q: u16 = 0b1111;
+
     /// Creates a new BitMove from raw bits.
     ///
     /// # Safety
@@ -174,15 +186,21 @@ impl BitMove {
         BitMove::make(BitMove::FLAG_DOUBLE_PAWN,src,dst)
     }
 
-    /// Makes a non-enpassant `BitMove` from a source and destination square.
+    /// Makes a non-enpassant capturing `BitMove` from a source and destination square.
     #[inline(always)]
     pub const fn make_capture(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_CAPTURE,src,dst)
     }
 
+    /// Makes an enpassant `BitMove` from a source and destination square.
+    #[inline(always)]
+    pub const fn make_ep_capture(src: SQ, dst: SQ) -> BitMove {
+        BitMove::make(BitMove::FLAG_EP,src,dst)
+    }
+
     /// Creates a `BitMove` from a source and destination square, as well as the current
     /// flag.
-    #[inline]
+    #[inline(always)]
     pub const fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
         BitMove { data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6) }
     }

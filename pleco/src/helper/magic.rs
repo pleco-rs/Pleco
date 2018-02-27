@@ -9,8 +9,6 @@ use core::{rank_bb,file_bb};
 use core::bit_twiddles::popcount64;
 use tools::prng::PRNG;
 
-
-
 /// Size of the magic rook table.
 const ROOK_M_SIZE: usize = 102_400;
 static mut ROOK_MAGICS: [SMagic; 64] = [SMagic::init(); 64];
@@ -43,7 +41,9 @@ pub fn bishop_attacks(mut occupied: u64, square: u8) -> u64 {
     occupied &= magic_entry.mask;
     occupied = occupied.wrapping_mul(magic_entry.magic);
     occupied = occupied.wrapping_shr(magic_entry.shift);
-    unsafe { *(mem::transmute::<usize, *const u64>(magic_entry.ptr)).add(occupied as usize) }
+    unsafe {
+        *(magic_entry.ptr as *const u64).add(occupied as usize)
+    }
 }
 
 #[inline]
@@ -52,7 +52,9 @@ pub fn rook_attacks(mut occupied: u64, square: u8) -> u64 {
     occupied &= magic_entry.mask;
     occupied = occupied.wrapping_mul(magic_entry.magic);
     occupied = occupied.wrapping_shr(magic_entry.shift);
-    unsafe { *(mem::transmute::<usize, *const u64>(magic_entry.ptr)).add(occupied as usize) }
+    unsafe {
+        *(magic_entry.ptr as *const u64).add(occupied as usize)
+    }
 }
 
 

@@ -30,6 +30,11 @@ unsafe impl Send for Helper {}
 
 unsafe impl Sync for Helper {}
 
+impl Default for Helper {
+    fn default() -> Self {
+        Helper::new()
+    }
+}
 
 impl Helper {
     pub fn new() -> Self {

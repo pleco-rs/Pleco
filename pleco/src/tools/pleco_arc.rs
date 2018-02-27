@@ -65,7 +65,7 @@ impl<T> Arc<T> {
     pub fn new(data: T) -> Self {
         let x = Box::new(ArcInner {
             count: atomic::AtomicUsize::new(1),
-            data: data,
+            data,
         });
         unsafe {
             Arc { p: NonNull::new_unchecked(Box::into_raw(x)) }

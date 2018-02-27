@@ -68,7 +68,7 @@ doctest = true
 
 
 [dependencies]
-clippy = {version = "0.0.186", optional = true}
+clippy = {version = "0.0.187", optional = true}
 bitflags = "1.0.1"
 rand = "0.4.2"
 rayon = "1.0.0"

@@ -529,7 +529,7 @@ impl Board {
         // Create the Board States
         let mut board_s = UniqueArc::new(BoardState {
             castling: castle_bytes,
-            rule_50: rule_50,
+            rule_50,
             ply: 0,
             ep_square: ep_sq,
             psq: Score::ZERO,
@@ -548,7 +548,7 @@ impl Board {
 
         // Create the Board
         let mut b = Board {
-            turn: turn,
+            turn,
             bit_boards: [[BitBoard(0); PIECE_TYPE_CNT]; PLAYER_CNT],
             occ: [BitBoard(0), BitBoard(0)],
             occ_all: BitBoard(0),
@@ -1138,26 +1138,20 @@ impl Board {
 
         // Set the Pinners and Blockers
         let mut white_pinners: BitBoard = BitBoard(0);
-        // TODO: NLL
-        {
-            board_state.blockers_king[Player::White as usize] = self.slider_blockers(
-                self.occupied_black(),
-                self.king_sq(Player::White),
-                &mut white_pinners,
-            )
-        };
+
+        board_state.blockers_king[Player::White as usize] = self.slider_blockers(
+            self.occupied_black(),
+            self.king_sq(Player::White),
+            &mut white_pinners);
 
         board_state.pinners_king[Player::White as usize] = white_pinners;
 
-        // TODO: NLL
         let mut black_pinners: BitBoard = BitBoard(0);
-        {
-            board_state.blockers_king[Player::Black as usize] = self.slider_blockers(
-                self.occupied_white(),
-                self.king_sq(Player::Black),
-                &mut black_pinners,
-            )
-        };
+
+        board_state.blockers_king[Player::Black as usize] = self.slider_blockers(
+            self.occupied_white(),
+            self.king_sq(Player::Black),
+            &mut black_pinners);
 
         board_state.pinners_king[Player::Black as usize] = black_pinners;
 
@@ -1168,8 +1162,8 @@ impl Board {
         board_state.check_sqs[PieceType::N as usize] = knight_moves(ksq);
         board_state.check_sqs[PieceType::B as usize] = bishop_moves(occupied, ksq);
         board_state.check_sqs[PieceType::R as usize] = rook_moves(occupied, ksq);
-        board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize] |
-            board_state.check_sqs[PieceType::R as usize];
+        board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize]
+            | board_state.check_sqs[PieceType::R as usize];
         board_state.check_sqs[PieceType::K as usize] = BitBoard(0);
     }
 

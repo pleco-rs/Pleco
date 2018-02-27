@@ -19,7 +19,7 @@ pub fn minimax(board: &mut Board, depth: u16) -> ScoringMove {
     moves.into_iter()
         .map(|mut m: ScoringMove| {
             board.apply_move(m.bit_move);
-            m.score = minimax(board, depth - 1).negate().score;
+            m.score = -minimax(board, depth - 1).score;
             board.undo_move();
             m
         }).max()

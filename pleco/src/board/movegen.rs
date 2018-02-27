@@ -289,7 +289,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 if piece == PieceType::K {
                     b &= queen_moves(BitBoard(0), self.board.king_sq(P::opp_player()))
                 }
-                self.move_append_from_bb::<L>(&mut b, from, MoveFlag::QuietMove);
+                self.move_append_from_bb_flag::<L>(&mut b, from, BitMove::FLAG_QUIET);
             }
         }
         self.generate_all::<L, QuietChecksGenType, P>(!self.board.get_occupied());
@@ -382,7 +382,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: ksq,
                     dst: r_from,
-                    flags: MoveFlag::Castle { king_side: king_side },
+                    flags: MoveFlag::Castle { king_side },
                 }));
             }
         }
@@ -490,16 +490,16 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             let mut right_cap_promo: BitBoard = P::shift_up_right(pawns_rank_7) & enemies;
 
             while let Some(dst) = no_promo.pop_some_lsb() {
-                self.create_all_promotions::<L>(dst, P::down(dst), false);
+                self.create_all_non_cap_promos::<L>(dst, P::down(dst));
             }
 
             if G::gen_type() != GenTypes::Quiets {
                 while let Some(dst) = left_cap_promo.pop_some_lsb() {
-                    self.create_all_promotions::<L>(dst, P::down_right(dst), true);
+                    self.create_all_cap_promos::<L>(dst, P::down_right(dst));
                 }
 
                 while let Some(dst) = right_cap_promo.pop_some_lsb() {
-                    self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                    self.create_all_cap_promos::<L>(dst, P::down_left(dst));
                 }
             }
         }
@@ -527,55 +527,27 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                     left_cap = pawns_not_rank_7 & pawn_attacks_from(ep_sq, P::opp_player());
 
                     while let Some(src) = left_cap.pop_some_lsb() {
-                        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                            src: src,
-                            dst: ep_sq,
-                            flags: MoveFlag::Capture { ep_capture: true },
-                        }));
+                        self.check_and_add::<L>(BitMove::make_ep_capture(src, ep_sq));
                     }
                 }
             }
         }
     }
 
-    // Helper function for creating promotions
     #[inline]
-    fn create_all_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        let prom_pieces = [PieceType::Q, PieceType::N, PieceType::R, PieceType::B];
-        for piece in &prom_pieces {
-            self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                src,
-                dst,
-                flags: MoveFlag::Promotion {
-                    capture: is_capture,
-                    prom: *piece,
-                },
-            }));
-        }
+    fn create_all_non_cap_promos<L: Legality>(&mut self, dst: SQ, src: SQ) {
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_N,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_B,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_R,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_Q,src,dst));
     }
 
     #[inline]
-    fn create_knight_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-            src,
-            dst,
-            flags: MoveFlag::Promotion {
-                capture: is_capture,
-                prom: PieceType::N,
-            },
-        }));
-    }
-
-    #[inline]
-    fn create_queen_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-            src,
-            dst,
-            flags: MoveFlag::Promotion {
-                capture: is_capture,
-                prom: PieceType::Q,
-            },
-        }));
+    fn create_all_cap_promos<L: Legality>(&mut self, dst: SQ, src: SQ) {
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_N,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_B,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_R,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_Q,src,dst));
     }
 
     // Return the moves Bitboard
@@ -590,20 +562,6 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             PieceType::R => rook_moves(self.occ, square),
             PieceType::Q => queen_moves(self.occ, square),
             PieceType::K => king_moves(square),
-        }
-    }
-
-    #[inline]
-    fn move_append_from_bb<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, move_flag: MoveFlag) {
-        while bits.is_not_empty() {
-            let dst = bits.pop_lsb();
-            let b_move = BitMove::init(
-                PreMoveInfo {
-                    src,
-                    dst,
-                    flags: move_flag,
-                });
-            self.check_and_add::<L>(b_move);
         }
     }
 
