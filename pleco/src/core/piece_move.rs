@@ -66,7 +66,6 @@ use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
 
 use super::*;
 use super::sq::SQ;
-use super::mono_traits::{PieceTrait};
 
 // Castles have the src as the king bit and the dst as the rook
 const SRC_MASK: u16 = 0b0000_000000_111111;
