@@ -600,7 +600,6 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 let b_ptr = mem::transmute::<*mut MP::Output, *mut BitMove>(self.ptr);
                 ptr::write(b_ptr, b_move);
                 self.ptr = self.ptr.add(1);
-//                self.movelist.unchecked_push_mv(b_move)
             };
         }
     }

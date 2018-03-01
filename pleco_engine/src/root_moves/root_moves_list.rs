@@ -120,11 +120,13 @@ impl RootMoveList {
         }
     }
 
+    /// Converts to a `MoveList`.
     pub fn to_list(&self) -> MoveList {
         let vec =  self.iter().map(|m| m.bit_move).collect::<Vec<BitMove>>();
         MoveList::from(vec)
     }
 
+    /// Returns the previous best score.
     #[inline]
     pub fn prev_best_score(&self) -> i32 {
         unsafe {
