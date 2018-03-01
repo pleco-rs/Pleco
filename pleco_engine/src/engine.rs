@@ -90,6 +90,7 @@ impl PlecoSearcher {
 
     pub fn clear_search(&mut self) {
         self.clear_tt();
+        threadpool().clear_all();
     }
 
     fn uci_go(&mut self, args: &[&str]) {
@@ -167,7 +168,6 @@ impl PlecoSearcher {
     }
 
     pub fn search(&mut self, board: &Board, limit: &PreLimits) {
-        TT_TABLE.new_search();
         self.search_mode = SearchType::Search;
         threadpool().uci_search(board, &(limit.clone().create()));
 

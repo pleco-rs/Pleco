@@ -143,6 +143,13 @@ impl Searcher {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.pawns.clear();
+        self.material.clear();
+        self.previous_time_reduction = 0.0;
+        self.previous_score = INFINITE;
+    }
+
     /// Spins in idle loop, waiting for it's condition to unlock.
     pub fn idle_loop(&mut self) {
         self.searching.set(false);
@@ -247,7 +254,9 @@ impl Searcher {
         };
 
         if self.main_thread() {
-            println!("Time.. Max: {}, Ideal: {}", TIMER.maximum_time(), TIMER.ideal_time());
+            if self.use_stdout() {
+                println!("Time.. Max: {}, Ideal: {}", TIMER.maximum_time(), TIMER.ideal_time());
+            }
             self.best_move_changes = 0.0;
             self.failed_low = false;
         }
@@ -292,7 +301,7 @@ impl Searcher {
                 beta = min(prev_best_score + delta, INFINITE);
             }
 
-            // Loop until we find a value that is int the bounds of alpha, beta, and the delta margin.
+            // Loop until we find a value that is within the bounds of alpha, beta, and the delta margin.
             'aspiration_window: loop {
                 // search!
                 best_value = self.search::<PV>(alpha, beta, ss,depth);
@@ -308,10 +317,10 @@ impl Searcher {
                 // or greater than beta, we need to increase the search window and re-search.
                 // Otherwise, go to the next search
                 if best_value <= alpha {
+                    beta = (alpha + beta) / 2;
                     alpha = max(best_value - delta, NEG_INFINITE);
                     if self.main_thread() {
                         self.failed_low = true;
-
                     }
                 } else if best_value >= beta {
                     beta = min(best_value + delta, INFINITE);
