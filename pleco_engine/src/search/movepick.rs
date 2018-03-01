@@ -1,6 +1,7 @@
 
 #[allow(unused_imports)]
 use pleco::{BitMove,Board};
+#[allow(unused_imports)]
 use pleco::core::move_list::ScoringMoveList;
 
 

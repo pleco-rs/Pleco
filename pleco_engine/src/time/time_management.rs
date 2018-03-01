@@ -11,13 +11,13 @@ use std::f64;
 
 
 const MOVE_HORIZON: i64 = 50;
-const MAX_RATIO: f64 = 7.01;
+const MAX_RATIO: f64 = 5.31;
 const STEAL_RATIO: f64 = 0.35;
 
 // TODO: These should be made into UCIOptions
 const MIN_THINKING_TIME: i64 = 20;
 const MOVE_OVERHEAD: i64 = 30;
-const SLOW_MOVER: i64 = 89;
+const SLOW_MOVER: i64 = 50;
 
 #[derive(PartialEq)]
 enum TimeCalc {
@@ -81,7 +81,7 @@ impl TimeManager {
             hyp_my_time = hyp_my_time.max(0);
 
             let t1: i64 = MIN_THINKING_TIME + TimeManager::remaining(hyp_my_time, hyp_mtg, ply as i64, SLOW_MOVER, TimeCalc::Ideal);
-            let t2: i64 = MIN_THINKING_TIME + TimeManager::remaining(hyp_my_time, hyp_mtg, ply as i64, SLOW_MOVER, TimeCalc::Max);
+            let t2: i64 = MIN_THINKING_TIME + TimeManager::remaining(hyp_my_time, hyp_mtg, ply as i64, SLOW_MOVER - 5, TimeCalc::Max);
 
             ideal_time = t1.min(ideal_time);
             max_time = t2.min(max_time);

@@ -102,10 +102,14 @@ pub struct Searcher {
     pub material: Material,
     pub root_moves: UnsafeCell<RootMoveList>,
     pub selected_depth: u16,
-
+    pub last_best_move: BitMove,
+    pub last_best_move_depth: u16,
     // MainThread Information
     pub previous_score: Value,
     pub best_move: BitMove,
+    pub failed_low: bool,
+    pub best_move_changes: f64,
+    pub previous_time_reduction: f64,
 
 }
 
@@ -129,8 +133,13 @@ impl Searcher {
             material: Material::new(8192),
             root_moves: UnsafeCell::new(RootMoveList::new()),
             selected_depth: 0,
+            last_best_move: BitMove::null(),
+            last_best_move_depth: 0,
             previous_score: 0,
-            best_move: BitMove::null()
+            best_move: BitMove::null(),
+            failed_low: false,
+            best_move_changes: 0.0,
+            previous_time_reduction: 0.0
         }
     }
 
@@ -210,6 +219,7 @@ impl Searcher {
         if self.use_stdout() {
             println!("bestmove {}", best_move.to_string());
         }
+
     }
 
     // The per thread searching function
@@ -236,6 +246,12 @@ impl Searcher {
             MAX_PLY
         };
 
+        if self.main_thread() {
+            println!("Time.. Max: {}, Ideal: {}", TIMER.maximum_time(), TIMER.ideal_time());
+            self.best_move_changes = 0.0;
+            self.failed_low = false;
+        }
+
         let start_ply: u16 = START_PLY[self.id % THREAD_DIST];
         let skip_size: u16 = SKIP_SIZE[self.id % THREAD_DIST];
         let mut depth: u16 = start_ply + 1;
@@ -247,8 +263,6 @@ impl Searcher {
         let mut beta: i32 = INFINITE as i32;
 
         let mut time_reduction: f64 = 1.0;
-        let mut last_best_move: BitMove = BitMove::null();
-        let mut best_move_stability: u32 = 0;
         let mut stack: ThreadStack = ThreadStack::new();
         let ss: &mut Stack = stack.ply_zero();
 
@@ -260,6 +274,11 @@ impl Searcher {
         // will ignore the max_depth and instead wait for a stop signal.
         'iterative_deepening: while (!self.stop() || !self.main_thread()) && depth < max_depth {
 
+            if self.main_thread() {
+                self.best_move_changes *= 0.505;
+                self.failed_low = false;
+            }
+
             // rollback all the root moves, ala set the previous score to the current score.
             self.root_moves().rollback();
 
@@ -269,14 +288,14 @@ impl Searcher {
             // Only applicable for a depth of 5 and beyond.
             if depth >= 5 {
                 delta = 18;
-                alpha = max(prev_best_score - delta, NEG_INFINITE as i32);
-                beta = min(prev_best_score + delta, INFINITE as i32);
+                alpha = max(prev_best_score - delta, NEG_INFINITE);
+                beta = min(prev_best_score + delta, INFINITE);
             }
 
             // Loop until we find a value that is int the bounds of alpha, beta, and the delta margin.
             'aspiration_window: loop {
                 // search!
-                best_value = self.search::<PV>(alpha, beta, ss,depth) as i32;
+                best_value = self.search::<PV>(alpha, beta, ss,depth);
 
                 // Order root moves by the socre retreived post search.
                 self.root_moves().sort();
@@ -289,16 +308,20 @@ impl Searcher {
                 // or greater than beta, we need to increase the search window and re-search.
                 // Otherwise, go to the next search
                 if best_value <= alpha {
-                    alpha = max(best_value - delta, NEG_INFINITE as i32);
+                    alpha = max(best_value - delta, NEG_INFINITE);
+                    if self.main_thread() {
+                        self.failed_low = true;
+
+                    }
                 } else if best_value >= beta {
-                    beta = min(best_value + delta, INFINITE as i32);
+                    beta = min(best_value + delta, INFINITE);
                 } else {
                     break 'aspiration_window;
                 }
                 delta += (delta / 4) + 5;
 
-                assert!(alpha >= NEG_INFINITE as i32);
-                assert!(beta <= INFINITE as i32);
+                assert!(alpha >= NEG_INFINITE);
+                assert!(beta <= INFINITE);
             }
 
             // Main Thread provides an update to the GUI
@@ -314,6 +337,15 @@ impl Searcher {
                 self.depth_completed = depth;
             }
 
+            let curr_best_move = unsafe {
+                (*self.root_moves.get()).first().bit_move
+            };
+
+            if curr_best_move != self.last_best_move {
+                    self.last_best_move = curr_best_move;
+                    self.last_best_move_depth = depth;
+            }
+
             depth += skip_size;
 
             if !self.main_thread() {
@@ -322,30 +354,41 @@ impl Searcher {
 
             // Main thread only from here on!
 
-            let best_move = unsafe { self.root_moves().get_unchecked(0).bit_move};
-            if best_move != last_best_move {
-                time_reduction = 1.0;
-                best_move_stability = 0;
-            } else {
-                time_reduction *= 0.91;
-                best_move_stability += 1;
-            }
-
-            last_best_move = best_move;
 
             // check for time
             if let Some(_) = self.limit.use_time_management() {
                 if !self.stop() {
-                    let ideal = TIMER.ideal_time();
-                    let elapsed = TIMER.elapsed();
-                    let stability: f64 = f64::powi(0.92, best_move_stability as i32);
-                    let new_ideal = (ideal as f64 * stability * time_reduction) as i64;
-                    println!("ideal: {}, new_ideal: {}, elapsed: {}", ideal, new_ideal, elapsed);
-                    if self.root_moves().len() == 1 || TIMER.elapsed() >= new_ideal {
-                        break 'iterative_deepening;
+                    let score_diff: i32 = best_value - self.previous_score;
+
+                    let improving_factor: i64 = (229).max((715).min(
+                          357
+                        + 119 * self.failed_low as i64
+                        -   6 * score_diff as i64));
+
+                    time_reduction = 1.0;
+
+                    // If the bestMove is stable over several iterations, reduce time accordingly
+                    for i in 3..6 {
+                        if self.last_best_move_depth * i < self.depth_completed {
+                            time_reduction *= 1.34;
+                        }
+                    }
+
+                    // Use part of the gained time from a previous stable move for the current move
+                    let mut unstable_factor: f64 = 1.0 + self.best_move_changes;
+                    unstable_factor *= self.previous_time_reduction.powf(0.51) / time_reduction;
+
+                    // Stop the search if we have only one legal move, or if available time elapsed
+                    if self.root_moves().len() == 1
+                        || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 602.0) as i64 {
+                        threadpool().set_stop(true);
                     }
                 }
             }
+        }
+
+        if self.main_thread() {
+            self.previous_time_reduction = time_reduction;
         }
     }
 
@@ -492,14 +535,21 @@ impl Searcher {
                 }
 
                 if at_root {
-                    let rm: &mut RootMove = unsafe { self.root_moves().get_unchecked_mut(i) };
-
-                    if moves_played == 1 || value > alpha {
-                        rm.depth_reached = depth;
-                        rm.score = value;
-
-                    } else {
-                        rm.score = NEG_INFINITE;
+                    let mut incr_bmc: bool = false;
+                    {
+                        let rm: &mut RootMove = unsafe { self.root_moves().get_unchecked_mut(i) };
+                        if moves_played == 1 || value > alpha {
+                            rm.depth_reached = depth;
+                            rm.score = value;
+                            if moves_played > 1 && self.main_thread() {
+                                incr_bmc = true;
+                            }
+                        } else {
+                            rm.score = NEG_INFINITE;
+                        }
+                    }
+                    if incr_bmc {
+                        self.best_move_changes += 1.0;
                     }
                 }
 
