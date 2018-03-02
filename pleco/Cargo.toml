@@ -75,6 +75,7 @@ rayon = "1.0.0"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"
 mucow = "0.1.0"
+unreachable = "1.0.0"
 
 [dependencies.lazy_static]
 version = "1.0.0"

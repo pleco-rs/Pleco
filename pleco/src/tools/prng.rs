@@ -11,7 +11,7 @@ impl PRNG {
     ///
     /// # Panics
     ///
-    /// Panics if the seed is zero.
+    /// Undefined behavior if the seed is zero
     pub const fn init(s: u64) -> PRNG {
         PRNG { seed: s }
     }

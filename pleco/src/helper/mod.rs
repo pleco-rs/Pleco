@@ -221,8 +221,4 @@ mod tests {
     fn init_helper() {
         Helper::new();
     }
-
-
-
-
 }

@@ -13,8 +13,10 @@ use board::Board;
 
 /// Defines an object that can play chess.
 pub trait Searcher {
+    /// Returns the name of the searcher.
     fn name() -> &'static str where Self: Sized;
 
+    /// Returns the BestMove of a position from a search of depth.
     fn best_move(board: Board, depth: u16) -> BitMove
         where
             Self: Sized;

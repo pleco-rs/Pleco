@@ -14,7 +14,7 @@ use core::masks::*;
 
 use core::sq::SQ;
 
-const ALL_CASTLING: u8 = 0b0101_1111;
+const ALL_CASTLING: u8 = 0b0000_1111;
 
 
 bitflags! {
@@ -22,10 +22,7 @@ bitflags! {
     ///
     /// For internal use by the [`Board`] only.
     ///
-    /// Keeps track two things for each player:
-    ///
-    /// 1. What sides are possible to castle from?
-    /// 2. Has this player castled?
+    /// Keeps track of what sides are possible to castle from for each player.
     ///
     /// Does not guarantee that the player containing a castling bit can castle at that
     /// time. Rather marks that castling is a possibility, e.g. a Castling struct
@@ -38,8 +35,6 @@ bitflags! {
         const WHITE_Q      = C_WHITE_Q_MASK; // White has Queen-side Castling ability
         const BLACK_K      = C_BLACK_K_MASK; // Black has King-side Castling ability
         const BLACK_Q      = C_BLACK_Q_MASK; // White has Queen-side Castling ability
-        const WHITE_CASTLE = 0b0100_0000; // White has castled
-        const BLACK_CASTLE = 0b0001_0000; // Black has castled
         const WHITE_ALL    = Self::WHITE_K.bits // White can castle for both sides
                            | Self::WHITE_Q.bits;
         const BLACK_ALL    = Self::BLACK_K.bits // Black can castle for both sides
@@ -106,28 +101,10 @@ impl Castling {
         }
     }
 
-    /// Sets the bits to represent a given player has castled
-    #[inline]
-    pub fn set_castling(&mut self, player: Player) {
-        match player {
-            Player::White => self.bits |= Self::WHITE_CASTLE.bits,
-            Player::Black => self.bits |= Self::BLACK_CASTLE.bits,
-        }
-    }
-
     #[inline]
     pub fn player_can_castle(&self, player: Player) -> Castling {
         Castling {
             bits: self.bits & (Castling::WHITE_ALL.bits << (2 * player as u16))
-        }
-    }
-
-    /// Returns if a given player has castled
-    #[inline]
-    pub fn has_castled(&self, player: Player) -> bool {
-        match player {
-            Player::White => self.contains(Castling::WHITE_CASTLE),
-            Player::Black => self.contains(Castling::BLACK_CASTLE),
         }
     }
 

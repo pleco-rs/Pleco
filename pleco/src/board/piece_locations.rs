@@ -135,6 +135,21 @@ impl PieceLocations {
         }
     }
 
+    /// Returns the `Player` (if any) is occupying a `SQ`.
+    ///
+    /// # Safety
+    ///
+    /// Will return an incorrect result if there is no player at the square.
+    #[inline]
+    pub unsafe fn unchecked_player_at(&self, square: SQ) -> Player {
+        let byte: u8 = self.data[square.0 as usize];
+        if byte < 8 {
+            Player::White
+        } else {
+            Player::Black
+        }
+    }
+
     /// Returns a Tuple of `(Player,Piece)` of the player and associated piece at a
     /// given square. Returns None if the square is unoccupied.
     ///
