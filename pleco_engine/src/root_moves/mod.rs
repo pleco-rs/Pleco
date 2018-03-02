@@ -8,8 +8,9 @@ use std::cmp::Ordering as CmpOrder;
 use pleco::core::score::*;
 use pleco::BitMove;
 
-const MAX_MOVES: usize = 255;
+const MAX_MOVES: usize = 256;
 
+/// Keeps track of information of a move for the position to be searched.
 #[derive(Copy, Clone,Eq)]
 pub struct RootMove {
     pub score: i32,
@@ -20,6 +21,7 @@ pub struct RootMove {
 
 
 impl RootMove {
+    /// Creates a new `RootMove`.
     #[inline]
     pub fn new(bit_move: BitMove) -> Self {
         RootMove {
@@ -30,6 +32,8 @@ impl RootMove {
         }
     }
 
+    /// Places the current score into the previous_score field, and then updates
+    /// the score and depth.
     #[inline]
     pub fn rollback_insert(&mut self, score: i32, depth: u16) {
         self.prev_score = self.score;
@@ -37,12 +41,14 @@ impl RootMove {
         self.depth_reached = depth;
     }
 
+    /// Inserts a score and depth.
     #[inline]
     pub fn insert(&mut self, score: i32, depth: u16) {
         self.score = score;
         self.depth_reached = depth;
     }
 
+    /// Places the current score in the previous score.
     #[inline]
     pub fn rollback(&mut self) {
         self.prev_score = self.score;

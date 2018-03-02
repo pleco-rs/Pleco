@@ -2,8 +2,7 @@
 use board::*;
 use core::*;
 use core::piece_move::BitMove;
-use super::{BestMove,eval_board};
-use core::score::*;
+use super::*;
 use rayon;
 
 
@@ -31,11 +30,11 @@ pub fn iterative_deepening(board: &mut Board, max_depth: u16) -> BitMove {
     //
 
     let mut i = 2;
-    let mut alpha: i32 = NEG_INFINITE;
-    let mut beta: i32 = INFINITE;
+    let mut alpha: i16 = NEG_INF_V;
+    let mut beta: i16 = INF_V;
 
     // Create a dummy best_move
-    let mut best_move = BestMove::new_none(NEG_INFINITE);
+    let mut best_move = ScoringMove::blank(NEG_INF_V);
 
     // Loop until max_depth is reached
     while i <= max_depth {
@@ -45,11 +44,11 @@ pub fn iterative_deepening(board: &mut Board, max_depth: u16) -> BitMove {
         let returned_b_move = jamboree(&mut b, alpha, beta, i, PLYS_SEQ[i as usize]);
         if i >= 2 {
             if returned_b_move.score > beta {
-                beta = INFINITE;
+                beta = INF_V;
             } else if returned_b_move.score < alpha {
-                alpha = NEG_INFINITE;
+                alpha = NEG_INF_V;
             } else {
-                if returned_b_move.best_move.is_some() {
+                if returned_b_move.bit_move != BitMove::null() {
                     alpha = returned_b_move.score - 34;
                     beta = returned_b_move.score + 34;
                     best_move = returned_b_move;
@@ -58,21 +57,19 @@ pub fn iterative_deepening(board: &mut Board, max_depth: u16) -> BitMove {
             }
         }
     }
-    if best_move.best_move.is_none() {
-        println!("{}, i = {}", best_move.score, i);
-    }
-    best_move.best_move.unwrap()
+
+    best_move.bit_move
 }
 
 
 
 fn jamboree(
     board: &mut Board,
-    mut alpha: i32,
-    beta: i32,
+    mut alpha: i16,
+    beta: i16,
     max_depth: u16,
     plys_seq: u16,
-) -> BestMove {
+) -> ScoringMove {
     assert!(alpha <= beta);
     if board.depth() >= max_depth {
         return eval_board(board);
@@ -85,9 +82,9 @@ fn jamboree(
     let mut moves = board.generate_moves();
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + (board.depth() as i32));
+            return ScoringMove::blank(MATE_V + (board.depth() as i16));
         } else {
-            return BestMove::new_none(DRAW);
+            return ScoringMove::blank(DRAW_V);
         }
     }
 
@@ -96,8 +93,8 @@ fn jamboree(
     let (seq, non_seq) = moves.split_at_mut(amount_seq);
 
 
-    let mut best_move: Option<BitMove> = None;
-    let mut best_value: i32 = NEG_INFINITE;
+    let mut best_move: BitMove = BitMove::null();
+    let mut best_value: i16 = NEG_INF_V;
     for mov in seq {
         board.apply_move(*mov);
         let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
@@ -105,17 +102,17 @@ fn jamboree(
 
 
         if return_move.score > best_value {
-                best_move = Some(*mov);
+                best_move = *mov;
             best_value = return_move.score;
 
             if return_move.score > alpha {
                 alpha = return_move.score;
-                best_move = Some(*mov);
+                best_move = *mov;
             }
 
             if alpha >= beta {
-                return BestMove {
-                    best_move: Some(*mov),
+                return ScoringMove {
+                    bit_move: *mov,
                     score: alpha,
                 };
             }
@@ -127,8 +124,8 @@ fn jamboree(
     if returned_move.score > alpha {
         returned_move
     } else {
-        BestMove {
-            best_move: best_move,
+        ScoringMove {
+            bit_move: best_move,
             score: best_value,
         }
     }
@@ -137,12 +134,12 @@ fn jamboree(
 fn parallel_task(
     slice: &[BitMove],
     board: &mut Board,
-    mut alpha: i32,
-    beta: i32,
+    mut alpha: i16,
+    beta: i16,
     max_depth: u16,
     plys_seq: u16,
-) -> BestMove {
-    let mut best_move: Option<BitMove> = None;
+) -> ScoringMove {
+    let mut best_move: BitMove = BitMove::null();
     if slice.len() <= DIVIDE_CUTOFF {
         for mov in slice {
             board.apply_move(*mov);
@@ -151,12 +148,12 @@ fn parallel_task(
 
             if return_move.score > alpha {
                 alpha = return_move.score;
-                best_move = Some(*mov);
+                best_move = *mov;
             }
 
             if alpha >= beta {
-                return BestMove {
-                    best_move: Some(*mov),
+                return ScoringMove {
+                    bit_move: *mov,
                     score: alpha,
                 };
             }
@@ -173,21 +170,21 @@ fn parallel_task(
 
         if left_move.score > alpha {
             alpha = left_move.score;
-            best_move = left_move.best_move;
+            best_move = left_move.bit_move;
         }
         if right_move.score > alpha {
             alpha = right_move.score;
-            best_move = right_move.best_move;
+            best_move = right_move.bit_move;
         }
     }
-    BestMove {
-        best_move: best_move,
+    ScoringMove {
+        bit_move: best_move,
         score: alpha,
     }
 
 }
 
-fn alpha_beta_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u16) -> BestMove {
+fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> ScoringMove {
 
     if board.depth() >= max_depth {
         if board.in_check() || board.piece_last_captured().is_some() {
@@ -211,15 +208,15 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u1
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + (board.depth() as i32));
+            return ScoringMove::blank(MATE_V + (board.depth() as i16));
         } else {
-            return BestMove::new_none(DRAW);
+            return ScoringMove::blank(DRAW_V);
         }
     }
 
 
 
-    let mut best_move: Option<BitMove> = None;
+    let mut best_move: BitMove = BitMove::null();
 
     for mov in moves {
         board.apply_move(mov);
@@ -228,24 +225,24 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u1
 
         if return_move.score > alpha {
             alpha = return_move.score;
-            best_move = Some(mov);
+            best_move = mov;
         }
 
         if alpha >= beta {
-            return BestMove {
-                best_move: Some(mov),
+            return ScoringMove {
+                bit_move: mov,
                 score: alpha,
             };
         }
     }
 
-    BestMove {
-        best_move: best_move,
+    ScoringMove {
+        bit_move: best_move,
         score: alpha,
     }
 }
 
-fn quiescence_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u16) -> BestMove {
+fn quiescence_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> ScoringMove {
     if board.depth() == max_depth {
         return eval_board(board);
     }
@@ -258,11 +255,11 @@ fn quiescence_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u1
 
     if moves.is_empty() {
         if board.in_check() {
-            return BestMove::new_none(MATE + (board.depth() as i32));
+            return ScoringMove::blank(-MATE_V + (board.depth() as i16));
         }
         return eval_board(board);
     }
-    let mut best_move: Option<BitMove> = None;
+    let mut best_move: BitMove = BitMove::null();
     for mov in moves {
         board.apply_move(mov);
 
@@ -272,19 +269,19 @@ fn quiescence_search(board: &mut Board, mut alpha: i32, beta: i32, max_depth: u1
 
         if return_move.score > alpha {
             alpha = return_move.score;
-            best_move = Some(mov);
+            best_move = mov;
         }
 
         if alpha >= beta {
-            return BestMove {
-                best_move: Some(mov),
+            return ScoringMove {
+                bit_move: mov,
                 score: alpha,
             };
         }
     }
 
-    BestMove {
-        best_move: best_move,
+    ScoringMove {
+        bit_move: best_move,
         score: alpha,
     }
 }

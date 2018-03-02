@@ -57,7 +57,7 @@ use std::ops::Index;
 
 use board::*;
 
-use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringBitMove};
+use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringMove};
 use core::move_list::{MoveList,ScoringMoveList,MVPushable};
 
 use {SQ, BitBoard};
@@ -139,9 +139,9 @@ impl MoveGen {
     pub fn generate_scoring<L: Legality, G: GenTypeTrait>(chessboard: &Board) -> ScoringMoveList {
         let mut movelist = ScoringMoveList::default();
         unsafe {
-            let ptr: *mut ScoringBitMove = movelist.as_mut_ptr();
+            let ptr: *mut ScoringMove = movelist.as_mut_ptr();
             let new_ptr = InnerMoveGen::<ScoringMoveList>::generate::<L, G>(chessboard, ptr);
-            let new_size = (new_ptr as usize - ptr as usize) / mem::size_of::<ScoringBitMove>();
+            let new_size = (new_ptr as usize - ptr as usize) / mem::size_of::<ScoringMove>();
             movelist.unchecked_set_len(new_size);
         }
         movelist
@@ -176,7 +176,7 @@ impl MoveGen {
     /// `MVPushable::unchecked_set_len(...)` to set the size manually after this method.
     #[inline(always)]
     pub unsafe fn extend_from_ptr<L: Legality, G: GenTypeTrait, MP: MVPushable>(chessboard: &Board, ptr: *mut MP::Output)
-        -> *mut MP::Output
+                                                                                -> *mut MP::Output
         where <MP as Index<usize>>::Output : Sized
     {
         InnerMoveGen::<MP>::generate::<L,G>(chessboard, ptr)
@@ -289,7 +289,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 if piece == PieceType::K {
                     b &= queen_moves(BitBoard(0), self.board.king_sq(P::opp_player()))
                 }
-                self.move_append_from_bb::<L>(&mut b, from, MoveFlag::QuietMove);
+                self.move_append_from_bb_flag::<L>(&mut b, from, BitMove::FLAG_QUIET);
             }
         }
         self.generate_all::<L, QuietChecksGenType, P>(!self.board.get_occupied());
@@ -382,7 +382,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 self.check_and_add::<L>(BitMove::init(PreMoveInfo {
                     src: ksq,
                     dst: r_from,
-                    flags: MoveFlag::Castle { king_side: king_side },
+                    flags: MoveFlag::Castle { king_side },
                 }));
             }
         }
@@ -401,7 +401,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
     fn moves_per_piece<L: Legality, PL: PlayerTrait, P: PieceTrait>(&mut self, target: BitBoard) {
         let mut piece_bb: BitBoard = self.board.piece_bb(PL::player(), P::piece_type());
         while let Some(src) = piece_bb.pop_some_lsb() {
-            let moves_bb: BitBoard = self.moves_bb(P::piece_type(), src) & !self.us_occ & target;
+            let moves_bb: BitBoard = self.moves_bb2::<P>(src) & !self.us_occ & target;
             let mut captures_bb: BitBoard = moves_bb & self.them_occ;
             let mut non_captures_bb: BitBoard = moves_bb & !self.them_occ;
             self.move_append_from_bb_flag::<L>(&mut captures_bb, src, BitMove::FLAG_CAPTURE);
@@ -490,16 +490,16 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             let mut right_cap_promo: BitBoard = P::shift_up_right(pawns_rank_7) & enemies;
 
             while let Some(dst) = no_promo.pop_some_lsb() {
-                self.create_all_promotions::<L>(dst, P::down(dst), false);
+                self.create_all_non_cap_promos::<L>(dst, P::down(dst));
             }
 
             if G::gen_type() != GenTypes::Quiets {
                 while let Some(dst) = left_cap_promo.pop_some_lsb() {
-                    self.create_all_promotions::<L>(dst, P::down_right(dst), true);
+                    self.create_all_cap_promos::<L>(dst, P::down_right(dst));
                 }
 
                 while let Some(dst) = right_cap_promo.pop_some_lsb() {
-                    self.create_all_promotions::<L>(dst, P::down_left(dst), true);
+                    self.create_all_cap_promos::<L>(dst, P::down_left(dst));
                 }
             }
         }
@@ -527,55 +527,27 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                     left_cap = pawns_not_rank_7 & pawn_attacks_from(ep_sq, P::opp_player());
 
                     while let Some(src) = left_cap.pop_some_lsb() {
-                        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                            src: src,
-                            dst: ep_sq,
-                            flags: MoveFlag::Capture { ep_capture: true },
-                        }));
+                        self.check_and_add::<L>(BitMove::make_ep_capture(src, ep_sq));
                     }
                 }
             }
         }
     }
 
-    // Helper function for creating promotions
     #[inline]
-    fn create_all_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        let prom_pieces = [PieceType::Q, PieceType::N, PieceType::R, PieceType::B];
-        for piece in &prom_pieces {
-            self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-                src,
-                dst,
-                flags: MoveFlag::Promotion {
-                    capture: is_capture,
-                    prom: *piece,
-                },
-            }));
-        }
+    fn create_all_non_cap_promos<L: Legality>(&mut self, dst: SQ, src: SQ) {
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_N,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_B,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_R,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_Q,src,dst));
     }
 
     #[inline]
-    fn create_knight_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-            src,
-            dst,
-            flags: MoveFlag::Promotion {
-                capture: is_capture,
-                prom: PieceType::N,
-            },
-        }));
-    }
-
-    #[inline]
-    fn create_queen_promotions<L: Legality>(&mut self, dst: SQ, src: SQ, is_capture: bool) {
-        self.check_and_add::<L>(BitMove::init(PreMoveInfo {
-            src,
-            dst,
-            flags: MoveFlag::Promotion {
-                capture: is_capture,
-                prom: PieceType::Q,
-            },
-        }));
+    fn create_all_cap_promos<L: Legality>(&mut self, dst: SQ, src: SQ) {
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_N,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_B,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_R,src,dst));
+        self.check_and_add::<L>(BitMove::make(BitMove::FLAG_PROMO_CAP_Q,src,dst));
     }
 
     // Return the moves Bitboard
@@ -593,19 +565,24 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
         }
     }
 
+    // Note: Does including this truly decrease MoveGen timing?
+
+    /// Return the moves Bitboard
     #[inline]
-    fn move_append_from_bb<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, move_flag: MoveFlag) {
-        while bits.is_not_empty() {
-            let dst = bits.pop_lsb();
-            let b_move = BitMove::init(
-                PreMoveInfo {
-                    src,
-                    dst,
-                    flags: move_flag,
-                });
-            self.check_and_add::<L>(b_move);
+    fn moves_bb2<P: PieceTrait>(&self, square: SQ) -> BitBoard {
+        debug_assert!(square.is_okay());
+        debug_assert_ne!(P::piece_type(), PieceType::P);
+        match P::piece_type() {
+            PieceType::P => panic!(),
+            PieceType::N => knight_moves(square),
+            PieceType::B => bishop_moves(self.occ, square),
+            PieceType::R => rook_moves(self.occ, square),
+            PieceType::Q => queen_moves(self.occ, square),
+            PieceType::K => king_moves(square),
         }
     }
+
+
 
     #[inline]
     fn move_append_from_bb_flag<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
@@ -623,7 +600,6 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 let b_ptr = mem::transmute::<*mut MP::Output, *mut BitMove>(self.ptr);
                 ptr::write(b_ptr, b_move);
                 self.ptr = self.ptr.add(1);
-//                self.movelist.unchecked_push_mv(b_move)
             };
         }
     }
@@ -687,8 +663,8 @@ mod tests {
     #[test]
     fn movegen_list_sim_all() {
         let boards: Vec<Board> = ALL_FENS.iter()
-            .map(|f| Board::from_fen(*f).unwrap())
-            .collect();
+                                         .map(|f| Board::from_fen(*f).unwrap())
+                                         .collect();
 
         boards.iter().for_each(|b| {
             let mb = b.generate_moves();

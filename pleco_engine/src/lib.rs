@@ -46,6 +46,7 @@ extern crate rand;
 extern crate pleco;
 extern crate chrono;
 extern crate crossbeam_utils;
+extern crate generic_array;
 
 pub mod threadpool;
 pub mod sync;

@@ -68,12 +68,13 @@ doctest = true
 
 
 [dependencies]
-clippy = {version = "0.0.186", optional = true}
+clippy = {version = "0.0.187", optional = true}
 bitflags = "1.0.1"
 rand = "0.4.2"
 rayon = "1.0.0"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"
+mucow = "0.1.0"
 
 [dependencies.lazy_static]
 version = "1.0.0"

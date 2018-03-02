@@ -33,6 +33,7 @@ unsafe impl Send for RootMoveList {}
 unsafe impl Sync for RootMoveList {}
 
 impl RootMoveList {
+    /// Creates an empty `RootMoveList`.
     #[inline]
     pub fn new() -> Self {
         unsafe {
@@ -43,11 +44,13 @@ impl RootMoveList {
         }
     }
 
+    /// Returns the length of the list.
     #[inline(always)]
     pub fn len(&self) -> usize {
         self.len.load(Ordering::SeqCst)
     }
 
+    /// Replaces the current `RootMoveList` with another `RootMoveList`.
     pub fn clone_from_other(&mut self, other: &RootMoveList) {
         self.len.store(other.len(), Ordering::SeqCst);
         unsafe {
@@ -57,6 +60,7 @@ impl RootMoveList {
         }
     }
 
+    /// Replaces the current `RootMoveList` with the moves inside a `MoveList`.
     pub fn replace(&mut self, moves: &MoveList) {
         self.len.store(moves.len(), Ordering::SeqCst);
         for (i, mov) in moves.iter().enumerate() {
@@ -64,12 +68,18 @@ impl RootMoveList {
         }
     }
 
+    /// Applies `RootMove::rollback()` to each `RootMove` inside.
     #[inline]
     pub fn rollback(&mut self) {
         self.iter_mut()
             .for_each(|b| b.prev_score = b.score);
     }
 
+    /// Returns the first `RootMove` in the list.
+    ///
+    /// # Safety
+    ///
+    /// May return a nonsense `RootMove` if the list hasn't been initalized since the start.
     #[inline]
     pub fn first(&mut self) -> &mut RootMove {
         unsafe {
@@ -77,8 +87,9 @@ impl RootMoveList {
         }
     }
 
+    /// Applied a `Most Valuable Victim - Leave Valuable Attacker` sort to the list.
     #[inline]
-    pub fn mvv_laa_sort(&mut self, board: &Board) {
+    pub fn mvv_lva_sort(&mut self, board: &Board) {
         self.sort_by_key(|root_move| {
             let a = root_move.bit_move;
             let piece = board.piece_at_sq((a).get_src()).unwrap();
@@ -99,20 +110,23 @@ impl RootMoveList {
         });
     }
 
+    /// Shuffles the moves arounf.
     #[inline]
     pub fn shuffle(&mut self, thread_id: usize, board: &Board) {
         if thread_id == 0 || thread_id >= 20 {
-            self.mvv_laa_sort(board);
+            self.mvv_lva_sort(board);
         } else {
             rand::thread_rng().shuffle(self.as_mut());
         }
     }
 
+    /// Converts to a `MoveList`.
     pub fn to_list(&self) -> MoveList {
         let vec =  self.iter().map(|m| m.bit_move).collect::<Vec<BitMove>>();
         MoveList::from(vec)
     }
 
+    /// Returns the previous best score.
     #[inline]
     pub fn prev_best_score(&self) -> i32 {
         unsafe {

@@ -61,9 +61,11 @@
 //! on a `Board` that didn't directly create them, unless it is otherwise known that move
 //! correlates to that specific board position.
 
+use std::fmt;
+use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
+
 use super::*;
 use super::sq::SQ;
-use std::fmt;
 
 // Castles have the src as the king bit and the dst as the rook
 const SRC_MASK: u16 = 0b0000_000000_111111;
@@ -149,6 +151,17 @@ impl BitMove {
     pub const FLAG_DOUBLE_PAWN: u16 = 1;
     pub const FLAG_CAPTURE: u16 = 4;
     pub const FLAG_EP: u16 = 5;
+
+    pub const FLAG_PROMO_N: u16 = 0b1000;
+    pub const FLAG_PROMO_B: u16 = 0b1001;
+    pub const FLAG_PROMO_R: u16 = 0b1010;
+    pub const FLAG_PROMO_Q: u16 = 0b1011;
+
+    pub const FLAG_PROMO_CAP_N: u16 = 0b1100;
+    pub const FLAG_PROMO_CAP_B: u16 = 0b1101;
+    pub const FLAG_PROMO_CAP_R: u16 = 0b1110;
+    pub const FLAG_PROMO_CAP_Q: u16 = 0b1111;
+
     /// Creates a new BitMove from raw bits.
     ///
     /// # Safety
@@ -172,15 +185,21 @@ impl BitMove {
         BitMove::make(BitMove::FLAG_DOUBLE_PAWN,src,dst)
     }
 
-    /// Makes a non-enpassant `BitMove` from a source and destination square.
+    /// Makes a non-enpassant capturing `BitMove` from a source and destination square.
     #[inline(always)]
     pub const fn make_capture(src: SQ, dst: SQ) -> BitMove {
         BitMove::make(BitMove::FLAG_CAPTURE,src,dst)
     }
 
+    /// Makes an enpassant `BitMove` from a source and destination square.
+    #[inline(always)]
+    pub const fn make_ep_capture(src: SQ, dst: SQ) -> BitMove {
+        BitMove::make(BitMove::FLAG_EP,src,dst)
+    }
+
     /// Creates a `BitMove` from a source and destination square, as well as the current
     /// flag.
-    #[inline]
+    #[inline(always)]
     pub const fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
         BitMove { data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6) }
     }
@@ -418,27 +437,27 @@ impl BitMove {
 }
 
 /// A move that stores a score as well
-#[derive(Copy, Clone, Debug)]
+#[derive(Eq, Copy, Clone, Debug)]
 #[repr(C)]
-pub struct ScoringBitMove {
+pub struct ScoringMove {
     pub bit_move: BitMove,
     pub score: i16
 }
 
-impl Default for ScoringBitMove {
+impl Default for ScoringMove {
     #[inline(always)]
     fn default() -> Self {
-        ScoringBitMove {
+        ScoringMove {
             bit_move: BitMove::null(),
             score: 0
         }
     }
 }
 
-impl ScoringBitMove {
+impl ScoringMove {
     #[inline(always)]
     pub fn new(m: BitMove) -> Self {
-        ScoringBitMove {
+        ScoringMove {
             bit_move: m,
             score: 0
         }
@@ -446,8 +465,16 @@ impl ScoringBitMove {
 
     #[inline(always)]
     pub fn new_score(m: BitMove, score: i16) -> Self {
-        ScoringBitMove {
+        ScoringMove {
             bit_move: m,
+            score,
+        }
+    }
+
+    #[inline(always)]
+    pub fn blank(score: i16) -> Self {
+        ScoringMove {
+            bit_move: BitMove::null(),
             score,
         }
     }
@@ -460,6 +487,37 @@ impl ScoringBitMove {
     #[inline(always)]
     pub fn score(&self) -> i16 {
         self.score
+    }
+
+    #[inline(always)]
+    pub fn negate(mut self) -> Self {
+        self.score = self.score.wrapping_neg();
+        self
+    }
+
+    #[inline(always)]
+    pub fn swap_move(mut self, mov: BitMove) -> Self {
+        self.bit_move = mov;
+        self
+    }
+
+}
+
+impl Ord for ScoringMove {
+    fn cmp(&self, other: &ScoringMove) -> Ordering {
+        self.score.cmp(&other.score)
+    }
+}
+
+impl PartialOrd for ScoringMove {
+    fn partial_cmp(&self, other: &ScoringMove) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for ScoringMove {
+    fn eq(&self, other: &ScoringMove) -> bool {
+        self.score == other.score
     }
 }
 

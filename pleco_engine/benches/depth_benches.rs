@@ -65,3 +65,17 @@ fn engine_6_ply(b: &mut Bencher) {
         black_box(s.await_move());
     })
 }
+
+
+#[bench]
+fn engine_7_ply(b: &mut Bencher) {
+    let mut limit = PreLimits::blank();
+    limit.depth = Some(7);
+    let board = Board::default();
+    let mut s = PlecoSearcher::init(false);
+    b.iter(|| {
+        black_box(s.clear_tt());
+        black_box(s.search(&board, &limit));
+        black_box(s.await_move());
+    })
+}

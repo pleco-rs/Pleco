@@ -17,7 +17,7 @@ use std::cmp::{PartialEq,max,min};
 use rand;
 
 use core::piece_move::{BitMove, MoveType};
-use core::move_list::MoveList;
+use core::move_list::{MoveList,ScoringMoveList};
 use core::mono_traits::*;
 use core::masks::*;
 use core::sq::{SQ,NO_SQ};
@@ -529,7 +529,7 @@ impl Board {
         // Create the Board States
         let mut board_s = UniqueArc::new(BoardState {
             castling: castle_bytes,
-            rule_50: rule_50,
+            rule_50,
             ply: 0,
             ep_square: ep_sq,
             psq: Score::ZERO,
@@ -548,7 +548,7 @@ impl Board {
 
         // Create the Board
         let mut b = Board {
-            turn: turn,
+            turn,
             bit_boards: [[BitBoard(0); PIECE_TYPE_CNT]; PLAYER_CNT],
             occ: [BitBoard(0), BitBoard(0)],
             occ_all: BitBoard(0),
@@ -1063,6 +1063,10 @@ impl Board {
         MoveGen::generate::<Legal, AllGenType>(self)
     }
 
+    pub fn generate_scoring_moves(&self) -> ScoringMoveList {
+        MoveGen::generate_scoring::<Legal, AllGenType>(self)
+    }
+
     /// Get a List of all PseudoLegal `BitMove`s for the player whose turn it is to move.
     /// Works exactly the same as `Board::generate_moves()`, but doesn't guarantee that all
     /// the moves are legal for the current position. Moves need to be checked with a
@@ -1134,26 +1138,20 @@ impl Board {
 
         // Set the Pinners and Blockers
         let mut white_pinners: BitBoard = BitBoard(0);
-        // TODO: NLL
-        {
-            board_state.blockers_king[Player::White as usize] = self.slider_blockers(
-                self.occupied_black(),
-                self.king_sq(Player::White),
-                &mut white_pinners,
-            )
-        };
+
+        board_state.blockers_king[Player::White as usize] = self.slider_blockers(
+            self.occupied_black(),
+            self.king_sq(Player::White),
+            &mut white_pinners);
 
         board_state.pinners_king[Player::White as usize] = white_pinners;
 
-        // TODO: NLL
         let mut black_pinners: BitBoard = BitBoard(0);
-        {
-            board_state.blockers_king[Player::Black as usize] = self.slider_blockers(
-                self.occupied_white(),
-                self.king_sq(Player::Black),
-                &mut black_pinners,
-            )
-        };
+
+        board_state.blockers_king[Player::Black as usize] = self.slider_blockers(
+            self.occupied_white(),
+            self.king_sq(Player::Black),
+            &mut black_pinners);
 
         board_state.pinners_king[Player::Black as usize] = black_pinners;
 
@@ -1164,8 +1162,8 @@ impl Board {
         board_state.check_sqs[PieceType::N as usize] = knight_moves(ksq);
         board_state.check_sqs[PieceType::B as usize] = bishop_moves(occupied, ksq);
         board_state.check_sqs[PieceType::R as usize] = rook_moves(occupied, ksq);
-        board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize] |
-            board_state.check_sqs[PieceType::R as usize];
+        board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize]
+            | board_state.check_sqs[PieceType::R as usize];
         board_state.check_sqs[PieceType::K as usize] = BitBoard(0);
     }
 
@@ -1465,6 +1463,11 @@ impl Board {
     pub fn get_occupied(&self) -> BitBoard {
         self.occ_all
     }
+
+
+    /// Returns a if a `SQ` is empty.
+    #[inline(always)]
+    pub fn empty(&self, sq: SQ) -> bool {self.piece_locations.piece_at(sq).is_none()}
 
     /// Get the BitBoard of the squares occupied by the given player.
     ///
@@ -1821,6 +1824,13 @@ impl Board {
         (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
     }
 
+    /// Checks if a move is an advanced pawn push, meaning it passes into enemy territory.
+    #[inline(always)]
+    pub fn advanced_pawn_push(&self, mov: BitMove) -> bool {
+        self.piece_at_sq(mov.get_src()) == Some(PieceType::P)
+            && self.turn().relative_rank_of_sq(mov.get_src()) > Rank::R4
+    }
+
 //  ------- Move Testing -------
 
     /// Tests if a given move is a legal. This is mostly for checking the legality of moves that
@@ -1869,10 +1879,74 @@ impl Board {
             aligned(src, dst, self.king_sq(self.turn))
     }
 
-    #[doc(hidden)]
-    pub fn pseudo_legal_move(&self, _m: BitMove) -> bool {
-        unimplemented!()
-        // TODO: create pseduo-legal-move
+    /// Rakes a random move and tests whether the move is pseudo-legal. Used to validate
+    /// moves from the Transposition Table
+    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
+        let us = self.turn;
+        let them = us.other_player();
+        let from: SQ = m.get_src();
+        let to: SQ = m.get_dest();
+        let to_bb = to.to_bb();
+        let query = self.piece_locations.player_piece_at(from);
+        if query.is_none() {
+            return false;
+        }
+
+        // Use a slower but simpler function for uncommon cases
+        if m.move_type() != MoveType::Normal {
+            return self.generate_pseudolegal_moves().contains(&m);
+        }
+
+        // cannot possibly be a promotion
+        if m.is_promo() {
+            return false;
+        }
+
+        let (player, piece): (Player, PieceType) = query.unwrap();
+
+        if player != us {
+            return false;
+        }
+
+        if (self.get_occupied_player(us) & to_bb).is_not_empty() {
+            return false;
+        }
+
+        if piece == PieceType::P {
+            if to.rank() == us.relative_rank(Rank::R8) {
+                return false;
+            }
+
+            if (pawn_attacks_from(to, us) & self.get_occupied_player(them)  // not a Capture
+                    & to_bb).is_empty()
+                && !(from.0 as i8 + us.pawn_push() == to.0 as i8 && self.empty(to)) // not a single push
+                && !(from.0 as i8 + 2 * us.pawn_push() == to.0 as i8
+                    && from.rank() == us.relative_rank(Rank::R2)
+                    && self.empty(to)
+                    && self.empty(SQ((to.0 as i8 - us.pawn_push()) as u8)))   // Not a double push
+            {
+                return false;
+            }
+        } else if (self.attacks_from(piece, from, us) & to_bb).is_empty() {
+            return false;
+        }
+
+        if self.in_check() {
+            if piece != PieceType::K {
+                if self.checkers().more_than_one()  {
+                    return false;
+                }
+
+                // Our move must be a blocking evasion or a capture of the checking piece
+                if ((between_bb(self.checkers().to_sq(),self.king_sq(us)) | self.checkers()) & to_bb).is_empty() {
+                    return false;
+                }
+            } else if (self.attackers_to(to, self.occ_all ^ from.to_bb())
+                & self.get_occupied_player(them)).is_not_empty() {
+                return false;
+            }
+        }
+        true
     }
 
     /// Returns if a move gives check to the opposing player's King.

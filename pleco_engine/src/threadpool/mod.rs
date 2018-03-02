@@ -235,6 +235,13 @@ impl ThreadPool {
         }
     }
 
+    pub fn clear_all(&mut self) {
+        for thread_ptr in self.threads.iter_mut() {
+            let mut thread: &mut Searcher = unsafe { &mut **(*thread_ptr).get() };
+            thread.clear();
+        }
+    }
+
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
     /// is true.
     pub fn uci_search(&mut self, board: &Board, limits: &Limits) {
