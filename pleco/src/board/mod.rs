@@ -1464,6 +1464,11 @@ impl Board {
         self.occ_all
     }
 
+
+    /// Returns a if a `SQ` is empty.
+    #[inline(always)]
+    pub fn empty(&self, sq: SQ) -> bool {self.piece_locations.piece_at(sq).is_none()}
+
     /// Get the BitBoard of the squares occupied by the given player.
     ///
     /// # Examples
@@ -1874,10 +1879,74 @@ impl Board {
             aligned(src, dst, self.king_sq(self.turn))
     }
 
-    #[doc(hidden)]
-    pub fn pseudo_legal_move(&self, _m: BitMove) -> bool {
-        unimplemented!()
-        // TODO: create pseduo-legal-move
+    /// Rakes a random move and tests whether the move is pseudo-legal. Used to validate
+    /// moves from the Transposition Table
+    pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
+        let us = self.turn;
+        let them = us.other_player();
+        let from: SQ = m.get_src();
+        let to: SQ = m.get_dest();
+        let to_bb = to.to_bb();
+        let query = self.piece_locations.player_piece_at(from);
+        if query.is_none() {
+            return false;
+        }
+
+        // Use a slower but simpler function for uncommon cases
+        if m.move_type() != MoveType::Normal {
+            return self.generate_pseudolegal_moves().contains(&m);
+        }
+
+        // cannot possibly be a promotion
+        if m.is_promo() {
+            return false;
+        }
+
+        let (player, piece): (Player, PieceType) = query.unwrap();
+
+        if player != us {
+            return false;
+        }
+
+        if (self.get_occupied_player(us) & to_bb).is_not_empty() {
+            return false;
+        }
+
+        if piece == PieceType::P {
+            if to.rank() == us.relative_rank(Rank::R8) {
+                return false;
+            }
+
+            if (pawn_attacks_from(to, us) & self.get_occupied_player(them)  // not a Capture
+                    & to_bb).is_empty()
+                && !(from.0 as i8 + us.pawn_push() == to.0 as i8 && self.empty(to)) // not a single push
+                && !(from.0 as i8 + 2 * us.pawn_push() == to.0 as i8
+                    && from.rank() == us.relative_rank(Rank::R2)
+                    && self.empty(to)
+                    && self.empty(SQ((to.0 as i8 - us.pawn_push()) as u8)))   // Not a double push
+            {
+                return false;
+            }
+        } else if (self.attacks_from(piece, from, us) & to_bb).is_empty() {
+            return false;
+        }
+
+        if self.in_check() {
+            if piece != PieceType::K {
+                if self.checkers().more_than_one()  {
+                    return false;
+                }
+
+                // Our move must be a blocking evasion or a capture of the checking piece
+                if ((between_bb(self.checkers().to_sq(),self.king_sq(us)) | self.checkers()) & to_bb).is_empty() {
+                    return false;
+                }
+            } else if (self.attackers_to(to, self.occ_all ^ from.to_bb())
+                & self.get_occupied_player(them)).is_not_empty() {
+                return false;
+            }
+        }
+        true
     }
 
     /// Returns if a move gives check to the opposing player's King.
