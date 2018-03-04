@@ -328,7 +328,7 @@ impl TranspositionTable {
         self.resize(*size);
     }
 
-    // Called each time a new position is searched
+    // Called each time a new position is searched.
     #[inline]
     pub fn new_search(&self) {
         unsafe {
@@ -356,7 +356,7 @@ impl TranspositionTable {
 
     /// Probes the Transposition Table for a specified Key. Returns (true, entry) if either (1) an
     /// Entry corresponding to the current key is found, or an Open Entry slot is found for the key.
-    /// In the case of an open Entry, the entry can be tested for its contents by using [entry.is_empty()].
+    /// In the case of an open Entry, the entry can be tested for its contents by using `Entry::is_empty()`.
     /// If no entry is found && there are no open entries, returns the entry that is is most irrelevent to
     /// the current search, e.g. has the shallowest depth or was found in a previous search.
     ///
@@ -426,6 +426,7 @@ impl TranspositionTable {
                      Layout::array::<Cluster>(*self.cap.get()).unwrap());
     }
 
+    /// Returns the % of the hash table that is full.
     pub fn hash_percent(&self) -> f64 {
         unsafe {
             let clusters_scanned: u64 = max((*self.cap.get() - 1) as u64, 2018);
@@ -447,7 +448,8 @@ impl TranspositionTable {
         }
     }
 
-    /// prefetches a key.
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
+    /// access.
     #[inline(always)]
     pub fn prefetch(&self, key: u64) {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
@@ -467,7 +469,7 @@ impl Drop for TranspositionTable {
     }
 }
 
-
+/// Returns the first entry of a cluster
 #[inline]
 unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
     (*cluster).entry.get_unchecked_mut(0) as *mut Entry

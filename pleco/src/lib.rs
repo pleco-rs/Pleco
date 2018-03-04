@@ -100,6 +100,7 @@ extern crate rayon;
 extern crate prefetch;
 extern crate mucow;
 extern crate test;
+extern crate unreachable;
 
 pub mod core;
 pub mod board;
@@ -111,12 +112,16 @@ pub mod tools;
 #[doc(no_inline)]
 pub use board::Board;
 #[doc(no_inline)]
-pub use core::piece_move::BitMove;
+pub use core::piece_move::{BitMove,ScoringMove};
 #[doc(no_inline)]
-pub use core::move_list::MoveList;
+pub use core::move_list::{MoveList,ScoringMoveList};
 #[doc(no_inline)]
 pub use core::sq::SQ;
 #[doc(no_inline)]
 pub use core::bitboard::BitBoard;
 #[doc(no_inline)]
+pub use helper::Helper;
+#[doc(no_inline)]
 pub use core::{Player, PieceType, Rank, File};
+
+

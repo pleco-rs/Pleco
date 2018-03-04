@@ -11,7 +11,7 @@ use core::mono_traits::*;
 use core::score::Value;
 
 lazy_static! {
-    pub static ref PAWN_POS:   [[i32; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
+    pub static ref PAWN_POS: [[i32; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
 }
 
 const PAWN_POS_ARRAY: [[i32; FILE_CNT]; RANK_CNT] = [
@@ -114,15 +114,12 @@ fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i32 {
 
 fn eval_castling<P: PlayerTrait>(board: &Board) -> i32 {
     let mut score: i32 = 0;
-    if board.has_castled(P::player()) {
-        score += CASTLE_BONUS
-    } else {
-        if board.can_castle(P::player(), CastleType::KingSide) {
-            score += CASTLE_ABILITY
-        }
-        if board.can_castle(P::player(), CastleType::QueenSide) {
-            score += CASTLE_ABILITY
-        }
+
+    if board.can_castle(P::player(), CastleType::KingSide) {
+        score += CASTLE_ABILITY
+    }
+    if board.can_castle(P::player(), CastleType::QueenSide) {
+        score += CASTLE_ABILITY
     }
     score
 }

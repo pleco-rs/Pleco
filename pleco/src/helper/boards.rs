@@ -25,6 +25,7 @@ static mut PASSED_PAWN_MASK: [[u64; 64]; 2] = [[0; 64]; 2];
 
 static mut FORWARD_RANKS_BB: [[u64; PLAYER_CNT]; RANK_CNT] = [[0; PLAYER_CNT]; RANK_CNT];
 
+/// Initialize the static boards.
 #[cold]
 pub fn init_boards() {
     unsafe {

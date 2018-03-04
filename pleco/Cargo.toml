@@ -1,7 +1,7 @@
 [package]
 name = "pleco"
 # REMINDER TO CHANGE IN MAIN README
-version = "0.3.8"
+version = "0.3.9"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast chess library."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -75,6 +75,7 @@ rayon = "1.0.0"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"
 mucow = "0.1.0"
+unreachable = "1.0.0"
 
 [dependencies.lazy_static]
 version = "1.0.0"

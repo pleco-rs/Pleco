@@ -213,7 +213,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
         InnerMoveGen {
             ptr,
             board: chessboard,
-            occ: chessboard.get_occupied(),
+            occ: chessboard.occupied(),
             us_occ: chessboard.get_occupied_player(chessboard.turn()),
             them_occ: chessboard.get_occupied_player(chessboard.turn().other_player()),
         }
@@ -285,14 +285,14 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
         while let Some(from) = disc_check.pop_some_lsb() {
             let piece: PieceType = self.board.piece_at_sq(from).unwrap();
             if piece != PieceType::P {
-                let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.get_occupied();
+                let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.occupied();
                 if piece == PieceType::K {
                     b &= queen_moves(BitBoard(0), self.board.king_sq(P::opp_player()))
                 }
                 self.move_append_from_bb_flag::<L>(&mut b, from, BitMove::FLAG_QUIET);
             }
         }
-        self.generate_all::<L, QuietChecksGenType, P>(!self.board.get_occupied());
+        self.generate_all::<L, QuietChecksGenType, P>(!self.board.occupied());
     }
 
 
@@ -439,7 +439,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 if G::gen_type() == GenTypes::Quiets || G::gen_type() == GenTypes::QuietChecks {
                     target
                 } else {
-                    !self.board.get_occupied()
+                    !self.board.occupied()
                 };
 
             let mut push_one: BitBoard = empty_squares & P::shift_up(pawns_not_rank_7);

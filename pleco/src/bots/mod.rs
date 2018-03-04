@@ -1,7 +1,6 @@
 //! Contains all of the currently completed standard bots/searchers/AIs.
 //!
 //! These are mostly for example purposes, to see how one can create a chess AI.
-//!
 
 extern crate rand;
 
@@ -12,7 +11,7 @@ pub mod jamboree;
 pub mod iterative_parallel_mvv_lva;
 
 use core::piece_move::*;
-use tools::{Searcher,UCILimit};
+use tools::Searcher;
 use board::Board;
 use tools::eval::*;
 use core::score::*;
@@ -34,23 +33,28 @@ pub struct RandomBot {}
 
 /// Searcher that uses a MiniMax algorithm to search for a best move.
 pub struct MiniMaxSearcher {}
+
 /// Searcher that uses a MiniMax algorithm to search for a best move, but does so in parallel.
 pub struct ParallelMiniMaxSearcher {}
+
 /// Searcher that uses an alpha-beta algorithm to search for a best move.
 pub struct AlphaBetaSearcher {}
+
 /// Searcher that uses a modified alpha-beta algorithm to search for a best move, but does so in parallel.
 /// The specific name of this algorithm is called "jamboree".
 pub struct JamboreeSearcher {}
+
 /// Modified `JamboreeSearcher` that uses the parallel alpha-beta algorithm. Improves upon `JamboreeSearcher` by
 /// adding iterative deepening with an aspiration window, MVV-LVA move ordering, as well as a qscience search.
 pub struct IterativeSearcher {}
+
 
 impl Searcher for RandomBot {
     fn name() -> &'static str {
         "Random Searcher"
     }
 
-    fn best_move(board: Board, _limit: UCILimit) -> BitMove {
+    fn best_move(board: Board, _depth: u16) -> BitMove {
         let moves = board.generate_moves();
         moves[rand::random::<usize>() % moves.len()]
     }
@@ -61,11 +65,10 @@ impl Searcher for AlphaBetaSearcher {
         "AlphaBeta Searcher"
     }
 
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
+    fn best_move(board: Board, depth: u16) -> BitMove {
         let alpha = NEG_INF_V;
         let beta = INF_V;
-        alphabeta::alpha_beta_search(&mut board.shallow_clone(), alpha, beta, max_depth)
+        alphabeta::alpha_beta_search(&mut board.shallow_clone(), alpha, beta, depth)
             .bit_move
     }
 }
@@ -75,9 +78,8 @@ impl Searcher for IterativeSearcher {
         "Advanced Searcher"
     }
 
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        iterative_parallel_mvv_lva::iterative_deepening(&mut board.shallow_clone(), max_depth)
+    fn best_move(board: Board, depth: u16) -> BitMove {
+        iterative_parallel_mvv_lva::iterative_deepening(&mut board.shallow_clone(), depth)
     }
 }
 
@@ -86,11 +88,10 @@ impl Searcher for JamboreeSearcher {
         "Jamboree Searcher"
     }
 
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
+    fn best_move(board: Board, depth: u16) -> BitMove {
         let alpha = NEG_INF_V;
         let beta = INF_V;
-        jamboree::jamboree(&mut board.shallow_clone(), alpha, beta, max_depth, 2)
+        jamboree::jamboree(&mut board.shallow_clone(), alpha, beta, depth, 2)
             .bit_move
     }
 }
@@ -100,9 +101,8 @@ impl Searcher for MiniMaxSearcher {
         "Simple Searcher"
     }
 
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        minimax::minimax( &mut board.shallow_clone(),  max_depth).bit_move
+    fn best_move(board: Board, depth: u16) -> BitMove {
+        minimax::minimax( &mut board.shallow_clone(),  depth).bit_move
     }
 }
 
@@ -112,9 +112,8 @@ impl Searcher for ParallelMiniMaxSearcher {
         "Parallel Searcher"
     }
 
-    fn best_move(board: Board, limit: UCILimit) -> BitMove {
-        let max_depth = if limit.is_depth() {limit.depth_limit()} else {MAX_PLY};
-        parallel_minimax::parallel_minimax(&mut board.shallow_clone(),  max_depth)
+    fn best_move(board: Board, depth: u16) -> BitMove {
+        parallel_minimax::parallel_minimax(&mut board.shallow_clone(),  depth)
             .bit_move
     }
 }
@@ -129,17 +128,20 @@ pub fn eval_board(board: &Board) -> ScoringMove {
 mod tests {
     use super::*;
 
+    // We test these, as both algorithms should give the same result no matter if paralleized
+    // or not.
+
     #[test]
     fn minimax_equality() {
         let b = Board::default();
         let b2 = b.shallow_clone();
-        assert_eq!(MiniMaxSearcher::best_move_depth(b, 5), ParallelMiniMaxSearcher::best_move_depth(b2, 5));
+        assert_eq!(MiniMaxSearcher::best_move(b, 5), ParallelMiniMaxSearcher::best_move(b2, 5));
     }
 
     #[test]
     fn alpha_equality() {
         let b = Board::default();
         let b2 = b.shallow_clone();
-        assert_eq!(AlphaBetaSearcher::best_move_depth(b, 5), JamboreeSearcher::best_move_depth(b2, 5));
+        assert_eq!(AlphaBetaSearcher::best_move(b, 5), JamboreeSearcher::best_move(b2, 5));
     }
 }

@@ -15,6 +15,7 @@ use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 use rand;
+use unreachable::UncheckedOptionExt;
 
 use core::piece_move::{BitMove, MoveType};
 use core::move_list::{MoveList,ScoringMoveList};
@@ -348,7 +349,7 @@ impl Board {
         // the Boards' PieceLocations accordingly.
         for square in 0..SQ_CNT as u8 {
             let bb = SQ(square).to_bb();
-            if (bb & self.get_occupied()).is_not_empty() {
+            if (bb & self.occupied()).is_not_empty() {
                 let player = if (bb & self.occupied_black()).is_empty() {
                     Player::White
                 } else {
@@ -727,7 +728,7 @@ impl Board {
             };
 
             // Sanity checks
-            assert_eq!(self.color_of_sq(from).unwrap(), us);
+            assert_eq!(self.player_at_sq(from).unwrap(), us);
 
             if bit_move.is_castle() {
 
@@ -745,7 +746,6 @@ impl Board {
                 zob ^= z_square(r_src, us, PieceType::R)
                         ^ z_square(r_dst, us, PieceType::R);
                 new_state.captured_piece = None;
-                new_state.castling.set_castling(us);
             } else if let Some(cap_p) = captured {
                 let mut cap_sq: SQ = to;
                 if cap_p == PieceType::P {
@@ -832,7 +832,7 @@ impl Board {
             new_state.material_key = material_key;
 
             new_state.checkers_bb = if gives_check {
-                self.attackers_to(self.king_sq(them), self.get_occupied()) &
+                self.attackers_to(self.king_sq(them), self.occupied()) &
                     self.get_occupied_player(us)
             } else {
                 BitBoard(0)
@@ -927,9 +927,7 @@ impl Board {
             self.remove_castling(us, from, to);
         } else {
             self.move_piece_c(piece_on.unwrap(), to, from, us);
-            let cap_piece = self.state.captured_piece;
-
-            if cap_piece.is_some() {
+            if let Some(cap_piece) = self.state.captured_piece {
                 let mut cap_sq: SQ = to;
                 if undo_move.is_en_passant() {
                     match us {
@@ -937,7 +935,7 @@ impl Board {
                         Player::Black => cap_sq += SQ(8),
                     };
                 }
-                self.put_piece_c(cap_piece.unwrap(), cap_sq, us.other_player());
+                self.put_piece_c(cap_piece, cap_sq, us.other_player());
             }
         }
         self.state = self.state.get_prev().unwrap();
@@ -1063,6 +1061,11 @@ impl Board {
         MoveGen::generate::<Legal, AllGenType>(self)
     }
 
+    /// Get a List of legal `BitMove`s (alongside a score) for the player whose turn it is to move.
+    ///
+    /// This method already takes into account if the Board is currently in check, and will return
+    /// legal moves only. The `ScoringMoveList` that is returned will have a value of zero for each
+    /// move.
     pub fn generate_scoring_moves(&self) -> ScoringMoveList {
         MoveGen::generate_scoring::<Legal, AllGenType>(self)
     }
@@ -1156,7 +1159,7 @@ impl Board {
         board_state.pinners_king[Player::Black as usize] = black_pinners;
 
         let ksq: SQ = self.king_sq(self.turn.other_player());
-        let occupied = self.get_occupied();
+        let occupied = self.occupied();
 
         board_state.check_sqs[PieceType::P as usize] = pawn_attacks_from(ksq, self.turn.other_player());
         board_state.check_sqs[PieceType::N as usize] = knight_moves(ksq);
@@ -1175,7 +1178,7 @@ impl Board {
     ///
     /// Panics if there is not piece at the given square.
     fn remove_piece(&mut self, piece: PieceType, square: SQ) {
-        let player = self.color_of_sq(square).unwrap();
+        let player = unsafe {self.piece_locations.unchecked_player_at(square)};
         self.remove_piece_c(piece, square, player);
     }
 
@@ -1186,7 +1189,7 @@ impl Board {
     ///
     /// Panics if there is not piece at the given square.
     fn move_piece(&mut self, piece: PieceType, from: SQ, to: SQ) {
-        let player = self.color_of_sq(from).unwrap();
+        let player = unsafe {self.piece_locations.unchecked_player_at(from)};
         self.move_piece_c(piece, from, to, player);
     }
 
@@ -1213,7 +1216,7 @@ impl Board {
     ///
     /// Panics if there is a piece at the given square.
     fn remove_piece_c(&mut self, piece: PieceType, square: SQ, player: Player) {
-        assert_eq!(self.piece_at_sq(square).unwrap(), piece);
+        debug_assert_eq!(self.piece_at_sq(square).unwrap(), piece);
         let bb = square.to_bb();
         self.occ_all ^= bb;
         self.occ[player as usize] ^= bb;
@@ -1292,11 +1295,11 @@ impl Board {
         self.move_piece_c(PieceType::R, r_dst, r_src, player);
     }
 
-    /// Helper function to that outputs the Blockers of a given square
+    /// Helper function that outputs the Blockers of a given square.
     pub fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
         let mut result: BitBoard = BitBoard(0);
         *pinners = BitBoard(0);
-        let occupied: BitBoard = self.get_occupied();
+        let occupied: BitBoard = self.occupied();
 
         let mut snipers: BitBoard = sliders &
             ((rook_moves(BitBoard(0), s) &
@@ -1309,7 +1312,8 @@ impl Board {
             let b: BitBoard = between_bb(s, sniper_sq) & occupied;
             if !b.more_than_one() {
                 result |= b;
-                let other_occ = self.get_occupied_player(self.player_at_sq(s).unwrap());
+                let player_at = unsafe {self.piece_locations.unchecked_player_at(s)};
+                let other_occ = self.get_occupied_player(player_at);
                 if (b & other_occ).is_not_empty() {
                     *pinners |= sniper_sq.to_bb();
                 }
@@ -1326,7 +1330,7 @@ impl Board {
         let mut zob: u64 = 0;
         let mut pawn_key: u64 = 0;
         let mut psq_s: Score = Score::ZERO;
-        let mut b: BitBoard = self.get_occupied();
+        let mut b: BitBoard = self.occupied();
         while let Some(sq) = b.pop_some_lsb() {
             let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
             psq_s += psq(piece,player,sq);
@@ -1353,11 +1357,7 @@ impl Board {
         state.pawn_key = pawn_key;
         state.psq = psq_s;
     }
-}
 
-// General information
-
-impl Board {
     /// Get the Player whose turn it is to move.
     ///
     /// # Examples
@@ -1441,9 +1441,22 @@ impl Board {
         self.state.psq
     }
 
-    /// Get the current square of en_passant.
+    /// Get the current square of en-passant. This is defined not as the pawn that could be
+    /// captured from an en-passant move, but rather the square directly behind it.
     ///
-    /// If the current en-passant square is none, it should return 64.
+    /// # Safety
+    ///
+    /// While it returns a `SQ`, this square could be `SQ::NONE`, meaning there is no actual
+    /// en-passant square.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Board,SQ};
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.ep_square(), SQ::NONE);
+    /// ```
     #[inline(always)]
     pub fn ep_square(&self) -> SQ {
         self.state.ep_square
@@ -1457,15 +1470,25 @@ impl Board {
     /// use pleco::{Board,BitBoard};
     ///
     /// let chessboard = Board::default();
-    /// assert_eq!(chessboard.get_occupied().0, 0xFFFF00000000FFFF);
+    /// assert_eq!(chessboard.occupied().0, 0xFFFF00000000FFFF);
     /// ```
     #[inline(always)]
-    pub fn get_occupied(&self) -> BitBoard {
+    pub fn occupied(&self) -> BitBoard {
         self.occ_all
     }
 
 
-    /// Returns a if a `SQ` is empty.
+    /// Returns a if a `SQ` is empty on the current `Board`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Board,SQ};
+    ///
+    /// let chessboard = Board::default();
+    /// assert!(chessboard.empty(SQ::F6));
+    /// assert!(!chessboard.empty(SQ::A2));
+    /// ```
     #[inline(always)]
     pub fn empty(&self, sq: SQ) -> bool {self.piece_locations.piece_at(sq).is_none()}
 
@@ -1485,12 +1508,30 @@ impl Board {
     }
 
     /// Returns a Bitboard consisting of only the squares occupied by the White Player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Board,BitBoard};
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.occupied_white(), BitBoard::RANK_1 | BitBoard::RANK_2);
+    /// ```
     #[inline(always)]
     pub fn occupied_white(&self) -> BitBoard {
         self.occ[Player::White as usize]
     }
 
     /// Returns a BitBoard consisting of only the squares occupied by the Black Player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Board,BitBoard};
+    ///
+    /// let chessboard = Board::default();
+    /// assert_eq!(chessboard.occupied_black(), BitBoard::RANK_8 | BitBoard::RANK_7);
+    /// ```
     #[inline(always)]
     pub fn occupied_black(&self) -> BitBoard {
         self.occ[Player::Black as usize]
@@ -1611,7 +1652,7 @@ impl Board {
     /// assert_eq!(chessboard.count_pieces_player(Player::White), 16);
     /// ```
     pub fn count_pieces_player(&self, player: Player) -> u8 {
-        self.piece_counts[player as usize].iter().sum()
+        self.occ[player as usize].count_bits()
     }
 
     /// Get the total number of pieces on the board.
@@ -1637,28 +1678,41 @@ impl Board {
     /// Panics if the square is not a legal square.
     #[inline]
     pub fn piece_at_sq(&self, sq: SQ) -> Option<PieceType> {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         self.piece_locations.piece_at(sq)
     }
 
-    /// Returns the Player, if any, occupying a square.
+    /// Returns the player, if any, at the square.
     ///
     /// # Panics
     ///
     /// Panics if the square is not a legal square.
-    #[inline]
-    pub fn color_of_sq(&self, sq: SQ) -> Option<Player> {
-        assert!(sq.is_okay());
-        self.piece_locations.player_at(sq)
-    }
-
-    /// Returns the player, if any, at the square.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Board,Player,SQ};
+    ///
+    /// let board = Board::default();
+    /// assert_eq!(board.player_at_sq(SQ::G8), Some(Player::Black));
+    /// assert_eq!(board.player_at_sq(SQ::E3), None);
+    /// ```
     #[inline(always)]
     pub fn player_at_sq(&self, s: SQ) -> Option<Player> {
+        debug_assert!(s.is_okay());
         self.piece_locations.player_at(s)
     }
 
     /// Returns the square of the King for a given player.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Board,Player,SQ};
+    ///
+    /// let board = Board::default();
+    /// assert_eq!(board.king_sq(Player::White), SQ::E1);
+    /// ```
     #[inline(always)]
     pub fn king_sq(&self, player: Player) -> SQ {
         (self.bit_boards[player as usize][PieceType::K as usize]).to_sq()
@@ -1680,7 +1734,8 @@ impl Board {
     }
 
     /// Returns the pinning pieces of a given player.
-    /// e.g, pieces that are pinning a piece to the opponent's king. This will return the pinned
+    ///
+    /// E.g., pieces that are pinning a piece to the opponent's king. This will return the pinned
     /// pieces of both players, pinned to the given player's king.
     #[inline(always)]
     pub fn pinning_pieces(&self, player: Player) -> BitBoard {
@@ -1695,6 +1750,8 @@ impl Board {
         self.state.castling.castle_rights(player, castle_type)
     }
 
+    /// Returns the `Castling` structure of a player, which marks whether or not
+    /// a player has the rights to castle.
     #[inline(always)]
     pub fn player_can_castle(&self, player: Player) -> Castling {
         self.state.castling.player_can_castle(player)
@@ -1723,12 +1780,6 @@ impl Board {
         } else {
             Some(self.state.prev_move)
         }
-    }
-
-    /// Returns if the current player has castled ever.
-    #[inline]
-    pub fn has_castled(&self, player: Player) -> bool {
-        self.state.castling.has_castled(player)
     }
 
     /// Returns if the piece (if any) that was captured last move. This method does not
@@ -1833,9 +1884,9 @@ impl Board {
 
 //  ------- Move Testing -------
 
-    /// Tests if a given move is a legal. This is mostly for checking the legality of moves that
-    /// were generated in a pseudo-legal fashion. Generating moves like this is faster, but doesn't
-    /// guarantee legality due to the possibility of a discovered check happening.
+    /// Tests if a given pseudo-legal move is a legal. This is mostly for checking the legality of
+    /// moves that were generated in a pseudo-legal fashion. Generating moves like this is faster,
+    /// but doesn't guarantee legality due to the possibility of a discovered check happening.
     ///
     /// # Safety
     ///
@@ -1854,7 +1905,7 @@ impl Board {
             let k_sq: SQ = self.king_sq(self.turn);
             let dst_bb: BitBoard = dst.to_bb();
             let captured_sq: SQ = SQ((dst.0 as i8).wrapping_sub(self.turn.pawn_push()) as u8);
-            let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) |
+            let occupied: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) |
                 dst_bb;
 
             return (rook_moves(occupied, k_sq) &
@@ -1864,15 +1915,15 @@ impl Board {
 
         // If Moving the king, check if the square moved to is not being attacked
         // Castles are checked during move gen for check, so we're good there.
-        let piece = self.piece_at_sq(src);
-        if piece.is_none() {
+        if let Some(piece) = self.piece_at_sq(src) {
+            if piece == PieceType::K {
+                return m.move_type() == MoveType::Castle ||
+                    (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
+            }
+        } else {
             return false;
         }
 
-        if piece.unwrap() == PieceType::K {
-            return m.move_type() == MoveType::Castle ||
-                (self.attackers_to(dst, self.get_occupied()) & self.get_occupied_player(them)).is_empty();
-        }
 
         // Making sure not moving a pinned piece
         (self.pinned_pieces(self.turn) & src_bb).is_empty() ||
@@ -1880,7 +1931,13 @@ impl Board {
     }
 
     /// Rakes a random move and tests whether the move is pseudo-legal. Used to validate
-    /// moves from the Transposition Table
+    /// moves from the Transposition Table.
+    ///
+    /// # Safety
+    ///
+    /// Using this method does not guarantee that a move is legal. It only guarantee's that
+    /// a move may possibly legal. To guarantee a move is completely legal for the position,
+    /// use `Board::pseudo_legal_move()` followed by a `Board::legal_move()`.
     pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
         let us = self.turn;
         let them = us.other_player();
@@ -1902,7 +1959,7 @@ impl Board {
             return false;
         }
 
-        let (player, piece): (Player, PieceType) = query.unwrap();
+        let (player, piece): (Player, PieceType) = unsafe {query.unchecked_unwrap()};
 
         if player != us {
             return false;
@@ -1964,7 +2021,7 @@ impl Board {
 
         // Stupidity Checks
         assert_ne!(src, dst);
-        assert_eq!(self.color_of_sq(src).unwrap(), self.turn);
+        assert_eq!(self.player_at_sq(src).unwrap(), self.turn);
 
         // Searches for direct checks from the pre-computed array
         if (self.state.check_sqs[self.piece_at_sq(src).unwrap() as usize] & dst_bb).is_not_empty()  {
@@ -1984,13 +2041,13 @@ impl Board {
                 let attacks_bb = match m.promo_piece() {
                     PieceType::N => knight_moves(dst),
                     PieceType::B => {
-                        bishop_moves(self.get_occupied() ^ src_bb, dst)
+                        bishop_moves(self.occupied() ^ src_bb, dst)
                     }
                     PieceType::R => {
-                        rook_moves(self.get_occupied() ^ src_bb, dst)
+                        rook_moves(self.occupied() ^ src_bb, dst)
                     }
                     PieceType::Q => {
-                        queen_moves(self.get_occupied() ^ src_bb, dst)
+                        queen_moves(self.occupied() ^ src_bb, dst)
                     }
                     _ => unreachable!(),
                 };
@@ -1999,7 +2056,7 @@ impl Board {
             MoveType::EnPassant => {
                 // Check for indirect check from the removal of the captured pawn
                 let captured_sq: SQ = SQ::make(dst.file(), src.rank());
-                let b: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
+                let b: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
 
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
@@ -2017,7 +2074,7 @@ impl Board {
 
                 let opp_k_bb = opp_king_sq.to_bb();
                 (rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty()
-                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.get_occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to, ) & opp_k_bb).is_not_empty()
+                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to, ) & opp_k_bb).is_not_empty()
             }
         }
     }
@@ -2027,7 +2084,7 @@ impl Board {
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
-    #[inline]
+    #[inline(always)]
     pub fn moved_piece(&self, m: BitMove) -> PieceType {
         let src = m.get_src();
         self.piece_at_sq(src).unwrap() // panics if no piece here :)
@@ -2038,7 +2095,7 @@ impl Board {
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
-    #[inline]
+    #[inline(always)]
     pub fn captured_piece(&self, m: BitMove) -> Option<PieceType> {
         if m.is_en_passant() {
             return Some(PieceType::P);
@@ -2371,13 +2428,13 @@ impl RandBoard {
             let moves = board.generate_moves();
             moves[self.random() % moves.len()]
         } else if self.random() % 5 == 0 {
-            JamboreeSearcher::best_move_depth(board.shallow_clone(),2)
+            JamboreeSearcher::best_move(board.shallow_clone(),2)
         } else if self.random() % 3 == 0 {
-            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+            JamboreeSearcher::best_move(board.shallow_clone(),3)
         } else if !favorable && self.random() % 4 < 3 {
-            JamboreeSearcher::best_move_depth(board.shallow_clone(),3)
+            JamboreeSearcher::best_move(board.shallow_clone(),3)
         } else {
-            IterativeSearcher::best_move_depth(board.shallow_clone(),4)
+            IterativeSearcher::best_move(board.shallow_clone(),4)
         };
         board.apply_move(best_move);
     }

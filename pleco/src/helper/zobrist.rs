@@ -18,6 +18,7 @@ static mut ZOBRIST_CASTLE: [u64; ALL_CASTLING_RIGHTS] =[0; ALL_CASTLING_RIGHTS];
 /// Zobrist key for the side to move.
 static mut ZOBRIST_SIDE: u64 = 0; // 8
 
+/// initialize the zobrist hash
 #[cold]
 pub fn init_zobrist() {
     let mut rng = PRNG::init(ZOBRIST_SEED);
