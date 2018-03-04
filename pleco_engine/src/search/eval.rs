@@ -383,7 +383,7 @@ impl <'a> Evaluation <'a> {
 
         // Find our pawns on the first two ranks, and those which are blocked
         let mut b: BitBoard = self.board.piece_bb(us, PieceType::P)
-            & P::shift_down(self.board.get_occupied() | low_ranks);
+            & P::shift_down(self.board.occupied() | low_ranks);
 
         self.mobility_area[us as usize] = !(b | self.board.piece_bb(us, PieceType::K)
                 | self.pawn_entry.pawn_attacks(us));
@@ -426,10 +426,10 @@ impl <'a> Evaluation <'a> {
 
         while let Some((s, bits)) = ps1.pop_some_lsb_and_bit() {
             b = if piece == PieceType::B {
-                let o: BitBoard = self.board.get_occupied() ^ self.board.piece_bb_both_players(PieceType::Q);
+                let o: BitBoard = self.board.occupied() ^ self.board.piece_bb_both_players(PieceType::Q);
                 bishop_moves(o,s)
             } else if piece == PieceType::R {
-                let o: BitBoard = self.board.get_occupied() ^ self.board.piece_bb_both_players(PieceType::Q);
+                let o: BitBoard = self.board.occupied() ^ self.board.piece_bb_both_players(PieceType::Q);
                 rook_moves(o,s)
             } else {
                 self.board.attacks_from(piece, s, us)
@@ -538,8 +538,8 @@ impl <'a> Evaluation <'a> {
             safe_b &= !self.attacked_by_all[us as usize] | (weak * self.attacked_by2[them as usize]);
 
             let us_queen: BitBoard = self.board.piece_bb(us, PieceType::Q);
-            b1 = rook_moves(self.board.get_occupied() ^ us_queen, ksq_us);
-            b2 = bishop_moves(self.board.get_occupied() ^ us_queen, ksq_us);
+            b1 = rook_moves(self.board.occupied() ^ us_queen, ksq_us);
+            b2 = bishop_moves(self.board.occupied() ^ us_queen, ksq_us);
 
             // Enemy queen safe checks
             if ((b1 | b2) & self.attacked_by[them as usize][PieceType::Q as usize] & safe_b
@@ -683,8 +683,8 @@ impl <'a> Evaluation <'a> {
         }
 
         // Find squares where our pawns can push on the next move
-        b  = P::shift_up(self.board.piece_bb(them, PieceType::P)) & ! self.board.get_occupied();
-        b |= P::shift_up(b & t_rank_3_bb) & ! self.board.get_occupied();
+        b  = P::shift_up(self.board.piece_bb(them, PieceType::P)) & ! self.board.occupied();
+        b |= P::shift_up(b & t_rank_3_bb) & ! self.board.occupied();
 
         // Add a bonus for each new pawn threats from those squares
         b = (P::shift_up_left(b) | P::shift_up_right(b))
@@ -750,7 +750,7 @@ impl <'a> Evaluation <'a> {
                     squares_to_queen = forward_file_bb(us, s);
 
                     bb = self.board.piece_two_bb_both_players(PieceType::R, PieceType::Q)
-                        & rook_moves(self.board.get_occupied(),s)  & forward_file_bb(them, s);
+                        & rook_moves(self.board.occupied(), s)  & forward_file_bb(them, s);
 
                     if (self.board.get_occupied_player(us) & bb).is_empty() {
                         defended_squares &= self.attacked_by_all[us as usize];

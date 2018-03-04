@@ -63,7 +63,7 @@ fn bench_apply_100_move(b: &mut Bencher) {
         black_box({
             for t in board_move.iter_mut() {
                 let board: &mut Board = &mut (t.0);
-                black_box(black_box(board.parallel_clone()).apply_move(t.1));
+                black_box(black_box(board.clone()).apply_move(t.1));
             }
         })
     })

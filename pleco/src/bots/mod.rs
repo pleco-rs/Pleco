@@ -1,7 +1,6 @@
 //! Contains all of the currently completed standard bots/searchers/AIs.
 //!
 //! These are mostly for example purposes, to see how one can create a chess AI.
-//!
 
 extern crate rand;
 
@@ -34,16 +33,21 @@ pub struct RandomBot {}
 
 /// Searcher that uses a MiniMax algorithm to search for a best move.
 pub struct MiniMaxSearcher {}
+
 /// Searcher that uses a MiniMax algorithm to search for a best move, but does so in parallel.
 pub struct ParallelMiniMaxSearcher {}
+
 /// Searcher that uses an alpha-beta algorithm to search for a best move.
 pub struct AlphaBetaSearcher {}
+
 /// Searcher that uses a modified alpha-beta algorithm to search for a best move, but does so in parallel.
 /// The specific name of this algorithm is called "jamboree".
 pub struct JamboreeSearcher {}
+
 /// Modified `JamboreeSearcher` that uses the parallel alpha-beta algorithm. Improves upon `JamboreeSearcher` by
 /// adding iterative deepening with an aspiration window, MVV-LVA move ordering, as well as a qscience search.
 pub struct IterativeSearcher {}
+
 
 impl Searcher for RandomBot {
     fn name() -> &'static str {
@@ -123,6 +127,9 @@ pub fn eval_board(board: &Board) -> ScoringMove {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // We test these, as both algorithms should give the same result no matter if paralleized
+    // or not.
 
     #[test]
     fn minimax_equality() {

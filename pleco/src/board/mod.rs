@@ -349,7 +349,7 @@ impl Board {
         // the Boards' PieceLocations accordingly.
         for square in 0..SQ_CNT as u8 {
             let bb = SQ(square).to_bb();
-            if (bb & self.get_occupied()).is_not_empty() {
+            if (bb & self.occupied()).is_not_empty() {
                 let player = if (bb & self.occupied_black()).is_empty() {
                     Player::White
                 } else {
@@ -832,7 +832,7 @@ impl Board {
             new_state.material_key = material_key;
 
             new_state.checkers_bb = if gives_check {
-                self.attackers_to(self.king_sq(them), self.get_occupied()) &
+                self.attackers_to(self.king_sq(them), self.occupied()) &
                     self.get_occupied_player(us)
             } else {
                 BitBoard(0)
@@ -1159,7 +1159,7 @@ impl Board {
         board_state.pinners_king[Player::Black as usize] = black_pinners;
 
         let ksq: SQ = self.king_sq(self.turn.other_player());
-        let occupied = self.get_occupied();
+        let occupied = self.occupied();
 
         board_state.check_sqs[PieceType::P as usize] = pawn_attacks_from(ksq, self.turn.other_player());
         board_state.check_sqs[PieceType::N as usize] = knight_moves(ksq);
@@ -1299,7 +1299,7 @@ impl Board {
     pub fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
         let mut result: BitBoard = BitBoard(0);
         *pinners = BitBoard(0);
-        let occupied: BitBoard = self.get_occupied();
+        let occupied: BitBoard = self.occupied();
 
         let mut snipers: BitBoard = sliders &
             ((rook_moves(BitBoard(0), s) &
@@ -1330,7 +1330,7 @@ impl Board {
         let mut zob: u64 = 0;
         let mut pawn_key: u64 = 0;
         let mut psq_s: Score = Score::ZERO;
-        let mut b: BitBoard = self.get_occupied();
+        let mut b: BitBoard = self.occupied();
         while let Some(sq) = b.pop_some_lsb() {
             let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
             psq_s += psq(piece,player,sq);
@@ -1357,11 +1357,7 @@ impl Board {
         state.pawn_key = pawn_key;
         state.psq = psq_s;
     }
-}
 
-// General information
-
-impl Board {
     /// Get the Player whose turn it is to move.
     ///
     /// # Examples
@@ -1474,10 +1470,10 @@ impl Board {
     /// use pleco::{Board,BitBoard};
     ///
     /// let chessboard = Board::default();
-    /// assert_eq!(chessboard.get_occupied().0, 0xFFFF00000000FFFF);
+    /// assert_eq!(chessboard.occupied().0, 0xFFFF00000000FFFF);
     /// ```
     #[inline(always)]
-    pub fn get_occupied(&self) -> BitBoard {
+    pub fn occupied(&self) -> BitBoard {
         self.occ_all
     }
 
@@ -1656,7 +1652,7 @@ impl Board {
     /// assert_eq!(chessboard.count_pieces_player(Player::White), 16);
     /// ```
     pub fn count_pieces_player(&self, player: Player) -> u8 {
-        self.piece_counts[player as usize].iter().sum()
+        self.occ[player as usize].count_bits()
     }
 
     /// Get the total number of pieces on the board.
@@ -1909,7 +1905,7 @@ impl Board {
             let k_sq: SQ = self.king_sq(self.turn);
             let dst_bb: BitBoard = dst.to_bb();
             let captured_sq: SQ = SQ((dst.0 as i8).wrapping_sub(self.turn.pawn_push()) as u8);
-            let occupied: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) |
+            let occupied: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) |
                 dst_bb;
 
             return (rook_moves(occupied, k_sq) &
@@ -1922,7 +1918,7 @@ impl Board {
         if let Some(piece) = self.piece_at_sq(src) {
             if piece == PieceType::K {
                 return m.move_type() == MoveType::Castle ||
-                    (self.attackers_to(dst, self.get_occupied()) & self.get_occupied_player(them)).is_empty();
+                    (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
             }
         } else {
             return false;
@@ -1935,7 +1931,13 @@ impl Board {
     }
 
     /// Rakes a random move and tests whether the move is pseudo-legal. Used to validate
-    /// moves from the Transposition Table
+    /// moves from the Transposition Table.
+    ///
+    /// # Safety
+    ///
+    /// Using this method does not guarantee that a move is legal. It only guarantee's that
+    /// a move may possibly legal. To guarantee a move is completely legal for the position,
+    /// use `Board::pseudo_legal_move()` followed by a `Board::legal_move()`.
     pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
         let us = self.turn;
         let them = us.other_player();
@@ -2039,13 +2041,13 @@ impl Board {
                 let attacks_bb = match m.promo_piece() {
                     PieceType::N => knight_moves(dst),
                     PieceType::B => {
-                        bishop_moves(self.get_occupied() ^ src_bb, dst)
+                        bishop_moves(self.occupied() ^ src_bb, dst)
                     }
                     PieceType::R => {
-                        rook_moves(self.get_occupied() ^ src_bb, dst)
+                        rook_moves(self.occupied() ^ src_bb, dst)
                     }
                     PieceType::Q => {
-                        queen_moves(self.get_occupied() ^ src_bb, dst)
+                        queen_moves(self.occupied() ^ src_bb, dst)
                     }
                     _ => unreachable!(),
                 };
@@ -2054,7 +2056,7 @@ impl Board {
             MoveType::EnPassant => {
                 // Check for indirect check from the removal of the captured pawn
                 let captured_sq: SQ = SQ::make(dst.file(), src.rank());
-                let b: BitBoard = (self.get_occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
+                let b: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
 
                 let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
                 let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
@@ -2072,7 +2074,7 @@ impl Board {
 
                 let opp_k_bb = opp_king_sq.to_bb();
                 (rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty()
-                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.get_occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to, ) & opp_k_bb).is_not_empty()
+                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to, ) & opp_k_bb).is_not_empty()
             }
         }
     }
@@ -2082,7 +2084,7 @@ impl Board {
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
-    #[inline]
+    #[inline(always)]
     pub fn moved_piece(&self, m: BitMove) -> PieceType {
         let src = m.get_src();
         self.piece_at_sq(src).unwrap() // panics if no piece here :)
@@ -2093,7 +2095,7 @@ impl Board {
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
-    #[inline]
+    #[inline(always)]
     pub fn captured_piece(&self, m: BitMove) -> Option<PieceType> {
         if m.is_en_passant() {
             return Some(PieceType::P);

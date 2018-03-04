@@ -7,8 +7,10 @@
 //! It is highly recommended to go through a `Helper` to access these tables, as the access will
 //! guarantee that the tables are initialized in the first place.
 //!
-//! If you want the same functions, but can ensure the Tables are initalized, see `helper::prelude`
+//! If you want the same functions, but can ensure the Tables are initalized, see [`helper::prelude`]
 //! for those raw functions.
+//!
+//! [`helper::prelude`]: prelude/index.html
 
 mod magic;
 mod boards;
@@ -37,6 +39,12 @@ impl Default for Helper {
 }
 
 impl Helper {
+    /// Creates a new `Helper` Object, automatically initializing all the needed tables.
+    ///
+    /// Calling this method multiple times does not waste time computing the static variables if
+    /// already initialized. [`init_statics`] also does the same thing as well.
+    ///
+    /// [`init_statics`]: prelude/fn.init_statics.html
     pub fn new() -> Self {
         prelude::init_statics();
         Helper {}

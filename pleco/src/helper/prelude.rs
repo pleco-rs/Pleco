@@ -44,18 +44,27 @@ pub fn init_statics() {
 
 // MAGIC FUNCTIONS
 
+/// Generate Bishop Moves `BitBoard` from a bishop square and all occupied squares on the board.
+/// This function will return captures to pieces on both sides. The resulting `BitBoard` must be
+/// AND'd with the inverse of the intending moving player's pieces.
 #[inline(always)]
 pub fn bishop_moves(occupied: BitBoard, sq: SQ) -> BitBoard {
     debug_assert!(sq.is_okay());
     BitBoard(magic::bishop_attacks(occupied.0, sq.0))
 }
 
+/// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
+/// This function will return captures to pieces on both sides. The resulting `BitBoard` must be
+/// AND'd with the inverse of the intending moving player's pieces.
 #[inline(always)]
 pub fn rook_moves(occupied: BitBoard, sq: SQ) -> BitBoard {
     debug_assert!(sq.is_okay());
     BitBoard(magic::rook_attacks(occupied.0, sq.0))
 }
 
+/// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
+/// This function will return captures to pieces on both sides. The resulting `BitBoard` must be
+/// AND'd with the inverse of the intending moving player's pieces.
 #[inline(always)]
 pub fn queen_moves(occupied: BitBoard, sq: SQ) -> BitBoard {
     debug_assert!(sq.is_okay());
@@ -65,11 +74,13 @@ pub fn queen_moves(occupied: BitBoard, sq: SQ) -> BitBoard {
 
 // BOARD FUNCTIONS
 
+/// Generate Knight Moves `BitBoard` from a source square.
 #[inline(always)]
 pub fn knight_moves(sq: SQ) -> BitBoard {
     BitBoard(boards::knight_moves(sq))
 }
 
+/// Generate King Moves `BitBoard` from a source square.
 #[inline(always)]
 pub fn king_moves(sq: SQ) -> BitBoard {
     BitBoard(boards::king_moves(sq))
@@ -171,11 +182,13 @@ pub fn passed_pawn_mask(player: Player, sq: SQ) -> BitBoard {
 
 // ZOBRIST FUNCTIONS
 
+/// Returns the Zobrist hash for a given square, and player / piece at that square.
 #[inline(always)]
 pub fn z_square(sq: SQ, player: Player, piece: PieceType) -> u64 {
     zobrist::z_square(sq, player, piece)
 }
 
+/// Returns the zobrist hash for a given zobrist square.
 #[inline(always)]
 pub fn z_ep(sq: SQ) -> u64 {
     zobrist::z_ep(sq)
