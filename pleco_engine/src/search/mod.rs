@@ -484,14 +484,17 @@ impl Searcher {
                                self.tt.time_age());
             }
 
-            // Razoring
+            // Razoring. At the lowest depth before qsearch, If the evaluation + a margin still
+            // isn't better than alpha, go straight to qsearch.
             if !is_pv
                 && depth <= 1
                 && pos_eval + RAZORING_MARGIN <= alpha {
                 return self.qsearch::<NonPV, NoCheck>(alpha, alpha+1, ss, 0);
             }
 
-            // Futility Pruning
+            // Futility Pruning. Disregard moves that have little chance of raising the callee's
+            // alpha value. Rather, return the position evaluation as an estimate for the current
+            // move's strenth
             if !at_root
                 && depth < 7
                 && pos_eval - futility_margin(depth) >= beta
@@ -697,11 +700,15 @@ impl Searcher {
             }
         }
 
-        let moves: MoveList = if in_check {
+        let mut moves: MoveList = if in_check {
             self.board.generate_pseudolegal_moves_of_type(GenTypes::Evasions)
         } else {
             self.board.generate_pseudolegal_moves_of_type(GenTypes::Captures)
         };
+
+        if !in_check {
+            mvv_lva_sort(&mut moves, &self.board);
+        }
 
         for  mov in moves.iter() {
             if self.board.legal_move(*mov) {
