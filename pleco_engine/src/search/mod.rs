@@ -33,6 +33,8 @@ use tables::pawn_table::PawnTable;
 use consts::*;
 
 
+const RAZORING_MARGIN: i32 = 590;
+
 const THREAD_DIST: usize = 20;
 
 //                                      1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
@@ -402,14 +404,13 @@ impl Searcher {
     }
 
     // The searching function for a specific depth.
-    fn search<N: PVNode>(&mut self, mut alpha: i32, beta: i32, ss: &mut Stack, depth: u16) -> i32 {
-//        assert!(depth >= 1);
+    fn search<N: PVNode>(&mut self, mut alpha: i32, mut beta: i32, ss: &mut Stack, depth: u16) -> i32 {
+        assert!(depth >= 1);
+        assert!(depth < MAX_PLY);
         let is_pv: bool = N::is_pv();
         let ply: u16 = ss.ply;
         let at_root: bool = ply == 0;
         let zob: u64 = self.board.zobrist();
-        let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
-        let tt_value: Value = if tt_hit {tt_entry.score as i32} else {0};
         let in_check: bool = self.board.in_check();
 
         let mut best_move = BitMove::null();
@@ -418,38 +419,43 @@ impl Searcher {
         let mut best_value: Value = NEG_INFINITE;
         let mut moves_played = 0;
 
-        let mut pos_eval: i32 = 0;
+        let mut pos_eval: i32;
 
+        // If we are the main thread, check the time.
         if self.main_thread() {
             self.check_time();
         }
 
-        if depth == 0 || ply == MAX_PLY {
-            if in_check {
-                if ply != MAX_PLY {
-                    return self.qsearch::<NonPV,InCheck>(alpha, alpha+1, ss, 0);
+        if !at_root {
+            // Check for stop conditions.
+            if self.stop() || ply >= MAX_PLY {
+                if !in_check && ply >= MAX_PLY {
+                    return self.eval();
                 } else {
                     return ZERO;
                 }
-            } else {
-                return self.eval();
             }
-        }
 
-
-        // increment the next ply
-        ss.incr().ply = ply + 1;
-
-        if !at_root {
+            // Mate distance pruning. This ensures that checkmates closer to the root
+            // have a higher value than otherwise.
+            alpha = alpha.max(-MATE + ply as i32);
+            beta = beta.min(MATE - ply as i32);
             if alpha >= beta {
                 return alpha
             }
         }
 
+        // probe the transposition table
+        let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
+        let tt_value: Value = if tt_hit {tt_entry.score as i32} else {0};
 
+        // increment the next ply
+        ss.incr().ply = ply + 1;
+
+        // At non-PV nodes, check for a better TT value to return.
         if !is_pv
             && tt_hit
-            && tt_entry.depth as u16 >= depth
+            && tt_entry.depth as i16 >= depth as i16
             && tt_value != 0
             && correct_bound_eq(tt_value, beta, tt_entry.node_type()) {
             return tt_value;
@@ -460,9 +466,13 @@ impl Searcher {
             pos_eval = 0;
         } else {
             if tt_hit {
-                if tt_entry.eval == 0 {
-                    pos_eval = self.eval();
-                }
+                pos_eval = if tt_entry.eval == 0 {
+                    self.eval()
+                } else {
+                    tt_entry.eval as i32
+                };
+
+                // check for tt value being a better position evaluation
                 if tt_value != 0 && correct_bound(tt_value, pos_eval, tt_entry.node_type()) {
                     pos_eval = tt_value;
                 }
@@ -472,6 +482,13 @@ impl Searcher {
                                0, pos_eval as i16,
                                0, NodeBound::NoBound,
                                self.tt.time_age());
+            }
+
+            // Razoring
+            if !is_pv
+                && depth <= 1
+                && pos_eval + RAZORING_MARGIN <= alpha {
+                return self.qsearch::<NonPV, NoCheck>(alpha, alpha+1, ss, 0);
             }
 
             // Futility Pruning

@@ -15,7 +15,6 @@ use pleco::tools::pleco_arc::Arc;
 use pleco::board::*;
 use pleco::core::piece_move::BitMove;
 
-use root_moves::RootMove;
 use sync::LockLatch;
 use time::uci_timer::*;
 use time::time_management::TimeManager;
