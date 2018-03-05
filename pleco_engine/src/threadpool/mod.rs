@@ -43,14 +43,11 @@ pub fn init_threadpool() {
     });
 }
 
+/// Returns access to the global thread pool.
 pub fn threadpool() -> &'static mut ThreadPool {
     unsafe {
         THREADPOOL.as_mut()
     }
-}
-
-pub enum SendData {
-    BestMove(RootMove)
 }
 
 /// Global Timer
@@ -65,12 +62,17 @@ struct SearcherPtr {
 unsafe impl Sync for SearcherPtr {}
 unsafe impl Send for SearcherPtr {}
 
+/// The thread-pool for the chess engine
 pub struct ThreadPool {
-    // This is all rootmoves for all treads.
+    /// Access to each thread's Structure
     pub threads: Vec<UnsafeCell<*mut Searcher>>,
+    /// Handles of each thread
     handles: Vec<JoinHandle<()>>,
+    /// Condition for the main thread to start.
     pub main_cond: Arc<LockLatch>,
+    /// Condition for all non-main threads
     pub thread_cond: Arc<LockLatch>,
+    /// Stop condition, if true the threads should halt.
     pub stop: AtomicBool
 }
 
@@ -94,12 +96,16 @@ impl ThreadPool {
             thread_cond: Arc::new(LockLatch::new()),
             stop: AtomicBool::new(true)
         };
+        // Lock both the cond variables
         pool.main_cond.lock();
         pool.thread_cond.lock();
+
+        // spawn the main thread
         pool.attach_thread();
         pool
     }
 
+    /// Spawns a new thread and appends it to our vector of JoinHandles.
     fn attach_thread(&mut self) {
          unsafe {
              let thread_ptr: SearcherPtr = self.create_thread();
@@ -168,30 +174,34 @@ impl ThreadPool {
         }
     }
 
-    /// Kills and deallocates all the threads that are running. This function will also
+    /// Kills and de-allocates all the threads that are running. This function will also
     /// block on waiting for the search to finish.
     pub fn kill_all(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
         self.wait_for_finish();
         unsafe {
+            // tell each thread to drop
             self.threads.iter()
                 .map(|s| &**s.get())
                 .for_each(|s: &Searcher| {
                     s.kill.store(true, Ordering::SeqCst)
                 });
 
+            // If awaiting a signal, wake up each thread so each can drop
             self.threads.iter()
                 .map(|s| &**s.get())
                 .for_each(|s: &Searcher| {
                     s.cond.set();
                 });
 
+            // Start connecting each join handle.
             while let Some(handle) = self.handles.pop() {
-                handle.join().unwrap();
+                handle.join().unwrap_or_else(|e| println!("Thread failed: {:?}",e));
             }
 
+            // De-allocate each thread.
             while let Some(unc) = self.threads.pop() {
-                let th = unc.get();
+                let th: *mut Searcher = *unc.get();
                 let layout = Layout::new::<Searcher>();
                 Heap.dealloc(th as *mut _, layout);
             }
@@ -283,5 +293,4 @@ impl Drop for ThreadPool {
         self.kill_all();
     }
 }
-
 

@@ -6,8 +6,8 @@ use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
 
 
-// TODO: Create StatBoards using const FNs
-// TODO: Create 3DBoard using Const fns
+// TODO: Create StatBoards using const generics: https://github.com/rust-lang/rust/issues/44580
+// TODO: Create 3DBoard using const generics: https://github.com/rust-lang/rust/issues/44580
 
 pub trait StatBoardType<T: Sized> {
     fn size1() -> usize;
