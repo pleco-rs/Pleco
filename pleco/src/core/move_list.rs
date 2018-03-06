@@ -21,8 +21,8 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 
 #[allow(unused_imports)]
-#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
-use std::simd::{u16x16,u16x32};
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+use std::simd::u16x16;
 
 use super::piece_move::{BitMove, ScoringMove};
 use super::bitboard::BitBoard;
@@ -66,7 +66,7 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     /// Unsafe due to allow modification of elements possibly not inside the length.
     unsafe fn over_bounds_ptr(&mut self) -> *mut Self::Output;
 
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
     #[doc(hidden)]
     unsafe fn avx_append(ptr: *mut Self::Output, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut Self::Output;
 }
@@ -274,11 +274,12 @@ impl MVPushable for MoveList {
     }
 
 
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
     #[doc(hidden)]
     unsafe fn avx_append(ptr: *mut BitMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut BitMove {
         let mut i = 0;
         let mut v = u16x16::splat(0);
+        let mut new_ptr = ptr;
         while let Some(dst_sq) = dst.pop_some_lsb() {
             v = v.replace_unchecked(i, dst_sq.0 as u16);
             i += 1;
@@ -287,11 +288,13 @@ impl MVPushable for MoveList {
         if i != 0 {
             v <<= 6;
             v |= u16x16::splat(flags << 12 | src.0 as u16);
+            for x in 0..i {
+                *new_ptr = transmute(v.extract_unchecked(x));
+                new_ptr = new_ptr.add(1);
+            }
         }
 
-        v.store_unchecked(slice::from_raw_parts_mut(transmute(ptr), 16), 0);
-
-        ptr.add(i as usize)
+        new_ptr
     }
 }
 
@@ -556,24 +559,27 @@ impl MVPushable for ScoringMoveList {
         self.as_mut_ptr().add(self.len)
     }
 
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
     #[doc(hidden)]
     unsafe fn avx_append(ptr: *mut ScoringMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut ScoringMove {
         let mut i = 0;
-        let mut v = u16x32::splat(0);
+        let mut v = u16x16::splat(0);
+        let mut new_ptr = ptr;
         while let Some(dst_sq) = dst.pop_some_lsb() {
-            v = v.replace_unchecked(i * 2, dst_sq.0 as u16);
+            v = v.replace_unchecked(i, dst_sq.0 as u16);
             i += 1;
         }
 
         if i != 0 {
             v <<= 6;
-            v |= u16x32::splat(flags << 12 | src.0 as u16);
-            v &= u16x32::new(0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,
-                             0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0,0xFFFF,0);
-            v.store_unchecked(slice::from_raw_parts_mut(transmute(ptr), 32), 0);
+            v |= u16x16::splat(flags << 12 | src.0 as u16);
+
+            for x in 0..i {
+                (*new_ptr).bit_move = transmute(v.extract_unchecked(x));
+                new_ptr = new_ptr.add(1);
+            }
         }
-        ptr.add(i as usize)
+        new_ptr
     }
 }
 
