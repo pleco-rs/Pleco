@@ -55,6 +55,10 @@ use std::mem;
 use std::ptr;
 use std::ops::Index;
 
+#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+#[allow(unused_imports)]
+use std::simd::u16x16;
+
 use board::*;
 
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringMove};
@@ -591,6 +595,19 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             self.check_and_add::<L>(b_move);
         }
     }
+//
+//    fn move_append_from_bb_flag_simd<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
+//        #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+//        {
+//            if L::gen_legal() {
+//                self.move_append_from_bb_flag::<L>(bits, src, flag_bits);
+//                return
+//            } else {
+//                self.move_append_from_bb_flag_avx(bits, flag_bits << 12 | src.0 as u16);
+//            }
+//        }
+//        self.move_append_from_bb_flag::<L>(bits, src, flag_bits);
+//    }
 
     /// Checks if the move is legal, and if so adds to the move list.
     #[inline]

@@ -2,7 +2,7 @@ mod pick;
 
 #[allow(unused_imports)]
 use pleco::{BitMove,Board,ScoringMove,ScoringMoveList};
-use pleco::board::movegen::{Legality,PseudoLegal,MoveGen};
+use pleco::board::movegen::{PseudoLegal,MoveGen};
 use pleco::core::mono_traits::*;
 
 use self::pick::*;
@@ -29,7 +29,7 @@ impl MovePicker<MainSearchPicker> {
             ttm = BitMove::null();
         }
         let mut moves = ScoringMoveList::default();
-        let first: *mut ScoringMove = unsafe {moves.as_mut_ptr()};
+        let first: *mut ScoringMove = moves.as_mut_ptr();
         let picker = MainSearchPicker::new(depth, ttm, killers[0], killers[1], counter_move, first);
         MovePicker::new(*&board, picker, moves)
     }
