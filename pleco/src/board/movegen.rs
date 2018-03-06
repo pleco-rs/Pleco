@@ -586,28 +586,33 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
         }
     }
 
+    #[inline]
+    fn move_append_from_bb_flag<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
+        #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+        {
+            if L::gen_legal() {
+                self.move_append_from_bb_flag_ns::<L>(bits, src, flag_bits);
+                return;
+            } else {
+                self.ptr = unsafe {
+                    MP::avx_append(self.ptr, src, bits, flag_bits)
+                };
+                return;
+            }
+        }
+
+        #[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx")))]
+        self.move_append_from_bb_flag_ns::<L>(bits, src, flag_bits);
+    }
 
 
     #[inline]
-    fn move_append_from_bb_flag<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
+    fn move_append_from_bb_flag_ns<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
         while let Some(dst) = bits.pop_some_lsb() {
             let b_move = BitMove::make(flag_bits, src, dst);
             self.check_and_add::<L>(b_move);
         }
     }
-//
-//    fn move_append_from_bb_flag_simd<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
-//        #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
-//        {
-//            if L::gen_legal() {
-//                self.move_append_from_bb_flag::<L>(bits, src, flag_bits);
-//                return
-//            } else {
-//                self.move_append_from_bb_flag_avx(bits, flag_bits << 12 | src.0 as u16);
-//            }
-//        }
-//        self.move_append_from_bb_flag::<L>(bits, src, flag_bits);
-//    }
 
     /// Checks if the move is legal, and if so adds to the move list.
     #[inline]

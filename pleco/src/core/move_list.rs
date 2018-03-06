@@ -276,6 +276,7 @@ impl MVPushable for MoveList {
 
     #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
     #[doc(hidden)]
+    #[inline]
     unsafe fn avx_append(ptr: *mut BitMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut BitMove {
         let mut i = 0;
         let mut v = u16x16::splat(0);
@@ -561,6 +562,7 @@ impl MVPushable for ScoringMoveList {
 
     #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
     #[doc(hidden)]
+    #[inline]
     unsafe fn avx_append(ptr: *mut ScoringMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut ScoringMove {
         let mut i = 0;
         let mut v = u16x16::splat(0);
