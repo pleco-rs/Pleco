@@ -5,40 +5,25 @@ pub mod material;
 use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
 
+use pleco::core::masks::*;
+
 
 // TODO: Create StatBoards using const generics: https://github.com/rust-lang/rust/issues/44580
 // TODO: Create 3DBoard using const generics: https://github.com/rust-lang/rust/issues/44580
 
-pub trait StatBoardType<T: Sized> {
-    fn size1() -> usize;
-    fn size2() -> usize;
-    const SIZE1: usize;
-    const SIZE2: usize;
+// ButterflyHistory
+// CapturePieceToHistory
+// CounterMoveHistory
+// ContinuationHistory
+pub struct ButterflyHistory {
+    d: [[i16; SQ_CNT * SQ_CNT]; PLAYER_CNT]
 }
 
-//
-//pub struct StatBoards<T, SBT: StatBoardType<T>> {
-//    a: NonNull<T>,
-//    p: PhantomData<SBT>
-//}
-//
-//impl<T> StatBoardType<T> {
-//    pub fn new() -> Self {
-//
-//    }
-//
-//    fn alloc<T, SBT: StatBoardType<T>>() -> NonNull<T> {
-//        unsafe {
-//            let size = SBT::SIZE1 * SBT::SIZE2;
-//            let ptr = Heap.alloc_zeroed(Layout::array::<T>(size).unwrap());
-//            let new_ptr = match ptr {
-//                Ok(ptr) => ptr,
-//                Err(err) => Heap.oom(err),
-//            };
-//            NonNull::new(new_ptr as *mut T).unwrap()
-//        }
-//    }
-//}
+pub struct PieceToBoards {
+    d: [[[i16; PIECE_TYPE_CNT]; PLAYER_CNT]; SQ_CNT]
+}
+
+
 
 // TODO: Performance increase awaiting with const generics: https://github.com/rust-lang/rust/issues/44580
 

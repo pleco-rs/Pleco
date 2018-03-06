@@ -70,7 +70,6 @@ fn bench_100_material_eval(b: &mut Bencher) {
 fn bench_100_eval(b: &mut Bencher) {
     let mut tp: PawnTable = black_box(PawnTable::new(1 << 10));
     let mut tm: Material = black_box(Material::new(1 << 11));
-    println!("{}", Evaluation::evaluate(&Board::default(), &mut tp, &mut tm));
     b.iter(|| {
         tp.clear();
         tm.clear();

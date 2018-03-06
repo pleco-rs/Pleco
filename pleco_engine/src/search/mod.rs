@@ -1,7 +1,6 @@
 //! The main searching function.
 
 pub mod eval;
-pub mod movepick;
 
 use std::cmp::{min,max};
 use std::sync::atomic::{Ordering,AtomicBool};
@@ -283,7 +282,7 @@ impl Searcher {
         // Iterative deeping. Start at the base ply (determined by thread_id), and then increment
         // by the skip size after searching that depth. If searching for depth, non-main threads
         // will ignore the max_depth and instead wait for a stop signal.
-        'iterative_deepening: while (!self.stop() || !self.main_thread()) && depth < max_depth {
+        'iterative_deepening: while !self.stop() && depth < max_depth  {
 
             if self.main_thread() {
                 self.best_move_changes *= 0.505;
@@ -374,7 +373,7 @@ impl Searcher {
                     let improving_factor: i64 = (229).max((715).min(
                           357
                         + 119 * self.failed_low as i64
-                        -   6 * score_diff as i64));
+                        -   5 * score_diff as i64));
 
                     time_reduction = 1.0;
 
@@ -393,6 +392,7 @@ impl Searcher {
                     if self.root_moves().len() == 1
                         || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 602.0) as i64 {
                         threadpool().set_stop(true);
+                        break 'iterative_deepening;
                     }
                 }
             }
@@ -599,7 +599,7 @@ impl Searcher {
 
         if moves_played == 0 {
             if self.board.in_check() {
-                return MATE as i32 - (ply as i32);
+                return -MATE as i32 + (ply as i32);
             } else {
                 return DRAW as i32;
             }
@@ -628,11 +628,6 @@ impl Searcher {
         assert!(rev_depth <= 0);
         assert!(is_pv || (alpha == beta - 1));
         assert_eq!(in_check, self.board.in_check());
-
-        if in_check != self.board.in_check() {
-            self.board.pretty_print();
-        }
-
 
         let ply: u16 = ss.ply;
         let zob: u64 = self.board.zobrist();
@@ -726,11 +721,6 @@ impl Searcher {
 
                 self.board.undo_move();
 
-                if value <= NEG_INFINITE {
-                    println!("Value {}, move {}", value, *mov);
-                    self.board.pretty_print();
-
-                }
                 assert!(value > NEG_INFINITE);
                 assert!(value < INFINITE );
 

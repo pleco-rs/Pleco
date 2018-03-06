@@ -244,6 +244,18 @@ impl ThreadPool {
         }
     }
 
+    pub fn wait_for_main_start(&self) {
+        unsafe {
+            self.threads.iter()
+                .map(|s| &**s.get())
+                .for_each(|t: &Searcher|{
+                    if t.id == 0 {
+                        t.searching.await(true);
+                    }
+                });
+        }
+    }
+
     pub fn clear_all(&mut self) {
         for thread_ptr in self.threads.iter_mut() {
             let mut thread: &mut Searcher = unsafe { &mut **(*thread_ptr).get() };
@@ -269,7 +281,7 @@ impl ThreadPool {
         }
 
         self.main_cond.set();
-        self.wait_for_start();
+        self.wait_for_main_start();
         self.main_cond.lock();
     }
 
