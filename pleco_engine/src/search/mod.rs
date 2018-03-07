@@ -853,12 +853,14 @@ impl Drop for Searcher {
 
 fn mvv_lva_sort(moves: &mut MoveList, board: &Board) {
     moves.sort_by_key(|a| {
+        if a.is_castle() {
+            return 1;
+        }
+
         let piece = board.piece_at_sq((*a).get_src()).unwrap();
 
         if a.is_capture() {
             piece.value() - board.captured_piece(*a).unwrap().value()
-        } else if a.is_castle() {
-            1
         } else if piece == PieceType::P {
             if a.is_double_push().0 {
                 2

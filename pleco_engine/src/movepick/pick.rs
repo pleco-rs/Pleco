@@ -1,4 +1,5 @@
 use std::mem;
+use std::fmt;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
@@ -34,6 +35,38 @@ pub enum Pick {
 impl Pick {
     pub fn incr(&mut self) {
         unsafe {*self = mem::transmute(*self as u8 + 1); }
+    }
+
+    pub fn to_string(&self) -> &'static str {
+        match *self {
+            Pick::MainSearch => "MainSearch",
+            Pick::CapturesInit => "CapturesInit",
+            Pick::GoodCaptures => "GoodCaptures",
+            Pick::KillerOne => "KillerOne",
+            Pick::KillerTwo => "KillerTwo",
+            Pick::CounterMove => "CounterMove",
+            Pick::QuietInit => "QuietInit",
+            Pick::QuietMoves => "QuietMoves",
+            Pick::BadCaptures => "BadCaptures",
+            Pick::EvasionSearch => "EvasionSearch",
+            Pick::EvasionsInit => "EvasionsInit",
+            Pick::AllEvasions => "AllEvasions",
+            Pick::ProbCutSearch => "ProbCutSearch",
+            Pick::ProbCutCapturesInit => "ProbCutCapturesInit",
+            Pick::ProbCutCaptures => "ProbCutCaptures",
+            Pick::QSearch => "QSearch",
+            Pick::QSearchInit => "QSearchInit",
+            Pick::QCaptures => "QCaptures",
+            Pick::QChecks => "QChecks",
+            Pick::QSearchRecaptures => "QSearchRecaptures",
+            Pick::QRecaptures => "QRecaptures",
+        }
+    }
+}
+
+impl fmt::Display for Pick {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(self.to_string())
     }
 }
 

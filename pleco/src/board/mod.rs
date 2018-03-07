@@ -1991,8 +1991,11 @@ impl Board {
             }
         }
 
-        if m.is_capture() && self.empty(to) {
-            return false;
+        if m.is_capture() {
+            let at_sq = self.player_at_sq(to);
+            if at_sq.is_none() || at_sq.unwrap() == us {
+                return false;
+            }
         }
 
         if self.in_check() {
@@ -2023,7 +2026,7 @@ impl Board {
     #[doc(hidden)]
     #[inline(always)]
     pub fn is_capture(&self, mov: BitMove) -> bool {
-        assert!(mov.get_dest_u8() != mov.get_src_u8());
+        assert_ne!(mov.get_dest_u8(), mov.get_src_u8());
         (!self.empty(mov.get_dest()) && mov.move_type() != MoveType::Castle)
             || mov.move_type() == MoveType::EnPassant
 

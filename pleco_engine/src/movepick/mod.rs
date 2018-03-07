@@ -2,6 +2,7 @@ mod pick;
 
 use std::ptr;
 use std::mem;
+use std::panic;
 
 #[allow(unused_imports)]
 use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList};
@@ -211,7 +212,7 @@ impl MovePicker {
                 while self.cur_ptr < self.end_ptr {
                     mov = self.pick_best(self.cur_ptr, self.end_ptr);
                     unsafe {self.cur_ptr = self.cur_ptr.add(1);}
-                    if mov.bit_move != self.ttm && mov.score > -20 {
+                    if mov.bit_move != self.ttm && mov.score > -128 {
                         return mov.bit_move;
                     }
 
@@ -483,8 +484,7 @@ mod tests {
             while b.checkmate() {
                 b = Board::random().one();
             }
-            println!("fen: {}", b.fen());
-            movepick_rand_one(b.clone());
+            movepick_rand_one(b);
             println!("pass movepick rand! {} ",_x);
         }
     }
@@ -570,6 +570,27 @@ mod tests {
     }
 
 
+    #[test]
+    fn movepick_incorrect_move_5() {
+    //    Unknown panic while using the movelist!
+    //    depth: 88, fen: r5nr/2knb1Q1/p1pp4/1p2p1Pp/1P4B1/2P5/P2P1PP1/RNB1K1NR w KQ h6 0 15
+    //    in check?: false
+    //    ttm: g8b2 bits: 17022
+    //    killer1: c5a2 bits: 16930
+    //    killer2: c1d5b bits: 39106
+    //    counter: d3g2q bits: 45971
+
+        let b = Board::from_fen("r5nr/2knb1Q1/p1pp4/1p2p1Pp/1P4B1/2P5/P2P1PP1/RNB1K1NR w KQ h6 0 15").unwrap();
+        let ttm = BitMove::new(17022);
+        let killers = [BitMove::new(16930), BitMove::new(39106)];
+        let depth = 88;
+        let cm = BitMove::new(45971);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
+
+
+
+
     fn movepick_rand_one(b: Board) {
         let ttm = BitMove::new(rand::random());
         let cm = BitMove::new(rand::random());
@@ -583,15 +604,33 @@ mod tests {
 
     fn movepick_main_search(b: Board, ttm: BitMove, killers: &[BitMove; 2], cm: BitMove, depth: i16) {
         let real_moves = b.generate_pseudolegal_moves();
-        let mut mp = MovePicker::main_search(&b, depth, ttm, &killers, cm);
 
-        let mut moves_mp = MoveList::default();
-        let mut mp_next = mp.next(&b, false);
+        let result = panic::catch_unwind(|| {
+            let mut moves_mp = MoveList::default();
+            let mut mp = MovePicker::main_search(&b, depth, ttm, &killers, cm);
 
-        while mp_next != BitMove::null() {
-            moves_mp.push(mp_next);
-            mp_next = mp.next(&b, false);
-        }
+            let mut mp_next = mp.next(&b, false);
+            while mp_next != BitMove::null() {
+                moves_mp.push(mp_next);
+                mp_next = mp.next(&b, false);
+            }
+            moves_mp
+        });
+
+        let moves_mp = result.expect(&format!(
+            "\n Unknown panic while using the movelist!\
+            \n depth: {}, fen: {}\
+                \n in check?: {}\
+                \n ttm: {} bits: {} \
+                \n killer1: {} bits: {}\
+                \n killer2: {} bits: {}\
+                \n counter: {} bits: {}\n",
+            depth, b.fen(),
+            b.in_check(),
+            ttm, ttm.get_raw(),
+            killers[0], killers[0].get_raw(),
+            killers[1], killers[1].get_raw(),
+            cm, cm.get_raw()));
 
         // Check to see if the MovePicker gives all the right moves
         for (i, mov) in real_moves.iter().enumerate() {

@@ -331,7 +331,7 @@ impl BitMove {
     /// Returns if a [BitMove] is an enpassant capture.
     #[inline(always)]
     pub const fn is_en_passant(&self) -> bool {
-        self.flag() >> 12 == 5
+        self.flag() == BitMove::FLAG_EP
     }
 
     /// Returns if a [BitMove] is a double push, and if so returns the Destination square as well.
