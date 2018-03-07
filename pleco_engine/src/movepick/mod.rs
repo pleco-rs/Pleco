@@ -32,7 +32,7 @@ impl MovePicker {
     /// MovePicker constructor for the main search
     pub fn main_search(board: &Board, depth: i16, mut ttm: BitMove,
                        killers: &[BitMove; 2], counter_move: BitMove) -> Self {
-
+        assert!(depth > 0);
         let mut pick = if board.in_check() {Pick::EvasionSearch} else {Pick::MainSearch};
 
         if ttm == BitMove::null() || !board.pseudo_legal_move(ttm) {
@@ -100,7 +100,7 @@ impl MovePicker {
     /// MovePicker constructor for ProbCut: we generate captures with SEE higher
     /// than or equal to the given threshold.
     pub fn probcut_search(board: &Board, threshold: i32, mut ttm: BitMove, recapture_sq: SQ) -> Self {
-        assert!(board.in_check());
+        assert!(!board.in_check());
         let mut moves = ScoringMoveList::default();
         let first: *mut ScoringMove = moves.as_mut_ptr();
 
@@ -108,7 +108,7 @@ impl MovePicker {
 
         ttm = if ttm != BitMove::null()
             && board.pseudo_legal_move(ttm)
-            && ttm.is_capture() {
+            && board.is_capture(ttm) {
             ttm
         } else {
             pick.incr();
@@ -150,7 +150,7 @@ impl MovePicker {
         unsafe {
             while ptr < self.end_ptr {
                 let mov: BitMove = (*ptr).bit_move;
-                if mov.is_capture() {
+                if board.is_capture(mov) {
                     let piece_moved = board.moved_piece(mov);
                     let piece_cap = board.captured_piece(mov).unwrap();
                     (*ptr).score = piece_value(piece_cap,false) as i16
@@ -216,7 +216,7 @@ impl MovePicker {
                 if mov.bit_move != BitMove::null()
                     && mov.bit_move != self.ttm
                     && board.pseudo_legal_move(mov.bit_move)
-                    && !mov.bit_move.is_capture() {
+                    && !board.is_capture(mov.bit_move) {
                     return mov.bit_move;
                 }
                 return self.next(board, skip_quiets);
@@ -228,7 +228,7 @@ impl MovePicker {
                     && self.cm != self.killers[0]
                     && self.cm != self.killers[1]
                     && board.pseudo_legal_move(self.cm)
-                    && !self.cm.is_capture() {
+                    && !board.is_capture(self.cm) {
                     return self.cm;
                 }
                 return self.next(board, skip_quiets);
@@ -448,10 +448,58 @@ mod tests {
     }
 
     #[test]
-    fn movepick_default_board_no_adds() {
+    fn movepick_startpos_blank() {
         movepick_main_search(Board::default(), BitMove::null(), &[BitMove::null(); 2],
                              BitMove::null(), 5);
     }
+
+    #[test]
+    fn movepick_startpos_rand_op() {
+        let b = Board::default();
+        for _x in 0..25 {
+            movepick_rand_one(b.clone());
+        }
+    }
+
+    #[test]
+    fn movepick_rand_mainsearch() {
+        for _x in 0..20 {
+            let mut b = Board::random().one();
+            while b.checkmate() {
+                b = Board::random().one();
+            }
+            movepick_rand_one(b);
+//            println!("pass movepick rand! {}",_x);
+        }
+    }
+
+    #[test]
+    fn movepick_incorrect_move1() {
+    //    MovePicker Returned an incorrect move: 39 at index 0
+    //    Incorrect Move: d1f3,
+    //    depth: 4232, fen: rnb1k2r/pppp1ppp/7n/2b1P3/4P3/2P5/PP3PPP/RN1QKBNR w KQkq - 1 6
+    //    in check?: false
+    //    ttm: a5e2b bits: 54048
+    //    killer1: d1f3 bits: 5443
+    //    killer1: c2f8q bits: 65354
+    //    counter: d6h2q bits: 62443', pleco_engine\src\movepick\mod.rs:523:17
+
+        let b = Board::from_fen("rnb1k2r/pppp1ppp/7n/2b1P3/4P3/2P5/PP3PPP/RN1QKBNR w KQkq - 1 6").unwrap();
+        let ttm = BitMove::new(54048);
+        let killers = [BitMove::new(5443), BitMove::new(65354)];
+        let depth = 4232;
+        let cm = BitMove::new(62443);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
+
+    fn movepick_rand_one(b: Board) {
+        let ttm = BitMove::new(rand::random());
+        let cm = BitMove::new(rand::random());
+        let killers = [BitMove::new(rand::random()),BitMove::new(rand::random())];
+        let depth = rand::random::<i16>().abs().max(1);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
+
 
 
     fn movepick_main_search(b: Board, ttm: BitMove, killers: &[BitMove; 2], cm: BitMove, depth: i16) {
@@ -466,25 +514,74 @@ mod tests {
             mp_next = mp.next(&b, false);
         }
 
-        if moves_mp.len() != real_moves.len() {
-            panic!("MovePicker did not return the correct number of moves: {}, Actual number: {}\n fen: {}",
-                   moves_mp.len(), real_moves.len(), b.fen());
-        }
-
         // Check to see if the MovePicker gives all the right moves
         for (i, mov) in real_moves.iter().enumerate() {
             if !moves_mp.contains(mov) {
-                panic!("MovePicker does not have this move: {} at index {}\nfen: {}",
-                       mov, i, b.fen());
+                panic!("\nMovePicker is missing this move: {} at index {}, bits: {}\
+                \n Real Length: {}, MovePicker Length: {},
+                \n depth: {}, fen: {}\
+                \n in check?: {}\
+                \n ttm: {} bits: {} \
+                \n killer1: {} bits: {}\
+                \n killer1: {} bits: {}\
+                \n counter: {} bits: {}",
+                       mov, i, mov.get_raw(),
+                       real_moves.len(), moves_mp.len(),
+                       depth, b.fen(),
+                       b.in_check(),
+                       ttm, ttm.get_raw(),
+                       killers[0], killers[0].get_raw(),
+                       killers[1], killers[1].get_raw(),
+                       cm, cm.get_raw());
             }
         }
 
         for (i, mov) in moves_mp.iter().enumerate() {
             if !real_moves.contains(mov) {
-                panic!("MovePicker Returned an incorrect move: {} at index {}\nfen: {}",
-                       mov, i, b.fen());
+                panic!("\nMovePicker Returned an incorrect move: {} at index {}, bits: {}\
+                \n Real Length: {}, MovePicker Length: {},
+                \n depth: {}, fen: {}\
+                \n in check?: {}\
+                \n ttm: {} bits: {} \
+                \n killer1: {} bits: {}\
+                \n killer1: {} bits: {}\
+                \n counter: {} bits: {}",
+                       mov, i, mov.get_raw(),
+                       real_moves.len(), moves_mp.len(),
+                       depth, b.fen(),
+                       b.in_check(),
+                       ttm, ttm.get_raw(),
+                       killers[0], killers[0].get_raw(),
+                       killers[1], killers[1].get_raw(),
+                       cm, cm.get_raw());
             }
         }
 
+        if moves_mp.len() != real_moves.len() {
+            panic!("\nMovePicker did not return the correct number of moves: {}, Actual number: {}\
+                \n depth: {}, fen: {}\
+                \n in check?: {}\
+                \n ttm: {} bits: {} \
+                \n killer1: {} bits: {}\
+                \n killer1: {} bits: {}\
+                \n counter: {} bits: {}",
+                   moves_mp.len(), real_moves.len(),
+                   depth, b.fen(),
+                   b.in_check(),
+                   ttm, ttm.get_raw(),
+                   killers[0], killers[0].get_raw(),
+                   killers[1], killers[1].get_raw(),
+                   cm, cm.get_raw());
+        }
     }
+
+//    MovePicker Returned an incorrect move: e2c3 at index 0, bits: 29836
+//    Real Length: 30, MovePicker Length: 31,
+//
+//    depth: 15927, fen: r4r2/1n1k1pp1/p1p4p/5n1P/1PpPB3/6PR/P3NP2/3RK3 w - - 4 28
+//    in check?: false
+//    ttm: f4h6 bits: 31709
+//    killer1: c7f7 bits: 3442
+//    killer1: e2c3 bits: 29836
+//    counter: e1f2 bits: 836', pleco_engine\src\movepick\mod.rs:541:17
 }

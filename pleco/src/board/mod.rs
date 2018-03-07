@@ -30,7 +30,7 @@ use helper::Helper;
 use helper::prelude::*;
 use tools::prng::PRNG;
 use tools::Searcher;
-use bot_prelude::{IterativeSearcher,JamboreeSearcher};
+use bot_prelude::{AlphaBetaSearcher,JamboreeSearcher};
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
@@ -1875,13 +1875,6 @@ impl Board {
         (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
     }
 
-    /// Checks if a move is an advanced pawn push, meaning it passes into enemy territory.
-    #[inline(always)]
-    pub fn advanced_pawn_push(&self, mov: BitMove) -> bool {
-        self.piece_at_sq(mov.get_src()) == Some(PieceType::P)
-            && self.turn().relative_rank_of_sq(mov.get_src()) > Rank::R4
-    }
-
 //  ------- Move Testing -------
 
     /// Tests if a given pseudo-legal move is a legal. This is mostly for checking the legality of
@@ -1945,6 +1938,7 @@ impl Board {
         let to: SQ = m.get_dest();
         let to_bb = to.to_bb();
         let query = self.piece_locations.player_piece_at(from);
+
         if query.is_none() {
             return false;
         }
@@ -1984,8 +1978,10 @@ impl Board {
             {
                 return false;
             }
-        } else if (self.attacks_from(piece, from, us) & to_bb).is_empty() {
-            return false;
+        } else {
+            if m.is_double_push().0 || (self.attacks_from(piece, from, us) & to_bb).is_empty() {
+                return false;
+            }
         }
 
         if self.in_check() {
@@ -2005,6 +2001,23 @@ impl Board {
         }
         true
     }
+
+    /// Checks if a move is an advanced pawn push, meaning it passes into enemy territory.
+    #[inline(always)]
+    pub fn advanced_pawn_push(&self, mov: BitMove) -> bool {
+        self.piece_at_sq(mov.get_src()) == Some(PieceType::P)
+            && self.turn().relative_rank_of_sq(mov.get_src()) > Rank::R4
+    }
+
+    #[doc(hidden)]
+    #[inline(always)]
+    pub fn is_capture(&self, mov: BitMove) -> bool {
+        assert!(mov.get_dest_u8() != mov.get_src_u8());
+        (!self.empty(mov.get_dest()) && mov.move_type() != MoveType::Castle)
+            || mov.move_type() == MoveType::EnPassant
+
+    }
+
 
     /// Returns if a move gives check to the opposing player's King.
     ///
@@ -2087,7 +2100,20 @@ impl Board {
     #[inline(always)]
     pub fn moved_piece(&self, m: BitMove) -> PieceType {
         let src = m.get_src();
-        self.piece_at_sq(src).unwrap() // panics if no piece here :)
+        if cfg!(debug_assertions) {
+            let moved_piece = self.piece_at_sq(src);
+            if moved_piece.is_none() {
+                panic!("\n There is no moved piece!\
+                        \n Move: {}, Bits: {}\
+                        \n fen: {}",
+                        m, m.get_raw(),
+                        self.fen());
+            } else {
+                unsafe {moved_piece.unchecked_unwrap()}
+            }
+        } else {
+            self.piece_at_sq(src).unwrap() // panics if no piece here :)
+        }
     }
 
     /// Returns the piece that was captured, if any from a given BitMove.
@@ -2181,10 +2207,7 @@ impl Board {
         );
         println!("Zobrist: {:x}", self.state.zobrast);
         println!();
-
-
     }
-
 }
 
 // TODO: Error Propagation
@@ -2421,20 +2444,20 @@ impl RandBoard {
             if self.favorable(board.turn) {
                 (24, true)
             } else {
-                (14, false)
+                (13, false)
             };
 
         let best_move = if self.random() % rand_num == 0 {
             let moves = board.generate_moves();
             moves[self.random() % moves.len()]
         } else if self.random() % 5 == 0 {
-            JamboreeSearcher::best_move(board.shallow_clone(),2)
+            AlphaBetaSearcher::best_move(board.shallow_clone(),2)
         } else if self.random() % 3 == 0 {
             JamboreeSearcher::best_move(board.shallow_clone(),3)
-        } else if !favorable && self.random() % 4 < 3 {
+        } else if !favorable && self.random() % 5 < 4 {
             JamboreeSearcher::best_move(board.shallow_clone(),3)
         } else {
-            IterativeSearcher::best_move(board.shallow_clone(),4)
+            JamboreeSearcher::best_move(board.shallow_clone(),4)
         };
         board.apply_move(best_move);
     }
