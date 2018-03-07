@@ -21,8 +21,9 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 
 #[allow(unused_imports)]
-#[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
-use std::simd::u16x16;
+#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
+use std::simd::u16x32;
+
 
 use super::piece_move::{BitMove, ScoringMove};
 use super::bitboard::BitBoard;
@@ -66,7 +67,7 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     /// Unsafe due to allow modification of elements possibly not inside the length.
     unsafe fn over_bounds_ptr(&mut self) -> *mut Self::Output;
 
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
     #[doc(hidden)]
     unsafe fn avx_append(ptr: *mut Self::Output, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut Self::Output;
 }
@@ -274,13 +275,13 @@ impl MVPushable for MoveList {
     }
 
 
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
     #[doc(hidden)]
-    #[inline]
-    unsafe fn avx_append(ptr: *mut BitMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut BitMove {
+    #[inline(always)]
+    unsafe fn avx_append(mut ptr: *mut BitMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut BitMove {
         let mut i = 0;
-        let mut v = u16x16::splat(0);
-        let mut new_ptr = ptr;
+        let mut v = u16x32::splat(0);
+
         while let Some(dst_sq) = dst.pop_some_lsb() {
             v = v.replace_unchecked(i, dst_sq.0 as u16);
             i += 1;
@@ -288,14 +289,14 @@ impl MVPushable for MoveList {
 
         if i != 0 {
             v <<= 6;
-            v |= u16x16::splat(flags << 12 | src.0 as u16);
+            v |= u16x32::splat(flags << 12 | src.0 as u16);
             for x in 0..i {
-                *new_ptr = transmute(v.extract_unchecked(x));
-                new_ptr = new_ptr.add(1);
+                *ptr = transmute(v.extract_unchecked(x));
+                ptr = ptr.add(1);
             }
         }
 
-        new_ptr
+        ptr
     }
 }
 
@@ -560,28 +561,27 @@ impl MVPushable for ScoringMoveList {
         self.as_mut_ptr().add(self.len)
     }
 
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
+    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
     #[doc(hidden)]
-    #[inline]
-    unsafe fn avx_append(ptr: *mut ScoringMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut ScoringMove {
+    #[inline(always)]
+    unsafe fn avx_append(mut ptr: *mut ScoringMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut ScoringMove {
         let mut i = 0;
-        let mut v = u16x16::splat(0);
-        let mut new_ptr = ptr;
+        let mut v = u16x32::splat(0);
         while let Some(dst_sq) = dst.pop_some_lsb() {
             v = v.replace_unchecked(i, dst_sq.0 as u16);
             i += 1;
         }
 
         if i != 0 {
-            v <<= 6;
-            v |= u16x16::splat(flags << 12 | src.0 as u16);
+            v *= u16x32::splat(64);
+            v |= u16x32::splat(flags << 12 | src.0 as u16);
 
             for x in 0..i {
-                (*new_ptr).bit_move = transmute(v.extract_unchecked(x));
-                new_ptr = new_ptr.add(1);
+                (*ptr).bit_move = transmute(v.extract_unchecked(x));
+                ptr = ptr.add(1);
             }
         }
-        new_ptr
+        ptr
     }
 }
 
@@ -690,3 +690,16 @@ impl FusedIterator for ScoreMoveIntoIter {}
 
 unsafe impl TrustedLen for ScoreMoveIntoIter {}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_avx2() {
+        let mut arr = [BitMove::null(); 16];
+        let mut bb = BitBoard::FILE_B;
+        unsafe {
+            MoveList::avx_append(arr.as_mut_ptr(), SQ::A1, &mut bb, 0b1111);
+        }
+    }
+}

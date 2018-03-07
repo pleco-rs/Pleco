@@ -293,7 +293,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
                 if piece == PieceType::K {
                     b &= queen_moves(BitBoard(0), self.board.king_sq(P::opp_player()))
                 }
-                self.move_append_from_bb_flag::<L>(&mut b, from, BitMove::FLAG_QUIET);
+                self.move_append_from_bb_flag_ns::<L>(&mut b, from, BitMove::FLAG_QUIET);
             }
         }
         self.generate_all::<L, QuietChecksGenType, P>(!self.board.occupied());
@@ -321,8 +321,8 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
         // Seperate captures and non captures
         let mut captures_bb: BitBoard = k_moves & self.them_occ;
         let mut non_captures_bb: BitBoard = k_moves & !self.them_occ;
-        self.move_append_from_bb_flag::<L>(&mut captures_bb, ksq, BitMove::FLAG_CAPTURE);
-        self.move_append_from_bb_flag::<L>(&mut non_captures_bb, ksq, BitMove::FLAG_QUIET);
+        self.move_append_from_bb_flag_ns::<L>(&mut captures_bb, ksq, BitMove::FLAG_CAPTURE);
+        self.move_append_from_bb_flag_ns::<L>(&mut non_captures_bb, ksq, BitMove::FLAG_QUIET);
 
         // If there is only one checking square, we can block or capture the piece
         if !(self.board.checkers().more_than_one()) {
@@ -588,21 +588,21 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
 
     #[inline]
     fn move_append_from_bb_flag<L: Legality>(&mut self, bits: &mut BitBoard, src: SQ, flag_bits: u16) {
-        #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx"))]
-        {
-            if L::gen_legal() {
-                self.move_append_from_bb_flag_ns::<L>(bits, src, flag_bits);
-                return;
-            } else {
+        if L::gen_legal() {
+            self.move_append_from_bb_flag_ns::<L>(bits, src, flag_bits);
+        } else {
+
+            #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
+            {
                 self.ptr = unsafe {
                     MP::avx_append(self.ptr, src, bits, flag_bits)
                 };
                 return;
             }
-        }
 
-        #[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx")))]
-        self.move_append_from_bb_flag_ns::<L>(bits, src, flag_bits);
+            #[cfg(not(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2")))]
+            self.move_append_from_bb_flag_ns::<L>(bits, src, flag_bits);
+        }
     }
 
 
