@@ -236,7 +236,7 @@ impl MovePicker {
             Pick::QuietInit => {
                 unsafe {
                     self.cur_ptr = self.end_bad_captures;
-                    self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,CapturesGenType, ScoringMoveList>(
+                    self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,QuietsGenType, ScoringMoveList>(
                         board, self.cur_ptr);
                     // TODO: Need to score the captures
                 }
@@ -370,6 +370,7 @@ fn partial_insertion_sort(begin: *mut ScoringMove, end: *mut ScoringMove, limit:
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pleco::MoveList;
     use rand;
 
     use std::i16::{MAX,MIN};
@@ -444,5 +445,46 @@ mod tests {
         for x in unsorted_idx..len {
             assert!(moves[x].score < limit);
         }
+    }
+
+    #[test]
+    fn movepick_default_board_no_adds() {
+        movepick_main_search(Board::default(), BitMove::null(), &[BitMove::null(); 2],
+                             BitMove::null(), 5);
+    }
+
+
+    fn movepick_main_search(b: Board, ttm: BitMove, killers: &[BitMove; 2], cm: BitMove, depth: i16) {
+        let real_moves = b.generate_pseudolegal_moves();
+        let mut mp = MovePicker::main_search(&b, depth, ttm, &killers, cm);
+
+        let mut moves_mp = MoveList::default();
+        let mut mp_next = mp.next(&b, false);
+
+        while mp_next != BitMove::null() {
+            moves_mp.push(mp_next);
+            mp_next = mp.next(&b, false);
+        }
+
+        if moves_mp.len() != real_moves.len() {
+            panic!("MovePicker did not return the correct number of moves: {}, Actual number: {}\n fen: {}",
+                   moves_mp.len(), real_moves.len(), b.fen());
+        }
+
+        // Check to see if the MovePicker gives all the right moves
+        for (i, mov) in real_moves.iter().enumerate() {
+            if !moves_mp.contains(mov) {
+                panic!("MovePicker does not have this move: {} at index {}\nfen: {}",
+                       mov, i, b.fen());
+            }
+        }
+
+        for (i, mov) in moves_mp.iter().enumerate() {
+            if !real_moves.contains(mov) {
+                panic!("MovePicker Returned an incorrect move: {} at index {}\nfen: {}",
+                       mov, i, b.fen());
+            }
+        }
+
     }
 }

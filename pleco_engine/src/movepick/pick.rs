@@ -3,6 +3,7 @@ use std::mem;
 #[repr(u8)]
 #[derive(Copy, Clone)]
 pub enum Pick {
+    // Main Searching Algo
     MainSearch = 0,
     CapturesInit = 1,
     GoodCaptures = 2,
@@ -12,16 +13,20 @@ pub enum Pick {
     QuietInit = 6,
     QuietMoves = 7,
     BadCaptures = 8,
+    // Evasions, Main and Qsearch
     EvasionSearch = 9,
     EvasionsInit = 10,
     AllEvasions = 11,
+    // ProbCut Searching
     ProbCutSearch = 12,
     ProbCutCapturesInit = 13,
     ProbCutCaptures = 14,
+    // QSearch - Non Re-Captures
     QSearch = 15,
     QSearchInit = 16,
     QCaptures = 17,
     QChecks = 18,
+    // Q Search ReCaptures
     QSearchRecaptures = 19,
     QRecaptures = 20,
 }
