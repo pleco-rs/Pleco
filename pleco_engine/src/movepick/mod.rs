@@ -170,6 +170,21 @@ impl MovePicker {
         }
     }
 
+    fn score_quiets(&mut self, board: &Board) {
+        let mut ptr = self.cur_ptr;
+        unsafe {
+            while ptr < self.end_ptr {
+                let mov: BitMove = (*ptr).bit_move;
+                if mov.is_castle() {
+                    (*ptr).score = 200;
+                } else if mov.is_double_push().0 {
+                    (*ptr).score = 194;
+                }
+                ptr = ptr.add(1);
+            }
+        }
+    }
+
     fn pick_best(&self, begin: *mut ScoringMove, end: *mut ScoringMove) -> ScoringMove {
         unsafe {
             let mut best_score = begin;
@@ -479,7 +494,7 @@ mod tests {
 
     #[test]
     fn movepick_rand_mainsearch() {
-        for _x in 0..10 {
+        for _x in 0..20 {
             let mut b = Board::random().one();
             while b.checkmate() {
                 b = Board::random().one();
