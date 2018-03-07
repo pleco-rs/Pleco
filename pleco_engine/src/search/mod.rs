@@ -617,7 +617,7 @@ impl Searcher {
         best_value
     }
 
-    // TODO: Qscience search
+
     fn qsearch<N: PVNode, C: CheckState>(&mut self, mut alpha: i32, beta: i32, ss: &mut Stack, rev_depth: i16) -> i32 {
         let is_pv: bool = N::is_pv();
         let in_check: bool = C::in_check();

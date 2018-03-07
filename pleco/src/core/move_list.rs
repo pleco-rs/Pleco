@@ -695,6 +695,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
     fn check_avx2() {
         let mut arr = [BitMove::null(); 16];
         let mut bb = BitBoard::FILE_B;
