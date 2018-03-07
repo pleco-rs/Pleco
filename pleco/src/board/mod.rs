@@ -1943,6 +1943,10 @@ impl Board {
             return false;
         }
 
+        if m.incorrect_flag() {
+            return false;
+        }
+
         // Use a slower but simpler function for uncommon cases
         if m.move_type() != MoveType::Normal {
             return self.generate_pseudolegal_moves().contains(&m);

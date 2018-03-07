@@ -492,11 +492,32 @@ mod tests {
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
 
+    
+    #[test]
+    fn movepick_incorrect_move2() {
+    //    MovePicker Returned an incorrect move: e2c3 at index 0, bits: 29836
+    //    Real Length: 30, MovePicker Length: 31,
+    //
+    //    depth: 15927, fen: r4r2/1n1k1pp1/p1p4p/5n1P/1PpPB3/6PR/P3NP2/3RK3 w - - 4 28
+    //    in check?: false
+    //    ttm: f4h6 bits: 31709
+    //    killer1: c7f7 bits: 3442
+    //    killer1: e2c3 bits: 29836
+    //    counter: e1f2 bits: 836', pleco_engine\src\movepick\mod.rs:541:17
+
+        let b = Board::from_fen("r4r2/1n1k1pp1/p1p4p/5n1P/1PpPB3/6PR/P3NP2/3RK3 w - - 4 28").unwrap();
+        let ttm = BitMove::new(31709);
+        let killers = [BitMove::new(3442), BitMove::new(29836)];
+        let depth = 15927;
+        let cm = BitMove::new(836);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
+
     fn movepick_rand_one(b: Board) {
         let ttm = BitMove::new(rand::random());
         let cm = BitMove::new(rand::random());
         let killers = [BitMove::new(rand::random()),BitMove::new(rand::random())];
-        let depth = rand::random::<i16>().abs().max(1);
+        let depth = rand::random::<i16>().abs().max(1).min(127);
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
 
@@ -523,7 +544,7 @@ mod tests {
                 \n in check?: {}\
                 \n ttm: {} bits: {} \
                 \n killer1: {} bits: {}\
-                \n killer1: {} bits: {}\
+                \n killer2: {} bits: {}\
                 \n counter: {} bits: {}",
                        mov, i, mov.get_raw(),
                        real_moves.len(), moves_mp.len(),
@@ -544,7 +565,7 @@ mod tests {
                 \n in check?: {}\
                 \n ttm: {} bits: {} \
                 \n killer1: {} bits: {}\
-                \n killer1: {} bits: {}\
+                \n killer2: {} bits: {}\
                 \n counter: {} bits: {}",
                        mov, i, mov.get_raw(),
                        real_moves.len(), moves_mp.len(),
@@ -563,7 +584,7 @@ mod tests {
                 \n in check?: {}\
                 \n ttm: {} bits: {} \
                 \n killer1: {} bits: {}\
-                \n killer1: {} bits: {}\
+                \n killer2: {} bits: {}\
                 \n counter: {} bits: {}",
                    moves_mp.len(), real_moves.len(),
                    depth, b.fen(),
@@ -574,14 +595,4 @@ mod tests {
                    cm, cm.get_raw());
         }
     }
-
-//    MovePicker Returned an incorrect move: e2c3 at index 0, bits: 29836
-//    Real Length: 30, MovePicker Length: 31,
-//
-//    depth: 15927, fen: r4r2/1n1k1pp1/p1p4p/5n1P/1PpPB3/6PR/P3NP2/3RK3 w - - 4 28
-//    in check?: false
-//    ttm: f4h6 bits: 31709
-//    killer1: c7f7 bits: 3442
-//    killer1: e2c3 bits: 29836
-//    counter: e1f2 bits: 836', pleco_engine\src\movepick\mod.rs:541:17
 }

@@ -434,6 +434,11 @@ impl BitMove {
     pub const fn get_raw(&self) -> u16 {
         self.data
     }
+
+    #[inline(always)]
+    pub fn incorrect_flag(&self) -> bool {
+        ((self.data >> 12) & 0b1110) == 0b0110
+    }
 }
 
 /// A move that stores a score as well
