@@ -472,6 +472,22 @@ impl ScoringMoveList {
         vec
     }
 
+    #[inline(always)]
+    pub fn push_score(&mut self, mov: BitMove, score: i16) {
+        if self.len < MAX_MOVES {
+            unsafe {
+                self.push_score_unchecked(mov, score);
+            }
+        }
+    }
+
+    #[inline(always)]
+    pub unsafe fn push_score_unchecked(&mut self, mov: BitMove, score: i16) {
+        let end = self.inner.get_unchecked_mut(self.len);
+        *end = ScoringMove::new_score(mov, score);
+        self.len += 1;
+    }
+
     /// Returns the number of moves inside the list.
     #[inline(always)]
     pub fn len(&self) -> usize {

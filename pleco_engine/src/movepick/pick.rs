@@ -1,12 +1,8 @@
 use std::mem;
 
-pub trait PickInner {
-    fn incr(&mut self);
-}
-
 #[repr(u8)]
 #[derive(Copy, Clone)]
-pub enum PickMain {
+pub enum Pick {
     MainSearch = 0,
     CapturesInit = 1,
     GoodCaptures = 2,
@@ -16,58 +12,26 @@ pub enum PickMain {
     QuietInit = 6,
     QuietMoves = 7,
     BadCaptures = 8,
+    EvasionSearch = 9,
+    EvasionsInit = 10,
+    AllEvasions = 11,
+    ProbCutSearch = 12,
+    ProbCutCapturesInit = 13,
+    ProbCutCaptures = 14,
+    QSearch = 15,
+    QSearchInit = 16,
+    QCaptures = 17,
+    QChecks = 18,
+    QSearchRecaptures = 19,
+    QRecaptures = 20,
 }
 
-#[repr(u8)]
-#[derive(Copy, Clone)]
-pub enum PickEvasion {
-    EvasionSearch = 0,
-    EvasionsInit = 1,
-    AllEvasions = 2,
-}
-
-#[repr(u8)]
-#[derive(Copy, Clone)]
-pub enum PickProbCut {
-    ProbCutSearch = 0,
-    ProbCutCapturesInit = 1,
-    ProbCutCaptures = 2,
-}
-
-#[repr(u8)]
-#[derive(Copy, Clone)]
-pub enum PickQSearch {
-    QSearch = 0,
-    QSearchInit = 1,
-    QCaptures = 2,
-    QChecks = 3,
-    QSearchRecaptures = 4,
-    QRecaptures = 5,
-}
-
-impl PickInner for PickMain {
-    fn incr(&mut self) {
+impl Pick {
+    pub fn incr(&mut self) {
         unsafe {*self = mem::transmute(*self as u8 + 1); }
     }
 }
 
-impl PickInner for PickEvasion {
-    fn incr(&mut self) {
-        unsafe {*self = mem::transmute(*self as u8 + 1); }
-    }
-}
-
-impl PickInner for PickProbCut {
-    fn incr(&mut self) {
-        unsafe {*self = mem::transmute(*self as u8 + 1); }
-    }
-}
-
-impl PickInner for PickQSearch {
-    fn incr(&mut self) {
-        unsafe {*self = mem::transmute(*self as u8 + 1); }
-    }
-}
 
 // types
 

@@ -501,6 +501,14 @@ impl ScoringMove {
         self
     }
 
+    #[inline(always)]
+    pub const fn null() -> Self {
+        ScoringMove {
+            bit_move: BitMove::null(),
+            score: 0
+        }
+    }
+
 }
 
 impl Ord for ScoringMove {
