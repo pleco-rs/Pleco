@@ -1974,8 +1974,11 @@ impl Board {
 
             if (pawn_attacks_from(to, us) & self.get_occupied_player(them)  // not a Capture
                     & to_bb).is_empty()
-                && !(from.0 as i8 + us.pawn_push() == to.0 as i8 && self.empty(to)) // not a single push
+                && !(from.0 as i8 + us.pawn_push() == to.0 as i8
+                    && self.empty(to)
+                    && m.is_quiet_move()) // not a single push
                 && !(from.0 as i8 + 2 * us.pawn_push() == to.0 as i8
+                    && m.is_double_push().0
                     && from.rank() == us.relative_rank(Rank::R2)
                     && self.empty(to)
                     && self.empty(SQ((to.0 as i8 - us.pawn_push()) as u8)))   // Not a double push
@@ -1986,6 +1989,10 @@ impl Board {
             if m.is_double_push().0 || (self.attacks_from(piece, from, us) & to_bb).is_empty() {
                 return false;
             }
+        }
+
+        if m.is_capture() && self.empty(to) {
+            return false;
         }
 
         if self.in_check() {

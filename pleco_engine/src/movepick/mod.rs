@@ -4,7 +4,7 @@ use std::ptr;
 use std::mem;
 
 #[allow(unused_imports)]
-use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ};
+use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList};
 use pleco::board::movegen::{PseudoLegal,MoveGen};
 use pleco::helper::prelude::piece_value;
 use pleco::core::mono_traits::*;
@@ -131,6 +131,14 @@ impl MovePicker {
         }
     }
 
+    pub fn drain(mut self, list: &mut MoveList, board: &Board, skip_quiets: bool) {
+        let mut mov = self.next(board, skip_quiets);
+        while mov != BitMove::null() {
+            list.push(mov);
+            mov = self.next(board, skip_quiets);
+        }
+    }
+
     fn score_captures(&mut self, board: &Board) {
         let mut ptr = self.cur_ptr;
         unsafe {
@@ -176,6 +184,10 @@ impl MovePicker {
         }
     }
 
+    pub fn state(&self) -> Pick {
+        self.pick
+    }
+
 
     pub fn next(&mut self, board: &Board, skip_quiets: bool) -> BitMove {
         let mut mov: ScoringMove = ScoringMove::null();
@@ -187,7 +199,7 @@ impl MovePicker {
             Pick::CapturesInit | Pick::ProbCutCapturesInit | Pick::QSearchInit | Pick::QSearchRecaptures => {
                 unsafe {
                     self.end_bad_captures = self.moves.as_mut_ptr();
-                    self.cur_ptr = self.end_bad_captures;
+                    self.cur_ptr = self.moves.as_mut_ptr();
                     self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,CapturesGenType, ScoringMoveList>
                         (board, self.cur_ptr);
                 }
@@ -202,6 +214,7 @@ impl MovePicker {
                     if mov.bit_move != self.ttm && mov.score > -20 {
                         return mov.bit_move;
                     }
+
                     unsafe {
                         *self.end_bad_captures = mov;
                         self.end_bad_captures = self.end_bad_captures.add(1);
@@ -404,7 +417,7 @@ mod tests {
         }
     }
 
-
+    /// Testing a random partial insertion sort
     fn partial_insertion_t() {
         let min = 10;
         let max = 200;
@@ -447,6 +460,8 @@ mod tests {
         }
     }
 
+
+    // Testing the movepicker for the starting position
     #[test]
     fn movepick_startpos_blank() {
         movepick_main_search(Board::default(), BitMove::null(), &[BitMove::null(); 2],
@@ -463,18 +478,19 @@ mod tests {
 
     #[test]
     fn movepick_rand_mainsearch() {
-        for _x in 0..20 {
+        for _x in 0..10 {
             let mut b = Board::random().one();
             while b.checkmate() {
                 b = Board::random().one();
             }
-            movepick_rand_one(b);
-//            println!("pass movepick rand! {}",_x);
+            println!("fen: {}", b.fen());
+            movepick_rand_one(b.clone());
+            println!("pass movepick rand! {} ",_x);
         }
     }
 
     #[test]
-    fn movepick_incorrect_move1() {
+    fn movepick_incorrect_move_1() {
     //    MovePicker Returned an incorrect move: 39 at index 0
     //    Incorrect Move: d1f3,
     //    depth: 4232, fen: rnb1k2r/pppp1ppp/7n/2b1P3/4P3/2P5/PP3PPP/RN1QKBNR w KQkq - 1 6
@@ -492,9 +508,9 @@ mod tests {
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
 
-    
+
     #[test]
-    fn movepick_incorrect_move2() {
+    fn movepick_incorrect_move_2() {
     //    MovePicker Returned an incorrect move: e2c3 at index 0, bits: 29836
     //    Real Length: 30, MovePicker Length: 31,
     //
@@ -513,13 +529,55 @@ mod tests {
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
 
+    #[test]
+    fn movepick_incorrect_move_3() {
+    //    MovePicker Returned an incorrect move: h2h4 at index 0, bits: 1999
+    //    Real Length: 33, MovePicker Length: 34,
+    //
+    //    depth: 127, fen: rn5r/p3nppp/2pk4/bpq5/3p1PN1/1Q2P1P1/PP2N2P/R1BK1B1R w - - 0 19
+    //    in check?: false
+    //    ttm: h2h4 bits: 1999
+    //    killer1: e4h5 bits: 23004
+    //    killer2: h3e3b bits: 38167
+    //    counter: h2h4 bits: 10191
+
+        let b = Board::from_fen("rn5r/p3nppp/2pk4/bpq5/3p1PN1/1Q2P1P1/PP2N2P/R1BK1B1R w - - 0 19").unwrap();
+        let ttm = BitMove::new(1999);
+        let killers = [BitMove::new(23004), BitMove::new(38167)];
+        let depth = 127;
+        let cm = BitMove::new(10191);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
+
+    #[test]
+    fn movepick_incorrect_move_4() {
+    //    Real Length: 35, MovePicker Length: 36,
+    //
+    //    depth: 19, fen: rnb1kbnr/pp3ppp/1q6/2pp4/1P1P4/Q7/P3PPPP/RNB1KBNR w KQkq - 0 7
+    //    in check?: false
+    //    ttm: g4a3 bits: 21534
+    //    killer1: c1e3 bits: 17666
+    //    killer2: b7d8 bits: 20209
+    //    counter: a6c2 bits: 12968
+
+        // duplicate move: c1e3
+        let b = Board::from_fen("rnb1kbnr/pp3ppp/1q6/2pp4/1P1P4/Q7/P3PPPP/RNB1KBNR w KQkq - 0 7").unwrap();
+        let ttm = BitMove::new(21534);
+        let killers = [BitMove::new(17666), BitMove::new(20209)];
+        let depth = 19;
+        let cm = BitMove::new(12968);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
+
+
     fn movepick_rand_one(b: Board) {
         let ttm = BitMove::new(rand::random());
         let cm = BitMove::new(rand::random());
         let killers = [BitMove::new(rand::random()),BitMove::new(rand::random())];
-        let depth = rand::random::<i16>().abs().max(1).min(127);
+        let depth = (rand::random::<i16>().abs() % 126).max(1);
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
+
 
 
 
@@ -545,7 +603,7 @@ mod tests {
                 \n ttm: {} bits: {} \
                 \n killer1: {} bits: {}\
                 \n killer2: {} bits: {}\
-                \n counter: {} bits: {}",
+                \n counter: {} bits: {}\n",
                        mov, i, mov.get_raw(),
                        real_moves.len(), moves_mp.len(),
                        depth, b.fen(),
@@ -566,7 +624,7 @@ mod tests {
                 \n ttm: {} bits: {} \
                 \n killer1: {} bits: {}\
                 \n killer2: {} bits: {}\
-                \n counter: {} bits: {}",
+                \n counter: {} bits: {}\n",
                        mov, i, mov.get_raw(),
                        real_moves.len(), moves_mp.len(),
                        depth, b.fen(),
@@ -585,7 +643,7 @@ mod tests {
                 \n ttm: {} bits: {} \
                 \n killer1: {} bits: {}\
                 \n killer2: {} bits: {}\
-                \n counter: {} bits: {}",
+                \n counter: {} bits: {}\n",
                    moves_mp.len(), real_moves.len(),
                    depth, b.fen(),
                    b.in_check(),

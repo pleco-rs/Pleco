@@ -147,20 +147,22 @@ impl fmt::Display for BitMove {
 
 // https://chessprogramming.wikispaces.com/Encoding+Moves
 impl BitMove {
-    pub const FLAG_QUIET: u16 = 0;
-    pub const FLAG_DOUBLE_PAWN: u16 = 1;
-    pub const FLAG_CAPTURE: u16 = 4;
-    pub const FLAG_EP: u16 = 5;
-
-    pub const FLAG_PROMO_N: u16 = 0b1000;
-    pub const FLAG_PROMO_B: u16 = 0b1001;
-    pub const FLAG_PROMO_R: u16 = 0b1010;
-    pub const FLAG_PROMO_Q: u16 = 0b1011;
-
-    pub const FLAG_PROMO_CAP_N: u16 = 0b1100;
-    pub const FLAG_PROMO_CAP_B: u16 = 0b1101;
-    pub const FLAG_PROMO_CAP_R: u16 = 0b1110;
-    pub const FLAG_PROMO_CAP_Q: u16 = 0b1111;
+    pub const FLAG_QUIET: u16 =         0b0000;
+    pub const FLAG_DOUBLE_PAWN: u16 =   0b0001;
+    pub const FLAG_KING_CASTLE: u16 =   0b0010;
+    pub const FLAG_QUEEN_CASTLE: u16 =  0b0011;
+    pub const FLAG_CAPTURE: u16 =       0b0100;
+    pub const FLAG_EP: u16 =            0b0101;
+    pub const ILLEGAL_FLAG_1: u16 =     0b0110;
+    pub const ILLEGAL_FLAG_2: u16 =     0b0111;
+    pub const FLAG_PROMO_N: u16 =       0b1000;
+    pub const FLAG_PROMO_B: u16 =       0b1001;
+    pub const FLAG_PROMO_R: u16 =       0b1010;
+    pub const FLAG_PROMO_Q: u16 =       0b1011;
+    pub const FLAG_PROMO_CAP_N: u16 =   0b1100;
+    pub const FLAG_PROMO_CAP_B: u16 =   0b1101;
+    pub const FLAG_PROMO_CAP_R: u16 =   0b1110;
+    pub const FLAG_PROMO_CAP_Q: u16 =   0b1111;
 
     /// Creates a new BitMove from raw bits.
     ///
@@ -275,7 +277,7 @@ impl BitMove {
     /// Returns if a [BitMove] is a Quiet Move, meaning it is not any of the following: a capture, promotion, castle, or double pawn push.
     #[inline(always)]
     pub const fn is_quiet_move(&self) -> bool {
-        ((self.data & FLAG_MASK) >> 12) == 0
+        self.flag() == 0
     }
 
     /// Returns if a [BitMove] is a promotion.
@@ -311,31 +313,31 @@ impl BitMove {
     /// Returns if a [BitMove] is a castle.
     #[inline(always)]
     pub const fn is_castle(&self) -> bool {
-        ((self.data & FLAG_MASK) >> 13) == 1
+        (self.data  >> 13) == 1
     }
 
     /// Returns if a [BitMove] is a Castle && it is a KingSide Castle.
     #[inline(always)]
     pub const fn is_king_castle(&self) -> bool {
-        ((self.data & FLAG_MASK) >> 12) == 2
+        self.flag() == BitMove::FLAG_KING_CASTLE
     }
 
     /// Returns if a [BitMove] is a Castle && it is a QueenSide Castle.
     #[inline(always)]
     pub const fn is_queen_castle(&self) -> bool {
-        ((self.data & FLAG_MASK) >> 12) == 3
+        self.flag() == BitMove::FLAG_QUEEN_CASTLE
     }
 
     /// Returns if a [BitMove] is an enpassant capture.
     #[inline(always)]
     pub const fn is_en_passant(&self) -> bool {
-        (self.data & FLAG_MASK) >> 12 == 5
+        self.flag() >> 12 == 5
     }
 
     /// Returns if a [BitMove] is a double push, and if so returns the Destination square as well.
     #[inline(always)]
     pub fn is_double_push(&self) -> (bool, u8) {
-        let is_double_push: u8 = ((self.data & FLAG_MASK) >> 12) as u8;
+        let is_double_push: u8 = self.flag() as u8;
         match is_double_push {
             1 => (true, self.get_dest().0 as u8),
             _ => (false, 64),
@@ -376,7 +378,7 @@ impl BitMove {
     /// Method should only be used if the [BitMove] is a promotion. Otherwise, Undefined Behavior may result.
     #[inline(always)]
     pub fn promo_piece(&self) -> PieceType {
-        match (self.data >> 12) & 0b0011 {
+        match (self.flag()) & 0b0011 {
             0 => PieceType::N,
             1 => PieceType::B,
             2 => PieceType::R,
@@ -437,7 +439,12 @@ impl BitMove {
 
     #[inline(always)]
     pub fn incorrect_flag(&self) -> bool {
-        ((self.data >> 12) & 0b1110) == 0b0110
+        ((self.flag()) & 0b1110) == 0b0110
+    }
+
+    #[inline(always)]
+    pub const fn flag(&self) -> u16 {
+        self.data >> 12
     }
 }
 
