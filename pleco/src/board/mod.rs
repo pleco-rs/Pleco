@@ -2036,6 +2036,17 @@ impl Board {
 
     }
 
+    #[inline(always)]
+    pub fn is_capture_or_promotion(&self, mov: BitMove) -> bool {
+        assert_ne!(mov.get_dest_u8(), mov.get_src_u8());
+        if mov.move_type() != MoveType::Normal {
+            mov.move_type() != MoveType::Castle
+        } else {
+            !self.empty(mov.get_dest())
+        }
+
+    }
+
 
     /// Returns if a move gives check to the opposing player's King.
     ///

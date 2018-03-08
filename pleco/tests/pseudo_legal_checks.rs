@@ -5,6 +5,8 @@ use std::u16::MAX;
 use pleco::{Board,BitMove};
 use pleco::board::fen::ALL_FENS;
 
+
+
 #[test]
 fn pseudolegal_all_fens() {
     for fen in ALL_FENS.iter() {
@@ -47,6 +49,35 @@ fn pseudolegal_correctness(board: &Board) {
                     \n  move: {} bits: {:b}\n",
                        board.fen(), bit_move, bit_move.get_raw());
             }
+        }
+    }
+}
+
+#[test]
+fn legal_all_fens() {
+    for fen in ALL_FENS.iter() {
+        let board = Board::from_fen(*fen).unwrap();
+        legal_correctness(&board);
+    }
+}
+
+#[test]
+fn legal_rand() {
+    for _x in 0..14 {
+        let board = Board::random().one();
+        legal_correctness(&board);
+    }
+}
+
+
+fn legal_correctness(board: &Board) {
+    let moves = board.generate_moves();
+    for m in moves.iter() {
+        if !board.pseudo_legal_move(*m) {
+            panic!("\nLegal move was not pseudo legal!\
+                    \n  fen: {}\
+                    \n  move: {} bits: {:b}\n",
+                   board.fen(), m, m.get_raw());
         }
     }
 }

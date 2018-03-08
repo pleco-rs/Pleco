@@ -2,7 +2,6 @@ mod pick;
 
 use std::ptr;
 use std::mem;
-use std::panic;
 
 #[allow(unused_imports)]
 use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList,PieceType};
@@ -60,6 +59,8 @@ impl MovePicker {
         }
     }
 
+
+
     /// MovePicker constructor for quiescence search
     pub fn qsearch(board: &Board, depth: i16, ttm: BitMove, recapture_sq: SQ) -> Self {
         assert!(depth <= 0);
@@ -100,7 +101,7 @@ impl MovePicker {
 
     /// MovePicker constructor for ProbCut: we generate captures with SEE higher
     /// than or equal to the given threshold.
-    pub fn probcut_search(board: &Board, threshold: i32, mut ttm: BitMove, recapture_sq: SQ) -> Self {
+    pub fn probcut_search(board: &Board, threshold: i32, mut ttm: BitMove) -> Self {
         assert!(!board.in_check());
         let mut moves = ScoringMoveList::default();
         let first: *mut ScoringMove = moves.as_mut_ptr();
@@ -124,7 +125,7 @@ impl MovePicker {
             ttm,
             killers: unsafe { mem::uninitialized() },
             cm: unsafe { mem::uninitialized() },
-            recapture_sq: recapture_sq,
+            recapture_sq: unsafe { mem::uninitialized() },
             threshold,
             cur_ptr: first,
             end_ptr: first,
@@ -132,15 +133,15 @@ impl MovePicker {
         }
     }
 
-    pub fn drain(mut self, list: &mut MoveList, board: &Board, skip_quiets: bool) {
-        let mut mov = self.next(board, skip_quiets);
+    pub fn drain(mut self, list: &mut MoveList, skip_quiets: bool) {
+        let mut mov = self.next(skip_quiets);
         while mov != BitMove::null() {
             list.push(mov);
-            mov = self.next(board, skip_quiets);
+            mov = self.next(skip_quiets);
         }
     }
 
-    fn score_captures(&mut self, board: &Board) {
+    fn score_captures(&mut self) {
         let mut ptr = self.cur_ptr;
         unsafe {
             while ptr < self.end_ptr {
@@ -149,8 +150,8 @@ impl MovePicker {
                     (*ptr).score = piece_value(mov.promo_piece(),false) as i16
                         - piece_value(PieceType::P,false) as i16;
                 } else {
-                    let piece_moved = board.moved_piece(mov);
-                    let piece_cap = board.captured_piece(mov).unwrap();
+                    let piece_moved = self.board().moved_piece(mov);
+                    let piece_cap = self.board().captured_piece(mov).unwrap();
                     (*ptr).score = piece_value(piece_cap,false) as i16
                         - piece_value(piece_moved,false) as i16;
                 }
@@ -159,14 +160,14 @@ impl MovePicker {
         }
     }
 
-    fn score_evasions(&mut self, board: &Board) {
+    fn score_evasions(&mut self) {
         let mut ptr = self.cur_ptr;
         unsafe {
             while ptr < self.end_ptr {
                 let mov: BitMove = (*ptr).bit_move;
-                if board.is_capture(mov) {
-                    let piece_moved = board.moved_piece(mov);
-                    let piece_cap = board.captured_piece(mov).unwrap();
+                if self.board().is_capture(mov) {
+                    let piece_moved = self.board().moved_piece(mov);
+                    let piece_cap = self.board().captured_piece(mov).unwrap();
                     (*ptr).score = piece_value(piece_cap,false) as i16
                         - piece_value(piece_moved,false) as i16;
                 }
@@ -175,7 +176,7 @@ impl MovePicker {
         }
     }
 
-    fn score_quiets(&mut self, board: &Board) {
+    fn score_quiets(&mut self) {
         let mut ptr = self.cur_ptr;
         unsafe {
             while ptr < self.end_ptr {
@@ -210,7 +211,7 @@ impl MovePicker {
     }
 
 
-    pub fn next(&mut self, board: &Board, skip_quiets: bool) -> BitMove {
+    pub fn next(&mut self, skip_quiets: bool) -> BitMove {
         let mut mov: ScoringMove = ScoringMove::null();
         match self.pick {
             Pick::MainSearch | Pick::EvasionSearch | Pick::QSearch | Pick::ProbCutSearch => {
@@ -222,11 +223,11 @@ impl MovePicker {
                     self.end_bad_captures = self.moves.as_mut_ptr();
                     self.cur_ptr = self.moves.as_mut_ptr();
                     self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,CapturesGenType, ScoringMoveList>
-                        (board, self.cur_ptr);
+                        (self.board(), self.cur_ptr);
                 }
-                self.score_captures(board);
+                self.score_captures();
                 self.pick.incr();
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::GoodCaptures => {
                 while self.cur_ptr < self.end_ptr {
@@ -242,18 +243,18 @@ impl MovePicker {
                     }
                 }
                 self.pick.incr();
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::KillerOne | Pick::KillerTwo => {
                 mov.bit_move = self.killers[self.pick as usize - Pick::KillerOne as usize];
                 self.pick.incr();
                 if mov.bit_move != BitMove::null()
                     && mov.bit_move != self.ttm
-                    && board.pseudo_legal_move(mov.bit_move)
-                    && !board.is_capture(mov.bit_move) {
+                    && self.board().pseudo_legal_move(mov.bit_move)
+                    && !self.board().is_capture(mov.bit_move) {
                     return mov.bit_move;
                 }
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::CounterMove => {
                 self.pick.incr();
@@ -261,21 +262,21 @@ impl MovePicker {
                     && self.cm != self.ttm
                     && self.cm != self.killers[0]
                     && self.cm != self.killers[1]
-                    && board.pseudo_legal_move(self.cm)
-                    && !board.is_capture(self.cm) {
+                    && self.board().pseudo_legal_move(self.cm)
+                    && !self.board().is_capture(self.cm) {
                     return self.cm;
                 }
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::QuietInit => {
                 unsafe {
                     self.cur_ptr = self.end_bad_captures;
                     self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,QuietsGenType, ScoringMoveList>(
-                        board, self.cur_ptr);
+                        self.board(), self.cur_ptr);
                     // TODO: Need to score the captures
                 }
                 self.pick.incr();
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::QuietMoves => {
                 if !skip_quiets {
@@ -294,7 +295,7 @@ impl MovePicker {
                 }
                 self.pick.incr();
                 self.cur_ptr = self.moves.as_mut_ptr();
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::BadCaptures => {
                 if self.cur_ptr < self.end_bad_captures {
@@ -309,11 +310,11 @@ impl MovePicker {
                 unsafe {
                     self.cur_ptr = self.moves.as_mut_ptr();
                     self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,EvasionsGenType,ScoringMoveList>
-                        (board, self.cur_ptr);
+                        (self.board(), self.cur_ptr);
                 }
-                self.score_evasions(board);
+                self.score_evasions();
                 self.pick.incr();
-                return self.next(board, skip_quiets);
+                return self.next(skip_quiets);
             },
             Pick::AllEvasions => {
                 while self.cur_ptr < self.end_ptr {
@@ -346,10 +347,10 @@ impl MovePicker {
                     unsafe {
                         self.cur_ptr = self.moves.as_mut_ptr();
                         self.end_ptr = MoveGen::extend_from_ptr::<PseudoLegal,QuietChecksGenType,ScoringMoveList>
-                            (board, self.cur_ptr);
+                            (self.board(), self.cur_ptr);
                     }
                     self.pick.incr();
-                    return self.next(board, skip_quiets);
+                    return self.next(skip_quiets);
                 }
             },
             Pick::QChecks => {
@@ -378,6 +379,12 @@ impl MovePicker {
         }
         BitMove::null()
     }
+
+    fn board(&self) -> &Board {
+        unsafe {
+            &*self.board
+        }
+    }
 }
 
 fn partial_insertion_sort(begin: *mut ScoringMove, end: *mut ScoringMove, limit: i32) {
@@ -403,11 +410,14 @@ fn partial_insertion_sort(begin: *mut ScoringMove, end: *mut ScoringMove, limit:
 
 #[cfg(test)]
 mod tests {
+
+    use std::panic;
+    use std::i16::{MAX,MIN};
+
+
     use super::*;
     use pleco::MoveList;
     use rand;
-
-    use std::i16::{MAX,MIN};
 
     #[test]
     fn mp_partial_insertion_sort() {
@@ -501,9 +511,6 @@ mod tests {
     fn movepick_rand_mainsearch() {
         for _x in 0..20 {
             let mut b = Board::random().one();
-            while b.checkmate() {
-                b = Board::random().one();
-            }
             movepick_rand_one(b);
             println!("pass movepick rand! {} ",_x);
         }
@@ -636,6 +643,14 @@ mod tests {
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
 
+    // Q Search
+    fn movepick_rand_one_q(b: Board) {
+        let ttm = BitMove::new(rand::random());
+        let cm = BitMove::new(rand::random());
+        let killers = [BitMove::new(rand::random()),BitMove::new(rand::random())];
+        let depth = ((rand::random::<i16>().abs() % 9) * -1).min(0);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
 
 
 
@@ -646,10 +661,10 @@ mod tests {
             let mut moves_mp = MoveList::default();
             let mut mp = MovePicker::main_search(&b, depth, ttm, &killers, cm);
 
-            let mut mp_next = mp.next(&b, false);
+            let mut mp_next = mp.next( false);
             while mp_next != BitMove::null() {
                 moves_mp.push(mp_next);
-                mp_next = mp.next(&b, false);
+                mp_next = mp.next(false);
             }
             moves_mp
         });
