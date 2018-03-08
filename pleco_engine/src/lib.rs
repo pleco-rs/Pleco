@@ -54,6 +54,7 @@ pub mod time;
 pub mod consts;
 pub mod uci;
 pub mod root_moves;
+pub mod movepick;
 pub mod tables;
 pub mod engine;
 pub mod search;

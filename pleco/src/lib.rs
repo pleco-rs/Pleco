@@ -79,6 +79,9 @@
 #![feature(const_fn)]
 #![feature(const_indexing)]
 #![feature(pointer_methods)]
+#![feature(cfg_target_feature, target_feature)]
+#![feature(stdsimd)]
+
 
 
 #![allow(dead_code)]
@@ -101,6 +104,7 @@ extern crate prefetch;
 extern crate mucow;
 extern crate test;
 extern crate unreachable;
+
 
 pub mod core;
 pub mod board;

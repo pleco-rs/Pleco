@@ -151,6 +151,15 @@ impl RootMoveList {
             rm.score = score;
         }
     }
+
+    pub fn find(&mut self, mov: BitMove) -> Option<&mut RootMove> {
+        for m in self.iter_mut() {
+            if m.bit_move == mov {
+                return Some(m);
+            }
+        }
+        None
+    }
 }
 
 impl Deref for RootMoveList {
