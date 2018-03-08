@@ -1972,7 +1972,7 @@ impl Board {
                 return false;
             }
 
-            if (pawn_attacks_from(to, us) & self.get_occupied_player(them)  // not a Capture
+            if (pawn_attacks_from(from, us) & self.get_occupied_player(them)  // not a Capture
                     & to_bb).is_empty()
                 && !(from.0 as i8 + us.pawn_push() == to.0 as i8
                     && self.empty(to)
@@ -1989,6 +1989,10 @@ impl Board {
             if m.is_double_push().0 || (self.attacks_from(piece, from, us) & to_bb).is_empty() {
                 return false;
             }
+        }
+
+        if self.is_capture(m) ^ m.is_capture() {
+            return false;
         }
 
         if m.is_capture() {
