@@ -478,7 +478,10 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
         }
 
         // Promotions
-        if pawns_rank_7.is_not_empty() && (G::gen_type() != GenTypes::Evasions || (target & rank_8).is_not_empty()) {
+        if pawns_rank_7.is_not_empty()
+            && G::gen_type() != GenTypes::Quiets
+            && (G::gen_type() != GenTypes::Evasions || (target & rank_8).is_not_empty()) {
+
             if G::gen_type() == GenTypes::Captures {
                 empty_squares = !self.occ;
             } else if G::gen_type() == GenTypes::Evasions {

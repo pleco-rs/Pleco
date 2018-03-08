@@ -5,7 +5,7 @@ use std::mem;
 use std::panic;
 
 #[allow(unused_imports)]
-use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList};
+use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList,PieceType};
 use pleco::board::movegen::{PseudoLegal,MoveGen};
 use pleco::helper::prelude::piece_value;
 use pleco::core::mono_traits::*;
@@ -145,10 +145,15 @@ impl MovePicker {
         unsafe {
             while ptr < self.end_ptr {
                 let mov: BitMove = (*ptr).bit_move;
-                let piece_moved = board.moved_piece(mov);
-                let piece_cap = board.captured_piece(mov).unwrap();
-                (*ptr).score = piece_value(piece_cap,false) as i16
-                    - piece_value(piece_moved,false) as i16;
+                if mov.is_promo() {
+                    (*ptr).score = piece_value(mov.promo_piece(),false) as i16
+                        - piece_value(PieceType::P,false) as i16;
+                } else {
+                    let piece_moved = board.moved_piece(mov);
+                    let piece_cap = board.captured_piece(mov).unwrap();
+                    (*ptr).score = piece_value(piece_cap,false) as i16
+                        - piece_value(piece_moved,false) as i16;
+                }
                 ptr = ptr.add(1);
             }
         }
@@ -603,6 +608,23 @@ mod tests {
         movepick_main_search(b, ttm, &killers, cm, depth);
     }
 
+    #[test]
+    fn movepick_incorrect_move_6() {
+        //  Unknown panic while using the movelist!
+    //    depth: 23, fen: 3r4/p2p1kP1/n2B4/b1p2p2/2P2P2/PP6/6NK/3R1RN1 w - - 1 33
+    //    in check?: false
+    //    ttm: b5g8 bits: 16289
+    //    killer1: g6d5b bits: 39150
+    //    killer2: g4c7n bits: 35998
+    //    counter: e6e4 bits: 1836
+
+        let b = Board::from_fen("3r4/p2p1kP1/n2B4/b1p2p2/2P2P2/PP6/6NK/3R1RN1 w - - 1 33").unwrap();
+        let ttm = BitMove::new(16289);
+        let killers = [BitMove::new(39150), BitMove::new(35998)];
+        let depth = 23;
+        let cm = BitMove::new(1836);
+        movepick_main_search(b, ttm, &killers, cm, depth);
+    }
 
 
 
