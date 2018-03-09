@@ -7,8 +7,6 @@ This project aims to utilize the efficiency of Rust to create a Chess Bot with t
 
 [![Pleco crate](https://img.shields.io/crates/v/pleco_engine.svg)](https://crates.io/crates/pleco_engine)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
-[![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
-[![Coverage Status](https://coveralls.io/repos/github/sfleischman105/Pleco/badge.svg?branch=master)](https://coveralls.io/github/sfleischman105/Pleco?branch=master)
 
 
 This project is split into two crates, `pleco_engine` (the current folder), which contains the
@@ -33,7 +31,7 @@ The AI  aims to have the following features:
 - [x] Futility Pruning
 - [x] Transposition Tables
 - [ ] Null Move Heuristic
-- [ ] Killer Moves
+- [x] Killer Moves
 
 Standalone Installation and Use
 -------

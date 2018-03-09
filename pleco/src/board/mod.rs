@@ -1,4 +1,4 @@
-//! This module contains [`Board`], the object representing the current state of a chessboard.
+//! This module contains `Board`, the object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
 //!
@@ -6,7 +6,6 @@
 //! determining castling rights throughout a game. Other utilities that may be of use
 //! are [`PieceLocations`], which maps squares on a chessboard to pieces and players.
 //!
-//! [`Board`]: struct.Board.html
 //! [`CastlingRights`]: castle_rights/struct.Castling.html
 //! [`PieceLocations`]: piece_locations/struct.Eval.html
 
@@ -2027,7 +2026,10 @@ impl Board {
             && self.turn().relative_rank_of_sq(mov.get_src()) > Rank::R4
     }
 
-    #[doc(hidden)]
+    /// Returns if a move is a capture.
+    ///
+    /// This is similar to `BitMove::is_capture`, but instead comapres the move to the `Board`s
+    /// data, rather than relying on the information encoded in the move.
     #[inline(always)]
     pub fn is_capture(&self, mov: BitMove) -> bool {
         assert_ne!(mov.get_dest_u8(), mov.get_src_u8());
@@ -2036,6 +2038,10 @@ impl Board {
 
     }
 
+    /// Returns if a move is a capture.
+    ///
+    /// This is similar to `BitMove::is_capture` & `BitMove::is_promo`, but instead comapres the
+    /// move to the `Board`s data, rather than relying on the information encoded in the move.
     #[inline(always)]
     pub fn is_capture_or_promotion(&self, mov: BitMove) -> bool {
         assert_ne!(mov.get_dest_u8(), mov.get_src_u8());

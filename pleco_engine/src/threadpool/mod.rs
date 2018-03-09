@@ -163,8 +163,9 @@ impl ThreadPool {
     /// # Safety
     ///
     /// Completely unsafe to use when the pool is searching.
-    pub fn set_thread_count(&mut self, num: usize) {
-        if num > 1 {
+    pub fn set_thread_count(&mut self, mut num: usize) {
+        if num >= 1 {
+            num = num.min(MAX_THREADS);
             self.wait_for_finish();
             self.kill_all();
             while self.size() < num {
@@ -178,6 +179,7 @@ impl ThreadPool {
     pub fn kill_all(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
         self.wait_for_finish();
+        let mut join_handles = Vec::with_capacity(self.size());
         unsafe {
             // tell each thread to drop
             self.threads.iter()
@@ -193,9 +195,11 @@ impl ThreadPool {
                     s.cond.set();
                 });
 
-            // Start connecting each join handle.
+
+            // Start connecting each join handle. We don't unwrap here, as if one of the
+            // threads fail, the other threads remain un-joined.
             while let Some(handle) = self.handles.pop() {
-                handle.join().unwrap_or_else(|e| println!("Thread failed: {:?}",e));
+                join_handles.push(handle.join());
             }
 
             // De-allocate each thread.
@@ -204,6 +208,11 @@ impl ThreadPool {
                 let layout = Layout::new::<Searcher>();
                 Heap.dealloc(th as *mut _, layout);
             }
+        }
+
+        // Unwrap the results from each `thread::join`,
+        while let Some(handle_result) = join_handles.pop() {
+            handle_result.unwrap_or_else(|e| println!("Thread failed: {:?}",e));
         }
     }
 

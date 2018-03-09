@@ -1,24 +1,21 @@
 //! A blazingly fast Chess Library.
 //!
-//! This package is separated into two parts. Firstly, the board representation & associated functions (the current crate, `pleco`), and secondly,
-//! the AI implementations [pleco_engine](https://crates.io/crates/pleco_engine).
+//! This package is separated into two parts. Firstly, the board representation & associated functions
+//! (the current crate, `pleco`), and secondly, the AI implementations using these chess foundations,
+//! [pleco_engine](https://crates.io/crates/pleco_engine).
 //!
-//! This crate requires NIGHTLY Rust to use.
+//! This crate requires *nightly* Rust to use.
 //!
 //! # Usage
 //!
 //! This crate is [on crates.io](https://crates.io/crates/pleco) and can be
 //! used by adding `pleco` to the dependencies in your project's `Cargo.toml`.
 //!
-//! `pleco` requires nightly rust currently, so make sure your toolchain is a nightly version.
-//!
-//!
 //! # Safety
 //!
 //! While generally a safe library, pleco was built with a focus of speed in mind. Usage of methods must be followed
 //! carefully, as there are many possible ways to `panic` unexpectedly. Methods with the ability to panic will be
 //! documented as such.
-//!
 //!
 //! # Examples
 //!
@@ -52,7 +49,7 @@
 //!
 //! ```ignore
 //! let start_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-//! let board = Board::new_from_fen(start_position);
+//! let board = Board::from_fen(start_position).unwrap();
 //! ```
 //!
 //! [`MoveList`]: core/move_list/struct.MoveList.html
@@ -83,16 +80,8 @@
 #![feature(stdsimd)]
 
 
-
 #![allow(dead_code)]
 
-
-// [`Vec<T>`]: ../../std/vec/struct.Vec.html
-// [`new`]: ../../std/vec/struct.Vec.html#method.new
-// [`push`]: ../../std/vec/struct.Vec.html#method.push
-// [`Index`]: ../../std/ops/trait.Index.html
-// [`IndexMut`]: ../../`std/ops/trait.IndexMut.html
-// [`vec!`]: ../../std/macro.vec.html
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
@@ -105,27 +94,29 @@ extern crate mucow;
 extern crate test;
 extern crate unreachable;
 
-
 pub mod core;
 pub mod board;
 pub mod bots;
-pub mod bot_prelude;
 pub mod helper;
 pub mod tools;
 
-#[doc(no_inline)]
 pub use board::Board;
-#[doc(no_inline)]
 pub use core::piece_move::{BitMove,ScoringMove};
-#[doc(no_inline)]
 pub use core::move_list::{MoveList,ScoringMoveList};
-#[doc(no_inline)]
 pub use core::sq::SQ;
-#[doc(no_inline)]
 pub use core::bitboard::BitBoard;
-#[doc(no_inline)]
 pub use helper::Helper;
-#[doc(no_inline)]
 pub use core::{Player, PieceType, Rank, File};
 
 
+pub mod bot_prelude {
+    //! Easy importing of all available bots.
+    pub use bots::RandomBot;
+    pub use bots::MiniMaxSearcher;
+    pub use bots::ParallelMiniMaxSearcher;
+    pub use bots::AlphaBetaSearcher;
+    pub use bots::JamboreeSearcher;
+    pub use bots::IterativeSearcher;
+
+    pub use tools::Searcher;
+}

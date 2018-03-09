@@ -40,7 +40,7 @@ script:
 
 after_success:
   - |
-    if [[ "$TRAVIS_BRANCH" != "Beta-Branch" ]]
+    if [[ "$TRAVIS_BRANCH" = "master" ]] AND [ "$TRAVIS_PULL_REQUEST" = "false" ]
     then
       cargo install cargo-travis || echo "cargo-travis has been already installed"
       export PATH=$HOME/.cargo/bin:$PATH
