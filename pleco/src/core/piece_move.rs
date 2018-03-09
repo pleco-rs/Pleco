@@ -217,7 +217,7 @@ impl BitMove {
         }
     }
 
-    /// Creates a BitMove from a [PreMoveInfo].
+    /// Creates a BitMove from a `PreMoveInfo`.
     #[inline]
     pub fn init(info: PreMoveInfo) -> BitMove {
         let src = info.src.0 as u16;
@@ -260,81 +260,81 @@ impl BitMove {
         BitMove { data: 0 }
     }
 
-    /// Returns if a [BitMove] is a Null Move.
+    /// Returns if a `BitMove` is a Null Move.
     ///
-    /// See [BitMove::null()] for more information on Null moves.
+    /// See `BitMove::null()` for more information on Null moves.
     #[inline]
     pub const fn is_null(&self) -> bool {
         self.data == 0
     }
 
-    /// Returns if a [BitMove] captures an opponent's piece.
+    /// Returns if a `BitMove` captures an opponent's piece.
     #[inline(always)]
     pub const fn is_capture(&self) -> bool {
         ((self.data & CP_MASK) >> 14) == 1
     }
 
-    /// Returns if a [BitMove] is a Quiet Move, meaning it is not any of the following: a capture, promotion, castle, or double pawn push.
+    /// Returns if a `BitMove` is a Quiet Move, meaning it is not any of the following: a capture, promotion, castle, or double pawn push.
     #[inline(always)]
     pub const fn is_quiet_move(&self) -> bool {
         self.flag() == 0
     }
 
-    /// Returns if a [BitMove] is a promotion.
+    /// Returns if a `BitMove` is a promotion.
     #[inline(always)]
     pub const fn is_promo(&self) -> bool {
         (self.data & PR_MASK) != 0
     }
 
-    /// Returns the destination of a [BitMove].
+    /// Returns the destination of a `BitMove`.
     #[inline(always)]
     pub const fn get_dest(&self) -> SQ {
         SQ(self.get_dest_u8())
     }
 
-    /// Returns the destination of a [BitMove].
+    /// Returns the destination of a `BitMove`.
     #[inline(always)]
     pub const fn get_dest_u8(&self) -> u8 {
         ((self.data & DST_MASK) >> 6) as u8
     }
 
-    /// Returns the source square of a [BitMove].
+    /// Returns the source square of a `BitMove`.
     #[inline(always)]
     pub const fn get_src(&self) -> SQ {
         SQ(self.get_src_u8())
     }
 
-    /// Returns the source square of a [BitMove].
+    /// Returns the source square of a `BitMove`.
     #[inline(always)]
     pub const fn get_src_u8(&self) -> u8 {
         (self.data & SRC_MASK) as u8
     }
 
-    /// Returns if a [BitMove] is a castle.
+    /// Returns if a `BitMove` is a castle.
     #[inline(always)]
     pub const fn is_castle(&self) -> bool {
         (self.data  >> 13) == 1
     }
 
-    /// Returns if a [BitMove] is a Castle && it is a KingSide Castle.
+    /// Returns if a `BitMove` is a Castle && it is a KingSide Castle.
     #[inline(always)]
     pub const fn is_king_castle(&self) -> bool {
         self.flag() == BitMove::FLAG_KING_CASTLE
     }
 
-    /// Returns if a [BitMove] is a Castle && it is a QueenSide Castle.
+    /// Returns if a `BitMove` is a Castle && it is a QueenSide Castle.
     #[inline(always)]
     pub const fn is_queen_castle(&self) -> bool {
         self.flag() == BitMove::FLAG_QUEEN_CASTLE
     }
 
-    /// Returns if a [BitMove] is an enpassant capture.
+    /// Returns if a `BitMove` is an enpassant capture.
     #[inline(always)]
     pub const fn is_en_passant(&self) -> bool {
         self.flag() == BitMove::FLAG_EP
     }
 
-    /// Returns if a [BitMove] is a double push, and if so returns the Destination square as well.
+    /// Returns if a `BitMove` is a double push, and if so returns the Destination square as well.
     #[inline(always)]
     pub fn is_double_push(&self) -> (bool, u8) {
         let is_double_push: u8 = self.flag() as u8;
@@ -437,11 +437,13 @@ impl BitMove {
         self.data
     }
 
+    /// Returns if the move has an incorrect flag inside, and therefore is invalid.
     #[inline(always)]
     pub fn incorrect_flag(&self) -> bool {
         ((self.flag()) & 0b1110) == 0b0110
     }
 
+    // Returns the 4 bit flag of the `BitMove`.
     #[inline(always)]
     pub const fn flag(&self) -> u16 {
         self.data >> 12

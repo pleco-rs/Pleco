@@ -38,7 +38,7 @@ The AI Bot aims to have the following features:
 - [x] Futility Pruning
 - [x] Transposition Tables
 - [ ] Null Move Heuristic
-- [ ] Killer Moves
+- [x] Killer Moves
 
 Standalone Installation and Use
 -------
@@ -49,11 +49,12 @@ To use pleco as an executable, please [navigate to here](https://github.com/sfle
 Using Pleco as a Library
 -------
 
-To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco) Simply include the following in your Cargo.toml:
+To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco)
+Simply include the current version in your `Cargo.toml`:
 
 ```
 [dependencies]
-pleco = "0.3.6"
+pleco = "x.x.x"
 ```
 
 And add the following to a `main.rs` or `lib.rs`:

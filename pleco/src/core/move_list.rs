@@ -68,7 +68,17 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     unsafe fn over_bounds_ptr(&mut self) -> *mut Self::Output;
 
     #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
-    #[doc(hidden)]
+    /// Appends a number of moves from the bits of `dst` to the List, with the src SQ and
+    /// flags. Returns a pointer to the next available square.
+    ///
+    /// # Notes
+    ///
+    /// This is an experimental feature, attempting to use SIMD to speed-up move generation.
+    /// It proved slow, so as of now there is no use for it.
+    ///
+    /// # Safety,
+    ///
+    /// As it returns a raw pointer (and takes in one!), this method is completely unsafe to use.
     unsafe fn avx_append(ptr: *mut Self::Output, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut Self::Output;
 }
 
@@ -472,6 +482,9 @@ impl ScoringMoveList {
         vec
     }
 
+    /// Pushes a `BitMove` and a score to the list.
+    ///
+    /// Unlike a normal score, which is a `i32`, the score pushed is of a type `i16`.
     #[inline(always)]
     pub fn push_score(&mut self, mov: BitMove, score: i16) {
         if self.len < MAX_MOVES {

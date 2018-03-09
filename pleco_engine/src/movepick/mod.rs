@@ -210,7 +210,6 @@ impl MovePicker {
         self.pick
     }
 
-
     pub fn next(&mut self, skip_quiets: bool) -> BitMove {
         let mut mov: ScoringMove = ScoringMove::null();
         match self.pick {
@@ -387,6 +386,8 @@ impl MovePicker {
     }
 }
 
+/// Sorts the list based on the moves scores, down to the limit. Past the limit, the order
+/// is unspecified.
 fn partial_insertion_sort(begin: *mut ScoringMove, end: *mut ScoringMove, limit: i32) {
     unsafe {
         let mut sorted_end: *mut ScoringMove = begin;

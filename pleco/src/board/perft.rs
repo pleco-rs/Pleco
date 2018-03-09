@@ -29,6 +29,38 @@ impl Default for PerftNodes {
     }
 }
 
+impl PerftNodes {
+    /// Checks for the correct number of nodes in each category. If the results don't
+    /// match, panics with an error-message containing the failed checks.
+    pub fn check(&self, nodes: u64, captures: u64, en_passant: u64,
+                 castles: u64, promotions: u64, checks: u64, checkmates: u64) {
+        if self.captures   != captures
+        || self.en_passant != en_passant
+        || self.promotions != promotions
+        || self.checks     != checks
+        || self.checkmates != checkmates
+        || self.castles    != castles
+        || self.nodes      != nodes {
+            panic!("\n Perft did not return the correct results!\
+            \n total nodes {}, expected: {}, difference: {}\
+            \n captures {}, expected: {}, difference: {}\
+            \n en_passant {}, expected: {}, difference: {}\
+            \n promotions {}, expected: {}, difference: {}\
+            \n checks {}, expected: {}, difference: {}\
+            \n checkmates {}, expected: {}, difference: {}\
+            \n castles {}, expected: {}, difference: {}\n",
+                   self.nodes, nodes, nodes - self.nodes,
+                   self.captures, captures, captures as i64 - self.captures as i64,
+                   self.en_passant, en_passant, en_passant as i64 - self.en_passant as i64,
+                   self.promotions, promotions, promotions as i64 - self.promotions as i64,
+                   self.checks, checks, checks as i64 - self.checks as i64,
+                   self.checkmates, checkmates as i64, checkmates as i64 - self.checkmates as i64,
+                   self.castles, castles, castles as i64 - self.castles as i64
+            );
+        }
+    }
+}
+
 /// Returns the number of leaf nodes from generating moves to a certain depth.
 pub fn perft(board: &Board, depth: u16) -> u64 {
     if depth == 0 {
@@ -97,19 +129,6 @@ fn inner_perft_all(board: &mut Board, depth: u16, perft: &mut PerftNodes) {
 mod tests {
     use super::*;
 
-    fn check_perft(perft: PerftNodes,
-                   nodes: u64,      captures: u64, en_passant: u64,
-                   promotions: u64, checks: u64,   checkmates: u64, castles: u64) {
-
-        assert_eq!(perft.captures, captures);
-        assert_eq!(perft.en_passant, en_passant);
-        assert_eq!(perft.promotions, promotions);
-        assert_eq!(perft.checks, checks);
-        assert_eq!(perft.checkmates, checkmates);
-        assert_eq!(perft.castles, castles);
-        assert_eq!(perft.nodes, nodes);
-    }
-
     #[test]
     fn start_pos_perft() {
         let b: Board = Board::default();
@@ -124,12 +143,12 @@ mod tests {
     #[test]
     fn start_pos_perft_all() {
         let b: Board = Board::default();
-        check_perft(perft_all(&b,3),
-                    8902, 34, 0, 0, 12, 0, 0);
-        check_perft(perft_all(&b,4),
-                    197_281, 1576, 0, 0, 469, 8, 0);
-        check_perft(perft_all(&b,5),
-                    4_865_609, 82_719, 258, 0, 27351, 347, 0);
+        perft_all(&b,3)
+            .check(8902, 34, 0, 0, 0, 12, 0);
+        perft_all(&b,4)
+            .check(197_281, 1576, 0, 0, 0, 469, 8);
+        perft_all(&b,5)
+            .check(4_865_609, 82_719, 258, 0, 0, 27351, 347);
     }
 
     #[ignore]
@@ -147,12 +166,12 @@ mod tests {
     #[test]
     fn perft_kiwipete_all() {
         let b: Board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -").unwrap();
-        check_perft(perft_all(&b,3),
-                    97862, 17102, 45, 0, 993, 1, 3162);
-        check_perft(perft_all(&b,4),
-                    4085603, 757163, 1929, 15172, 25523, 43, 128013);
-        check_perft(perft_all(&b,5),
-                    193690690, 35043416, 73365, 8392, 3309887, 30171, 4993637);
+       perft_all(&b,3)
+           .check(97862, 17102, 45, 0, 993, 1, 3162);
+        perft_all(&b,4)
+            .check(4085603, 757163, 1929, 15172, 25523, 43, 128013);
+        perft_all(&b,5)
+            .check(193690690, 35043416, 73365, 8392, 3309887, 30171, 4993637);
     }
 
     #[test]
