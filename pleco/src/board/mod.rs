@@ -1,4 +1,4 @@
-//! This module contains [`Board`], the object representing the current state of a chessboard.
+//! This module contains `Board`, the object representing the current state of a chessboard.
 //! All modifications to the current state of the board is done through this object, as well as
 //! gathering information about the current state of the board.
 //!
@@ -6,7 +6,6 @@
 //! determining castling rights throughout a game. Other utilities that may be of use
 //! are [`PieceLocations`], which maps squares on a chessboard to pieces and players.
 //!
-//! [`Board`]: struct.Board.html
 //! [`CastlingRights`]: castle_rights/struct.Castling.html
 //! [`PieceLocations`]: piece_locations/struct.Eval.html
 

@@ -5,7 +5,6 @@ Pleco is a chess Engine & Library inspired by Stockfish, written entirely in Rus
 [![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
 [![Pleco crate](https://img.shields.io/crates/v/pleco_engine.svg)](https://crates.io/crates/pleco_engine)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
-[![Coverage Status](https://coveralls.io/repos/github/sfleischman105/Pleco/badge.svg?branch=master)](https://coveralls.io/github/sfleischman105/Pleco?branch=master)
 
 
 This project is split into two crates, `pleco`, which contains the library functionality, and `pleco_engine`, which contains the
@@ -49,7 +48,7 @@ To use pleco as an executable, please [navigate to here](https://github.com/sfle
 Using Pleco as a Library
 -------
 
-To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco)
+To use pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io.](https://crates.io/crates/pleco)
 Simply include the current version in your `Cargo.toml`:
 
 ```
@@ -65,11 +64,11 @@ extern crate pleco;
 ### Basic Usage
 Setting up a board position is extremely simple.
 ```rust
-use pleco::{Board,Player,Piece};
+use pleco::{Board,Player,PieceType};
 
 let board = Board::default();
-assert_eq!(board.count_piece(Player::White,Piece::P), 8);
-assert_eq!(&board.get_fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+assert_eq!(board.count_piece(Player::White,PieceType::P), 8);
+assert_eq!(&board.fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 ```
 
 #### Creating a board from a Position
@@ -78,7 +77,7 @@ Check out the [Wikipedia article](https://en.wikipedia.org/wiki/Forsyth%E2%80%93
 and their format.
 
 ```rust
-let board = Board::new_from_fen("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2");
+let board = Board::from_fen("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2").unwrap();
 ```
 
 #### Applying and Generating Moves

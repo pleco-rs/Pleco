@@ -167,6 +167,7 @@ impl BoardState {
         }
     }
 
+    /// Prints information about the current `BoardState`.
     pub fn print_info(&self) {
         print!("ply: {}, move played: {} ",self.ply, self.prev_move);
         if let Some(piece) = self.captured_piece {
