@@ -1,17 +1,12 @@
-#![feature(test)]
-extern crate pleco;
-extern crate test;
-extern crate rand;
 
-#[macro_use]
-extern crate lazy_static;
+use criterion::{Criterion,black_box};
+use lazy_static;
 
 use pleco::{Player,Board,BitMove,MoveList};
 use pleco::tools::prng::PRNG;
 
 pub const SEED: u64 = 5363310003543;
 
-use test::{black_box, Bencher};
 
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
@@ -28,62 +23,77 @@ lazy_static! {
     };
 }
 
-#[bench]
-fn bench_board_100_clone(b: &mut Bencher) {
+fn bench_board_100_clone(c: &mut Criterion) {
+    lazy_static::initialize(&RAND_BOARDS);
+    c.bench_function(" bench_board_100_clone", |b|
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
             black_box(board.shallow_clone());
         }
     })
+    );
 }
 
-#[bench]
-fn bench_find(b: &mut Bencher) {
-    b.iter(|| {
-        black_box({
-            for board in RAND_BOARDS.iter() {
-                black_box( board.king_sq(Player::Black));
-            }
+
+fn bench_find(c: &mut Criterion) {
+    c.bench_function("bench_find", |b| {
+        lazy_static::initialize(&RAND_BOARDS);
+        b.iter(|| {
+            black_box({
+                for board in RAND_BOARDS.iter() {
+                    black_box(board.king_sq(Player::Black));
+                }
+            })
         })
-    })
+    });
 }
 
-#[bench]
-fn bench_apply_100_move(b: &mut Bencher) {
-    let mut prng = PRNG::init(SEED);
-    let mut board_move: Vec<(Board, BitMove)> = Vec::with_capacity(100);
+fn bench_apply_100_move(c: &mut Criterion) {
+    c.bench_function("bench_apply_100_move",  |b| {
+        let mut prng = PRNG::init(SEED);
+        let mut board_move: Vec<(Board, BitMove)> = Vec::with_capacity(100);
 
-    for board in RAND_BOARDS.iter() {
-        let moves: Vec<BitMove> = MoveList::into(board.generate_moves());
-        let bit_move = *moves.get(prng.rand() as usize % moves.len()).unwrap();
-        board_move.push((board.parallel_clone(),bit_move));
-    }
+        for board in RAND_BOARDS.iter() {
+            let moves: Vec<BitMove> = MoveList::into(board.generate_moves());
+            let bit_move = *moves.get(prng.rand() as usize % moves.len()).unwrap();
+            board_move.push((board.parallel_clone(),bit_move));
+        }
 
-    b.iter(|| {
-        black_box({
-            for t in board_move.iter_mut() {
-                let board: &mut Board = &mut (t.0);
-                black_box(black_box(board.clone()).apply_move(t.1));
-            }
+        b.iter(|| {
+            black_box({
+                for t in board_move.iter() {
+                    let board: &Board = &(t.0);
+                    black_box(black_box(board.clone()).apply_move(t.1));
+                }
+            })
         })
-    })
+    });
 }
 
-#[bench]
-fn bench_undo_100_move(b: &mut Bencher) {
-    let mut boards: Vec<Board> = Vec::with_capacity(100);
-    for board in RAND_BOARDS.iter() {
-        boards.push(board.parallel_clone());
-    }
+fn bench_undo_100_move(c: &mut Criterion) {
+    c.bench_function("bench_undo_100_move", |b| {
+        let mut boards: Vec<Board> = Vec::with_capacity(100);
+        for board in RAND_BOARDS.iter() {
+            boards.push(board.parallel_clone());
+        }
 
-    b.iter(|| {
-        black_box({
-            for board in boards.iter_mut() {
-                black_box(black_box(board.parallel_clone()).undo_move());
-            }
+        b.iter(|| {
+            black_box({
+                for board in boards.iter_mut() {
+                    black_box(black_box(board.parallel_clone()).undo_move());
+                }
+            })
         })
-    })
+    });
 }
+
+criterion_group!(board_benches,
+    bench_board_100_clone,
+    bench_find,
+    bench_apply_100_move,
+    bench_undo_100_move
+);
+
 
 static RAND_BOARD_FENS: [&str; 100] = [
     "r3kb1r/3qpppp/p1Qp4/1p6/3Pp3/7P/PP1PP2P/R1B1KB1R w KQkq - 2 13",

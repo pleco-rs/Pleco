@@ -24,6 +24,12 @@ include = [
 travis-ci = { repository = "sfleischman105/Pleco", branch = "master" }
 coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = "github" }
 
+[lib]
+name = "pleco"
+#bench = true
+path = "src/lib.rs"
+doctest = true
+
 [profile.dev]
 opt-level = 3
 
@@ -59,12 +65,6 @@ debug-assertions = true
 codegen-units = 1
 panic = "unwind"
 
-[lib]
-name = "pleco"
-bench = true
-path = "src/lib.rs"
-doctest = true
-
 
 [dependencies]
 clippy = {version = "0.0.187", optional = true}
@@ -84,3 +84,9 @@ features = ["nightly"]
 default = []
 dev = ["clippy"]
 
+[dev-dependencies]
+criterion = { version = '0.2', features=['real_blackbox'] }
+
+[[bench]]
+name = "bench_main"
+harness = false

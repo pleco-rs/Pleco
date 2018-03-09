@@ -1,16 +1,13 @@
-#![feature(test)]
-extern crate pleco;
-extern crate test;
-extern crate rand;
 
-#[macro_use]
-extern crate lazy_static;
+use criterion::{Criterion,black_box,Bencher,Fun};
 
+use lazy_static;
 use pleco::Board;
 use pleco::bot_prelude::*;
+use pleco::tools::Searcher;
 
+use std::time::Duration;
 
-use test::{black_box, Bencher};
 
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
@@ -21,38 +18,27 @@ lazy_static! {
 }
 
 
-#[bench]
-fn _4_ply_minimax(b: &mut Bencher) {
+fn bench_searcher<S: Searcher>(b: &mut Bencher, data: &(&Vec<Board>, u16)) {
     b.iter(|| {
-        for board in RAND_BOARDS.iter() {
-            black_box(MiniMaxSearcher::best_move(board.shallow_clone(), 4));
+        for board in data.0.iter() {
+            black_box(S::best_move(board.shallow_clone(), data.1));
         }
     })
 }
 
-#[bench]
-fn _4_ply_parallel_minimax(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS.iter() {
-            black_box(ParallelMiniMaxSearcher::best_move(board.shallow_clone(), 4));
-        }
-    })
+fn bench_all_searchers_4_ply(c: &mut Criterion) {
+    lazy_static::initialize(&RAND_BOARDS);
+    let minimax = Fun::new("MiniMax",bench_searcher::<MiniMaxSearcher>);
+    let parallel_minimax = Fun::new("ParallelMiniMax",bench_searcher::<ParallelMiniMaxSearcher>);
+    let alpha_beta = Fun::new("AlphaBeta",bench_searcher::<AlphaBetaSearcher>);
+    let jamboree = Fun::new("Jamboree",bench_searcher::<JamboreeSearcher>);
+
+    let funs = vec![minimax, parallel_minimax, alpha_beta, jamboree];
+
+    c.bench_functions("Searcher Benches 4 ply", funs, (&RAND_BOARDS, 4));
 }
 
-#[bench]
-fn _4_ply_alpha_beta(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS.iter() {
-            black_box(AlphaBetaSearcher::best_move(board.shallow_clone(), 4));
-        }
-    })
-}
-
-#[bench]
-fn _4_ply_jamboree(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS.iter() {
-            black_box(JamboreeSearcher::best_move(board.shallow_clone(),4));
-        }
-    })
-}
+criterion_group!(name = bot_benches;
+    config = Criterion::default().sample_size(7).warm_up_time(Duration::from_millis(500));
+    targets = bench_all_searchers_4_ply
+);
