@@ -155,6 +155,7 @@ pub fn popcount_old(x: u64) -> u8 {
     if x & (x.wrapping_sub(1)) == 0 {
         return 1;
     }
+
     POPCNT8[x >> 56] + POPCNT8[(x >> 48) & 0xFF] + POPCNT8[(x >> 40) & 0xFF] +
         POPCNT8[(x >> 32) & 0xFF] + POPCNT8[(x >> 24) & 0xFF] + POPCNT8[(x >> 16) & 0xFF] +
         POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]

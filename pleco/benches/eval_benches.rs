@@ -1,32 +1,34 @@
-#![feature(test)]
-extern crate pleco;
-extern crate test;
-extern crate rand;
 
-#[macro_use]
-extern crate lazy_static;
+
+use std::time::Duration;
+
+use criterion::{Criterion,black_box};
 
 use pleco::tools::eval::Eval;
 use pleco::{Board};
-use test::{black_box, Bencher};
 
-lazy_static! {
-    pub static ref RAND_BOARDS: Vec<Board> = {
-        RAND_BOARD_NON_CHECKS_100.iter()
+
+fn bench_100_evaluations(c: &mut Criterion) {
+    c.bench_function("bench_100_evaluations", |b| {
+        let rand_boards: Vec<Board> = RAND_BOARD_NON_CHECKS_100.iter()
             .map(|b| Board::from_fen(b).unwrap())
-            .collect::<Vec<Board>>()
-    };
+            .collect();
+
+        b.iter(|| {
+            black_box({
+                for board in rand_boards.iter() {
+                    black_box(Eval::eval_low(board));
+                }
+            })
+        })
+    });
 }
 
+criterion_group!(name = eval_benches;
+    config = Criterion::default().sample_size(20).warm_up_time(Duration::from_millis(5));
+    targets = bench_100_evaluations
+);
 
-#[bench]
-fn bench_100_evaluations(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS.iter() {
-            black_box(Eval::eval_low(board));
-        }
-    })
-}
 
 static RAND_BOARD_NON_CHECKS_100: [&str; 100] = [
     "3qkb1r/3ppp2/3r1np1/2Q4p/5P2/1P3B2/P1P1PP1P/R2NK2R b k - 0 22",

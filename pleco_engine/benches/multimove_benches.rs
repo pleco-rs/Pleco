@@ -1,26 +1,22 @@
-#![feature(test)]
-extern crate test;
-extern crate pleco;
-extern crate pleco_engine;
+use std::time::Duration;
+use criterion::{Criterion,black_box,Bencher};
 
 use pleco::{Board};
 
 use pleco_engine::engine::PlecoSearcher;
 use pleco_engine::time::uci_timer::PreLimits;
 
+use super::*;
 
-use test::{black_box, Bencher};
 
-
-#[bench]
-fn multi_3_engine_4_ply(b: &mut Bencher) {
+fn search_3moves_engine<D: DepthLimit>(b: &mut Bencher) {
     let mut limit = PreLimits::blank();
-    limit.depth = Some(4);
-    let startpos = Board::default();
-    let mut s = PlecoSearcher::init(false);
-    b.iter(|| {
-        let mut board = startpos.clone();
-        black_box(s.clear_search());
+    limit.depth = Some(D::depth());
+    b.iter_with_setup(|| {
+        let mut s = PlecoSearcher::init(false);
+        s.clear_search();
+        (Board::default(), s)
+    }, |(mut board, mut s)| {
         black_box(s.search(&board, &limit));
         let mov = black_box(s.await_move());
         board.apply_move(mov);
@@ -32,62 +28,17 @@ fn multi_3_engine_4_ply(b: &mut Bencher) {
     })
 }
 
-#[bench]
-fn multi_3_engine_5_ply(b: &mut Bencher) {
-    let mut limit = PreLimits::blank();
-    limit.depth = Some(5);
-    let startpos = Board::default();
-    let mut s = PlecoSearcher::init(false);
-    b.iter(|| {
-        let mut board = startpos.clone();
-        black_box(s.clear_search());
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
-        board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
-        board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        black_box(s.await_move());
-    })
+fn bench_engine_evaluations(c: &mut Criterion) {
+    c.bench_function("Search MuliMove Depth 4", search_3moves_engine::<Depth4>);
+    c.bench_function("Search MuliMove Depth 5", search_3moves_engine::<Depth5>);
+    c.bench_function("Search MuliMove Depth 6", search_3moves_engine::<Depth6>);
+    c.bench_function("Search MuliMove Depth 7", search_3moves_engine::<Depth7>);
 }
 
-#[bench]
-fn multi_3_engine_6_ply(b: &mut Bencher) {
-    let mut limit = PreLimits::blank();
-    limit.depth = Some(6);
-    let startpos = Board::default();
-    let mut s = PlecoSearcher::init(false);
-    b.iter(|| {
-        let mut board = startpos.clone();
-        black_box(s.clear_search());
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
-        board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
-        board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        black_box(s.await_move());
-    })
-}
+criterion_group!(name = search_multimove;
+     config = Criterion::default()
+        .sample_size(12)
+        .warm_up_time(Duration::from_millis(200));
+    targets = bench_engine_evaluations
+);
 
-#[bench]
-fn multi_3_engine_7_ply(b: &mut Bencher) {
-    let mut limit = PreLimits::blank();
-    limit.depth = Some(7);
-    let startpos = Board::default();
-    let mut s = PlecoSearcher::init(false);
-    b.iter(|| {
-        let mut board = startpos.clone();
-        black_box(s.clear_search());
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
-        board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
-        board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        black_box(s.await_move());
-    })
-}

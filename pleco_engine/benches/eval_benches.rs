@@ -1,50 +1,36 @@
-#![feature(test)]
-extern crate pleco;
-extern crate pleco_engine;
-extern crate test;
-extern crate rand;
 
-#[macro_use]
-extern crate lazy_static;
+use std::time::Duration;
+use criterion::{Criterion,black_box,Bencher,Fun};
 
 use pleco::{Board,Player};
 use pleco_engine::tables::pawn_table::{PawnEntry, PawnTable};
 use pleco_engine::tables::material::{Material, MaterialEntry};
 use pleco::core::mono_traits::WhiteType;
-use test::{black_box, Bencher};
 
 use pleco_engine::search::eval::Evaluation;
 
-lazy_static! {
-    pub static ref RAND_BOARDS: Vec<Board> = {
-        RAND_BOARD_NON_CHECKS_100.iter()
-            .map(|b| Board::from_fen(b).unwrap())
-            .collect::<Vec<Board>>()
-    };
-}
+fn bench_100_pawn_evals(b: &mut Bencher, boards: &Vec<Board>) {
 
-#[bench]
-fn bench_100_pawn_evals(b: &mut Bencher) {
-    let mut t: PawnTable = black_box(PawnTable::new(1 << 10));
-    b.iter(|| {
-        t.clear();
+    b.iter_with_setup(|| {
+        PawnTable::new(1 << 10)
+    }, |mut t| {
         #[allow(unused_variables)]
         let mut score: i64 = 0;
-        for board in RAND_BOARDS.iter() {
+        for board in boards.iter() {
             let entry: &mut PawnEntry = black_box(t.probe(board));
             score += black_box(entry.pawns_score()).0 as i64;
         }
     })
 }
 
-#[bench]
-fn bench_100_pawn_king_evals(b: &mut Bencher) {
-    let mut t: PawnTable = black_box(PawnTable::new(1 << 10));
-    b.iter(|| {
-        t.clear();
+
+fn bench_100_pawn_king_evals(b: &mut Bencher,  boards: &Vec<Board>) {
+    b.iter_with_setup(|| {
+        PawnTable::new(1 << 10)
+    }, |mut t| {
         #[allow(unused_variables)]
         let mut score: i64 = 0;
-        for board in RAND_BOARDS.iter() {
+        for board in boards.iter() {
             let entry: &mut PawnEntry = black_box(t.probe(board));
             score += black_box(entry.pawns_score()).0 as i64;
             score +=  black_box(entry.king_safety::<WhiteType>(&board, board.king_sq(Player::White))).0 as i64;
@@ -52,34 +38,56 @@ fn bench_100_pawn_king_evals(b: &mut Bencher) {
     })
 }
 
-#[bench]
-fn bench_100_material_eval(b: &mut Bencher) {
-    let mut t: Material = black_box(Material::new(1 << 11));
-    b.iter(|| {
-        t.clear();
+fn bench_100_material_eval(b: &mut Bencher,  boards: &Vec<Board>) {
+    b.iter_with_setup(|| {
+        Material::new(1 << 11)
+    }, |mut t| {
         #[allow(unused_variables)]
         let mut score: i64 = 0;
-        for board in RAND_BOARDS.iter() {
+        for board in boards.iter() {
             let entry: &mut MaterialEntry = black_box(t.probe(board));
             score += black_box(entry.value) as i64;
         }
     })
 }
 
-#[bench]
-fn bench_100_eval(b: &mut Bencher) {
-    let mut tp: PawnTable = black_box(PawnTable::new(1 << 10));
-    let mut tm: Material = black_box(Material::new(1 << 11));
-    b.iter(|| {
-        tp.clear();
-        tm.clear();
+
+fn bench_100_eval(b: &mut Bencher,  boards: &Vec<Board>) {
+    b.iter_with_setup(|| {
+        let tp: PawnTable = black_box(PawnTable::new(1 << 10));
+        let tm: Material = black_box(Material::new(1 << 11));
+        (tp, tm)
+    }, |(mut tp, mut tm)| {
         #[allow(unused_variables)]
         let mut score: i64 = 0;
-        for board in RAND_BOARDS.iter() {
+        for board in boards.iter() {
             score += black_box(Evaluation::evaluate(&board, &mut tp, &mut tm)) as i64;
         }
     })
 }
+
+fn bench_engine_evaluations(c: &mut Criterion) {
+    let boards: Vec<Board> = RAND_BOARD_NON_CHECKS_100.iter()
+        .map(|b| Board::from_fen(b).unwrap())
+        .collect();
+
+    let pawn_evals = Fun::new("Pawn Evaluations", bench_100_pawn_evals);
+    let pawn_king_evals = Fun::new("Pawn & King Evaluations", bench_100_pawn_king_evals);
+    let material_evals = Fun::new("Material Evaluations", bench_100_material_eval);
+    let full_evals =  Fun::new("Full Evaluation", bench_100_eval);
+
+    let funcs = vec![pawn_evals, pawn_king_evals, material_evals, full_evals];
+
+    c.bench_functions("Engine Evaluations", funcs, boards);
+}
+
+criterion_group!(name = eval_benches;
+     config = Criterion::default()
+        .sample_size(60)
+        .warm_up_time(Duration::from_millis(5));
+    targets = bench_engine_evaluations
+);
+
 
 static RAND_BOARD_NON_CHECKS_100: [&str; 100] = [
     "3qkb1r/3ppp2/3r1np1/2Q4p/5P2/1P3B2/P1P1PP1P/R2NK2R b k - 0 22",

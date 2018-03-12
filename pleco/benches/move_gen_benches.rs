@@ -1,156 +1,81 @@
-#![feature(test)]
-extern crate pleco;
-extern crate test;
-extern crate rand;
+use std::time::Duration;
 
-#[macro_use]
-extern crate lazy_static;
+use criterion::{Criterion,black_box,Bencher,Fun};
 
-use pleco::core::GenTypes;
-use pleco::board::Board;
+use pleco::core::mono_traits::*;
+use pleco::Board;
+use pleco::board::movegen::{MoveGen,Legality,PseudoLegal,Legal};
 
-use test::{black_box, Bencher};
 
-lazy_static! {
-    pub static ref RAND_BOARDS_ANY: Vec<Board> = {
-        RAND_BOARD_ANY_GEN.iter()
-            .map(|b| Board::from_fen(b).unwrap())
-            .collect::<Vec<Board>>()
-    };
-
-    pub static ref RAND_BOARDS_CHECKS: Vec<Board> = {
-        RAND_BOARD_IN_CHECKS_GEN.iter()
-            .map(|b| Board::from_fen(b).unwrap())
-            .collect::<Vec<Board>>()
-    };
-
-    pub static ref RAND_BOARDS_NON_CHECKS: Vec<Board> = {
-        RAND_BOARD_NON_CHECKS_GEN.iter()
-            .map(|b| Board::from_fen(b).unwrap())
-            .collect::<Vec<Board>>()
-    };
-}
-
-fn prefetch() {
-    let board = Board::default();
-    black_box(board.generate_moves());
-    black_box(board.generate_pseudolegal_moves());
-    black_box(board.generate_moves_of_type(GenTypes::Captures));
-}
-
-#[bench]
-fn bench_movegen_any_legal(b: &mut Bencher) {
-    // prefetch any cache instructions
-    black_box(prefetch());
+fn movegen_ty<L: Legality, G: GenTypeTrait>(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter(|| {
-        for board in RAND_BOARDS_ANY.iter() {
-            black_box(board.generate_moves());
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_any_pseudolegal(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_ANY.iter() {
-            black_box(board.generate_pseudolegal_moves());
+        for board in boards.iter() {
+            black_box(MoveGen::generate::<L,G>(board));
         }
     })
 }
 
 
-#[bench]
-fn bench_movegen_legal_all(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_moves());
-        }
-    })
+fn all_movegen(c: &mut Criterion) {
+    let boards_any: Vec<Board> = RAND_BOARD_ANY_GEN.iter()
+        .map(|b| Board::from_fen(b).unwrap())
+        .collect();
+
+    let boards_no_check: Vec<Board> = RAND_BOARD_NON_CHECKS_GEN.iter()
+        .map(|b| Board::from_fen(b).unwrap())
+        .collect();
+
+    let boards_in_check: Vec<Board> = RAND_BOARD_IN_CHECKS_GEN.iter()
+        .map(|b| Board::from_fen(b).unwrap())
+        .collect();
+
+
+    let all_legal = Fun::new("MoveGen All Legal", movegen_ty::<Legal, AllGenType>);
+    let all_pslegal = Fun::new("MoveGen All PseudoLegal", movegen_ty::<PseudoLegal, AllGenType>);
+
+    let nochk_legal = Fun::new("MoveGen NonEvasions - Legal", movegen_ty::<Legal, NonEvasionsGenType>);
+    let nochk_pslegal = Fun::new("MoveGen NonEvasions - PseudoLegal", movegen_ty::<PseudoLegal, NonEvasionsGenType>);
+
+    let nochk_captures_legal = Fun::new("MoveGen Captures - Legal", movegen_ty::<Legal, CapturesGenType>);
+    let nochk_captures_pslegal = Fun::new("MoveGen Captures - PseudoLegal", movegen_ty::<PseudoLegal, CapturesGenType>);
+
+    let nochk_quiets_legal = Fun::new("MoveGen Quiets - Legal", movegen_ty::<Legal, QuietsGenType>);
+    let nochk_quiets_pslegal = Fun::new("MoveGen Quiets - PseudoLegal", movegen_ty::<PseudoLegal, QuietsGenType>);
+
+    let nochk_quietchecks_legal = Fun::new("MoveGen QuietChecks - Legal", movegen_ty::<Legal, QuietChecksGenType>);
+    let nochk_quietchecks_pslegal = Fun::new("MoveGen QuietChecks - PseudoLegal", movegen_ty::<PseudoLegal, QuietChecksGenType>);
+
+    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, AllGenType>);
+    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, AllGenType>);
+
+//    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, EvasionsGenType>);
+//    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, EvasionsGenType>);
+
+    let all_funcs = vec![all_legal, all_pslegal];
+
+    let nochk_funcs = vec![
+                            nochk_legal,              nochk_pslegal,
+                            nochk_captures_legal,     nochk_captures_pslegal,
+                            nochk_quiets_legal,       nochk_quiets_pslegal,
+                            nochk_quietchecks_legal,  nochk_quietchecks_pslegal];
+
+    let chk_funcs = vec![chk_legal, chk_pslegal];
+
+    c.bench_functions("Any Board", all_funcs, boards_any);
+    c.bench_functions("No Checks Board", nochk_funcs, boards_no_check);
+    c.bench_functions("In Checks Board", chk_funcs, boards_in_check);
 }
 
-#[bench]
-fn bench_movegen_legal_captures(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_moves_of_type(GenTypes::Captures));
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_legal_quiets(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_moves_of_type(GenTypes::Quiets));
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_legal_quiet_checks(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_moves_of_type(GenTypes::QuietChecks));
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_pslegal_all(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_pseudolegal_moves());
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_pslegal_captures(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_pseudolegal_moves_of_type(GenTypes::Captures));
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_pslegal_quiets(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_pseudolegal_moves_of_type(GenTypes::Quiets));
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_pslegal_quiet_checks(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_NON_CHECKS.iter() {
-            black_box(board.generate_pseudolegal_moves_of_type(GenTypes::QuietChecks));
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_in_check_legal_evasions(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_CHECKS.iter() {
-            black_box(board.generate_moves());
-        }
-    })
-}
-
-#[bench]
-fn bench_movegen_in_check_pslegal_evasions(b: &mut Bencher) {
-    b.iter(|| {
-        for board in RAND_BOARDS_CHECKS.iter() {
-            black_box(board.generate_pseudolegal_moves());
-        }
-    })
-}
+criterion_group!(name = movegen_benches;
+     config = Criterion::default()
+        .sample_size(100)
+        .warm_up_time(Duration::from_millis(10));
+    targets = all_movegen
+);
 
 
-static RAND_BOARD_ANY_GEN: [&str; 30] = [
+
+const RAND_BOARD_ANY_GEN: [&str; 30] = [
     "3qkb1r/ppp2ppp/4bn2/8/4P3/1PNB1K1P/P1PP1PP1/R6R b k - 0 13",
     "4k1n1/3b2p1/8/1p2p3/1Q1n3r/4P3/5P1P/q3NK1R b - - 0 28",
     "rn2k3/pp1qPppr/5n2/1b2B3/8/4NP2/3NP1PP/R2K1B1R b q - 0 23",
@@ -183,7 +108,7 @@ static RAND_BOARD_ANY_GEN: [&str; 30] = [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
 
 
-static RAND_BOARD_NON_CHECKS_GEN: [&str; 30] = [
+const RAND_BOARD_NON_CHECKS_GEN: [&str; 30] = [
     "3qkb1r/ppp2ppp/4bn2/8/4P3/1PNB1K1P/P1PP1PP1/R6R b k - 0 13",
     "4k1n1/3b2p1/8/1p2p3/1Q1n3r/4P3/5P1P/q3NK1R b - - 0 28",
     "rn2k3/pp1qPppr/5n2/1b2B3/8/4NP2/3NP1PP/R2K1B1R b q - 0 23",
@@ -215,7 +140,7 @@ static RAND_BOARD_NON_CHECKS_GEN: [&str; 30] = [
     "1k6/1p1n4/p6p/4P3/2P5/1R6/5K1P/4R b - - 2 33",
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
 
-static RAND_BOARD_IN_CHECKS_GEN: [&str; 30] = [
+const RAND_BOARD_IN_CHECKS_GEN: [&str; 30] = [
     "3r4/2pk2p1/p1n1p3/8/P1PP2q1/4b3/3K4/ w - - 0 38",
     "3Q2Q1/5p2/1P3k2/5P2/P7/8/5R1p/3K b - - 3 44",
     "8/5P1p/2R3pk/1p6/8/1PP3PP/rBK1r3/2R w - - 1 31",

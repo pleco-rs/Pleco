@@ -1,44 +1,47 @@
-#![feature(test)]
-extern crate pleco;
-extern crate test;
-extern crate rand;
+use std::time::Duration;
 
-#[macro_use]
-extern crate lazy_static;
+use criterion::{Criterion,black_box,Bencher,Fun};
 
 use pleco::board::perft::*;
 use pleco::board::Board;
 
-use test::{black_box, Bencher};
-
-lazy_static! {
-    pub static ref RAND_BOARDS: Vec<Board> = {
-        RAND_BOARDS_ALL.iter()
-            .map(|b| Board::from_fen(b).unwrap())
-            .collect::<Vec<Board>>()
-    };
-}
-
-#[bench]
-fn perft_3(b: &mut Bencher) {
-    lazy_static::initialize(&RAND_BOARDS);
+fn perft_3(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter(|| {
-        for board in RAND_BOARDS.iter() {
+        for board in boards.iter() {
             black_box(perft(board, 3));
         }
     })
 }
 
-#[bench]
-fn perft_4(b: &mut Bencher) {
-    lazy_static::initialize(&RAND_BOARDS);
+fn perft_4(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter(|| {
-        for board in RAND_BOARDS.iter() {
+        for board in boards.iter() {
             black_box(perft(board, 4));
         }
     })
 }
 
+fn perft_all(c: &mut Criterion) {
+    let rand_boards: Vec<Board> = RAND_BOARDS_ALL.iter()
+        .map(|b| Board::from_fen(b).unwrap())
+        .collect();
+
+    let perft_3_f = Fun::new("Perft 3",perft_3);
+    let perft_4_f = Fun::new("Perft 3",perft_4);
+
+    let funs = vec![perft_3_f, perft_4_f];
+
+    c.bench_functions("Perft All", funs, rand_boards);
+
+
+}
+
+criterion_group!(name = perft_benches;
+     config = Criterion::default()
+        .sample_size(8)
+        .warm_up_time(Duration::from_millis(10));
+    targets = perft_all
+);
 
 static RAND_BOARDS_ALL: [&str; 6] = [
     "rn2k3/pp1qPppr/5n2/1b2B3/8/4NP2/3NP1PP/R2K1B1R b q - 0 23",
@@ -47,3 +50,4 @@ static RAND_BOARDS_ALL: [&str; 6] = [
     "3k4/6b1/1p5p/4p3/5rP1/6K1/8/ w - - 0 40",
     "1k6/1p1n4/p6p/4P3/2P5/1R6/5K1P/4R b - - 2 33",
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+

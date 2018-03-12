@@ -5,8 +5,12 @@ rust:
 
 
 cache:
+
   - cargo
   - apt
+#  cache:
+#    directories:
+#      - $HOME/.cache/pip
 
 sudo: required
 
@@ -14,36 +18,38 @@ env:
   global:
     - RUST_BACKTRACE=FULL
     - RUSTFLAGS="-Ctarget-cpu=native -Zmutable-noalias"
+    - RUST_MIN_STACK=8000000
 #    - RUST_TEST_THREADS=1
 
-addons:
-  apt:
-    packages:
-      - libcurl4-openssl-dev
-      - libelf-dev
-      - libdw-dev
-      - binutils-dev
-      - cmake
-    sources:
-      - kalakris-cmake
+
+#addons:
+#  apt:
+#    packages:
+#      - libcurl4-openssl-dev
+#      - libelf-dev
+#      - libdw-dev
+#      - binutils-dev
+#      - cmake
+#    sources:
+#      - kalakris-cmake
 
 
 os:
   - linux
 
 script:
+  - cargo bench
   - cargo build --verbose
   - cargo test --verbose
-  - cargo bench
 #  - cd pleco/ && cargo bench
 #  - cd ../pleco_engine/ && cargo bench --bench eval_benches
 
-after_success:
-  - |
-    if [[ "$TRAVIS_BRANCH" = "master" ]] AND [ "$TRAVIS_PULL_REQUEST" = "false" ]
-    then
-      cargo install cargo-travis || echo "cargo-travis has been already installed"
-      export PATH=$HOME/.cargo/bin:$PATH
-      cargo coveralls
-    fi
-
+#after_success:
+#  - |
+#    if [[ "$TRAVIS_BRANCH" = "master" ]] AND [ "$TRAVIS_PULL_REQUEST" = "false" ]
+#    then
+#      cargo install cargo-travis || echo "cargo-travis has been already installed"
+#      export PATH=$HOME/.cargo/bin:$PATH
+#      cargo coveralls
+#    fi
+#
