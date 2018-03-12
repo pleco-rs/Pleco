@@ -16,18 +16,20 @@
 //! [`ScoreMoveList`]: struct.MoveList.html
 
 use std::slice;
-use std::mem::transmute;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
+use super::piece_move::{BitMove, ScoringMove};
 
-#[allow(unused_imports)]
+
 #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
 use std::simd::u16x32;
-
-
-use super::piece_move::{BitMove, ScoringMove};
+#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
+use std::mem::transmute;
+#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
 use super::bitboard::BitBoard;
+#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
 use super::sq::SQ;
+
 
 pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
 
@@ -720,11 +722,11 @@ impl FusedIterator for ScoreMoveIntoIter {}
 unsafe impl TrustedLen for ScoreMoveIntoIter {}
 
 #[cfg(test)]
+#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
 mod tests {
     use super::*;
 
     #[test]
-    #[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
     fn check_avx2() {
         let mut arr = [BitMove::null(); 16];
         let mut bb = BitBoard::FILE_B;

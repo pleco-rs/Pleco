@@ -205,11 +205,9 @@ impl PieceLocations {
         self.first_square(piece,player).is_some()
     }
 
-
-
     /// Generates a `PieceLocations` from a partial fen. A partial fen is defined as the first part of a
     /// fen, where the piece positions are available.
-    pub fn from_partial_fen(ranks: &[&str]) -> Result<Vec<(SQ,Player,PieceType)>, FenBuildError> {
+    pub(crate) fn from_partial_fen(ranks: &[&str]) -> Result<Vec<(SQ,Player,PieceType)>, FenBuildError> {
         let mut loc = Vec::with_capacity(64);
         for (i, rank) in ranks.iter().enumerate() {
             let min_sq = (7 - i) * 8;
@@ -248,7 +246,6 @@ impl PieceLocations {
         }
         Ok(loc)
     }
-
 
     /// Helper method to return the bit representation of a given piece and player.
     #[inline]

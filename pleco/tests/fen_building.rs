@@ -24,7 +24,6 @@ fn basic_fen() {
     assert_eq!(board.count_piece(Player::Black, PieceType::Q), 0);
     assert_eq!(board.count_piece(Player::Black, PieceType::K), 1);
 
-
     let board = Board::from_fen("8/2Q1pk2/nbpppppp/8/8/2K4N/PPPPPPPP/BBB2BBB w - - 0 10").unwrap();
     assert_eq!(board.count_piece(Player::White, PieceType::P), 8);
     assert_eq!(board.count_piece(Player::White, PieceType::N), 1);
@@ -46,4 +45,11 @@ fn all_fens() {
         let board = Board::from_fen(*fen).unwrap();
         assert_eq!(*fen, board.fen());
     }
+}
+
+#[test]
+fn rank8_zero_fen() {
+    let fen = "8/2Q1pk2/nbpppppp/8/8/2K4N/PPPPPPPP/BBB2BBB w - - 0 10";
+    let board = Board::from_fen(fen).unwrap();
+    assert_eq!(fen, board.fen());
 }
