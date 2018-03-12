@@ -2105,6 +2105,7 @@ impl Board {
             return Err(BoardError::IncorrectKingSQ {player: Player::White, sq: w_ksq}); }
         if self.piece_at_sq(b_ksq).unwrap() != PieceType::K {
             return Err(BoardError::IncorrectKingSQ {player: Player::Black, sq: b_ksq}); }
+
         Ok(())
     }
 //

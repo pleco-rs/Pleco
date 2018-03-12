@@ -18,6 +18,9 @@ static mut ZOBRIST_CASTLE: [u64; ALL_CASTLING_RIGHTS] =[0; ALL_CASTLING_RIGHTS];
 /// Zobrist key for the side to move.
 static mut ZOBRIST_SIDE: u64 = 0; // 8
 
+/// Zobrist key for having no pawns;
+static mut ZOBRIST_NO_PAWNS: u64 = 0; // 8
+
 /// initialize the zobrist hash
 #[cold]
 pub fn init_zobrist() {
@@ -47,8 +50,8 @@ pub fn init_zobrist() {
                 ZOBRIST_CASTLE[cr] ^= k;
             }
         }
-
         ZOBRIST_SIDE = rng.rand();
+        ZOBRIST_NO_PAWNS = rng.rand();
     }
 }
 
@@ -79,4 +82,9 @@ pub fn z_castle(castle: u8) -> u64 {
 #[inline(always)]
 pub fn z_side() -> u64 {
     unsafe { ZOBRIST_SIDE }
+}
+
+#[inline(always)]
+pub fn z_no_pawns() -> u64 {
+    unsafe { ZOBRIST_NO_PAWNS }
 }

@@ -194,15 +194,24 @@ pub fn z_ep(sq: SQ) -> u64 {
     zobrist::z_ep(sq)
 }
 
+/// Returns the Zobrish hash for a castling right.
 #[inline(always)]
 pub fn z_castle(castle: u8) -> u64 {
     zobrist::z_castle(castle)
 }
 
+/// Returns the Zobrist Hash for having a Black Player's turn.
 #[inline(always)]
 pub fn z_side() -> u64 {
     zobrist::z_side()
 }
+
+/// Returns the Zobrist Hash for having no pawns.
+#[inline(always)]
+pub fn z_no_pawns() -> u64 {
+    zobrist::z_no_pawns()
+}
+
 
 
 // PSQT FUNCTIONS

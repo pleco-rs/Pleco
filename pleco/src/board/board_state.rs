@@ -136,7 +136,7 @@ impl BoardState {
     pub(crate) fn set(&mut self, board: &Board) {
         self.zobrast = 0;
         self.material_key = 0;
-        self.pawn_key = 0;
+        self.pawn_key = z_no_pawns();
         self.nonpawn_material = [0; 2];
 
         let us = board.turn;
