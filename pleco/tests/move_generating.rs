@@ -8,14 +8,8 @@ use pleco::board::{Board,RandBoard};
 
 #[test]
 fn test_movegen_captures() {
-    let mut vec = Vec::new();
-    for _i in 0..10 {
-        let mut b  = RandBoard::default().one();
-        if !b.in_check() {
-            vec.push(b);
-        }
-    }
-    // TODO: Possible failures on a travis build
+    let vec =  RandBoard::default().no_check().many(9);
+
     vec.iter().for_each(|b| {
         let moves = b.generate_moves_of_type(GenTypes::Captures);
         for m in moves {
@@ -29,22 +23,13 @@ fn test_movegen_captures() {
 
 #[test]
 fn test_movegen_quiets() {
-    let mut vec = Vec::new();
-    for _i in 0..10 {
-        let mut b = RandBoard::default().one();
-        if !b.in_check() {
-            vec.push(b);
-        }
-    }
+    let vec =  RandBoard::default().no_check().many(6);
+
     vec.iter().for_each(|b| {
         let moves = b.generate_moves_of_type(GenTypes::Quiets);
         for m in moves {
             if !m.is_promo() && !m.is_castle() {
                 assert!(!m.is_capture());
-//                if b.captured_piece(m).is_some() {
-//                    b.pretty_print();
-//                    println!("{}",m.to_string());
-//                }
                 assert!(b.captured_piece(m).is_none());
             }
         }
@@ -53,13 +38,8 @@ fn test_movegen_quiets() {
 
 #[test]
 fn test_movegen_quiet_checks() {
-    let mut vec = Vec::new();
-    for _i in 0..10 {
-        let mut b = RandBoard::default().no_check().one();
-        if !b.in_check() {
-            vec.push(b);
-        }
-    }
+    let vec =  RandBoard::default().no_check().many(5);
+
     vec.iter().for_each(|b| {
         b.generate_moves_of_type(GenTypes::QuietChecks);
     })
@@ -84,7 +64,7 @@ fn bit_move_position() {
 
 #[test]
 fn test_opening_position() {
-    let b = Board::default();
+    let b = Board::start_pos();
     let moves = b.generate_moves();
     assert_eq!(moves.len(), (8 * 2) + (2 * 2));
 }

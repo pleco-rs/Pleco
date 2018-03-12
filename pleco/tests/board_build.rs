@@ -10,7 +10,7 @@ use pleco::*;
 
 #[test]
 fn test_init_counts() {
-    let board = Board::default();
+    let board = Board::start_pos();
     assert_eq!(board.count_piece(Player::White, PieceType::P), 8);
     assert_eq!(board.count_piece(Player::White, PieceType::N), 2);
     assert_eq!(board.count_piece(Player::White, PieceType::B), 2);
@@ -33,7 +33,7 @@ fn test_init_counts() {
 
 #[test]
 fn basic_move_apply() {
-    let mut b = Board::default();
+    let mut b = Board::start_pos();
     let p1 = PreMoveInfo {
         src: SQ(12),
         dst: SQ(28),
@@ -65,7 +65,7 @@ fn basic_move_apply() {
 
 #[test]
 fn move_seq_1() {
-    let mut b = board::Board::default();
+    let mut b = board::Board::start_pos();
     let p = PreMoveInfo {
         src: SQ(12),
         dst: SQ(28),

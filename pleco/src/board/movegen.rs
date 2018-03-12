@@ -526,7 +526,13 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             if self.board.ep_square() != NO_SQ {
                 let ep_sq: SQ = self.board.ep_square();
                 assert_eq!(ep_sq.rank(), P::player().relative_rank(Rank::R6));
-                if G::gen_type() != GenTypes::Evasions || (target & P::down(ep_sq).to_bb()).is_not_empty() {
+
+                // An en passant capture can be an evasion only if the checking piece
+                // is the double pushed pawn and so is in the target. Otherwise this
+                // is a discovery check and we are forced to do otherwise.
+                if G::gen_type() != GenTypes::Evasions
+                    || (target & P::down(ep_sq).to_bb()).is_not_empty() {
+
                     left_cap = pawns_not_rank_7 & pawn_attacks_from(ep_sq, P::opp_player());
 
                     while let Some(src) = left_cap.pop_some_lsb() {
@@ -633,7 +639,7 @@ mod tests {
 
     #[test]
     fn movelist_basic() {
-        let b = Board::default();
+        let b = Board::start_pos();
         let mut m = b.generate_moves();
         let mut i = 0;
         for _d in m.iter() {
@@ -654,7 +660,7 @@ mod tests {
 
     #[test]
     fn movegen_list_sim_basic() {
-        let b = Board::default();
+        let b = Board::start_pos();
         let mb = b.generate_moves();
         let ms = MoveGen::generate_scoring::<Legal, AllGenType>(&b);
         assert_eq!(mb.len(), ms.len());

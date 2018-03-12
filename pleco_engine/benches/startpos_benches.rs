@@ -15,7 +15,7 @@ fn search_singular_engine<D: DepthLimit>(b: &mut Bencher) {
     b.iter_with_setup(|| {
         let mut s = PlecoSearcher::init(false);
         s.clear_search();
-        (Board::default(), s)
+        (Board::start_pos(), s)
     }, |(board, mut s)| {
         black_box(s.search(&board, &limit));
         black_box(s.await_move());

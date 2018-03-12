@@ -496,13 +496,13 @@ mod tests {
     // Testing the movepicker for the starting position
     #[test]
     fn movepick_startpos_blank() {
-        movepick_main_search(Board::default(), BitMove::null(), &[BitMove::null(); 2],
+        movepick_main_search(Board::start_pos(), BitMove::null(), &[BitMove::null(); 2],
                              BitMove::null(), 5);
     }
 
     #[test]
     fn movepick_startpos_rand_op() {
-        let b = Board::default();
+        let b = Board::start_pos();
         for _x in 0..25 {
             movepick_rand_one(b.clone());
         }
@@ -510,7 +510,7 @@ mod tests {
 
     #[test]
     fn movepick_rand_mainsearch() {
-        for _x in 0..20 {
+        for _x in 0..15 {
             let mut b = Board::random().one();
             movepick_rand_one(b);
             println!("pass movepick rand! {} ",_x);

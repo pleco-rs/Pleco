@@ -26,7 +26,7 @@ lazy_static! {
 
 fn bench_board_100_clone(c: &mut Criterion) {
     lazy_static::initialize(&RAND_BOARDS);
-    c.bench_function(" bench_board_100_clone", |b|
+    c.bench_function("Board Clone 100", |b|
     b.iter(|| {
         for board in RAND_BOARDS.iter() {
             black_box(board.shallow_clone());
@@ -37,7 +37,7 @@ fn bench_board_100_clone(c: &mut Criterion) {
 
 
 fn bench_find(c: &mut Criterion) {
-    c.bench_function("bench_find", |b| {
+    c.bench_function("Board find King SQ", |b| {
         lazy_static::initialize(&RAND_BOARDS);
         b.iter(|| {
             black_box({
@@ -50,7 +50,7 @@ fn bench_find(c: &mut Criterion) {
 }
 
 fn bench_apply_100_move(c: &mut Criterion) {
-    c.bench_function("bench_apply_100_move",  |b| {
+    c.bench_function("Board Apply 100 Move",  |b| {
         let mut prng = PRNG::init(SEED);
         let mut board_move: Vec<(Board, BitMove)> = Vec::with_capacity(100);
 
@@ -72,7 +72,7 @@ fn bench_apply_100_move(c: &mut Criterion) {
 }
 
 fn bench_undo_100_move(c: &mut Criterion) {
-    c.bench_function("bench_undo_100_move", |b| {
+    c.bench_function("Board Undo 100 Move", |b| {
         let mut boards: Vec<Board> = Vec::with_capacity(100);
         for board in RAND_BOARDS.iter() {
             boards.push(board.parallel_clone());

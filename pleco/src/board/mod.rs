@@ -181,6 +181,12 @@ impl Clone for Board {
     }
 }
 
+impl Default for Board {
+    fn default() -> Self {
+        Board::start_pos()
+    }
+}
+
 impl Board {
     /// Constructs a board from the starting position
     ///
@@ -189,27 +195,11 @@ impl Board {
     /// ```
     /// use pleco::{Board,Player};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.count_pieces_player(Player::White),16);
     /// ```
-    pub fn default() -> Board {
-        let mut b = Board {
-            turn: Player::White,
-            bit_boards: BitBoard::start_bbs(),
-            occ: [BitBoard(START_WHITE_OCC), BitBoard(START_BLACK_OCC)],
-            occ_all: BitBoard(START_OCC_ALL),
-            half_moves: 0,
-            depth: 0,
-            piece_counts: [[8, 2, 2, 2, 1, 1], [8, 2, 2, 2, 1, 1]],
-            piece_locations: PieceLocations::default(),
-            state: Arc::new(BoardState::default()),
-            magic_helper: Helper::new(),
-        };
-        // Create the Zobrist hash & set the Piece Locations structure
-        b.set_piece_states();
-        b.set_zob_hash();
-        b.set_material_key();
-        b
+    pub fn start_pos() -> Board {
+        Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap()
     }
 
     /// Constructs a shallow clone of the Board.
@@ -229,7 +219,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let mut chessboard = Board::default();
+    /// let mut chessboard = Board::start_pos();
     /// let moves = chessboard.generate_moves(); // generate all possible legal moves
     /// chessboard.apply_move(moves[0]); // apply first move
     ///
@@ -272,7 +262,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let mut chessboard = Board::default();
+    /// let mut chessboard = Board::start_pos();
     /// let moves = chessboard.generate_moves(); // generate all possible legal moves
     /// chessboard.apply_move(moves[0]);
     /// assert_eq!(chessboard.moves_played(), 1);
@@ -308,121 +298,23 @@ impl Board {
     /// ```
     /// use pleco::Board;
     /// let rand_boards: Board = Board::random()
-    ///     .pseudo_random(12455)
+    ///     .pseudo_random(6622225)
     ///     .min_moves(5)
     ///     .one();
     /// ```
     ///
-    /// Create a `Vec` of 10 random `Board`s that are guaranteed to not be in check.
+    /// Create a `Vec` of 3 random `Board`s that are guaranteed to not be in check.
     ///
     /// ```
     /// use pleco::board::{Board,RandBoard};
     ///
     /// let rand_boards: Vec<Board> = Board::random()
-    ///     .pseudo_random(12455)
     ///     .no_check()
-    ///     .many(10);
+    ///     .many(3);
     /// ```
     pub fn random() -> RandBoard {
         RandBoard::default()
     }
-
-    /// Helper method for setting the piece states on initialization.
-    ///
-    /// Only used when creating the Board from scratch (e.g. default position).
-    ///
-    /// # Safety
-    ///
-    /// Assumes that the Board has all of its BitBoards completely set, including the BitBoards
-    /// for the individual pieces as well as occupancy per player BitBoards.
-    fn set_piece_states(&mut self) {
-        // Loop each piece and player and count all the pieces per player
-        for player in &ALL_PLAYERS {
-            for piece in &ALL_PIECE_TYPES {
-                let count = self.piece_bb(*player, *piece).count_bits();
-                self.piece_counts[*player as usize][*piece as usize] = count;
-            }
-        }
-
-        // Loop through each square and see if any bitboard contains something at that location, and set
-        // the Boards' PieceLocations accordingly.
-        for square in 0..SQ_CNT as u8 {
-            let bb = SQ(square).to_bb();
-            if (bb & self.occupied()).is_not_empty() {
-                let player = if (bb & self.occupied_black()).is_empty() {
-                    Player::White
-                } else {
-                    Player::Black
-                };
-                let piece = if (self.piece_bb(player, PieceType::P) & bb).is_not_empty() {
-                    PieceType::P
-                } else if (self.piece_bb(player, PieceType::N) & bb).is_not_empty() {
-                    PieceType::N
-                } else if (self.piece_bb(player, PieceType::B) & bb).is_not_empty() {
-                    PieceType::B
-                } else if (self.piece_bb(player, PieceType::R) & bb).is_not_empty() {
-                    PieceType::R
-                } else if (self.piece_bb(player, PieceType::Q) & bb).is_not_empty() {
-                    PieceType::Q
-                } else if (self.piece_bb(player, PieceType::K) & bb).is_not_empty() {
-                    PieceType::K
-                } else {
-                    panic!()
-                };
-                self.piece_locations.place(SQ(square), player, piece);
-            } else {
-                // Remove the square just in case nothing eas found. Can't assume that the PieceLocations
-                // represents that square as blank
-                self.piece_locations.remove(SQ(square));
-            }
-        }
-    }
-
-    /// Sets the material key for the board. CAN ONLY BE DONE ONCE THE BITBOARDS ARE SET.
-    fn set_material_key(&mut self) {
-        let mut material_key: u64 = 0;
-        let mut nonpawn_material: [Value; PLAYER_CNT] = [0; PLAYER_CNT];
-        for player in &ALL_PLAYERS {
-            for piece in &ALL_PIECE_TYPES {
-                let count = self.piece_bb(*player, *piece).count_bits();
-                for n in 0..count {
-                    material_key ^= z_square(SQ(n), *player, *piece);
-                }
-                if *piece != PieceType::P && *piece != PieceType::K {
-                    nonpawn_material[*player as usize] +=
-                        count as i32 * piece_value(*piece, false);
-                }
-            }
-        }
-        let state =  Arc::get_mut(&mut self.state).unwrap();
-        state.material_key = material_key;
-        state.nonpawn_material = nonpawn_material;
-    }
-
-    /// Helper method for setting the BitBoards from a fully created PieceLocations.
-    ///
-    /// Only used when creating the Board from a fen String.
-    ///
-    /// # Safety
-    ///
-    /// Assumes that the Board has its PieceLocations completely set.
-    fn set_bitboards(&mut self) {
-        for sq in 0..SQ_CNT as u8 {
-            if let Some((player, piece)) = self.piece_locations.player_piece_at(SQ(sq)) {
-                let bb = SQ(sq).to_bb();
-                self.bit_boards[player as usize][piece as usize] |= bb;
-                self.occ[player as usize] |= bb;
-            }
-        }
-        self.occ_all = self.occupied_black() | self.occupied_white();
-        for player in &ALL_PLAYERS {
-            for piece in &ALL_PIECE_TYPES {
-                self.piece_counts[*player as usize][*piece as usize] =
-                    self.piece_bb(*player, *piece).count_bits();
-            }
-        }
-    }
-
 
     /// Constructs a board from a FEN String.
     ///
@@ -463,7 +355,25 @@ impl Board {
             return Err(FenBuildError::IncorrectRankAmounts{ranks: b_rep.len()});
         }
 
-        let (piece_loc, piece_cnt) = PieceLocations::from_partial_fen(b_rep.as_slice())?;
+        let piece_loc = PieceLocations::from_partial_fen(b_rep.as_slice())?;
+
+        // Create the Board
+        let mut b = Board {
+            turn: Player::White,
+            bit_boards: [[BitBoard(0); PIECE_TYPE_CNT]; PLAYER_CNT],
+            occ: [BitBoard(0), BitBoard(0)],
+            occ_all: BitBoard(0),
+            half_moves: 0,
+            depth: 0,
+            piece_counts: [[0; PIECE_TYPE_CNT]; PLAYER_CNT],
+            piece_locations: PieceLocations::blank(),
+            state: Arc::new(BoardState::blank()),
+            magic_helper: Helper::new(),
+        };
+
+        for &(sq, plyr, piece) in piece_loc.iter() {
+            b.put_piece_c(piece,sq,plyr);
+        }
 
         // Side to Move
         let turn_char: char = det_split[1].chars()
@@ -476,10 +386,12 @@ impl Board {
             _ => {return Err(FenBuildError::UnrecognizedTurn{turn: det_split[1].to_string()});},
         };
 
+        b.turn = turn;
+
         // Castle Bytes
         let mut castle_bytes = Castling::empty();
-        for char in det_split[2].chars() {
-            castle_bytes.add_castling_char(char);
+        for ch in det_split[2].chars() {
+            castle_bytes.add_castling_char(ch);
         }
 
         let mut ep_sq: SQ = SQ(0);
@@ -516,60 +428,34 @@ impl Board {
         if ep_sq == SQ(0) {ep_sq = NO_SQ}
 
         // rule 50 counts
-        let rule_50 = if det_split.len() >= 5 && det_split[4] != "-" { det_split[4].parse::<i16>()?} else {0};
-
+        let rule_50 = if det_split.len() >= 5 && det_split[4] != "-" { det_split[4].parse::<i16>()?
+        } else {0};
 
         // Total Moves Played
-        // Moves is defined as everyime White moves, so gotta translate to total moves
-        let mut total_moves = if det_split.len() >= 6 && det_split[5] != "-" {(det_split[5].parse::<u16>()? - 1) * 2} else {0};
+        // Moves is defined as everytime White moves, so gotta translate to total moves
+        let mut total_moves = if det_split.len() >= 6
+            && det_split[5] != "-" { (det_split[5].parse::<u16>()? - 1) * 2
+        } else {0};
+
         if turn == Player::Black {
             total_moves += 1
         };
 
-        // Create the Board States
-        let mut board_s = UniqueArc::new(BoardState {
-            castling: castle_bytes,
-            rule_50,
-            ply: 0,
-            ep_square: ep_sq,
-            psq: Score::ZERO,
-            zobrast: 0,
-            pawn_key: 0,
-            material_key: 0,
-            nonpawn_material: [0; PLAYER_CNT],
-            captured_piece: None,
-            checkers_bb: BitBoard(0),
-            blockers_king: [BitBoard(0); PLAYER_CNT],
-            pinners_king: [BitBoard(0); PLAYER_CNT],
-            check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
-            prev_move: BitMove::null(),
-            prev: None,
-        });
+        b.half_moves = total_moves;
 
-        // Create the Board
-        let mut b = Board {
-            turn,
-            bit_boards: [[BitBoard(0); PIECE_TYPE_CNT]; PLAYER_CNT],
-            occ: [BitBoard(0), BitBoard(0)],
-            occ_all: BitBoard(0),
-            half_moves: total_moves,
-            depth: 0,
-            piece_counts: piece_cnt,
-            piece_locations: piece_loc,
-            state: Arc::new(BoardState::default()),
-            magic_helper: Helper::new(),
+        // Set State info
+        let b_state = { // Set Check info
+            let mut state: BoardState = BoardState::blank();
+            state.castling = castle_bytes;
+            state.rule_50 = rule_50;
+            state.ep_square = ep_sq;
+            state.set(&b);
+            state
         };
 
-        // Set the BitBoards
-        b.set_bitboards();
-        { // Set Check info
-            let state: &mut BoardState = &mut *board_s;
-            b.set_check_info(state);
-        }
-        b.state = board_s.shareable();
-        b.set_zob_hash();
-        b.set_material_key();
+        b.state = Arc::new(b_state);
 
+        // validate
         fen::is_valid_fen(b)
     }
 
@@ -583,10 +469,11 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let board = Board::default();
+    /// let board = Board::start_pos();
     /// assert_eq!(board.fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     /// ```
     pub fn fen(&self) -> String {
+        // TODO: Doesnt display if rank 8 has zero pieces on it
         let mut s = String::default();
         let mut blanks = 0;
         for idx in 0..SQ_CNT as u8 {
@@ -681,10 +568,6 @@ impl Board {
     /// if the move doesn't give check. If an incorrect `gives_check` is supplied, undefined
     /// behavior will follow.
     pub fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
-
-        // TODO: investigate potention for SIMD in capturing moves
-        //
-        // Specifically https://github.com/rust-lang-nursery/simd, u16 X 8 ?
 
         // Check for stupidity
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
@@ -799,10 +682,16 @@ impl Board {
 
             // Pawn Moves need special help :(
             if piece == PieceType::P {
-                if distance_of_sqs(to, from) == 2 {
+                if to.0 ^ from.0 == 16 {
                     // Double Push
-                    new_state.ep_square = (to + from) / SQ(2);
-                    zob ^= z_ep(new_state.ep_square);
+                    let poss_ep: u8 = (to.0 as i8 - us.pawn_push()) as u8;
+
+                    // Set en-passant square if the moved pawn can be captured
+                    if (pawn_attacks_from(SQ(poss_ep), us) & self.piece_bb(them, PieceType::P)).is_not_empty() {
+
+                        new_state.ep_square = SQ(poss_ep);
+                        zob ^= z_ep(new_state.ep_square);
+                    }
                 } else if bit_move.is_promo() {
                     let promo_piece: PieceType = bit_move.promo_piece();
 
@@ -838,7 +727,9 @@ impl Board {
             };
 
             self.turn = them;
-            self.set_check_info(new_state); // Set the checking information
+
+            // Set the checking information
+            new_state.set_check_info(&self);
         }
         self.state = next_arc_state.shareable();
 
@@ -858,7 +749,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let mut board = Board::default();
+    /// let mut board = Board::start_pos();
     /// let success = board.apply_uci_move("e2e4");
     ///
     /// assert!(success);
@@ -887,7 +778,7 @@ impl Board {
     /// ```rust,should_panic
     /// use pleco::Board;
     ///
-    /// let mut chessboard = Board::default();
+    /// let mut chessboard = Board::start_pos();
     ///
     /// let moves = chessboard.generate_moves();
     /// chessboard.apply_move(moves[0]);
@@ -968,7 +859,7 @@ impl Board {
     /// ```rust
     /// use pleco::board::*;
     ///
-    /// let mut chessboard = Board::default();
+    /// let mut chessboard = Board::start_pos();
     /// let board_clone = chessboard.shallow_clone();
     ///
     /// unsafe { chessboard.apply_null_move(); }
@@ -1000,7 +891,9 @@ impl Board {
 
             new_state.zobrast = zob;
             self.turn = self.turn.other_player();
-            self.set_check_info(new_state);
+
+            // Set the checking information
+            new_state.set_check_info(&self);
         }
         self.state = next_arc_state.shareable();
 
@@ -1023,7 +916,7 @@ impl Board {
     /// ```rust
     /// use pleco::board::*;
     ///
-    /// let mut chessboard = Board::default();
+    /// let mut chessboard = Board::start_pos();
     /// let board_clone = chessboard.shallow_clone();
     ///
     /// unsafe { chessboard.apply_null_move(); }
@@ -1051,7 +944,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// let moves = chessboard.generate_moves();
     ///
     /// println!("There are {} possible legal moves.", moves.len());
@@ -1092,7 +985,7 @@ impl Board {
     /// use pleco::board::*;
     /// use pleco::core::GenTypes;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// let capturing_moves = chessboard.generate_moves_of_type(GenTypes::Captures);
     ///
     /// assert_eq!(capturing_moves.len(), 0); // no possible captures for the starting position
@@ -1131,45 +1024,6 @@ impl Board {
     }
 
     //  ------- PRIVATE MUTATING FUNCTIONS -------
-
-    /// Helper method, used after a move is made, creates information concerning checking and
-    /// possible checks.
-    ///
-    /// Specifically, sets Blockers, Pinners, and Check Squares for each piece.
-    fn set_check_info(&self, board_state: &mut BoardState) {
-
-        // Set the Pinners and Blockers
-        let mut white_pinners: BitBoard = BitBoard(0);
-
-        board_state.blockers_king[Player::White as usize] = self.slider_blockers(
-            self.occupied_black(),
-            self.king_sq(Player::White),
-            &mut white_pinners);
-
-        board_state.pinners_king[Player::White as usize] = white_pinners;
-
-        let mut black_pinners: BitBoard = BitBoard(0);
-
-        board_state.blockers_king[Player::Black as usize] = self.slider_blockers(
-            self.occupied_white(),
-            self.king_sq(Player::Black),
-            &mut black_pinners);
-
-        board_state.pinners_king[Player::Black as usize] = black_pinners;
-
-        let ksq: SQ = self.king_sq(self.turn.other_player());
-        let occupied = self.occupied();
-
-        board_state.check_sqs[PieceType::P as usize] = pawn_attacks_from(ksq, self.turn.other_player());
-        board_state.check_sqs[PieceType::N as usize] = knight_moves(ksq);
-        board_state.check_sqs[PieceType::B as usize] = bishop_moves(occupied, ksq);
-        board_state.check_sqs[PieceType::R as usize] = rook_moves(occupied, ksq);
-        board_state.check_sqs[PieceType::Q as usize] = board_state.check_sqs[PieceType::B as usize]
-            | board_state.check_sqs[PieceType::R as usize];
-        board_state.check_sqs[PieceType::K as usize] = BitBoard(0);
-    }
-
-
 
     /// Removes a Piece from the Board, if the color is unknown.
     ///
@@ -1294,7 +1148,7 @@ impl Board {
         self.move_piece_c(PieceType::R, r_dst, r_src, player);
     }
 
-    /// Helper function that outputs the Blockers of a given square.
+    /// Outputs the Blockers of a given square.
     pub fn slider_blockers(&self, sliders: BitBoard, s: SQ, pinners: &mut BitBoard) -> BitBoard {
         let mut result: BitBoard = BitBoard(0);
         *pinners = BitBoard(0);
@@ -1322,41 +1176,6 @@ impl Board {
         result
     }
 
-    /// Sets the Zobrist hash when the board is initialized or created from a FEN string.
-    ///
-    /// Assumes the rest of the board is initialized.
-    fn set_zob_hash(&mut self) {
-        let mut zob: u64 = 0;
-        let mut pawn_key: u64 = 0;
-        let mut psq_s: Score = Score::ZERO;
-        let mut b: BitBoard = self.occupied();
-        while let Some(sq) = b.pop_some_lsb() {
-            let (player, piece) = self.piece_locations.player_piece_at(sq).unwrap();
-            psq_s += psq(piece,player,sq);
-            let key = z_square(sq, player, piece);
-            zob ^= key;
-            if piece == PieceType::P {
-                pawn_key ^= key;
-            }
-        }
-
-        let ep = self.state.ep_square;
-        if ep != NO_SQ && ep.is_okay() {
-            zob ^= z_ep(ep);
-        }
-
-        match self.turn {
-            Player::Black => zob ^= z_side(),
-            Player::White => {}
-        };
-
-        let state =  Arc::get_mut(&mut self.state).unwrap();
-
-        state.zobrast = zob;
-        state.pawn_key = pawn_key;
-        state.psq = psq_s;
-    }
-
     /// Get the Player whose turn it is to move.
     ///
     /// # Examples
@@ -1364,7 +1183,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,Player};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.turn(), Player::White);
     /// ```
     #[inline(always)]
@@ -1393,7 +1212,7 @@ impl Board {
     /// ```
     /// use pleco::Board;
     ///
-    /// let mut chessboard = Board::default();
+    /// let mut chessboard = Board::start_pos();
     /// assert_eq!(chessboard.moves_played(), 0);
     ///
     /// let moves = chessboard.generate_moves();
@@ -1453,7 +1272,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,SQ};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.ep_square(), SQ::NONE);
     /// ```
     #[inline(always)]
@@ -1468,7 +1287,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,BitBoard};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.occupied().0, 0xFFFF00000000FFFF);
     /// ```
     #[inline(always)]
@@ -1484,7 +1303,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,SQ};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert!(chessboard.empty(SQ::F6));
     /// assert!(!chessboard.empty(SQ::A2));
     /// ```
@@ -1498,7 +1317,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,Player,BitBoard};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.get_occupied_player(Player::White).0, 0x000000000000FFFF);
     /// ```
     #[inline(always)]
@@ -1513,7 +1332,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,BitBoard};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.occupied_white(), BitBoard::RANK_1 | BitBoard::RANK_2);
     /// ```
     #[inline(always)]
@@ -1528,7 +1347,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,BitBoard};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.occupied_black(), BitBoard::RANK_8 | BitBoard::RANK_7);
     /// ```
     #[inline(always)]
@@ -1544,7 +1363,7 @@ impl Board {
     /// use pleco::Board;
     /// use pleco::{Player,PieceType};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.piece_bb(Player::White,PieceType::P).0, 0x000000000000FF00);
     /// ```
     #[inline]
@@ -1560,7 +1379,7 @@ impl Board {
     /// use pleco::{Board,Player,BitBoard};
     /// use pleco::core::bit_twiddles::*;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.sliding_piece_bb(Player::White).count_bits(), 3);
     /// ```
     #[inline]
@@ -1576,7 +1395,7 @@ impl Board {
     /// use pleco::{Board,Player,BitBoard};
     /// use pleco::core::bit_twiddles::*;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.diagonal_piece_bb(Player::White).count_bits(), 3);
     /// ```
     #[inline]
@@ -1592,7 +1411,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,PieceType};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.piece_bb_both_players(PieceType::P).0, 0x00FF00000000FF00);
     /// ```
     #[inline(always)]
@@ -1609,7 +1428,7 @@ impl Board {
     /// use pleco::{Board,PieceType,BitBoard};
     /// use pleco::core::bit_twiddles::*;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.piece_two_bb_both_players(PieceType::Q,PieceType::K).count_bits(), 4);
     /// ```
     #[inline]
@@ -1631,7 +1450,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,Player,PieceType};
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.count_piece(Player::White, PieceType::P), 8);
     /// ```
     #[inline(always)]
@@ -1647,7 +1466,7 @@ impl Board {
     /// use pleco::{Board,Player,PieceType};
     /// use pleco::core::bit_twiddles::*;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.count_pieces_player(Player::White), 16);
     /// ```
     pub fn count_pieces_player(&self, player: Player) -> u8 {
@@ -1662,7 +1481,7 @@ impl Board {
     /// use pleco::{Board,Player,PieceType};
     /// use pleco::core::bit_twiddles::*;
     ///
-    /// let chessboard = Board::default();
+    /// let chessboard = Board::start_pos();
     /// assert_eq!(chessboard.count_all_pieces(), 32);
     /// ```
     #[inline]
@@ -1692,7 +1511,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,Player,SQ};
     ///
-    /// let board = Board::default();
+    /// let board = Board::start_pos();
     /// assert_eq!(board.player_at_sq(SQ::G8), Some(Player::Black));
     /// assert_eq!(board.player_at_sq(SQ::E3), None);
     /// ```
@@ -1709,7 +1528,7 @@ impl Board {
     /// ```
     /// use pleco::{Board,Player,SQ};
     ///
-    /// let board = Board::default();
+    /// let board = Board::start_pos();
     /// assert_eq!(board.king_sq(Player::White), SQ::E1);
     /// ```
     #[inline(always)]
@@ -1900,9 +1719,8 @@ impl Board {
             let occupied: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) |
                 dst_bb;
 
-            return (rook_moves(occupied, k_sq) &
-                self.sliding_piece_bb(them)).is_empty() &&
-                (queen_moves(occupied, k_sq) & self.diagonal_piece_bb(them)).is_empty();
+            return (rook_moves(occupied, k_sq) & self.sliding_piece_bb(them)).is_empty()
+                && (bishop_moves(occupied, k_sq) & self.diagonal_piece_bb(them)).is_empty();
         }
 
         // If Moving the king, check if the square moved to is not being attacked
@@ -2250,12 +2068,16 @@ impl Board {
 /// Errors concerning the current `Board` position.
 pub enum BoardError {
     IncorrectKingNum {player: Player, num: u8},
+    IncorrectKingSQ {player: Player, sq: SQ},
+    BadEPSquare {sq: SQ},
 }
 
 impl fmt::Debug for BoardError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             BoardError::IncorrectKingNum{player, num} => writeln!(f, "incorrect number of kings for {}: {}", player, num),
+            BoardError::IncorrectKingSQ {player, sq} => writeln!(f, "The board.king_sq for {} player was not at the correct location: {}", player, sq),
+            BoardError::BadEPSquare {sq} => writeln!(f, "Bad En-passant Square: {}", sq),
         }
     }
 }
@@ -2281,6 +2103,12 @@ impl Board {
         let b_king_num = self.count_piece(Player::Black, PieceType::K);
         if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::White, num: w_king_num}); }
         if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::Black, num: b_king_num}); }
+        let w_ksq = self.king_sq(Player::White);
+        let b_ksq = self.king_sq(Player::Black);
+        if self.piece_at_sq(w_ksq).unwrap() != PieceType::K {
+            return Err(BoardError::IncorrectKingSQ {player: Player::White, sq: w_ksq}); }
+        if self.piece_at_sq(b_ksq).unwrap() != PieceType::K {
+            return Err(BoardError::IncorrectKingSQ {player: Player::Black, sq: b_ksq}); }
         Ok(())
     }
 //
@@ -2432,7 +2260,7 @@ impl RandBoard {
             Player::Black
         };
         loop {
-            let mut board = Board::default();
+            let mut board = Board::start_pos();
             let mut iterations = 0;
             let mut moves = board.generate_moves();
 
@@ -2513,7 +2341,7 @@ mod tests {
 
     #[test]
     fn random_move_apply() {
-        let mut board = Board::default();
+        let mut board = Board::start_pos();
         let mut ply = 1000;
         while ply > 0 && !board.checkmate() && !board.stalemate() {
             let moves = board.generate_moves();
@@ -2525,7 +2353,7 @@ mod tests {
 
     #[test]
     fn fen_equality() {
-        let mut board = Board::default();
+        let mut board = Board::start_pos();
         let mut ply = 1000;
         let mut fen_stack = Vec::new();
         while ply > 0 && !board.checkmate() && !board.stalemate() {
@@ -2544,7 +2372,7 @@ mod tests {
 
     #[test]
     fn zob_equality() {
-        let mut board = Board::default();
+        let mut board = Board::start_pos();
         let mut ply = 1000;
         let mut zobrist_stack = Vec::new();
         while ply > 0 && !board.checkmate() && !board.stalemate() {
@@ -2594,13 +2422,13 @@ mod tests {
 
     #[test]
     fn uci_move() {
-        let mut b = Board::default();
+        let mut b = Board::start_pos();
         assert!(!b.apply_uci_move("a1a5"));
     }
 
     #[test]
     fn check_state() {
-        let b = Board::default();
+        let b = Board::start_pos();
         assert_eq!(b.count_all_pieces(), 32);
         assert!(!b.checkmate());
         assert!(!b.stalemate());

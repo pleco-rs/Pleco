@@ -453,7 +453,7 @@ mod tests {
     #[test]
     fn pawn_eval() {
         let mut t: PawnTable = PawnTable::new(1 << 7);
-        let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(15);
+        let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(9);
         let mut score: i64 = 0;
         boards.iter().for_each(|b| {
             score += t.probe(b).pawns_score().0 as i64;
