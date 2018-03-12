@@ -5,8 +5,12 @@ rust:
 
 
 cache:
+
   - cargo
   - apt
+#  cache:
+#    directories:
+#      - $HOME/.cache/pip
 
 sudo: required
 
@@ -14,7 +18,7 @@ env:
   global:
     - RUST_BACKTRACE=FULL
     - RUSTFLAGS="-Ctarget-cpu=native -Zmutable-noalias"
-    - RUST_MIN_STACK=4000000
+    - RUST_MIN_STACK=8000000
 #    - RUST_TEST_THREADS=1
 
 
