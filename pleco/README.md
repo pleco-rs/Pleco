@@ -42,7 +42,7 @@ Setting up a board position is extremely simple.
 ```rust
 use pleco::{Board,Player,PieceType};
 
-let board = Board::default();
+let board = Board::start_pos();
 assert_eq!(board.count_piece(Player::White,PieceType::P), 8);
 assert_eq!(&board.fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 ```
@@ -64,7 +64,7 @@ position for the current player.
 ```rust
 use pleco::{Board,BitMove};
 
-let mut board = Board::default(); // create a board of the starting position
+let mut board = Board::start_pos(); // create a board of the starting position
 let moves = board.generate_moves(); // generate all possible legal moves
 board.apply_move(moves[0]);
 assert_eq!(board.moves_played(), 1);
@@ -76,7 +76,7 @@ while promoting a pawn would look something like "e7e81". If the board is suppli
 incorrectly formatted or illegal, false shall be returned.
 
 ```rust
-let mut board = Board::default(); // create a board of the starting position
+let mut board = Board::start_pos(); // create a board of the starting position
 let success = board.apply_uci_move("e7e8q"); // apply a move where piece on e7 -> eq, promotes to queen
 assert!(!success); // Wrong, not a valid move for the starting position
 ```
@@ -86,7 +86,7 @@ assert!(!success); // Wrong, not a valid move for the starting position
 We can revert to the previous chessboard state with a simple `Board::undo_move()`:
 
 ```rust
-let mut board = Board::default();
+let mut board = Board::start_pos();
 board.apply_uci_move("e2e4"); // A very good starting move, might I say
 assert_eq!(board.moves_played(),1);
 board.undo_move();

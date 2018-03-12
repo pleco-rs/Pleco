@@ -131,7 +131,7 @@ impl Searcher {
             cond,
             depth_completed: 0,
             limit: Limits::blank(),
-            board: Board::default(),
+            board: Board::start_pos(),
             time_man: &TIMER,
             tt: &TT_TABLE,
             pawns: PawnTable::new(16384),

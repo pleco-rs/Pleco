@@ -133,14 +133,14 @@ mod tests {
 
     #[test]
     fn minimax_equality() {
-        let b = Board::default();
+        let b = Board::start_pos();
         let b2 = b.shallow_clone();
         assert_eq!(MiniMaxSearcher::best_move(b, 5), ParallelMiniMaxSearcher::best_move(b2, 5));
     }
 
     #[test]
     fn alpha_equality() {
-        let b = Board::default();
+        let b = Board::start_pos();
         let b2 = b.shallow_clone();
         assert_eq!(AlphaBetaSearcher::best_move(b, 5), JamboreeSearcher::best_move(b2, 5));
     }

@@ -159,7 +159,7 @@ pub fn setboard_parse_board(args: &[&str]) -> Option<Board> {
 pub fn position_parse_board(args: &[&str]) -> Option<Board> {
     let start: &str = args[0];
     let mut board = if start == "startpos" {
-        Some(Board::default())
+        Some(Board::start_pos())
     } else if start == "fen" {
         let fen_string: String = args[1..].iter()
                                           .take_while(|p: &&&str| **p != "moves")

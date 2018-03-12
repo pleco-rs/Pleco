@@ -17,7 +17,7 @@ fn pseudolegal_all_fens() {
 
 #[test]
 fn pseudolegal_rand() {
-    for _x in 0..14 {
+    for _x in 0..9 {
         let board = Board::random().one();
         pseudolegal_correctness(&board);
     }
@@ -63,7 +63,7 @@ fn legal_all_fens() {
 
 #[test]
 fn legal_rand() {
-    for _x in 0..14 {
+    for _x in 0..10 {
         let board = Board::random().one();
         legal_correctness(&board);
     }

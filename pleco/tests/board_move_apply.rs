@@ -8,7 +8,7 @@ use std::*;
 
 #[test]
 fn random_moves() {
-    let mut chess_board = Board::default();
+    let mut chess_board = Board::start_pos();
     let mut moves = chess_board.generate_moves();
     let mut i = 0;
     while i < 50 && !moves.is_empty() {

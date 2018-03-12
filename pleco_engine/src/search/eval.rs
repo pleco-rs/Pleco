@@ -863,7 +863,7 @@ mod tests {
 //    #[test]
 //    fn eval_stuff() {
 //        init_statics();
-//        let board = Board::default();
+//        let board = Board::start_pos();
 //        let mut score = Score::ZERO;
 //        let mut bb = board.get_occupied();
 //        while let Some(sq) = bb.pop_some_lsb() {
@@ -879,7 +879,7 @@ mod tests {
 
     #[test]
     fn trace_eval() {
-        let mut board = Board::default();
+        let mut board = Board::start_pos();
         board.pretty_print();
         Evaluation::trace(&board);
         println!("\n------------------------------\n");

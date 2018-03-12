@@ -38,9 +38,9 @@ os:
   - linux
 
 script:
-  - cargo bench
   - cargo build --verbose
   - cargo test --verbose
+  - cargo bench
 #  - cd pleco/ && cargo bench
 #  - cd ../pleco_engine/ && cargo bench --bench eval_benches
 

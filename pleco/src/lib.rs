@@ -23,7 +23,7 @@
 //!
 //! ```ignore
 //! use pleco::Board;
-//! let board = Board::default();
+//! let board = Board::start_pos();
 //! ```
 //!
 //! Generating a list of moves (Contained inside a [`MoveList`]) can be done with:
@@ -35,7 +35,7 @@
 //! Applying and undoing moves is simple:
 //!
 //! ```ignore
-//! let mut board = Board::default();
+//! let mut board = Board::start_pos();
 //! let list = board.generate_moves();
 //!
 //! for mov in list.iter() {

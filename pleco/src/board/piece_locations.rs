@@ -5,10 +5,10 @@
 //! [`Board`]: ../struct.Board.html
 //! [`PieceLocations`]: struct.PieceLocations.html
 
-use core::*;
 use std::mem;
+
+use core::*;
 use core::sq::SQ;
-use core::masks::{PLAYER_CNT, PIECE_TYPE_CNT};
 use super::FenBuildError;
 
 /// Struct to allow fast lookups for any square. Given a square, allows for determining if there
@@ -209,9 +209,8 @@ impl PieceLocations {
 
     /// Generates a `PieceLocations` from a partial fen. A partial fen is defined as the first part of a
     /// fen, where the piece positions are available.
-    pub fn from_partial_fen(ranks: &[&str]) -> Result<(PieceLocations,[[u8; PIECE_TYPE_CNT]; PLAYER_CNT]), FenBuildError> {
-        let mut loc = PieceLocations::blank();
-        let mut piece_cnt: [[u8; PIECE_TYPE_CNT]; PLAYER_CNT] = [[0; PIECE_TYPE_CNT]; PLAYER_CNT];
+    pub fn from_partial_fen(ranks: &[&str]) -> Result<Vec<(SQ,Player,PieceType)>, FenBuildError> {
+        let mut loc = Vec::with_capacity(64);
         for (i, rank) in ranks.iter().enumerate() {
             let min_sq = (7 - i) * 8;
             let max_sq = min_sq + 7;
@@ -242,13 +241,12 @@ impl PieceLocations {
                     } else {
                         Player::White
                     };
-                    loc.place(SQ(idx as u8), player, piece);
-                    piece_cnt[player as usize][piece as usize] += 1;
+                    loc.push((SQ(idx as u8), player, piece));
                     idx += 1;
                 }
             }
         }
-        Ok((loc,piece_cnt))
+        Ok(loc)
     }
 
 
@@ -285,6 +283,42 @@ impl PartialEq for PieceLocations {
             }
         }
         true
+    }
+}
+
+
+pub struct PieceLocationsIter {
+    locations: PieceLocations,
+    sq: SQ
+}
+
+impl Iterator for PieceLocationsIter {
+    type Item = (SQ,Player,PieceType);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.sq >= SQ::NONE {
+            None
+        } else if let Some((plyr, piece)) = self.locations.player_piece_at(self.sq) {
+            let sq = self.sq;
+            self.sq += SQ(1);
+            Some((sq, plyr, piece))
+        } else {
+            self.next()
+        }
+    }
+}
+
+impl IntoIterator for PieceLocations {
+    type Item = (SQ,Player,PieceType);
+    type IntoIter = PieceLocationsIter;
+
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter {
+        PieceLocationsIter {
+            locations: self,
+            sq: SQ(0),
+        }
     }
 }
 

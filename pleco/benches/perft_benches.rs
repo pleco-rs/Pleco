@@ -27,7 +27,7 @@ fn perft_all(c: &mut Criterion) {
         .collect();
 
     let perft_3_f = Fun::new("Perft 3",perft_3);
-    let perft_4_f = Fun::new("Perft 3",perft_4);
+    let perft_4_f = Fun::new("Perft 4",perft_4);
 
     let funs = vec![perft_3_f, perft_4_f];
 

@@ -11,6 +11,7 @@
 //! [`Board`]: ../struct.Board.html
 
 use super::castle_rights::Castling;
+use super::Board;
 
 use core::*;
 use core::piece_move::BitMove;
@@ -21,6 +22,7 @@ use core::score::{Value,Score};
 
 //use std::sync::Arc;
 use tools::pleco_arc::Arc;
+use helper::prelude::*;
 
 /// Holds useful information concerning the current state of the [`Board`].
 ///
@@ -82,28 +84,6 @@ pub struct BoardState {
 }
 
 impl BoardState {
-    /// Constructs a `BoardState` from the starting position.
-    pub const fn default() -> BoardState {
-        BoardState {
-            castling: Castling::all_castling(),
-            rule_50: 0,
-            ply: 0,
-            ep_square: NO_SQ,
-            psq: Score::ZERO,
-            zobrast: 0,
-            pawn_key: 0,
-            material_key: 0,
-            nonpawn_material: [0; PLAYER_CNT],
-            captured_piece: None,
-            checkers_bb: BitBoard(0),
-            blockers_king: [BitBoard(0); PLAYER_CNT],
-            pinners_king: [BitBoard(0); PLAYER_CNT],
-            check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
-            prev_move: BitMove::null(),
-            prev: None,
-        }
-    }
-
     /// Constructs a blank `BoardState`.
     pub const fn blank() -> BoardState {
         BoardState {
@@ -148,6 +128,105 @@ impl BoardState {
             check_sqs: [BitBoard(0); PIECE_TYPE_CNT],
             prev_move: BitMove::null(),
             prev: self.get_prev(),
+        }
+    }
+
+    /// Sets the current position completely. Used only when initializing a `Board`, not when
+    /// applying a move.
+    pub(crate) fn set(&mut self, board: &Board) {
+        self.zobrast = 0;
+        self.material_key = 0;
+        self.pawn_key = 0;
+        self.nonpawn_material = [0;2];
+
+        let us = board.turn;
+        let them = us.other_player();
+        let ksq = board.king_sq(us);
+
+        self.checkers_bb = board.attackers_to(ksq, board.occ_all)
+            & board.occ[them as usize];
+
+        self.set_check_info(board);
+        self.set_zob_hash(board);
+        self.set_material_key(board);
+    }
+
+    /// Helper method, used after a move is made, creates information concerning checking and
+    /// possible checks.
+    ///
+    /// Specifically, sets Blockers, Pinners, and Check Squares for each piece.
+    ///
+    /// The `checkers_bb` must beset before this methof can be used.
+    pub(crate) fn set_check_info(&mut self, board: &Board) {
+        let mut white_pinners: BitBoard = BitBoard(0);
+
+        self.blockers_king[Player::White as usize] = board.slider_blockers(
+            board.occupied_black(),
+            board.king_sq(Player::White),
+            &mut white_pinners);
+
+        self.pinners_king[Player::White as usize] = white_pinners;
+
+        let mut black_pinners: BitBoard = BitBoard(0);
+
+        self.blockers_king[Player::Black as usize] = board.slider_blockers(
+            board.occupied_white(),
+            board.king_sq(Player::Black),
+            &mut black_pinners);
+
+        self.pinners_king[Player::Black as usize] = black_pinners;
+
+        let ksq: SQ = board.king_sq(board.turn.other_player());
+        let occupied = board.occupied();
+
+        self.check_sqs[PieceType::P as usize] = pawn_attacks_from(ksq, board.turn.other_player());
+        self.check_sqs[PieceType::N as usize] = knight_moves(ksq);
+        self.check_sqs[PieceType::B as usize] = bishop_moves(occupied, ksq);
+        self.check_sqs[PieceType::R as usize] = rook_moves(occupied, ksq);
+        self.check_sqs[PieceType::Q as usize] = self.check_sqs[PieceType::B as usize]
+            | self.check_sqs[PieceType::R as usize];
+        self.check_sqs[PieceType::K as usize] = BitBoard(0);
+    }
+
+    // Sets the Zobrist Hash for the current board
+    fn set_zob_hash(&mut self, board: &Board) {
+        let mut b: BitBoard = board.occupied();
+        while let Some(sq) = b.pop_some_lsb() {
+            let (player, piece) = board.piece_locations.player_piece_at(sq).unwrap();
+            self.psq += psq(piece,player,sq);
+            let key = z_square(sq, player, piece);
+            self.zobrast ^= key;
+            if piece == PieceType::P {
+                self.pawn_key ^= key;
+            }
+        }
+
+        self.zobrast = z_castle(self.castling.bits());
+
+        let ep = self.ep_square;
+        if ep != NO_SQ && ep.is_okay() {
+            self.zobrast ^= z_ep(ep);
+        }
+
+        match board.turn {
+            Player::Black => self.zobrast ^= z_side(),
+            Player::White => {}
+        };
+    }
+
+    /// Sets the material key & Also sets non_pawn material for the board state.
+    fn set_material_key(&mut self, board: &Board) {
+        for player in &ALL_PLAYERS {
+            for piece in &ALL_PIECE_TYPES {
+                let count = board.piece_bb(*player, *piece).count_bits();
+                for n in 0..count {
+                    self.material_key ^= z_square(SQ(n), *player, *piece);
+                }
+                if *piece != PieceType::P && *piece != PieceType::K {
+                    self.nonpawn_material[*player as usize] +=
+                        count as i32 * piece_value(*piece, false);
+                }
+            }
         }
     }
 

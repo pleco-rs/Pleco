@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn start_pos_perft() {
-        let b: Board = Board::default();
+        let b: Board = Board::start_pos();
         assert_eq!(1, perft(&b,0));
         assert_eq!(20, perft(&b,1));
         assert_eq!(400, perft(&b,2));
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn start_pos_perft_all() {
-        let b: Board = Board::default();
+        let b: Board = Board::start_pos();
         perft_all(&b,3)
             .check(8902, 34, 0, 0, 0, 12, 0);
         perft_all(&b,4)
@@ -151,7 +151,6 @@ mod tests {
             .check(4_865_609, 82_719, 258, 0, 0, 27351, 347);
     }
 
-    #[ignore]
     #[test]
     fn perft_kiwipete() {
         let b: Board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -").unwrap();
@@ -162,16 +161,18 @@ mod tests {
         assert_eq!(193690690, perft(&b,5));
     }
 
+    // THis passes, but we're gonna ignore it as it takes a long time to use.
     #[ignore]
     #[test]
     fn perft_kiwipete_all() {
         let b: Board = Board::from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -").unwrap();
        perft_all(&b,3)
-           .check(97862, 17102, 45, 0, 993, 1, 3162);
+           .check(97862, 17102, 45, 3162, 0, 993, 1);
         perft_all(&b,4)
-            .check(4085603, 757163, 1929, 15172, 25523, 43, 128013);
+            .check(4085603, 757163, 1929, 128013, 15172, 25523, 43);
         perft_all(&b,5)
-            .check(193690690, 35043416, 73365, 8392, 3309887, 30171, 4993637);
+            .check(193690690, 35043416, 73365, 4993637, 8392, 3309887, 30171);
+
     }
 
     #[test]
@@ -202,4 +203,5 @@ mod tests {
         assert_eq!(89_890, perft(&b,3));
         assert_eq!(3_894_594, perft(&b,4));
     }
+
 }
