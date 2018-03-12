@@ -1,3 +1,4 @@
+use std::time::Duration;
 
 use criterion::{Criterion,black_box,Bencher,Fun};
 
@@ -5,8 +6,6 @@ use lazy_static;
 use pleco::Board;
 use pleco::bot_prelude::*;
 use pleco::tools::Searcher;
-
-use std::time::Duration;
 
 
 lazy_static! {

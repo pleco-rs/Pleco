@@ -1,4 +1,5 @@
 
+use std::time::Duration;
 use criterion::{Criterion,black_box};
 use lazy_static;
 
@@ -87,11 +88,15 @@ fn bench_undo_100_move(c: &mut Criterion) {
     });
 }
 
-criterion_group!(board_benches,
-    bench_board_100_clone,
-    bench_find,
-    bench_apply_100_move,
-    bench_undo_100_move
+criterion_group!(name = board_benches;
+    config = Criterion::default()
+        .sample_size(50)
+        .warm_up_time(Duration::from_millis(10));
+    targets =
+        bench_board_100_clone,
+        bench_find,
+        bench_apply_100_move,
+        bench_undo_100_move
 );
 
 

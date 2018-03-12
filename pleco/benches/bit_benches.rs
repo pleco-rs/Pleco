@@ -41,6 +41,6 @@ fn popcount(c: &mut Criterion) {
 criterion_group!(name = bit_benches;
      config = Criterion::default()
         .sample_size(100)
-        .warm_up_time(Duration::from_millis(20));
+        .warm_up_time(Duration::from_millis(1));
     targets = popcount
 );
