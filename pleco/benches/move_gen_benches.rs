@@ -45,8 +45,11 @@ fn all_movegen(c: &mut Criterion) {
     let nochk_quietchecks_legal = Fun::new("MoveGen QuietChecks - Legal", movegen_ty::<Legal, QuietChecksGenType>);
     let nochk_quietchecks_pslegal = Fun::new("MoveGen QuietChecks - PseudoLegal", movegen_ty::<PseudoLegal, QuietChecksGenType>);
 
-    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, EvasionsGenType>);
-    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, EvasionsGenType>);
+    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, AllGenType>);
+    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, AllGenType>);
+
+//    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, EvasionsGenType>);
+//    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, EvasionsGenType>);
 
     let all_funcs = vec![all_legal, all_pslegal];
 
