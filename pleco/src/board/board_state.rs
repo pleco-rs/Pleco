@@ -136,8 +136,8 @@ impl BoardState {
     pub(crate) fn set(&mut self, board: &Board) {
         self.zobrast = 0;
         self.material_key = 0;
-        self.pawn_key = 0;
-        self.nonpawn_material = [0;2];
+        self.pawn_key = z_no_pawns();
+        self.nonpawn_material = [0; 2];
 
         let us = board.turn;
         let them = us.other_player();
@@ -201,10 +201,10 @@ impl BoardState {
             }
         }
 
-        self.zobrast = z_castle(self.castling.bits());
+        self.zobrast ^= z_castle(self.castling.bits());
 
         let ep = self.ep_square;
-        if ep != NO_SQ && ep.is_okay() {
+        if ep != NO_SQ {
             self.zobrast ^= z_ep(ep);
         }
 

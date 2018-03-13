@@ -38,6 +38,6 @@ fn bench_all_searchers_4_ply(c: &mut Criterion) {
 }
 
 criterion_group!(name = bot_benches;
-    config = Criterion::default().sample_size(7).warm_up_time(Duration::from_millis(500));
+    config = Criterion::default().sample_size(11).warm_up_time(Duration::from_millis(100));
     targets = bench_all_searchers_4_ply
 );

@@ -29,7 +29,7 @@ use helper::Helper;
 use helper::prelude::*;
 use tools::prng::PRNG;
 use tools::Searcher;
-use bot_prelude::{AlphaBetaSearcher,JamboreeSearcher};
+use bot_prelude::AlphaBetaSearcher;
 
 use self::castle_rights::Castling;
 use self::piece_locations::PieceLocations;
@@ -475,35 +475,31 @@ impl Board {
     pub fn fen(&self) -> String {
         // TODO: Doesnt display if rank 8 has zero pieces on it
         let mut s = String::default();
-        let mut blanks = 0;
-        for idx in 0..SQ_CNT as u8 {
-            // Cause of weird fen ordering, gotta do it this way
-            let sq = SQ((idx % 8) + (8 * (7 - (idx / 8))));
-            if sq.file() == File::A && sq.rank() != Rank::R8 {
-                if blanks != 0 {
-                    // Only add a number if there is a space between pieces
-                    s.push(char::from_digit(blanks, 10).unwrap());
-                    blanks = 0;
-                }
+
+        for reverse_rnk in 0..8 {
+            let mut blanks = 0;
+            let rank = 7 - reverse_rnk;
+
+            if reverse_rnk != 0 {
                 s.push('/');
             }
-            let piece = self.piece_at_sq(sq);
-            let player = self.player_at_sq(sq);
-            if piece.is_none() {
-                blanks += 1;
-            } else {
-                if blanks != 0 {
-                    s.push(char::from_digit(blanks, 10).unwrap());
-                    blanks = 0;
-                }
-                s.push(
-                    PIECE_DISPLAYS[player.unwrap() as usize][piece.unwrap() as usize],
-                );
-            }
-        }
 
-        if blanks != 0 {
-            s.push(char::from_digit(blanks, 10).unwrap());
+            for file in 0..FILE_CNT {
+                let sq = SQ(rank as u8 * 8 + file as u8);
+                if let Some((player, piece)) = self.piece_locations.player_piece_at(sq) {
+                    if blanks != 0 {
+                        s.push(char::from_digit(blanks, 10).unwrap());
+                        blanks = 0;
+                    }
+                    s.push(PIECE_DISPLAYS[player as usize][piece as usize]);
+                } else {
+                    blanks += 1;
+                }
+            }
+            if blanks != 0 {
+                s.push(char::from_digit(blanks, 10).unwrap());
+            }
+
         }
 
         s.push(' ');
@@ -698,7 +694,7 @@ impl Board {
                     self.remove_piece_c(piece, to, us);
                     self.put_piece_c(promo_piece, to, us);
                     zob ^= z_square(to, us, promo_piece) ^
-                        z_square(from, us, PieceType::P);
+                        z_square(to, us, PieceType::P);
                     pawn_key ^= z_square(to, us, PieceType::P);
 
                     let promo_count = self.count_piece(us, promo_piece);
@@ -2109,6 +2105,7 @@ impl Board {
             return Err(BoardError::IncorrectKingSQ {player: Player::White, sq: w_ksq}); }
         if self.piece_at_sq(b_ksq).unwrap() != PieceType::K {
             return Err(BoardError::IncorrectKingSQ {player: Player::Black, sq: b_ksq}); }
+
         Ok(())
     }
 //
@@ -2184,7 +2181,8 @@ pub struct RandBoard {
     minimum_move: u16,
     favorable_player: Player,
     prng: PRNG,
-    seed: u64
+    seed: u64,
+    only_startpos: bool
 }
 
 impl Default for RandBoard {
@@ -2194,7 +2192,8 @@ impl Default for RandBoard {
             minimum_move: 2,
             favorable_player: Player::Black,
             prng: PRNG::init(1),
-            seed: 0
+            seed: 0,
+            only_startpos: false
         }
     }
 }
@@ -2207,7 +2206,8 @@ impl RandBoard {
             minimum_move: 1,
             favorable_player: Player::Black,
             prng: PRNG::init(1),
-            seed: 0
+            seed: 0,
+            only_startpos: false
         }
     }
 
@@ -2240,15 +2240,21 @@ impl RandBoard {
         self
     }
 
-    /// Garuntees that the boards returned are only in check,
+    /// Guarantees that the boards returned are only in check,
     pub fn in_check(mut self) -> Self {
         self.gen_type = RandGen::InCheck;
         self
     }
 
-    /// Garuntees that the boards returned are not in check.
+    /// Guarantees that the boards returned are not in check.
     pub fn no_check(mut self) -> Self {
         self.gen_type = RandGen::NoCheck;
+        self
+    }
+
+    /// Generates Random Boards from the start position only
+    pub fn from_start_pos(mut self) -> Self {
+        self.only_startpos = true;
         self
     }
 
@@ -2260,7 +2266,7 @@ impl RandBoard {
             Player::Black
         };
         loop {
-            let mut board = Board::start_pos();
+            let mut board = self.select_board();
             let mut iterations = 0;
             let mut moves = board.generate_moves();
 
@@ -2285,6 +2291,15 @@ impl RandBoard {
 
     }
 
+    fn select_board(&mut self) -> Board {
+        if self.only_startpos || self.random() % 3 == 0 {
+            Board::default()
+        } else {
+            let rn = self.random() % fen::ALL_FENS.len();
+            Board::from_fen(fen::ALL_FENS[rn]).unwrap()
+        }
+    }
+
     /// Creates a random number.
     fn random(&mut self) -> usize {
         if self.seed == 0 {
@@ -2294,7 +2309,7 @@ impl RandBoard {
     }
 
     fn to_ret(&self, board: &Board) -> bool {
-        let gen: bool =match self.gen_type {
+        let gen: bool = match self.gen_type {
             RandGen::All => true,
             RandGen::InCheck => board.in_check(),
             RandGen::NoCheck => !board.in_check()
@@ -2316,11 +2331,11 @@ impl RandBoard {
         } else if self.random() % 5 == 0 {
             AlphaBetaSearcher::best_move(board.shallow_clone(),2)
         } else if self.random() % 3 == 0 {
-            JamboreeSearcher::best_move(board.shallow_clone(),3)
+            AlphaBetaSearcher::best_move(board.shallow_clone(),3)
         } else if !favorable && self.random() % 5 < 4 {
-            JamboreeSearcher::best_move(board.shallow_clone(),3)
+            AlphaBetaSearcher::best_move(board.shallow_clone(),3)
         } else {
-            JamboreeSearcher::best_move(board.shallow_clone(),4)
+            AlphaBetaSearcher::best_move(board.shallow_clone(),4)
         };
         board.apply_move(best_move);
     }

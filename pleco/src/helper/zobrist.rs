@@ -1,4 +1,4 @@
-use {Player,SQ,PieceType};
+use {Player,SQ,PieceType,BitBoard};
 use tools::prng::PRNG;
 use core::masks::*;
 
@@ -18,6 +18,9 @@ static mut ZOBRIST_CASTLE: [u64; ALL_CASTLING_RIGHTS] =[0; ALL_CASTLING_RIGHTS];
 /// Zobrist key for the side to move.
 static mut ZOBRIST_SIDE: u64 = 0; // 8
 
+/// Zobrist key for having no pawns;
+static mut ZOBRIST_NO_PAWNS: u64 = 0; // 8
+
 /// initialize the zobrist hash
 #[cold]
 pub fn init_zobrist() {
@@ -35,13 +38,20 @@ pub fn init_zobrist() {
             ZOBRIST_ENPASSANT[i] = rng.rand()
         }
 
-        ZOBRIST_CASTLE[0] = 0;
+        for cr in 0..ALL_CASTLING_RIGHTS {
+            ZOBRIST_CASTLE[cr] = 0;
 
-        for i in 1..ALL_CASTLING_RIGHTS {
-            ZOBRIST_CASTLE[i] = rng.rand()
+            // We do this as having all castling rights is similar to having all individual
+            // castling rights. So, ALL_CASTLE = CASLTE_Q_W ^ CASLTE_Q_B ^ CASLTE_K_W ^ CASLTE_K_B
+            let mut b = BitBoard(cr as u64);
+            while let Some(s) = b.pop_some_lsb() {
+                let mut k: u64 = ZOBRIST_CASTLE[1 << s.0 as usize];
+                if k == 0 {k = rng.rand();}
+                ZOBRIST_CASTLE[cr] ^= k;
+            }
         }
-
         ZOBRIST_SIDE = rng.rand();
+        ZOBRIST_NO_PAWNS = rng.rand();
     }
 }
 
@@ -72,4 +82,9 @@ pub fn z_castle(castle: u8) -> u64 {
 #[inline(always)]
 pub fn z_side() -> u64 {
     unsafe { ZOBRIST_SIDE }
+}
+
+#[inline(always)]
+pub fn z_no_pawns() -> u64 {
+    unsafe { ZOBRIST_NO_PAWNS }
 }
