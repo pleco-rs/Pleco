@@ -384,7 +384,7 @@ impl TranspositionTable {
                     }
 
                     // Return the spot
-                    return (true, entry);
+                    return (entry.partial_key != 0, entry);
                 }
             }
 
