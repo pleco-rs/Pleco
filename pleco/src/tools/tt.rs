@@ -123,7 +123,7 @@ pub struct Entry {
 impl Entry {
 
     pub fn is_empty(&self) -> bool {
-        self.node_type() == NodeBound::NoBound
+        self.node_type() == NodeBound::NoBound || self.partial_key == 0
     }
 
     /// Rewrites over an Entry.
@@ -555,7 +555,7 @@ mod tests {
 
         let key_1 = create_key(partial_key_1, 0x5556);
         let (found, entry) = tt.probe(key_1);
-        assert!(found);
+        assert!(!found);
         entry.partial_key = partial_key_1;
         entry.depth = 2;
 
@@ -571,13 +571,13 @@ mod tests {
         let key_3: u64 = create_key(partial_key_3, key_index);
 
         let (found, entry) = tt.probe(key_2);
-        assert!(found);
+        assert!(!found);
         assert!(entry.is_empty());
         entry.partial_key = partial_key_2;
         entry.depth = 3;
 
         let (found, entry) = tt.probe(key_3);
-        assert!(found);
+        assert!(!found);
         assert!(entry.is_empty());
         entry.partial_key = partial_key_3;
         entry.depth = 6;
