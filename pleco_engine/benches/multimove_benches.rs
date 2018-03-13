@@ -5,26 +5,27 @@ use pleco::{Board};
 
 use pleco_engine::engine::PlecoSearcher;
 use pleco_engine::time::uci_timer::PreLimits;
+use pleco_engine::consts::*;
+use pleco_engine::threadpool::*;
 
 use super::*;
 
 
 fn search_3moves_engine<D: DepthLimit>(b: &mut Bencher) {
-    let mut limit = PreLimits::blank();
-    limit.depth = Some(D::depth());
+    let mut pre_limit = PreLimits::blank();
+    pre_limit.depth = Some(D::depth());
+    let _searcher = PlecoSearcher::init(false);
+    let limit = pre_limit.create();
     b.iter_with_setup(|| {
-        let mut s = PlecoSearcher::init(false);
-        s.clear_search();
-        (Board::start_pos(), s)
-    }, |(mut board, mut s)| {
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
+        threadpool().clear_all();
+        unsafe {TT_TABLE.clear() };
+        Board::start_pos()
+    }, |mut board| {
+        let mov = black_box(threadpool().search(&board, &limit));
         board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        let mov = black_box(s.await_move());
+        let mov = black_box(threadpool().search(&board, &limit));
         board.apply_move(mov);
-        black_box(s.search(&board, &limit));
-        black_box(s.await_move());
+        black_box(threadpool().search(&board, &limit));
     })
 }
 
