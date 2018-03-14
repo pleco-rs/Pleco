@@ -22,7 +22,6 @@ use search::Searcher;
 
 use consts::*;
 
-
 pub static mut THREADPOOL: NonNull<ThreadPool> = unsafe {NonNull::new_unchecked(ptr::null_mut())};
 
 static THREADPOOL_INIT: Once = ONCE_INIT;
@@ -42,7 +41,7 @@ pub fn init_threadpool() {
     });
 }
 
-/// Returns access to the global thread pool.
+/// Returns access to the global thread pool.z
 pub fn threadpool() -> &'static mut ThreadPool {
     unsafe {
         THREADPOOL.as_mut()
@@ -89,8 +88,8 @@ impl ThreadPool {
     /// Creates a new `ThreadPool`
     pub fn new() -> Self {
         let mut pool: ThreadPool = ThreadPool {
-            threads: Vec::with_capacity(256),
-            handles: Vec::with_capacity(256),
+            threads: Vec::new(),
+            handles: Vec::new(),
             main_cond: Arc::new(LockLatch::new()),
             thread_cond: Arc::new(LockLatch::new()),
             stop: AtomicBool::new(true)
@@ -108,7 +107,9 @@ impl ThreadPool {
     fn attach_thread(&mut self) {
          unsafe {
              let thread_ptr: SearcherPtr = self.create_thread();
-             let builder = thread::Builder::new().name(self.size().to_string());
+             let builder = thread::Builder::new()
+                 .name(self.size().to_string());
+
              let handle = scoped::builder_spawn_unsafe(builder,
                 move || {
                     let thread = &mut **thread_ptr.ptr.get();
@@ -139,13 +140,12 @@ impl ThreadPool {
         let layout = Layout::new::<Searcher>();
         let cond = if len == 0 {self.main_cond.clone()} else {self.thread_cond.clone()};
         unsafe {
-            let s = Searcher::new(len, cond);
             let result = Heap.alloc_zeroed(layout);
             let new_ptr: *mut Searcher = match result {
                 Ok(ptr) => ptr as *mut Searcher,
                 Err(err) => Heap.oom(err),
             };
-            ptr::write(new_ptr, s);
+            ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));
             SearcherPtr {ptr: UnsafeCell::new(new_ptr)}
         }
@@ -253,6 +253,7 @@ impl ThreadPool {
         }
     }
 
+    /// Waits for all the non-main threads to start running
     pub fn wait_for_main_start(&self) {
         unsafe {
             self.threads.iter()

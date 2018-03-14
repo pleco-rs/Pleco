@@ -14,6 +14,15 @@ pub enum LimitsType {
     Ponder   // ponder mode
 }
 
+impl LimitsType {
+    pub fn is_depth(&self) -> bool {
+        match *self {
+            LimitsType::Depth(_x) => true,
+            _ => false
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct UCITimer {
     pub time_msec: [i64; PLAYER_CNT], // time each player has remaining
@@ -34,8 +43,7 @@ impl UCITimer {
         self.time_msec[0] == 0 &&
             self.time_msec[1] == 0 &&
             self.inc_msec[0] == 0 &&
-            self.inc_msec[1] == 0 &&
-            self.moves_to_go == 0
+            self.inc_msec[1] == 0
     }
 
     pub fn display(&self) {
