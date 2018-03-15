@@ -74,7 +74,6 @@
 #![feature(integer_atomics)]
 #![feature(allocator_api)]
 #![feature(const_fn)]
-#![feature(const_indexing)]
 #![feature(pointer_methods)]
 #![feature(cfg_target_feature, target_feature)]
 #![feature(stdsimd)]

@@ -276,6 +276,14 @@ impl ThreadPool {
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
     /// is true.
     pub fn uci_search(&mut self, board: &Board, limits: &Limits) {
+
+        // Start the timer!
+        if let Some(timer) = limits.use_time_management() {
+            TIMER.init(limits.start, &timer, board.turn(), board.moves_played());
+        } else {
+            TIMER.start_timer(limits.start);
+        }
+
         let root_moves: MoveList = board.generate_moves();
 
         assert!(!root_moves.is_empty());
@@ -284,6 +292,7 @@ impl ThreadPool {
 
         for thread_ptr in self.threads.iter_mut() {
             let mut thread: &mut Searcher = unsafe {&mut **(*thread_ptr).get()};
+            thread.nodes.store(0, Ordering::Relaxed);
             thread.depth_completed = 0;
             thread.board = board.shallow_clone();
             thread.limit = limits.clone();
@@ -306,6 +315,14 @@ impl ThreadPool {
     /// Returns the best move of a search
     pub fn best_move(&mut self) -> BitMove {
         self.main().root_moves().get(0).unwrap().bit_move
+    }
+
+    /// Returns total number of nodes searched so far.
+    pub fn nodes(&self) -> u64 {
+        self.threads.iter()
+            .map(|s| unsafe {&**s.get()})
+            .map(|s: &Searcher| s.nodes.load(Ordering::Relaxed))
+            .sum()
     }
 }
 

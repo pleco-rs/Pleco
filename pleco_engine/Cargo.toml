@@ -32,7 +32,7 @@ coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = 
 opt-level = 3
 debug = false
 debug-assertions = false
-panic = "unwind"
+panic = "panic"
 codegen-units = 1
 lto = true
 

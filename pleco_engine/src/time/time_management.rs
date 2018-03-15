@@ -61,6 +61,13 @@ impl TimeManager {
         }
     }
 
+    pub fn start_timer(&self, start: Instant) {
+        unsafe {
+            let self_start = self.start.get();
+            *self_start = start;
+        }
+    }
+
     pub fn init(&self, start: Instant, timer: &UCITimer, turn: Player, ply: u16) {
         let moves_to_go: i64 = timer.moves_to_go as i64;
         let my_time: i64 = (timer.time_msec[turn as usize]) as i64;

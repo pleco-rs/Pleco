@@ -1979,6 +1979,27 @@ impl Board {
         self.piece_at_sq(dst)
     }
 
+    /// Returns the Zobrist key after a move is played. Doesn't recognize special
+    /// moves like castling, en-passant, and promotion.
+    ///
+    /// # Safety
+    ///
+    /// Panics if the move is not legal for the current board.
+    pub fn key_after(&self, m: BitMove) -> u64 {
+        let src = m.get_src();
+        let dst = m.get_dest();
+        let (us, piece) = self.piece_locations.player_piece_at(src).unwrap();
+        let captured = self.piece_locations.player_piece_at(dst);
+
+        let mut key: u64 = self.zobrist() ^ z_side();
+
+        if let Some((them, cap)) = captured {
+            key ^= z_square(dst, them, cap);
+        }
+
+        key ^ z_square(src, us, piece) ^ z_square(dst, us, piece)
+    }
+
     /// Returns a prettified String of the current `Board`, for easy command line displaying.
     ///
     /// Capital Letters represent white pieces, while lower case represents black pieces.
