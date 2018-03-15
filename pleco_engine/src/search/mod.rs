@@ -259,8 +259,6 @@ impl Searcher {
             return;
         }
 
-        self.nodes.fetch_add(1, Ordering::Relaxed);
-
         // notify GUI that this thread is starting
         if self.use_stdout() {
             println!("info id {} start", self.id);
@@ -673,8 +671,6 @@ impl Searcher {
         assert!(is_pv || (alpha == beta - 1));
         assert_eq!(in_check, self.board.in_check());
 
-        self.nodes.fetch_add(1, Ordering::Relaxed);
-
         let ply: u16 = ss.ply;
         let zob: u64 = self.board.zobrist();
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
@@ -826,7 +822,6 @@ impl Searcher {
     }
 
     pub fn eval(&mut self) -> Value {
-        self.nodes.fetch_add(1, Ordering::Relaxed);
         let pawns = &mut self.pawns;
         let material = &mut self.material;
         eval::Evaluation::evaluate(&self.board, pawns, material)
