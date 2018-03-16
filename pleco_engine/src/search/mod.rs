@@ -15,6 +15,7 @@ use pleco::core::*;
 use pleco::tools::tt::*;
 use pleco::core::score::*;
 use pleco::tools::pleco_arc::Arc;
+use pleco::helper::prelude::*;
 //use pleco::board::movegen::{MoveGen,PseudoLegal};
 //use pleco::core::mono_traits::{QuietChecksGenType};
 
@@ -223,16 +224,18 @@ impl Searcher {
         let mut best_depth = self.depth_completed;
         if !self.limit.limits_type.is_depth()  {
             let mut best_thread: &Searcher = &self;
-            threadpool().threads.iter().map(|u| unsafe {&**u.get()}).for_each(|th| {
+            threadpool().threads.iter()
+                .map(|u| unsafe {&**u.get()})
+                .for_each(|th| {
                 let depth_diff = th.depth_completed as i32 - best_thread.depth_completed as i32;
-                let score_diff = th.root_moves().first().score - best_thread.root_moves()[0].score;
+                let score_diff = th.root_moves().first().score - best_thread.root_moves().first().score;
                 if score_diff > 0 && depth_diff >= 0 {
                     best_thread = th;
                 }
             });
             best_move  = best_thread.root_moves().first().bit_move;
             best_score = best_thread.root_moves().first().score;
-            best_depth = best_thread.root_moves().first().depth_reached;
+            best_depth = best_thread.depth_completed;
         }
 
         self.previous_score = best_score;
@@ -304,7 +307,7 @@ impl Searcher {
         'iterative_deepening: while !self.stop() && depth < max_depth  {
 
             if self.main_thread() {
-                self.best_move_changes *= 0.505;
+                self.best_move_changes *= 0.400;
                 self.failed_low = false;
             }
 
@@ -314,8 +317,8 @@ impl Searcher {
             // Delta gives a bound in the iterative loop before re-searching that position.
             // Only applicable for a depth of 5 and beyond.
             if depth >= 5 {
-                let prev_best_score = self.root_moves().first().score;
-                delta = 18;
+                let prev_best_score = self.root_moves().first().prev_score;
+                delta = 23;
                 alpha = max(prev_best_score - delta, NEG_INFINITE);
                 beta = min(prev_best_score + delta, INFINITE);
             }
@@ -325,12 +328,15 @@ impl Searcher {
                 // search!
                 best_value = self.search::<PV>(alpha, beta, stack.ply_zero(),depth);
 
-                // Order root moves by the score retreived post search.
                 self.root_moves().sort();
 
                 if self.stop() {
+                    // In case of a fail high or fail low, we do not choose to sort the moves,
+                    // as the resulting scores would be incorrect
                     break 'aspiration_window;
                 }
+
+                // Order root moves by the score retreived post search.
 
                 if self.use_stdout() && self.main_thread()
                     && (best_value <= alpha || best_value >= beta)
@@ -352,17 +358,19 @@ impl Searcher {
                 } else {
                     break 'aspiration_window;
                 }
-                delta += (delta / 4) + 5;
+                delta += (delta / 4) + 7;
 
                 assert!(alpha >= NEG_INFINITE);
                 assert!(beta <= INFINITE);
             }
 
-            self.root_moves().sort();
-
             // Main Thread provides an update to the GUI
             if self.use_stdout() && self.main_thread() && TIMER.elapsed() > 6 {
-                println!("{}",self.pv(depth, alpha, beta));
+                if self.stop() {
+                    println!("{}",self.pv(depth, NEG_INFINITE, INFINITE));
+                } else {
+                    println!("{}",self.pv(depth, alpha, beta));
+                }
             }
 
             if !self.stop() {
@@ -392,29 +400,29 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (229).max((701).min(
-                          357
-                        + 119 * self.failed_low as i64
-                        -   5 * score_diff as i64));
+                    let improving_factor: i64 = (185).max((630).min(
+                          353
+                        + 100 * self.failed_low as i64
+                        -   6 * score_diff as i64));
 
                     time_reduction = 1.0;
 
                     // If the bestMove is stable over several iterations, reduce time accordingly
                     for i in 3..6 {
                         if self.last_best_move_depth * i < self.depth_completed {
-                            time_reduction *= 1.34;
+                            time_reduction *= 1.43;
                         }
                     }
 
                     // Use part of the gained time from a previous stable move for the current move
                     let mut unstable_factor: f64 = 1.0 + self.best_move_changes;
-                    unstable_factor *= self.previous_time_reduction.powf(0.51) / time_reduction;
+                    unstable_factor *= self.previous_time_reduction.powf(0.42) / time_reduction;
 
                     // Stop the search if we have only one legal move, or if available time elapsed
 //                    let new_time = (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 602.0) as i64;
 //                    println!("new time: {}", new_time);
                     if self.root_moves().len() == 1
-                        || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 602.0) as i64 {
+                        || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 609.0) as i64 {
                         threadpool().set_stop(true);
                         break 'iterative_deepening;
                     }
@@ -545,9 +553,8 @@ impl Searcher {
         }
 
         let mut move_picker = MovePicker::main_search(&self.board, depth as i16, tt_move, &ss.killers, BitMove::null());
-        let mut mov = move_picker.next(false);
 
-        while mov != BitMove::null() {
+        while let Some(mov) = move_picker.next(false) {
             if self.board.legal_move(mov) {
                 moves_played += 1;
                 let gives_check: bool = self.board.gives_check(mov);
@@ -558,7 +565,7 @@ impl Searcher {
                 self.tt.prefetch(self.board.zobrist());
 
                 // At higher depths, only do a lower
-                let do_full_depth: bool = if depth >= 5 && moves_played > 1 && !mov.is_capture() && !mov.is_promo() {
+                let do_full_depth: bool = if depth >= 4 && moves_played > 1 && !mov.is_capture() && !mov.is_promo() {
                     let new_depth = if in_check || gives_check {depth - 2} else {depth - 3};
                     value = -self.search::<NonPV>(-(alpha+1), -alpha, ss.incr(), new_depth);
                     value > alpha
@@ -633,7 +640,6 @@ impl Searcher {
                     }
                 }
             }
-            mov = move_picker.next(false);
         }
 
         if moves_played == 0 {
@@ -683,6 +689,9 @@ impl Searcher {
         let mut value: Value;
         let mut best_value: Value;
         let pos_eval: Value;
+        let futility_base: Value;
+        let mut futility_value: Value;
+        let mut evasion_prunable: bool;
         #[allow(unused_variables)]
         let mut moves_played = 0;
         let old_alpha = alpha;
@@ -714,6 +723,7 @@ impl Searcher {
         if in_check {
             pos_eval = NONE;
             best_value = NEG_INFINITE;
+            futility_base = NEG_INFINITE;
         } else {
             if tt_hit {
                 if tt_entry.eval as i32 == NONE {
@@ -744,54 +754,87 @@ impl Searcher {
             if is_pv && best_value > alpha {
                 alpha = best_value;
             }
+
+            futility_base = 128 + best_value;
         }
 
         let recap_sq = ss.offset(-1).current_move.get_dest();
         let mut move_picker = MovePicker::qsearch(&self.board, rev_depth, tt_move, recap_sq);
-        let mut mov = move_picker.next(false);
 
-        while mov != BitMove::null() {
-            if self.board.legal_move(mov) {
-                moves_played += 1;
-                let gives_check: bool = self.board.gives_check(mov);
-                ss.current_move = mov;
-                self.apply_move(mov, gives_check);
-                self.tt.prefetch(self.board.zobrist());
-                assert_eq!(gives_check, self.board.in_check());
+        while let Some(mov) = move_picker.next(false) {
+            let gives_check: bool = self.board.gives_check(mov);
 
-                value = if gives_check {
-                    -self.qsearch::<N,InCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
-                } else {
-                    -self.qsearch::<N,NoCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
-                };
+            moves_played += 1;
+            // futility pruning
+            if !in_check
+                && !gives_check
+                && futility_base > -10000
+                && !self.board.advanced_pawn_push(mov) {
+                let piece_at = self.board.piece_at_sq(mov.get_src()).unwrap();
+                futility_value = futility_base + piece_value(piece_at, true);
 
-                self.board.undo_move();
+                if futility_value <= alpha {
+                    best_value = best_value.max(futility_value);
+                    continue;
+                }
 
-                assert!(value > NEG_INFINITE);
-                assert!(value < INFINITE );
+                if futility_base <= alpha && !self.board.see_ge(mov, 1) {
+                    best_value = best_value.max(futility_base);
+                    continue;
+                }
+            }
 
-                if value > best_value {
-                    best_value = value;
+            evasion_prunable = in_check
+                && (rev_depth != 0 || moves_played > 2)
+                && best_value > MATED_IN_MAX_PLY
+                && !self.board.is_capture(mov);
 
-                    if value > alpha {
+            if (!in_check || evasion_prunable) && !self.board.see_ge(mov, 0) {
+                continue;
+            }
 
-                        if is_pv {
-                            ss.incr().pv = best_move;
-                        }
+            if !self.board.legal_move(mov) {
+                moves_played -= 1;
+                continue;
+            }
 
-                        if is_pv && value < beta {
-                            best_move = mov;
-                            alpha = value;
-                        } else {
-                            tt_entry.place(zob, mov, best_value as i16,
-                                           pos_eval as i16, tt_depth as i16,
-                                           NodeBound::LowerBound, self.tt.time_age());
-                            return value;
-                        }
+
+
+
+            ss.current_move = mov;
+            self.apply_move(mov, gives_check);
+            self.tt.prefetch(self.board.zobrist());
+            assert_eq!(gives_check, self.board.in_check());
+
+            value = if gives_check {
+                -self.qsearch::<N,InCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
+            } else {
+                -self.qsearch::<N,NoCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
+            };
+
+            self.board.undo_move();
+
+            assert!(value > NEG_INFINITE);
+            assert!(value < INFINITE );
+
+            if value > best_value {
+                best_value = value;
+
+                if value > alpha {
+                    if is_pv {
+                        ss.incr().pv = best_move;
+                    }
+                    if is_pv && value < beta {
+                        best_move = mov;
+                        alpha = value;
+                    } else {
+                        tt_entry.place(zob, mov, best_value as i16,
+                                       pos_eval as i16, tt_depth as i16,
+                                       NodeBound::LowerBound, self.tt.time_age());
+                        return value;
                     }
                 }
             }
-            mov = move_picker.next(false);
         }
 
         if in_check && best_value == NEG_INFINITE {
@@ -908,8 +951,13 @@ impl Searcher {
         let elapsed = TIMER.elapsed() as u64;
         let nodes = threadpool().nodes();
         let mut s = String::from("info");
+        let score = if root_move.score == NEG_INFINITE {
+            root_move.prev_score
+            } else {
+            root_move.score
+        };
         s.push_str(&format!(" depth {}", depth));
-        s.push_str(&format!(" score {}", root_move.score));
+        s.push_str(&format!(" score {}", score));
         if root_move.score >= beta {
             s.push_str(" lowerbound");
         } else if root_move.score <= alpha {

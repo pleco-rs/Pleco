@@ -199,6 +199,7 @@ pub enum PieceType {
 }
 
 impl PieceType {
+
     /// Returns the relative value of a piece.
     ///
     /// Used for sorting moves.
@@ -238,7 +239,6 @@ impl PieceType {
             PieceType::K => 'K',
         }
     }
-
 }
 
 impl fmt::Display for PieceType {

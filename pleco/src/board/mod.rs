@@ -1941,6 +1941,142 @@ impl Board {
         }
     }
 
+    /// `see_ge` stands for Static Exchange Evaluation, Greater or Equal. This teats if the
+    /// Static Exchange Evaluation of a move is greater than or equal to a value.
+    pub fn see_ge(&self, mov: BitMove, threshold: i32) -> bool {
+        if mov.move_type() != MoveType::Normal {
+            return 0 >= threshold;
+        }
+
+        let from = mov.get_src();
+        let to = mov.get_dest();
+        let mut next_victim: PieceType;
+
+        if let Some(piece) = self.piece_at_sq(from) {
+            next_victim = piece;
+        } else {
+            return false;
+        }
+
+        let us: Player;
+        let mut stm: Player;
+        let mut stm_attackers: BitBoard;
+
+        if let Some(player_us) = self.player_at_sq(from) {
+            us = player_us;
+            stm = player_us.other_player();
+            if us == stm { return false;}
+        } else {
+            return false;
+        }
+
+
+        // Values of the pieces taken by us minus opponent's ones
+        let mut balance: i32 = piece_value_op(self.piece_at_sq(to), false) - threshold;
+
+        if balance < 0 {
+            return false;
+        }
+
+        // If it is enough (like in PxQ) then return immediately. Note that
+        // in case nextVictim == KING we always return here, this is ok
+        // if the given move is legal.
+        balance -= piece_value(next_victim, false);
+
+        if balance >= 0 {
+            return true;
+        }
+
+        // Find all attackers to the destination square, with the moving piece
+        // removed, but possibly an X-ray attacker added behind it.
+        let mut occupied: BitBoard = self.occ_all ^ to.to_bb() ^ from.to_bb();
+        let mut attackers: BitBoard = self.attackers_to(to, occupied) & occupied;
+
+        loop {
+            stm_attackers = attackers & self.get_occupied_player(stm);
+            // Don't allow pinned pieces to attack (except the king) as long as
+            // all pinners are on their original square.
+            if (self.state.pinners_king[stm as usize] & !occupied).is_empty() {
+                stm_attackers &= !self.state.blockers_king[stm as usize];
+            }
+
+            // If stm has no more attackers then give up: stm loses
+            if stm_attackers.is_empty() {
+                break;
+            }
+
+            // Locate and remove the next least valuable attacker, and add to
+            // the bitboard 'attackers' the possibly X-ray attackers behind it.
+            next_victim = self.min_attacker::<PawnType>(to, stm_attackers,
+                                                        &mut occupied, &mut attackers);
+
+            // switch side to move
+            stm = stm.other_player();
+
+            // Negamax the balance with alpha = balance, beta = balance+1 and
+            // add nextVictim's value.
+            //
+            //      (balance, balance+1) -> (-balance-1, -balance)
+            //
+            assert!(balance < 0);
+            balance = -balance - 1 - piece_value(next_victim, false);
+
+            // If balance is still non-negative after giving away nextVictim then we
+            // win. The only thing to be careful about it is that we should revert
+            // stm if we captured with the king when the opponent still has attackers.
+            if balance >= 0 {
+                if next_victim == PieceType::K
+                    && (attackers & self.get_occupied_player(stm)).is_not_empty() {
+                    stm = stm.other_player();
+                }
+                break;
+            }
+            if next_victim == PieceType::K {
+
+            }
+            assert_ne!(next_victim,PieceType::K);
+        }
+
+        us != stm
+    }
+
+
+
+    fn min_attacker<P>(&self, to: SQ, stm_attackers: BitBoard, occupied: &mut BitBoard,
+                        attackers: &mut BitBoard) -> PieceType
+        where P: PieceTrait {
+
+        let p = P::piece_type();
+
+        let b: BitBoard = stm_attackers & self.piece_bb_both_players(p);
+        if b.is_empty() {
+            let np = match p {
+                PieceType::P => self.min_attacker::<KnightType>(to, stm_attackers, occupied, attackers),
+                PieceType::N => self.min_attacker::<BishopType>(to, stm_attackers, occupied, attackers),
+                PieceType::B => self.min_attacker::<RookType>(to, stm_attackers, occupied, attackers),
+                PieceType::R => self.min_attacker::<QueenType>(to, stm_attackers, occupied, attackers),
+                _ => self.min_attacker::<KingType>(to, stm_attackers, occupied, attackers)
+            };
+            return np;
+        }
+
+        *occupied ^= b.lsb();
+
+        if p == PieceType::P || p == PieceType::B || p == PieceType::Q {
+            *attackers |= bishop_moves(*occupied, to)
+                & (self.piece_bb_both_players(PieceType::B) | (self.piece_bb_both_players(PieceType::Q)));
+        }
+
+        if p == PieceType::R || p == PieceType::Q {
+            *attackers |= rook_moves(*occupied, to)
+                & (self.piece_bb_both_players(PieceType::R) | (self.piece_bb_both_players(PieceType::Q)));
+        }
+
+        *attackers &= *occupied;
+
+        p
+    }
+
     /// Returns the piece that was moved from a given BitMove.
     ///
     /// # Safety
@@ -2079,6 +2215,7 @@ impl Board {
         println!();
     }
 }
+
 
 // TODO: Error Propagation
 
@@ -2472,5 +2609,20 @@ mod tests {
         let bmove: BitMove = BitMove::make_pawn_push(SQ::A2,SQ::A4);
         assert_eq!(b.moved_piece(bmove), PieceType::P);
         assert_eq!(b.captured_piece(bmove), None);
+    }
+
+
+    #[test]
+    fn see_ge_all_fens() {
+        for b in super::fen::ALL_FENS.iter() {
+            see_ge_all_fens_inner(&Board::from_fen(*b).unwrap());
+        }
+
+    }
+
+    fn see_ge_all_fens_inner(b: &Board) {
+        for m in b.generate_moves().iter() {
+            b.see_ge(*m, 0);
+        }
     }
 }

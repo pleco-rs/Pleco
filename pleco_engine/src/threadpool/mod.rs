@@ -26,6 +26,9 @@ pub static mut THREADPOOL: NonNull<ThreadPool> = unsafe {NonNull::new_unchecked(
 
 static THREADPOOL_INIT: Once = ONCE_INIT;
 
+const KILOBYTE: usize = 1000;
+const THREAD_STACK_SIZE: usize = 4000 * KILOBYTE;
+
 pub fn init_threadpool() {
     THREADPOOL_INIT.call_once(|| {
         unsafe {
@@ -41,7 +44,7 @@ pub fn init_threadpool() {
     });
 }
 
-/// Returns access to the global thread pool.z
+/// Returns access to the global thread pool
 pub fn threadpool() -> &'static mut ThreadPool {
     unsafe {
         THREADPOOL.as_mut()
@@ -108,7 +111,8 @@ impl ThreadPool {
          unsafe {
              let thread_ptr: SearcherPtr = self.create_thread();
              let builder = thread::Builder::new()
-                 .name(self.size().to_string());
+                 .name(self.size().to_string())
+                 .stack_size(THREAD_STACK_SIZE);
 
              let handle = scoped::builder_spawn_unsafe(builder,
                 move || {

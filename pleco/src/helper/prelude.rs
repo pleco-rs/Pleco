@@ -228,3 +228,16 @@ pub fn psq(piece: PieceType, player: Player, sq: SQ) -> Score {
 pub fn piece_value(piece: PieceType, eg: bool) -> Value {
     psqt::piece_value(piece, eg)
 }
+
+/// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+/// it'll return the midgame value.
+///
+/// If the piece is `None`, returns zero
+#[inline(always)]
+pub fn piece_value_op(op_piece: Option<PieceType>, eg: bool) -> Value {
+    if let Some(piece) = op_piece {
+        psqt::piece_value(piece, eg)
+    } else {
+        0
+    }
+}

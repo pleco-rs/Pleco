@@ -110,7 +110,8 @@ impl MovePicker {
 
         ttm = if ttm != BitMove::null()
             && board.pseudo_legal_move(ttm)
-            && board.is_capture(ttm) {
+            && board.is_capture(ttm)
+            && board.see_ge(ttm, threshold) {
             ttm
         } else {
             pick.incr();
@@ -134,10 +135,10 @@ impl MovePicker {
     }
 
     pub fn drain(mut self, list: &mut MoveList, skip_quiets: bool) {
-        let mut mov = self.next(skip_quiets);
+        let mut mov = self.next_mov(skip_quiets);
         while mov != BitMove::null() {
             list.push(mov);
-            mov = self.next(skip_quiets);
+            mov = self.next_mov(skip_quiets);
         }
     }
 
@@ -210,7 +211,16 @@ impl MovePicker {
         self.pick
     }
 
-    pub fn next(&mut self, skip_quiets: bool) -> BitMove {
+    pub fn next(&mut self, skip_quiets: bool) -> Option<BitMove> {
+        let mov = self.next_mov(skip_quiets);
+        if mov != BitMove::null() {
+            Some(mov)
+        } else {
+            None
+        }
+    }
+
+    pub fn next_mov(&mut self, skip_quiets: bool) -> BitMove {
         let mut mov: ScoringMove = ScoringMove::null();
         match self.pick {
             Pick::MainSearch | Pick::EvasionSearch | Pick::QSearch | Pick::ProbCutSearch => {
@@ -226,14 +236,19 @@ impl MovePicker {
                 }
                 self.score_captures();
                 self.pick.incr();
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::GoodCaptures => {
                 while self.cur_ptr < self.end_ptr {
                     mov = self.pick_best(self.cur_ptr, self.end_ptr);
                     unsafe {self.cur_ptr = self.cur_ptr.add(1);}
                     if mov.bit_move != self.ttm && mov.score > -128 {
-                        return mov.bit_move;
+                        let previous_val = unsafe {
+                            (*self.cur_ptr.sub(1)).score as i32
+                        };
+                        if self.board().see_ge(mov.bit_move, -55 * previous_val / 1024 ) {
+                            return mov.bit_move;
+                        }
                     }
 
                     unsafe {
@@ -242,7 +257,7 @@ impl MovePicker {
                     }
                 }
                 self.pick.incr();
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::KillerOne | Pick::KillerTwo => {
                 mov.bit_move = self.killers[self.pick as usize - Pick::KillerOne as usize];
@@ -253,7 +268,7 @@ impl MovePicker {
                     && !self.board().is_capture(mov.bit_move) {
                     return mov.bit_move;
                 }
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::CounterMove => {
                 self.pick.incr();
@@ -265,7 +280,7 @@ impl MovePicker {
                     && !self.board().is_capture(self.cm) {
                     return self.cm;
                 }
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::QuietInit => {
                 unsafe {
@@ -275,7 +290,7 @@ impl MovePicker {
                     // TODO: Need to score the captures
                 }
                 self.pick.incr();
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::QuietMoves => {
                 if !skip_quiets {
@@ -294,7 +309,7 @@ impl MovePicker {
                 }
                 self.pick.incr();
                 self.cur_ptr = self.moves.as_mut_ptr();
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::BadCaptures => {
                 if self.cur_ptr < self.end_bad_captures {
@@ -313,7 +328,7 @@ impl MovePicker {
                 }
                 self.score_evasions();
                 self.pick.incr();
-                return self.next(skip_quiets);
+                return self.next_mov(skip_quiets);
             },
             Pick::AllEvasions => {
                 while self.cur_ptr < self.end_ptr {
@@ -328,7 +343,8 @@ impl MovePicker {
                 while self.cur_ptr < self.end_ptr {
                     mov = self.pick_best(self.cur_ptr, self.end_ptr);
                     unsafe {self.cur_ptr = self.cur_ptr.add(1);}
-                    if mov.bit_move != self.ttm {
+                    if mov.bit_move != self.ttm
+                        && self.board().see_ge(mov.bit_move, self.threshold) {
                         return mov.bit_move;
                     }
                 }
@@ -349,7 +365,7 @@ impl MovePicker {
                             (self.board(), self.cur_ptr);
                     }
                     self.pick.incr();
-                    return self.next(skip_quiets);
+                    return self.next_mov(skip_quiets);
                 }
             },
             Pick::QChecks => {
@@ -662,10 +678,10 @@ mod tests {
             let mut moves_mp = MoveList::default();
             let mut mp = MovePicker::main_search(&b, depth, ttm, &killers, cm);
 
-            let mut mp_next = mp.next( false);
+            let mut mp_next = mp.next_mov( false);
             while mp_next != BitMove::null() {
                 moves_mp.push(mp_next);
-                mp_next = mp.next(false);
+                mp_next = mp.next_mov(false);
             }
             moves_mp
         });
