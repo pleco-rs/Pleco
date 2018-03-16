@@ -642,6 +642,10 @@ impl Searcher {
             } else {
                 return DRAW as i32;
             }
+        } else if best_move != BitMove::null() {
+            if !self.board.is_capture_or_promotion(best_move) {
+                self.update_quiet_stats(best_move, ss);
+            }
         }
 
         let node_bound = if best_value as i32 >= beta {NodeBound::LowerBound}

@@ -83,6 +83,6 @@ impl PartialOrd for RootMove {
 
 impl PartialEq for RootMove {
     fn eq(&self, other: &RootMove) -> bool {
-        self.score == other.score && self.depth_reached == other.depth_reached
+        self.score == other.score && self.prev_score == other.prev_score
     }
 }
