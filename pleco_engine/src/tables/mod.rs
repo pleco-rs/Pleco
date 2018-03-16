@@ -1,29 +1,77 @@
 
 pub mod pawn_table;
 pub mod material;
+pub mod counter_move;
+pub mod continuation;
+pub mod capture_piece_history;
+pub mod butterfly;
 
 use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
+use std::mem;
+use std::ptr;
 
-use pleco::core::masks::*;
+pub mod prelude {
+    // easier exporting :)
+    pub use super::counter_move::CounterMoveHistory;
+    pub use super::continuation::{ContinuationHistory,PieceToHistory};
+    pub use super::butterfly::ButterflyHistory;
+    pub use super::capture_piece_history::CapturePieceToHistory;
+    pub use super::{StatBoard,NumStatBoard,NumStatCube};
+}
 
 
 // TODO: Create StatBoards using const generics: https://github.com/rust-lang/rust/issues/44580
 // TODO: Create 3DBoard using const generics: https://github.com/rust-lang/rust/issues/44580
 
-// ButterflyHistory
-// CapturePieceToHistory
-// CounterMoveHistory
-// ContinuationHistory
-pub struct ButterflyHistory {
-    d: [[i16; SQ_CNT * SQ_CNT]; PLAYER_CNT]
+
+pub trait StatBoard<T>: Sized
+    where T: Copy + Clone + Sized {
+
+    const FILL: T;
+
+    fn new() -> Self {
+        unsafe {mem::zeroed()}
+    }
+
+    fn clear(&mut self) {
+        self.fill(Self::FILL);
+    }
+
+    fn fill(&mut self, val: T) {
+        let num: usize = mem::size_of::<Self>() / mem::size_of::<T>();
+
+        unsafe {
+            let ptr: *mut T = mem::transmute(self as *mut Self);
+            for i in 0..num {
+                ptr::write(ptr.add(i), val);
+            }
+        }
+    }
 }
 
-pub struct PieceToBoards {
-    d: [[[i16; PIECE_TYPE_CNT]; PLAYER_CNT]; SQ_CNT]
+pub trait NumStatBoard: StatBoard<i16> {
+    const D: i16;
+    fn update(entry: &mut i16, bonus: i16) {
+        assert!(bonus.abs() <= Self::D); // Ensure range is [-32 * D, 32 * D]
+        *entry += bonus * 32 - (*entry) * bonus.abs() / Self::D;
+    }
 }
 
+pub trait NumStatCube: StatBoard<i16> {
+    const D: i16;
+    const W: i16;
+    fn update(entry: &mut i16, bonus: i16) {
+        assert!(bonus.abs() <= Self::D);
 
+        *entry += bonus * Self::W - (*entry) * bonus.abs() / Self::D;
+        assert!((*entry).abs() <= Self::D * Self::W);
+    }
+}
+
+//impl StatBoard<i16> where {
+//
+//}
 
 // TODO: Performance increase awaiting with const generics: https://github.com/rust-lang/rust/issues/44580
 

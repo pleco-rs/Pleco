@@ -36,7 +36,7 @@
 use std::ptr::NonNull;
 use std::mem;
 use std::heap::{Alloc, Layout, Heap};
-use std::cmp::max;
+use std::cmp::min;
 use std::cell::UnsafeCell;
 
 use prefetch::prefetch::*;
@@ -429,7 +429,7 @@ impl TranspositionTable {
     /// Returns the % of the hash table that is full.
     pub fn hash_percent(&self) -> f64 {
         unsafe {
-            let clusters_scanned: u64 = max((*self.cap.get() - 1) as u64, 2018);
+            let clusters_scanned: u64 = min((*self.cap.get() - 1) as u64, 333);
             let mut hits: f64 = 0.0;
 
             for i in 0..clusters_scanned {
@@ -439,7 +439,7 @@ impl TranspositionTable {
                     // get a pointer to the specified entry
                     let entry_ptr: *mut Entry = init_entry.offset(e as isize);
                     let entry: &Entry = & (*entry_ptr);
-                    if !entry.is_empty() {
+                    if entry.time() == self.time_age() {
                         hits += 1.0;
                     }
                 }

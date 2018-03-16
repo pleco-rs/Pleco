@@ -32,7 +32,7 @@ coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = 
 opt-level = 3
 debug = false
 debug-assertions = false
-panic = "unwind"
+panic = "panic"
 codegen-units = 1
 lto = true
 
@@ -73,7 +73,7 @@ chrono = "0.4.0"
 rand = "0.4.2"
 rayon = "1.0.0"
 num_cpus = "1.8.0"
-crossbeam-utils = "0.2.2"
+crossbeam-utils = "0.3.2"
 generic-array = "0.10.0"
 
 [dependencies.lazy_static]
