@@ -35,7 +35,7 @@ fn bench_engine_evaluations(c: &mut Criterion) {
 
 criterion_group!(name = search_singular;
      config = Criterion::default()
-        .sample_size(18)
+        .sample_size(23)
         .warm_up_time(Duration::from_millis(100));
     targets = bench_engine_evaluations
 );
