@@ -74,7 +74,7 @@ static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
     [ BISHOP_MG,  BISHOP_EG],// White Bishop
     [ ROOK_MG,    ROOK_EG],  // White Rook
     [ QUEEN_MG,   QUEEN_MG], // White Queen
-    [ NONE,       NONE]];    // White King
+    [ ZERO,       ZERO]];    // White King
 
 #[cold]
 pub fn init_psqt() {

@@ -38,6 +38,8 @@ pub const QUEEN_EG: Value = 2646;
 pub const MID_GAME_LIMIT: Value = 15258;
 pub const END_GAME_LIMIT: Value = 3915;
 
+pub const MATE_IN_MAX_PLY: Value = MATE - 2 * 128;
+pub const MATED_IN_MAX_PLY: Value = -MATE + 2 * 128;
 
 /// Struct to define the value of a mid-game / end-game evaluation.
 #[derive(Copy, Clone,PartialEq,Debug)]

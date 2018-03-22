@@ -300,6 +300,25 @@ pub trait PieceTrait {
     fn piece_type() -> PieceType;
 }
 
+// Returns the next `PieceTrait` for the PieceTrait.
+//
+// Pawn   -> KnightType
+// Knight -> BishopType
+// Bishop -> RookType
+// Rook   -> QueenType
+// Queen  -> KingType
+// King   -> KingType
+//pub(crate) fn incr_pt<P: PieceTrait>(p: P) -> impl PieceTrait {
+//    match <P as PieceTrait>::piece_type() {
+//        PieceType::P => PawnType{},
+//        PieceType::N => KnightType{},
+//        PieceType::B => BishopType{},
+//        PieceType::R => QueenType{},
+//        PieceType::Q => KingType{},
+//        PieceType::K => KingType{},
+//    }
+//}
+
 /// Dummy type to represent a `Piece::P` which implements `PieceTrait`.
 pub struct PawnType {}
 /// Dummy type to represent a `Piece::N` which implements `PieceTrait`.
@@ -320,10 +339,24 @@ impl PieceTrait for PawnType {
     }
 }
 
+impl PawnType {
+    #[inline(always)]
+    fn incr() -> impl PieceTrait {
+        KnightType{}
+    }
+}
+
 impl PieceTrait for KnightType {
     #[inline(always)]
     fn piece_type() -> PieceType {
         PieceType::N
+    }
+}
+
+impl KnightType {
+    #[inline(always)]
+    fn incr() -> impl PieceTrait {
+        BishopType{}
     }
 }
 
@@ -334,10 +367,24 @@ impl PieceTrait for BishopType {
     }
 }
 
+impl BishopType {
+    #[inline(always)]
+    fn incr() -> impl PieceTrait {
+        RookType{}
+    }
+}
+
 impl PieceTrait for RookType {
     #[inline(always)]
     fn piece_type() -> PieceType {
         PieceType::R
+    }
+}
+
+impl RookType {
+    #[inline(always)]
+    fn incr() -> impl PieceTrait {
+        QueenType{}
     }
 }
 
@@ -348,9 +395,23 @@ impl PieceTrait for QueenType {
     }
 }
 
+impl QueenType {
+    #[inline(always)]
+    fn incr() -> impl PieceTrait {
+        KingType{}
+    }
+}
+
 impl PieceTrait for KingType {
     #[inline(always)]
     fn piece_type() -> PieceType {
         PieceType::K
+    }
+}
+
+impl KingType {
+    #[inline(always)]
+    fn incr() -> impl PieceTrait {
+        KingType{}
     }
 }

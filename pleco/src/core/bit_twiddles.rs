@@ -227,7 +227,7 @@ pub fn string_u64(input: u64) -> String {
     let mut s = String::new();
     let format_in = format_u64(input);
     for x in 0..8 {
-        let slice = &format_in[x * 8..(x * 8) + 8];
+        let slice = &format_in[x * 8..((x * 8) + 8)];
         s += slice;
         s += "\n";
     }

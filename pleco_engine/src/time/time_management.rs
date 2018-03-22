@@ -11,13 +11,13 @@ use std::f64;
 
 
 const MOVE_HORIZON: i64 = 50;
-const MAX_RATIO: f64 = 5.31;
-const STEAL_RATIO: f64 = 0.35;
+const MAX_RATIO: f64 = 5.10;
+const STEAL_RATIO: f64 = 0.32;
 
 // TODO: These should be made into UCIOptions
 const MIN_THINKING_TIME: i64 = 20;
-const MOVE_OVERHEAD: i64 = 30;
-const SLOW_MOVER: i64 = 50;
+const MOVE_OVERHEAD: i64 = 105;
+const SLOW_MOVER: i64 = 30;
 
 #[derive(PartialEq)]
 enum TimeCalc {
@@ -120,9 +120,9 @@ impl TimeManager {
     }
 
     fn move_importance(ply: i64) -> f64 {
-        const X_SCALE: f64 = 7.64;
-        const X_SHIFT: f64 = 58.4;
-        const SKEW: f64 = 0.183;
+        const X_SCALE: f64 = 6.85;
+        const X_SHIFT: f64 = 64.5;
+        const SKEW: f64 = 0.171;
 
         let exp: f64 = ((ply as f64 - X_SHIFT) / X_SCALE).exp();
         let base: f64 = 1.0 + exp;
