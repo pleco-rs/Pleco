@@ -76,7 +76,7 @@ pub struct BoardState {
     /// Array of BitBoards where for Each Piece, gives a spot the piece can move to where
     /// the opposing player's king would be in check.
     pub check_sqs: [BitBoard; PIECE_TYPE_CNT],
-    /// returns the previous move, if any, that was played. Returns `BitMove::NULL` if there was no
+    /// The previous move, if any, that was played. Returns `BitMove::NULL` if there was no
     /// previous move played.
     pub prev_move: BitMove,
     /// Previous State of the board (from one move ago).
@@ -231,12 +231,14 @@ impl BoardState {
     }
 
     /// Return the previous BoardState from one move ago.
+    ///
+    /// If there was no previous state, returns `None`.
     #[inline]
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
         (&self).prev.as_ref().cloned()
     }
 
-    /// Iterates through all previous `BoardStates` and prints their information.
+    /// Iterates through all previous `BoardStates` and prints debug information for each.
     ///
     /// Used primarily for debugging.
     pub fn backtrace(&self) {

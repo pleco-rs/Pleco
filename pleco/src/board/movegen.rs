@@ -147,7 +147,8 @@ impl MoveGen {
         movelist
     }
 
-    /// Extends the current list of moves of a certain Legality, and Generation type.
+    /// Extends the current list of moves of a certain Legality, and Generation type. This method
+    /// will correctly set the new length of the list.
     ///
     /// # Safety
     ///

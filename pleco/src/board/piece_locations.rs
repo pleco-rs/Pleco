@@ -46,7 +46,7 @@ impl PieceLocations {
     /// This function is unsafe as Zeros represent Pawns, and therefore care mus be taken
     /// to iterate through every square and ensure the correct piece or lack of piece
     /// is placed.
-    pub const fn default() -> PieceLocations {
+    pub(crate) const fn default() -> PieceLocations {
         PieceLocations { data: [0; 64] }
     }
 
