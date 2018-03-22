@@ -1517,6 +1517,14 @@ impl Board {
         self.piece_locations.player_at(s)
     }
 
+
+    /// Returns the player and piece at a square, if any.
+    #[inline(always)]
+    pub fn player_piece_at_sq(&self, s: SQ) -> Option<(Player, PieceType)> {
+        debug_assert!(s.is_okay());
+        self.piece_locations.player_piece_at(s)
+    }
+
     /// Returns the square of the King for a given player.
     ///
     /// # Examples

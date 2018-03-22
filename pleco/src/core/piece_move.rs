@@ -70,6 +70,7 @@ use super::sq::SQ;
 // Castles have the src as the king bit and the dst as the rook
 const SRC_MASK: u16 = 0b0000_000000_111111;
 const DST_MASK: u16 = 0b0000_111111_000000;
+const FROM_TO_MASK: u16 = 0b0000_111111_111111;
 const PR_MASK: u16 = 0b1000_000000_000000;
 const CP_MASK: u16 = 0b0100_000000_000000;
 const FLAG_MASK: u16 = 0b1111_000000_000000;
@@ -443,10 +444,23 @@ impl BitMove {
         ((self.flag()) & 0b1110) == 0b0110
     }
 
-    // Returns the 4 bit flag of the `BitMove`.
+    /// Returns the 4 bit flag of the `BitMove`.
     #[inline(always)]
     pub const fn flag(&self) -> u16 {
         self.data >> 12
+    }
+
+    /// Returns if the move is within bounds, ala the to and from squares
+    /// are not equal.
+    #[inline(always)]
+    pub const fn is_okay(&self) -> bool {
+        self.get_dest_u8() != self.get_src_u8()
+    }
+
+    /// Returns only from "from" and "to" squares of the move.
+    #[inline(always)]
+    pub const fn from_to(&self) -> u16 {
+        self.data & FROM_TO_MASK
     }
 }
 
