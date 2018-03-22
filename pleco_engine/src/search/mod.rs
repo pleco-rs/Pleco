@@ -43,6 +43,33 @@ const THREAD_DIST: usize = 20;
 static SKIP_SIZE: [u16; THREAD_DIST] = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4];
 static START_PLY: [u16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 7];
 
+pub struct Stack {
+    pv: BitMove,
+    cont_history: *mut PieceToHistory,
+    ply: u16,
+    current_move: BitMove,
+    excluded_move: BitMove,
+    killers: [BitMove; 2],
+    static_eval: Value,
+    stat_score: i32,
+    move_count: u32,
+}
+
+impl Stack {
+    /// Get the next ply at an offset.
+    pub fn offset(&mut self, count: isize) -> &mut Stack {
+        unsafe {
+            let ptr: *mut Stack = self as *mut Stack;
+            &mut *ptr.offset(count)
+        }
+    }
+
+    /// Get the next ply's Stack.
+    pub fn incr(&mut self) -> &mut Stack {
+        self.offset(1)
+    }
+}
+
 /// A Stack for the searcher, with information being contained per-ply.
 pub struct ThreadStack {
     stack: [Stack; THREAD_STACK_SIZE],
@@ -66,29 +93,6 @@ impl ThreadStack {
     /// Get the ply at Zero
     pub fn ply_zero(&mut self) -> &mut Stack {
         self.get(4)
-    }
-}
-
-pub struct Stack {
-    pv: BitMove,
-    ply: u16,
-    killers: [BitMove; 2],
-    current_move: BitMove,
-    static_eval: Value,
-}
-
-impl Stack {
-    /// Get the next ply at an offset.
-    pub fn offset(&mut self, count: isize) -> &mut Stack {
-        unsafe {
-            let ptr: *mut Stack = self as *mut Stack;
-            &mut *ptr.offset(count)
-        }
-    }
-
-    /// Get the next ply's Stack.
-    pub fn incr(&mut self) -> &mut Stack {
-        self.offset(1)
     }
 }
 
@@ -859,6 +863,52 @@ impl Searcher {
         if ss.killers[0] != mov {
             ss.killers[1] = ss.killers[0];
             ss.killers[0] = mov;
+        }
+    }
+
+    // TODO: Implement this inside the main search
+    // Right now this is a stub.
+    fn update_quiet_stats2(&mut self, mov: BitMove, ss: &mut Stack,
+                          quiets: &[BitMove], bonus: i32) {
+        if ss.killers[0] != mov {
+            ss.killers[1] = ss.killers[0];
+            ss.killers[0] = mov;
+        }
+
+        let us: Player = self.board.turn();
+        let moved_piece = self.board.moved_piece(mov);
+        let to_sq = mov.get_dest();
+        self.main_history.update((us, mov), bonus as i16);
+        self.update_continuation_histories(ss, us, moved_piece, to_sq, bonus);
+
+        {
+            let ss_bef: &mut Stack = ss.offset(-1);
+            if ss_bef.current_move.is_okay() {
+                let prev_sq = ss_bef.current_move.get_dest();
+                let (player, piece) = self.board.player_piece_at_sq(prev_sq).unwrap();
+                self.counter_moves[(player, piece, prev_sq)] = mov;
+            }
+        }
+
+        for q_mov in quiets.iter() {
+            self.main_history.update((us, *q_mov), -bonus as i16);
+            let q_moved_piece = self.board.moved_piece(*q_mov);
+            let to_sq = q_mov.get_dest();
+            self.update_continuation_histories(ss, us, q_moved_piece, to_sq, -bonus);
+        }
+    }
+
+    fn update_continuation_histories(&mut self, ss: &mut Stack, player: Player, piece: PieceType,
+                                     to: SQ, bonus: i32) {
+        for i in [1,2,4].iter() {
+            let i_ss: &mut Stack = ss.offset(-i as isize);
+            if i_ss.current_move.is_okay() {
+                unsafe  {
+                    let cont_his: &mut PieceToHistory = &mut *i_ss.cont_history;
+                    cont_his.update((player, piece, to), bonus as i16);
+                }
+            }
+
         }
     }
 
