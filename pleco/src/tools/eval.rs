@@ -71,12 +71,14 @@ const CHECK: i32 = 14;
 
 // Pawn, Knight, Bishop, Rook, Queen, King
 pub const PIECE_VALS: [i32; PIECE_TYPE_CNT] = [
+    0,
     PAWN_VALUE,
     KNIGHT_VALUE,
     BISHOP_VALUE,
     ROOK_VALUE,
     QUEEN_VALUE,
     KING_VALUE,
+    0,
 ];
 
 

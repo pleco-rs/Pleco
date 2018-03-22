@@ -572,6 +572,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             PieceType::R => rook_moves(self.occ, square),
             PieceType::Q => queen_moves(self.occ, square),
             PieceType::K => king_moves(square),
+            _ => BitBoard(0)
         }
     }
 
@@ -589,6 +590,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             PieceType::R => rook_moves(self.occ, square),
             PieceType::Q => queen_moves(self.occ, square),
             PieceType::K => king_moves(square),
+            _ => BitBoard(0)
         }
     }
 

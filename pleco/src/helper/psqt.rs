@@ -3,6 +3,16 @@ use core::masks::*;
 use core::score::*;
 
 const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
+    [    // NO PIECE
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+    ],
     [ // Pawn
         [ Score(  0, 0), Score(  0, 0), Score(  0, 0), Score( 0, 0) ],
         [ Score(-11, 7), Score(  6,-4), Score(  7, 8), Score( 3,-2) ],
@@ -62,6 +72,16 @@ const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
         [ Score(118, 95), Score(159,155), Score( 84,176), Score( 41,174) ],
         [ Score( 87, 50), Score(128, 99), Score( 63,122), Score( 20,139) ],
         [ Score( 63,  9), Score( 88, 55), Score( 47, 80), Score(  0, 90) ]
+    ],
+    [    // ALL PIECE
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
+        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
     ]
 ];
 
@@ -69,12 +89,14 @@ static mut PSQ: [[[Score; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT] =
     [[[Score(0,0); SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT];
 
 static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
-    [[ PAWN_MG,    PAWN_EG],  // White Pawn
+    [[0, 0],                 // Empty
+    [ PAWN_MG,    PAWN_EG],  // White Pawn
     [ KNIGHT_MG,  KNIGHT_EG],// White Knight
     [ BISHOP_MG,  BISHOP_EG],// White Bishop
     [ ROOK_MG,    ROOK_EG],  // White Rook
     [ QUEEN_MG,   QUEEN_MG], // White Queen
-    [ ZERO,       ZERO]];    // White King
+    [ ZERO,       ZERO],     // White King
+    [0, 0]];                 // All
 
 #[cold]
 pub fn init_psqt() {

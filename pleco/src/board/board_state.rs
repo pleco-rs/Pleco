@@ -143,8 +143,8 @@ impl BoardState {
         let them = us.other_player();
         let ksq = board.king_sq(us);
 
-        self.checkers_bb = board.attackers_to(ksq, board.occ_all)
-            & board.occ[them as usize];
+        self.checkers_bb = board.attackers_to(ksq, board.occupied())
+            & board.bbs_player[them as usize];
 
         self.set_check_info(board);
         self.set_zob_hash(board);
@@ -192,7 +192,7 @@ impl BoardState {
     fn set_zob_hash(&mut self, board: &Board) {
         let mut b: BitBoard = board.occupied();
         while let Some(sq) = b.pop_some_lsb() {
-            let (player, piece) = board.piece_locations.player_piece_at(sq).unwrap();
+            let (player, piece) = board.piece_locations.piece_at(sq).player_piece_lossy();
             self.psq += psq(piece,player,sq);
             let key = z_square(sq, player, piece);
             self.zobrast ^= key;
