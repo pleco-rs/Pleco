@@ -196,7 +196,7 @@ impl BoardState {
             self.psq += psq(piece,sq);
             let key = z_square(sq, piece);
             self.zobrast ^= key;
-            if piece.piece() == PieceType::P {
+            if piece.type_of() == PieceType::P {
                 self.pawn_key ^= key;
             }
         }

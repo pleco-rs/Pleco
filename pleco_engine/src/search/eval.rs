@@ -655,7 +655,7 @@ impl <'a> Evaluation <'a> {
                                     | self.attacked_by[us as usize][PieceType::B as usize]);
 
             while let Some(s) = b.pop_some_lsb() {
-                let piece = self.board.piece_at_sq(s).piece();
+                let piece = self.board.piece_at_sq(s).type_of();
                 score += THREAT_BY_MINOR[piece as usize];
                 if piece != PieceType::P {
                     score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
@@ -664,7 +664,7 @@ impl <'a> Evaluation <'a> {
 
             b = (self.board.piece_bb(them, PieceType::Q) | weak) & self.attacked_by[us as usize][PieceType::R as usize];
             while let Some(s) = b.pop_some_lsb() {
-                let piece = self.board.piece_at_sq(s).piece();
+                let piece = self.board.piece_at_sq(s).type_of();
                 score += THREAT_BY_ROOK[piece as usize];
                 if piece != PieceType::P {
                     score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;

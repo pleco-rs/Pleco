@@ -774,7 +774,7 @@ impl Searcher {
                 && !gives_check
                 && futility_base > -10000
                 && !self.board.advanced_pawn_push(mov) {
-                let piece_at = self.board.piece_at_sq(mov.get_src()).piece();
+                let piece_at = self.board.piece_at_sq(mov.get_src()).type_of();
                 futility_value = futility_base + piece_value(piece_at, true);
 
                 if futility_value <= alpha {
@@ -977,7 +977,7 @@ impl Searcher {
         let board = &self.board;
         self.root_moves().sort_by_key(|root_move| {
             let a = root_move.bit_move;
-            let piece = board.piece_at_sq((a).get_src()).piece();
+            let piece = board.piece_at_sq((a).get_src()).type_of();
 
             if a.is_capture() {
                 piece.value() - board.captured_piece(a).unwrap().value()

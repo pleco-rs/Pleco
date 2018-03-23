@@ -111,8 +111,8 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
         let sq_1bb = checks.lsb();
         let sq_2 = (checks & !sq_1bb).to_sq();
         let sq_1 = sq_1bb.to_sq();
-        let piece_1 = board.piece_at_sq(sq_1).piece();
-        let piece_2 = board.piece_at_sq(sq_2).piece();
+        let piece_1 = board.piece_at_sq(sq_1).type_of();
+        let piece_2 = board.piece_at_sq(sq_2).type_of();
 
         // Some combinations of pieces can never check the king at the same time.
         if piece_1 == PieceType::P {

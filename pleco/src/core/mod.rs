@@ -315,7 +315,7 @@ impl Piece {
     }
 
     #[inline(always)]
-    pub fn piece(self) -> PieceType {
+    pub fn type_of(self) -> PieceType {
         unsafe {
             mem::transmute(self as u8 & 0b111)
         }
@@ -332,7 +332,7 @@ impl Piece {
 
     #[inline(always)]
     pub fn player_piece_lossy(self) -> (Player, PieceType) {
-        (self.player_lossy(), self.piece())
+        (self.player_lossy(), self.type_of())
     }
 
     #[inline(always)]
