@@ -56,6 +56,7 @@ pub static ALL_RANKS: [Rank; RANK_CNT] = [
 
 /// Enum to represent the Players White & Black.
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum Player {
     White = 0,
     Black = 1,
@@ -74,10 +75,7 @@ impl Player {
     /// ```
     #[inline(always)]
     pub fn other_player(&self) -> Player {
-        match *self {
-            Player::White => Player::Black,
-            Player::Black => Player::White,
-        }
+        !(*self)
     }
 
     /// Returns the relative square from a given square.
@@ -138,6 +136,17 @@ impl Player {
 //        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
         unsafe {
             mem::transmute::<u8,Rank>(r)
+        }
+    }
+}
+
+impl Not for Player {
+    type Output = Player;
+
+    fn not(self) -> Self::Output {
+        let other: u8 = (self as u8) ^ 0b0000_0001;
+        unsafe {
+            mem::transmute(other)
         }
     }
 }
@@ -308,7 +317,7 @@ impl Piece {
 
     #[inline(always)]
     pub fn player_lossy(self) -> Player {
-        debug_assert_ne!(self, Piece::None);
+        assert_ne!(self, Piece::None);
         unsafe {
             mem::transmute((self as u8 >> 3) & 0b1)
         }

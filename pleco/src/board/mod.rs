@@ -590,7 +590,7 @@ impl Board {
 
 
             let us = self.turn;
-            let them = us.other_player();
+            let them = !us;
             let from: SQ = bit_move.get_src();
             let mut to: SQ = bit_move.get_dest();
             let piece: Piece = self.piece_at_sq(from);
@@ -790,7 +790,7 @@ impl Board {
 
         let undo_move: BitMove = self.state.prev_move;
 
-        self.turn = self.turn.other_player();
+        self.turn = !self.turn;
         let us: Player = self.turn;
         let from: SQ = undo_move.get_src();
         let to: SQ = undo_move.get_dest();
@@ -819,7 +819,7 @@ impl Board {
                         Player::Black => cap_sq += SQ(8),
                     };
                 }
-                self.put_piece_c(Piece::make_lossy(us.other_player(), cap_piece), cap_sq);
+                self.put_piece_c(Piece::make_lossy(!us, cap_piece), cap_sq);
             }
         }
         self.state = self.state.get_prev().unwrap();
@@ -1625,8 +1625,7 @@ impl Board {
     /// blocking a check from another piece of the same color.
     #[inline(always)]
     pub fn discovered_check_candidates(&self) -> BitBoard {
-        self.state.blockers_king[self.turn.other_player() as usize] &
-            self.get_occupied_player(self.turn)
+        self.state.blockers_king[(!self.turn) as usize] & self.get_occupied_player(self.turn)
     }
 
     /// Gets the Pinned pieces for the given player. A pinned piece is defined as a piece that
@@ -1638,12 +1637,12 @@ impl Board {
     /// Returns a BitBoard of possible attacks / defends to a square with a given occupancy.
     /// Includes pieces from both players.
     pub fn attackers_to(&self, sq: SQ, occupied: BitBoard) -> BitBoard {
-        (pawn_attacks_from(sq, Player::Black)       & self.piece_bb(Player::White, PieceType::P))
+              (pawn_attacks_from(sq, Player::Black) & self.piece_bb(Player::White, PieceType::P))
             | (pawn_attacks_from(sq, Player::White) & self.piece_bb(Player::Black, PieceType::P))
             | (knight_moves(sq)           & self.piece_bb_both_players(PieceType::N))
-            | (rook_moves(occupied, sq)   & (self.sliding_piece_bb(Player::White)  | self.sliding_piece_bb(Player::Black)))
-            | (bishop_moves(occupied, sq) & (self.diagonal_piece_bb(Player::White) | self.diagonal_piece_bb(Player::Black)))
-            | (king_moves(sq)             & self.piece_bb_both_players(PieceType::K))
+            | (rook_moves(occupied, sq)   & (self.bbs[PieceType::R as usize] | self.bbs[PieceType::Q as usize]))
+            | (bishop_moves(occupied, sq) & (self.bbs[PieceType::B as usize] | self.bbs[PieceType::Q as usize]))
+            | (king_moves(sq)             &  self.bbs[PieceType::K as usize])
     }
 
     /// Given a piece, square, and player, returns all squares the piece may possibly move to.
@@ -1663,7 +1662,7 @@ impl Board {
     /// Returns if a pawn on a given square is passed.
     #[inline(always)]
     pub fn pawn_passed(&self, player: Player, sq: SQ) -> bool {
-        (self.piece_bb(player.other_player(), PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
+        (self.piece_bb(!player, PieceType::P) & passed_pawn_mask(player, sq)).is_empty()
     }
 
 //  ------- Move Testing -------
@@ -1680,7 +1679,7 @@ impl Board {
             return false;
         }
         let us: Player = self.turn;
-        let them: Player = us.other_player();
+        let them: Player = !us;
         let src: SQ = m.get_src();
         let src_bb: BitBoard = src.to_bb();
         let dst: SQ = m.get_dest();
@@ -1726,7 +1725,7 @@ impl Board {
     /// use `Board::pseudo_legal_move()` followed by a `Board::legal_move()`.
     pub fn pseudo_legal_move(&self, m: BitMove) -> bool {
         let us = self.turn;
-        let them = us.other_player();
+        let them = !us;
         let from: SQ = m.get_src();
         let to: SQ = m.get_dest();
         let to_bb = to.to_bb();
@@ -1859,7 +1858,9 @@ impl Board {
         let dst: SQ = m.get_dest();
         let src_bb: BitBoard = src.to_bb();
         let dst_bb: BitBoard = dst.to_bb();
-        let opp_king_sq: SQ = self.king_sq(self.turn.other_player());
+        let us: Player = self.turn();
+        let them: Player = !us;
+        let opp_king_sq: SQ = self.king_sq(them);
 
         // Stupidity Checks
         assert_ne!(src, dst);
@@ -1900,8 +1901,8 @@ impl Board {
                 let captured_sq: SQ = SQ::make(dst.file(), src.rank());
                 let b: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) | dst_bb;
 
-                let turn_sliding_p: BitBoard = self.sliding_piece_bb(self.turn);
-                let turn_diag_p: BitBoard = self.diagonal_piece_bb(self.turn);
+                let turn_sliding_p: BitBoard = self.sliding_piece_bb(us);
+                let turn_diag_p: BitBoard = self.diagonal_piece_bb(us);
 
                 ((rook_moves(b, opp_king_sq) & turn_sliding_p) |
                     (bishop_moves(b, opp_king_sq) & turn_diag_p)).is_not_empty()
@@ -1916,7 +1917,7 @@ impl Board {
 
                 let opp_k_bb = opp_king_sq.to_bb();
                 (rook_moves(BitBoard(0), r_to) & opp_k_bb).is_not_empty()
-                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to, ) & opp_k_bb).is_not_empty()
+                    && (rook_moves(r_to.to_bb() | k_to.to_bb() | (self.occupied() ^ k_from.to_bb() ^ r_from.to_bb()), r_to) & opp_k_bb).is_not_empty()
             }
         }
     }
@@ -1946,7 +1947,7 @@ impl Board {
         let player_us = self.piece_at_sq(from);
         if player_us != Piece::None {
             us = player_us.player_lossy();
-            stm = us.other_player();
+            stm = !us;
             if us == stm { return false;}
         } else {
             return false;
@@ -1993,7 +1994,7 @@ impl Board {
                                                         &mut occupied, &mut attackers);
 
             // switch side to move
-            stm = stm.other_player();
+            stm = !stm;
 
             // Negamax the balance with alpha = balance, beta = balance+1 and
             // add nextVictim's value.
@@ -2009,7 +2010,7 @@ impl Board {
             if balance >= 0 {
                 if next_victim == PieceType::K
                     && (attackers & self.get_occupied_player(stm)).is_not_empty() {
-                    stm = stm.other_player();
+                    stm = !stm;
                 }
                 break;
             }

@@ -140,7 +140,7 @@ impl BoardState {
         self.nonpawn_material = [0; 2];
 
         let us = board.turn;
-        let them = us.other_player();
+        let them = !us;
         let ksq = board.king_sq(us);
 
         self.checkers_bb = board.attackers_to(ksq, board.occupied())
