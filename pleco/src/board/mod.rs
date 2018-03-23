@@ -618,9 +618,9 @@ impl Board {
 
                 // yay helper methods
                 self.apply_castling(us, from, &mut to, &mut r_src, &mut r_dst);
-                new_state.psq += psq(PieceType::R, us, r_dst) - psq(PieceType::R, us, r_src);
-                zob ^= z_square(r_src, us, PieceType::R)
-                        ^ z_square(r_dst, us, PieceType::R);
+                let rook = Piece::make_lossy(us, PieceType::R);
+                new_state.psq += psq(rook, r_dst) - psq(rook, r_src);
+                zob ^= z_square(r_src, rook) ^ z_square(r_dst, rook);
                 new_state.captured_piece = None;
             } else if captured != Piece::None {
                 let mut cap_sq: SQ = to;
@@ -640,23 +640,22 @@ impl Board {
                     } else {
                         self.remove_piece_c(captured, cap_sq);
                     }
-                    pawn_key ^= z_square(cap_sq, them, captured.piece());
+                    pawn_key ^= z_square(cap_sq, captured);
                 } else {
                     new_state.nonpawn_material[them as usize] -= piece_value(captured.piece(), false);
                     self.remove_piece_c(captured, cap_sq);
                 }
-                zob ^= z_square(cap_sq, them, captured.piece());
+                zob ^= z_square(cap_sq, captured);
                 let cap_count = self.count_piece(them, captured.piece());
-                material_key ^= z_square(SQ(cap_count), them, captured.piece());
-                new_state.psq -= psq(captured.piece(),them, cap_sq);
+                material_key ^= z_square(SQ(cap_count), captured);
+                new_state.psq -= psq(captured, cap_sq);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = Some(captured.piece());
             }
 
             // Update hash for moving piece
-            zob ^= z_square(to, us, piece.piece()) ^
-                z_square(from, us, piece.piece());
+            zob ^= z_square(to, piece) ^ z_square(from, piece);
 
             if self.state.ep_square != NO_SQ {
                 zob ^= z_ep(self.state.ep_square);
@@ -688,26 +687,28 @@ impl Board {
                     }
                 } else if bit_move.is_promo() {
                     let promo_piece: PieceType = bit_move.promo_piece();
-
+                    let us_promo = Piece::make_lossy(us,promo_piece);
                     self.remove_piece_c(piece, to);
-                    self.put_piece_c(Piece::make_lossy(us,promo_piece), to);
-                    zob ^= z_square(to, us, promo_piece) ^
-                        z_square(to, us, PieceType::P);
-                    pawn_key ^= z_square(to, us, PieceType::P);
+                    self.put_piece_c(us_promo, to);
+                    zob ^= z_square(to, us_promo) ^ z_square(to, piece);
+
+                    // We add the zobrist key for the pawn promotion square as we'll just take
+                    // it away later
+                    pawn_key ^= z_square(to, piece);
 
                     let promo_count = self.count_piece(us, promo_piece);
                     let pawn_count = self.count_piece(us, PieceType::P);
-                    material_key ^= z_square(SQ(promo_count - 1), us, promo_piece)
-                        ^ z_square(SQ(pawn_count), us, PieceType::P);
+                    material_key ^= z_square(SQ(promo_count - 1), us_promo)
+                        ^ z_square(SQ(pawn_count), piece);
 
-                    new_state.psq += psq(promo_piece, us, to) - psq(PieceType::P, us, to);
+                    new_state.psq += psq(us_promo,to) - psq(piece, to);
                     new_state.nonpawn_material[us as usize] += piece_value(promo_piece, false);
                 }
-                pawn_key ^= z_square(from, us, PieceType::P) ^ z_square(to, us, PieceType::P);
+                pawn_key ^= z_square(from, piece) ^ z_square(to, piece);
                 new_state.rule_50 = 0;
             }
 
-            new_state.psq += psq(piece.piece(), us, to) - psq(piece.piece(), us, from);
+            new_state.psq += psq(piece, to) - psq(piece, from);
             new_state.captured_piece = captured.piece().as_option();
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
@@ -1678,16 +1679,17 @@ impl Board {
         if m.get_src() == m.get_dest() {
             return false;
         }
-        let them: Player = self.turn.other_player();
+        let us: Player = self.turn;
+        let them: Player = us.other_player();
         let src: SQ = m.get_src();
         let src_bb: BitBoard = src.to_bb();
         let dst: SQ = m.get_dest();
 
         // Special en_passant case
         if m.move_type() == MoveType::EnPassant {
-            let k_sq: SQ = self.king_sq(self.turn);
+            let k_sq: SQ = self.king_sq(us);
             let dst_bb: BitBoard = dst.to_bb();
-            let captured_sq: SQ = SQ((dst.0 as i8).wrapping_sub(self.turn.pawn_push()) as u8);
+            let captured_sq: SQ = SQ((dst.0 as i8).wrapping_sub(us.pawn_push()) as u8);
             let occupied: BitBoard = (self.occupied() ^ src_bb ^ captured_sq.to_bb()) |
                 dst_bb;
 
@@ -1695,17 +1697,18 @@ impl Board {
                 && (bishop_moves(occupied, k_sq) & self.diagonal_piece_bb(them)).is_empty();
         }
 
-        // If Moving the king, check if the square moved to is not being attacked
-        // Castles are checked during move gen for check, so we're good there.
         let piece = self.piece_at_sq(src);
-        if piece != Piece::None {
-            if piece.piece() == PieceType::K {
-                return m.move_type() == MoveType::Castle ||
-                    (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
-            }
-        } else {
+        if piece == Piece::None {
             return false;
         }
+
+        // If Moving the king, check if the square moved to is not being attacked
+        // Castles are checked during move gen for check, so we're good there.
+        if piece.piece() == PieceType::K {
+            return m.move_type() == MoveType::Castle
+                || (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
+        }
+
 
 
         // Making sure not moving a pinned piece
@@ -2091,16 +2094,16 @@ impl Board {
     pub fn key_after(&self, m: BitMove) -> u64 {
         let src = m.get_src();
         let dst = m.get_dest();
-        let (us, piece) = self.piece_locations.piece_at(src).player_piece_lossy();
-        let (them, captured) = self.piece_locations.piece_at(dst).player_piece_lossy();
+        let piece_moved = self.piece_locations.piece_at(src);
+        let piece_captured = self.piece_locations.piece_at(dst);
 
         let mut key: u64 = self.zobrist() ^ z_side();
 
-        if captured != PieceType::None {
-            key ^= z_square(dst, them, captured);
+        if piece_captured != Piece::None {
+            key ^= z_square(dst, piece_captured);
         }
 
-        key ^ z_square(src, us, piece) ^ z_square(dst, us, piece)
+        key ^ z_square(src, piece_moved) ^ z_square(dst, piece_moved)
     }
 
     /// Returns a prettified String of the current `Board`, for easy command line displaying.

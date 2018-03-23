@@ -192,11 +192,11 @@ impl BoardState {
     fn set_zob_hash(&mut self, board: &Board) {
         let mut b: BitBoard = board.occupied();
         while let Some(sq) = b.pop_some_lsb() {
-            let (player, piece) = board.piece_locations.piece_at(sq).player_piece_lossy();
-            self.psq += psq(piece,player,sq);
-            let key = z_square(sq, player, piece);
+            let piece =  board.piece_locations.piece_at(sq);
+            self.psq += psq(piece,sq);
+            let key = z_square(sq, piece);
             self.zobrast ^= key;
-            if piece == PieceType::P {
+            if piece.piece() == PieceType::P {
                 self.pawn_key ^= key;
             }
         }
@@ -220,7 +220,7 @@ impl BoardState {
             for piece in &ALL_PIECE_TYPES {
                 let count = board.piece_bb(*player, *piece).count_bits();
                 for n in 0..count {
-                    self.material_key ^= z_square(SQ(n), *player, *piece);
+                    self.material_key ^= z_square(SQ(n), Piece::make_lossy(*player, *piece));
                 }
                 if *piece != PieceType::P && *piece != PieceType::K {
                     self.nonpawn_material[*player as usize] +=
