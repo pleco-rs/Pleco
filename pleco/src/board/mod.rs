@@ -14,7 +14,6 @@ use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
 
 use rand;
-use unreachable::UncheckedOptionExt;
 
 use core::piece_move::{BitMove, MoveType};
 use core::move_list::{MoveList,ScoringMoveList};
@@ -368,7 +367,7 @@ impl Board {
         };
 
         for &(sq, plyr, piece) in piece_loc.iter() {
-            b.put_piece_c(piece,sq,plyr);
+            b.put_piece_c(Piece::make_lossy(plyr, piece),sq);
         }
 
         // Side to Move
@@ -594,23 +593,25 @@ impl Board {
             let them = us.other_player();
             let from: SQ = bit_move.get_src();
             let mut to: SQ = bit_move.get_dest();
-            let piece: PieceType = self.piece_at_sq(from).unwrap();
+            let piece: Piece = self.piece_at_sq(from);
 
-            let captured: Option<PieceType> = if bit_move.is_en_passant() {
-                Some(PieceType::P)
+            debug_assert_ne!(piece, Piece::None);
+
+            let captured: Piece = if bit_move.is_en_passant() {
+                Piece::make_lossy(them, PieceType::P)
             } else {
                 self.piece_at_sq(to)
             };
 
             // Sanity checks
-            assert_eq!(self.player_at_sq(from).unwrap(), us);
+            assert_eq!(piece.player_lossy(),us);
 
             if bit_move.is_castle() {
 
                 // Sanity Checks, moved piece should be K, "captured" should be R
                 // As this is the encoding of Castling
-                assert_eq!(captured.unwrap(), PieceType::R);
-                assert_eq!(piece, PieceType::K);
+                assert_eq!(captured.piece(), PieceType::R);
+                assert_eq!(piece.piece(), PieceType::K);
 
                 let mut r_src: SQ = SQ(0);
                 let mut r_dst: SQ = SQ(0);
@@ -621,41 +622,41 @@ impl Board {
                 zob ^= z_square(r_src, us, PieceType::R)
                         ^ z_square(r_dst, us, PieceType::R);
                 new_state.captured_piece = None;
-            } else if let Some(cap_p) = captured {
+            } else if captured != Piece::None {
                 let mut cap_sq: SQ = to;
-                if cap_p == PieceType::P {
+                if captured.piece() == PieceType::P {
                     if bit_move.is_en_passant() {
                         assert_eq!(cap_sq, self.state.ep_square);
                         match us {
                             Player::White => cap_sq -= SQ(8),
                             Player::Black => cap_sq += SQ(8),
                         };
-                        assert_eq!(piece, PieceType::P);
+                        assert_eq!(piece.piece(), PieceType::P);
                         assert_eq!(us.relative_rank( Rank::R6), to.rank());
-                        assert!(self.piece_at_sq(to).is_none());
-                        assert_eq!(self.piece_at_sq(cap_sq).unwrap(), PieceType::P);
-                        assert_eq!(self.player_at_sq(cap_sq).unwrap(), them);
-                        self.remove_piece_c(PieceType::P, cap_sq, them);
+                        assert_eq!(self.piece_at_sq(to), Piece::None);
+                        assert_eq!(self.piece_at_sq(cap_sq).piece(), PieceType::P);
+                        assert_eq!(self.piece_at_sq(cap_sq).player().unwrap(), them);
+                        self.remove_piece_c(captured, cap_sq);
                     } else {
-                        self.remove_piece_c(cap_p, cap_sq, them);
+                        self.remove_piece_c(captured, cap_sq);
                     }
-                    pawn_key ^= z_square(cap_sq, them, cap_p);
+                    pawn_key ^= z_square(cap_sq, them, captured.piece());
                 } else {
-                    new_state.nonpawn_material[them as usize] -= piece_value(cap_p, false);
-                    self.remove_piece_c(cap_p, cap_sq, them);
+                    new_state.nonpawn_material[them as usize] -= piece_value(captured.piece(), false);
+                    self.remove_piece_c(captured, cap_sq);
                 }
-                zob ^= z_square(cap_sq, them, cap_p);
-                let cap_count = self.count_piece(them, cap_p);
-                material_key ^= z_square(SQ(cap_count), them, cap_p);
-                new_state.psq -= psq(cap_p,them, cap_sq);
+                zob ^= z_square(cap_sq, them, captured.piece());
+                let cap_count = self.count_piece(them, captured.piece());
+                material_key ^= z_square(SQ(cap_count), them, captured.piece());
+                new_state.psq -= psq(captured.piece(),them, cap_sq);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
-                new_state.captured_piece = Some(cap_p);
+                new_state.captured_piece = Some(captured.piece());
             }
 
             // Update hash for moving piece
-            zob ^= z_square(to, us, piece) ^
-                z_square(from, us, piece);
+            zob ^= z_square(to, us, piece.piece()) ^
+                z_square(from, us, piece.piece());
 
             if self.state.ep_square != NO_SQ {
                 zob ^= z_ep(self.state.ep_square);
@@ -670,11 +671,11 @@ impl Board {
 
             // Actually move the piece
             if !bit_move.is_castle()  {
-                self.move_piece_c(piece, from, to, us);
+                self.move_piece_c(piece, from, to);
             }
 
             // Pawn Moves need special help :(
-            if piece == PieceType::P {
+            if piece.piece() == PieceType::P {
                 if to.0 ^ from.0 == 16 {
                     // Double Push
                     let poss_ep: u8 = (to.0 as i8 - us.pawn_push()) as u8;
@@ -688,8 +689,8 @@ impl Board {
                 } else if bit_move.is_promo() {
                     let promo_piece: PieceType = bit_move.promo_piece();
 
-                    self.remove_piece_c(piece, to, us);
-                    self.put_piece_c(promo_piece, to, us);
+                    self.remove_piece_c(piece, to);
+                    self.put_piece_c(Piece::make_lossy(us,promo_piece), to);
                     zob ^= z_square(to, us, promo_piece) ^
                         z_square(to, us, PieceType::P);
                     pawn_key ^= z_square(to, us, PieceType::P);
@@ -706,8 +707,8 @@ impl Board {
                 new_state.rule_50 = 0;
             }
 
-            new_state.psq += psq(piece, us, to) - psq(piece, us, from);
-            new_state.captured_piece = captured;
+            new_state.psq += psq(piece.piece(), us, to) - psq(piece.piece(), us, from);
+            new_state.captured_piece = captured.piece().as_option();
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
             new_state.material_key = material_key;
@@ -792,24 +793,23 @@ impl Board {
         let us: Player = self.turn;
         let from: SQ = undo_move.get_src();
         let to: SQ = undo_move.get_dest();
-        let mut piece_on: Option<PieceType> = self.piece_at_sq(to);
+        let mut piece_on: Piece = self.piece_at_sq(to);
 
         // Make sure the piece moved from is not there, or there is a castle
-        assert!(self.piece_at_sq(from).is_none() || undo_move.is_castle());
+        assert!(self.piece_at_sq(from) == Piece::None || undo_move.is_castle());
 
         if undo_move.is_promo() {
-            assert_eq!(piece_on.unwrap(), undo_move.promo_piece());
+            assert_eq!(piece_on.piece(), undo_move.promo_piece());
 
-            self.remove_piece_c(piece_on.unwrap(), to, us);
-            self.put_piece_c(PieceType::P, to, us);
-            piece_on = Some(PieceType::P);
-
+            self.remove_piece_c(piece_on, to);
+            self.put_piece_c(Piece::make_lossy(us, PieceType::P), to);
+            piece_on = Piece::make_lossy(us, PieceType::P);
         }
 
         if undo_move.is_castle() {
             self.remove_castling(us, from, to);
         } else {
-            self.move_piece_c(piece_on.unwrap(), to, from, us);
+            self.move_piece_c(piece_on, to, from);
             if let Some(cap_piece) = self.state.captured_piece {
                 let mut cap_sq: SQ = to;
                 if undo_move.is_en_passant() {
@@ -818,7 +818,7 @@ impl Board {
                         Player::Black => cap_sq += SQ(8),
                     };
                 }
-                self.put_piece_c(cap_piece, cap_sq, us.other_player());
+                self.put_piece_c(Piece::make_lossy(us.other_player(), cap_piece), cap_sq);
             }
         }
         self.state = self.state.get_prev().unwrap();
@@ -1025,7 +1025,8 @@ impl Board {
     /// Panics if there is not piece at the given square.
     fn remove_piece(&mut self, piece: PieceType, square: SQ) {
         let player = self.piece_locations.piece_at(square).player_lossy();
-        self.remove_piece_c(piece, square, player);
+
+        self.remove_piece_c(Piece::make_lossy(player,piece), square);
     }
 
     /// Moves a Piece on the Board (if the color is unknown) from square 'from'
@@ -1036,7 +1037,7 @@ impl Board {
     /// Panics if there is not piece at the given square.
     fn move_piece(&mut self, piece: PieceType, from: SQ, to: SQ) {
         let player = self.piece_locations.piece_at(from).player_lossy();
-        self.move_piece_c(piece, from, to, player);
+        self.move_piece_c(Piece::make_lossy(player,piece), from, to);
     }
 
     /// Places a Piece on the board at a given square and player.
@@ -1045,13 +1046,14 @@ impl Board {
     ///
     /// Assumes there is not already a piece at that square. If there already is,
     /// Undefined Behavior will result.
-    fn put_piece_c(&mut self, piece: PieceType, square: SQ, player: Player) {
+    fn put_piece_c(&mut self, piece: Piece, square: SQ) {
         let bb = square.to_bb();
+        let (player, piece_ty) = piece.player_piece_lossy();
         self.bbs[PieceType::All as usize] |= bb;
-        self.bbs[piece as usize] |= bb;
+        self.bbs[piece_ty as usize] |= bb;
         self.bbs_player[player as usize] |= bb;
-        self.piece_locations.place(square, player, piece);
-        self.piece_counts[player as usize][piece as usize] += 1;
+        self.piece_locations.place(square, player, piece_ty);
+        self.piece_counts[player as usize][piece_ty as usize] += 1;
         // Note: Should We set captured Piece?
     }
 
@@ -1060,15 +1062,16 @@ impl Board {
     /// # Panics
     ///
     /// Panics if there is a piece at the given square.
-    fn remove_piece_c(&mut self, piece: PieceType, square: SQ, player: Player) {
-        debug_assert_eq!(self.piece_at_sq(square).unwrap(), piece);
+    fn remove_piece_c(&mut self, piece: Piece, square: SQ) {
+        debug_assert_eq!(self.piece_at_sq(square), piece);
+        let (player, piece_ty) = piece.player_piece_lossy();
         let bb = square.to_bb();
         self.bbs[PieceType::All as usize] ^= bb;
         self.bbs_player[player as usize] ^= bb;
-        self.bbs[piece as usize] ^= bb;
+        self.bbs[piece_ty as usize] ^= bb;
 
         self.piece_locations.remove(square);
-        self.piece_counts[player as usize][piece as usize] -= 1;
+        self.piece_counts[player as usize][piece_ty as usize] -= 1;
     }
 
     /// Moves a Piece on the Board of a given player from square 'from'
@@ -1077,16 +1080,16 @@ impl Board {
     /// # Panics
     ///
     /// Panics if the two and from square are equal
-    fn move_piece_c(&mut self, piece: PieceType, from: SQ, to: SQ, player: Player) {
+    fn move_piece_c(&mut self, piece: Piece, from: SQ, to: SQ) {
         assert_ne!(from, to);
         let comb_bb: BitBoard = from.to_bb() | to.to_bb();
-
+        let (player, piece_ty) = piece.player_piece_lossy();
         self.bbs[PieceType::All as usize] ^= comb_bb;
         self.bbs_player[player as usize] ^= comb_bb;
-        self.bbs[piece as usize] ^= comb_bb;
+        self.bbs[piece_ty as usize] ^= comb_bb;
 
         self.piece_locations.remove(from);
-        self.piece_locations.place(to, player, piece);
+        self.piece_locations.place(to, player, piece_ty);
     }
 
     /// Helper function to apply a Castling for a given player.
@@ -1116,8 +1119,8 @@ impl Board {
             *to_r_orig = player.relative_square( SQ(2));
             *r_dst = player.relative_square( SQ(3));
         }
-        self.move_piece_c(PieceType::K, k_src, *to_r_orig, player);
-        self.move_piece_c(PieceType::R, *r_src, *r_dst, player);
+        self.move_piece_c(Piece::make_lossy(player, PieceType::K), k_src, *to_r_orig);
+        self.move_piece_c(Piece::make_lossy(player, PieceType::R), *r_src, *r_dst);
     }
 
     /// Helper function to remove a Castling for a given player.
@@ -1136,8 +1139,8 @@ impl Board {
             player.relative_square(SQ(3))
         };
 
-        self.move_piece_c(PieceType::K, k_dst, k_src, player);
-        self.move_piece_c(PieceType::R, r_dst, r_src, player);
+        self.move_piece_c(Piece::make_lossy(player, PieceType::K), k_dst, k_src);
+        self.move_piece_c(Piece::make_lossy(player, PieceType::R), r_dst,r_src);
     }
 
     /// Outputs the Blockers of a given square.
@@ -1475,7 +1478,7 @@ impl Board {
     /// ```
     #[inline]
     pub fn count_all_pieces(&self) -> u8 {
-        self.count_pieces_player(Player::White) + self.count_pieces_player(Player::Black)
+        self.bbs[PieceType::All as usize].count_bits()
     }
 
     /// Returns the PieceType, if any, at the square.
@@ -1484,38 +1487,9 @@ impl Board {
     ///
     /// Panics if the square is not a legal square.
     #[inline]
-    pub fn piece_at_sq(&self, sq: SQ) -> Option<PieceType> {
+    pub fn piece_at_sq(&self, sq: SQ) -> Piece {
         debug_assert!(sq.is_okay());
-        self.piece_locations.piece_at(sq).piece().as_option()
-    }
-
-    /// Returns the player, if any, at the square.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the square is not a legal square.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pleco::{Board,Player,SQ};
-    ///
-    /// let board = Board::start_pos();
-    /// assert_eq!(board.player_at_sq(SQ::G8), Some(Player::Black));
-    /// assert_eq!(board.player_at_sq(SQ::E3), None);
-    /// ```
-    #[inline(always)]
-    pub fn player_at_sq(&self, s: SQ) -> Option<Player> {
-        debug_assert!(s.is_okay());
-        self.piece_locations.piece_at(s).player()
-    }
-
-
-    /// Returns the player and piece at a square, if any.
-    #[inline(always)]
-    pub fn player_piece_at_sq(&self, s: SQ) -> Option<(Player, PieceType)> {
-        debug_assert!(s.is_okay());
-        self.piece_locations.piece_at(s).player_piece()
+        self.piece_locations.piece_at(sq)
     }
 
     /// Returns the square of the King for a given player.
@@ -1723,8 +1697,9 @@ impl Board {
 
         // If Moving the king, check if the square moved to is not being attacked
         // Castles are checked during move gen for check, so we're good there.
-        if let Some(piece) = self.piece_at_sq(src) {
-            if piece == PieceType::K {
+        let piece = self.piece_at_sq(src);
+        if piece != Piece::None {
+            if piece.piece() == PieceType::K {
                 return m.move_type() == MoveType::Castle ||
                     (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
             }
@@ -1811,8 +1786,8 @@ impl Board {
         }
 
         if m.is_capture() {
-            let at_sq = self.player_at_sq(to);
-            if at_sq.is_none() || at_sq.unwrap() == us {
+            let at_sq = self.piece_at_sq(to);
+            if at_sq == Piece::None || at_sq.player_lossy() == us {
                 return false;
             }
         }
@@ -1838,7 +1813,7 @@ impl Board {
     /// Checks if a move is an advanced pawn push, meaning it passes into enemy territory.
     #[inline(always)]
     pub fn advanced_pawn_push(&self, mov: BitMove) -> bool {
-        self.piece_at_sq(mov.get_src()) == Some(PieceType::P)
+        self.piece_at_sq(mov.get_src()).piece() == PieceType::P
             && self.turn().relative_rank_of_sq(mov.get_src()) > Rank::R4
     }
 
@@ -1885,10 +1860,10 @@ impl Board {
 
         // Stupidity Checks
         assert_ne!(src, dst);
-        assert_eq!(self.player_at_sq(src).unwrap(), self.turn);
+        assert_eq!(self.piece_at_sq(src).player_lossy(), self.turn);
 
         // Searches for direct checks from the pre-computed array
-        if (self.state.check_sqs[self.piece_at_sq(src).unwrap() as usize] & dst_bb).is_not_empty()  {
+        if (self.state.check_sqs[self.piece_at_sq(src).piece() as usize] & dst_bb).is_not_empty()  {
             return true;
         }
 
@@ -1954,7 +1929,8 @@ impl Board {
         let to = mov.get_dest();
         let mut next_victim: PieceType;
 
-        if let Some(piece) = self.piece_at_sq(from) {
+        let piece = self.piece_at_sq(from).piece();
+        if piece != PieceType::None {
             next_victim = piece;
         } else {
             return false;
@@ -1964,9 +1940,10 @@ impl Board {
         let mut stm: Player;
         let mut stm_attackers: BitBoard;
 
-        if let Some(player_us) = self.player_at_sq(from) {
-            us = player_us;
-            stm = player_us.other_player();
+        let player_us = self.piece_at_sq(from);
+        if player_us != Piece::None {
+            us = player_us.player_lossy();
+            stm = us.other_player();
             if us == stm { return false;}
         } else {
             return false;
@@ -1974,7 +1951,7 @@ impl Board {
 
 
         // Values of the pieces taken by us minus opponent's ones
-        let mut balance: i32 = piece_value_op(self.piece_at_sq(to), false) - threshold;
+        let mut balance: i32 = piece_value(self.piece_at_sq(to).piece(), false) - threshold;
 
         if balance < 0 {
             return false;
@@ -2087,20 +2064,8 @@ impl Board {
     #[inline(always)]
     pub fn moved_piece(&self, m: BitMove) -> PieceType {
         let src = m.get_src();
-        if cfg!(debug_assertions) {
-            let moved_piece = self.piece_at_sq(src);
-            if moved_piece.is_none() {
-                panic!("\n There is no moved piece!\
-                        \n Move: {}, Bits: {}\
-                        \n fen: {}",
-                        m, m.get_raw(),
-                        self.fen());
-            } else {
-                unsafe {moved_piece.unchecked_unwrap()}
-            }
-        } else {
-            self.piece_at_sq(src).unwrap() // panics if no piece here :)
-        }
+        self.piece_at_sq(src).piece()
+
     }
 
     /// Returns the piece that was captured, if any from a given BitMove.
@@ -2114,7 +2079,7 @@ impl Board {
             return Some(PieceType::P);
         }
         let dst = m.get_dest();
-        self.piece_at_sq(dst)
+        self.piece_at_sq(dst).piece().as_option()
     }
 
     /// Returns the Zobrist key after a move is played. Doesn't recognize special
@@ -2239,8 +2204,8 @@ impl fmt::Debug for BoardError {
 impl Board {
     /// Checks the basic status of the board, returning false if something is wrong.
     pub fn is_ok_quick(&self) -> bool {
-        self.piece_at_sq(self.king_sq(Player::White)).unwrap() == PieceType::K
-            && self.piece_at_sq(self.king_sq(Player::Black)).unwrap() == PieceType::K
+        self.piece_at_sq(self.king_sq(Player::White)).piece() == PieceType::K
+            && self.piece_at_sq(self.king_sq(Player::Black)).piece() == PieceType::K
             && (self.state.ep_square == NO_SQ
             || self.turn.relative_rank_of_sq(self.state.ep_square) == Rank::R6)
     }
@@ -2259,9 +2224,9 @@ impl Board {
         if w_king_num != 1 { return Err(BoardError::IncorrectKingNum {player: Player::Black, num: b_king_num}); }
         let w_ksq = self.king_sq(Player::White);
         let b_ksq = self.king_sq(Player::Black);
-        if self.piece_at_sq(w_ksq).unwrap() != PieceType::K {
+        if self.piece_at_sq(w_ksq).piece() != PieceType::K {
             return Err(BoardError::IncorrectKingSQ {player: Player::White, sq: w_ksq}); }
-        if self.piece_at_sq(b_ksq).unwrap() != PieceType::K {
+        if self.piece_at_sq(b_ksq).piece() != PieceType::K {
             return Err(BoardError::IncorrectKingSQ {player: Player::Black, sq: b_ksq}); }
 
         Ok(())

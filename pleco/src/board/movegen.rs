@@ -60,7 +60,7 @@ use board::*;
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringMove};
 use core::move_list::{MoveList,ScoringMoveList,MVPushable};
 
-use {SQ, BitBoard};
+use {SQ, BitBoard, Piece, PieceType};
 
 
 //                   Legal    PseudoLegal
@@ -284,7 +284,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
 
         // discovered check candidates
         while let Some(from) = disc_check.pop_some_lsb() {
-            let piece: PieceType = self.board.piece_at_sq(from).unwrap();
+            let piece: PieceType = self.board.piece_at_sq(from).piece();
             if piece != PieceType::P {
                 let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.occupied();
                 if piece == PieceType::K {
@@ -346,7 +346,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
     fn castling_side<L: Legality, P: PlayerTrait>(&mut self, side: CastleType) {
         // Make sure we can castle AND the space between the king / rook is clear AND the piece at castling_side is a Rook
         if !self.board.castle_impeded(side) && self.board.can_castle(P::player(), side)
-            && self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R) {
+            && self.board.piece_at_sq(self.board.castling_rook_square(side)).piece() == PieceType::R {
             let king_side: bool = { side == CastleType::KingSide };
 
             let ksq: SQ = self.board.king_sq(P::player());

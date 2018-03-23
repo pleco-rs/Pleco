@@ -5,7 +5,7 @@
 
 use std::ops::Add;
 use std::mem;
-use pleco::{Board,BitBoard,SQ,Rank,File,Player,PieceType};
+use pleco::{Board,BitBoard,SQ,Rank,File,Player,PieceType,Piece};
 use pleco::core::mono_traits::*;
 use pleco::core::score::*;
 use pleco::core::masks::*;
@@ -655,7 +655,7 @@ impl <'a> Evaluation <'a> {
                                     | self.attacked_by[us as usize][PieceType::B as usize]);
 
             while let Some(s) = b.pop_some_lsb() {
-                let piece = self.board.piece_at_sq(s).unwrap();
+                let piece = self.board.piece_at_sq(s).piece();
                 score += THREAT_BY_MINOR[piece as usize];
                 if piece != PieceType::P {
                     score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
@@ -664,7 +664,7 @@ impl <'a> Evaluation <'a> {
 
             b = (self.board.piece_bb(them, PieceType::Q) | weak) & self.attacked_by[us as usize][PieceType::R as usize];
             while let Some(s) = b.pop_some_lsb() {
-                let piece = self.board.piece_at_sq(s).unwrap();
+                let piece = self.board.piece_at_sq(s).piece();
                 score += THREAT_BY_ROOK[piece as usize];
                 if piece != PieceType::P {
                     score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
@@ -743,7 +743,7 @@ impl <'a> Evaluation <'a> {
                     ebonus -= self.king_distance(us, P::up(block_sq)) as i32 * rr;
                 }
 
-                if self.board.piece_at_sq(block_sq).is_none() {
+                if self.board.piece_at_sq(block_sq) == Piece::None {
                     // If there is a rook or queen attacking/defending the pawn from behind,
                     // consider all the squaresToQueen. Otherwise consider only the squares
                     // in the pawn's path attacked or occupied by the enemy.

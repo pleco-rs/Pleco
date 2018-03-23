@@ -170,24 +170,27 @@ pub struct PieceLocationsIter {
 }
 
 impl Iterator for PieceLocationsIter {
-    type Item = (SQ,Player,PieceType);
+    type Item = (SQ,Piece);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.sq >= SQ::NONE {
             None
-        } else if let Some((plyr, piece)) = self.locations.piece_at(self.sq).player_piece() {
-            let sq = self.sq;
-            self.sq += SQ(1);
-            Some((sq, plyr, piece))
         } else {
-            self.next()
+            let piece = self.locations.piece_at(self.sq);
+            if piece != Piece::None {
+                let sq = self.sq;
+                self.sq += SQ(1);
+                return Some((sq, piece));
+            } else {
+                return self.next();
+            }
         }
     }
 }
 
 impl IntoIterator for PieceLocations {
-    type Item = (SQ,Player,PieceType);
+    type Item = (SQ,Piece);
     type IntoIter = PieceLocationsIter;
 
     #[inline(always)]
