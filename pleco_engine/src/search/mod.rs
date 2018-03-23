@@ -774,7 +774,7 @@ impl Searcher {
                 && !gives_check
                 && futility_base > -10000
                 && !self.board.advanced_pawn_push(mov) {
-                let piece_at = self.board.piece_at_sq(mov.get_src()).unwrap();
+                let piece_at = self.board.piece_at_sq(mov.get_src()).piece();
                 futility_value = futility_base + piece_value(piece_at, true);
 
                 if futility_value <= alpha {
@@ -885,7 +885,7 @@ impl Searcher {
             let ss_bef: &mut Stack = ss.offset(-1);
             if ss_bef.current_move.is_okay() {
                 let prev_sq = ss_bef.current_move.get_dest();
-                let (player, piece) = self.board.player_piece_at_sq(prev_sq).unwrap();
+                let (player, piece) = self.board.piece_at_sq(prev_sq).player_piece_lossy();
                 self.counter_moves[(player, piece, prev_sq)] = mov;
             }
         }
@@ -977,7 +977,7 @@ impl Searcher {
         let board = &self.board;
         self.root_moves().sort_by_key(|root_move| {
             let a = root_move.bit_move;
-            let piece = board.piece_at_sq((a).get_src()).unwrap();
+            let piece = board.piece_at_sq((a).get_src()).piece();
 
             if a.is_capture() {
                 piece.value() - board.captured_piece(a).unwrap().value()
