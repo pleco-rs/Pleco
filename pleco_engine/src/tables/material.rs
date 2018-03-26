@@ -8,7 +8,7 @@ use pleco::core::score::*;
 use pleco::core::mono_traits::*;
 use pleco::tools::PreFetchable;
 
-use super::TableBase;
+use super::{TableBase,TableBaseConst};
 
 pub const PHASE_END_GAME: u16 = 0;
 pub const PHASE_MID_GAME: u16 = 128;
@@ -60,7 +60,13 @@ impl MaterialEntry {
     }
 }
 
+// TODO: Use const-generics once it becomes available
+impl TableBaseConst for MaterialEntry {
+    const ENTRY_COUNT: usize = 8192;
+}
 
+//pawns: PawnTable::new(16384),
+//material: Material::new(8192),
 pub struct Material {
     table: TableBase<MaterialEntry>,
 }
@@ -85,15 +91,14 @@ impl Material {
     /// # Panics
     ///
     /// Panics if size is not a power of 2.
-    pub fn new(size: usize) -> Self {
+    pub fn new() -> Self {
         Material {
-            table: TableBase::new(size).unwrap()
+            table: TableBase::new().unwrap()
         }
     }
 
     pub fn clear(&mut self) {
-        let size = self.table.size();
-        self.table.resize(size);
+        self.table.clear();
     }
 
     pub fn probe(&mut self, board: &Board) -> &mut MaterialEntry {

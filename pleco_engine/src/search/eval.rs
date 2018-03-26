@@ -294,8 +294,8 @@ impl Evaluation {
     }
 
     pub fn trace(board: &Board) {
-        let mut pawn_table = PawnTable::new(1 << 4);
-        let mut material = Material::new(1 << 4);
+        let mut pawn_table = PawnTable::new();
+        let mut material = Material::new();
         let pawn_entry = { pawn_table.probe(&board) };
         let material_entry = { material.probe(&board) };
         let mut trace = Trace::new();

@@ -17,7 +17,7 @@ use pleco::core::CastleType;
 use pleco::helper::prelude::*;
 use pleco::tools::PreFetchable;
 
-use super::TableBase;
+use super::{TableBase,TableBaseConst};
 
 
 
@@ -133,9 +133,9 @@ impl PawnTable {
     /// # Panics
     ///
     /// Panics if size is not a power of 2.
-    pub fn new(size: usize) -> Self {
+    pub fn new() -> Self {
         PawnTable {
-            table: TableBase::new(size).unwrap()
+            table: TableBase::new().unwrap()
         }
     }
 
@@ -148,8 +148,7 @@ impl PawnTable {
 
     /// Clears the table and resets to another size.
     pub fn clear(&mut self) {
-        let size = self.table.size();
-        self.table.resize(size);
+        self.table.clear();
     }
 
     /// Retrieves the entry of a specified key. If the `Entry` doesn't a matching key,
@@ -219,6 +218,11 @@ pub struct PawnEntry {
     asymmetry: i16,
     open_files: u8
 }
+
+impl TableBaseConst for PawnEntry {
+    const ENTRY_COUNT: usize = 16384;
+}
+
 
 impl PawnEntry {
 
@@ -494,7 +498,7 @@ mod tests {
 
     #[test]
     fn pawn_eval() {
-        let mut t: PawnTable = PawnTable::new(1 << 7);
+        let mut t: PawnTable = PawnTable::new();
         let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(9);
         let mut score: i64 = 0;
         boards.iter().for_each(|b| {
