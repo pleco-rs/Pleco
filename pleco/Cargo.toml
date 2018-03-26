@@ -58,7 +58,7 @@ codegen-units = 4
 
 [dependencies]
 clippy = {version = "0.0.200", optional = true}
-bitflags = "1.0.3"
+bitflags = "1.0.4"
 rand = "0.5.5"
 rayon = "1.0.2"
 num_cpus = "1.8.0"
@@ -66,8 +66,8 @@ prefetch = "0.2.0"
 mucow = "0.1.0"
 
 [dependencies.lazy_static]
-version = "1.0.0"
-#features = ["nightly"]
+version = "1.1.0"
+features = ["nightly"]
 
 [features]
 default = []

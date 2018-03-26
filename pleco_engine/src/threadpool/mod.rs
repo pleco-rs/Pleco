@@ -350,4 +350,3 @@ impl Drop for ThreadPool {
         self.kill_all();
     }
 }
-
