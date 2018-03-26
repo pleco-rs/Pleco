@@ -20,15 +20,6 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 use super::piece_move::{BitMove, ScoringMove};
 
-
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use std::mem::transmute;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use super::bitboard::BitBoard;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use super::sq::SQ;
-
-
 pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
 
     /// Adds a `BitMove` to the end of the list.
