@@ -222,6 +222,25 @@ impl BitBoard {
         }
     }
 
+    /// Array containing all the `BitBoards` for of the starting position, for each player and piece.
+    pub const fn start_bbs() -> [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] {
+        [[
+            BitBoard(START_W_PAWN),
+            BitBoard(START_W_KNIGHT),
+            BitBoard(START_W_BISHOP),
+            BitBoard(START_W_ROOK),
+            BitBoard(START_W_QUEEN),
+            BitBoard(START_W_KING),
+        ], [
+            BitBoard(START_B_PAWN),
+            BitBoard(START_B_KNIGHT),
+            BitBoard(START_B_BISHOP),
+            BitBoard(START_B_ROOK),
+            BitBoard(START_B_QUEEN),
+            BitBoard(START_B_KING),
+        ], ]
+    }
+
     /// Returns a clone of a `[[BitBoard; 6]; 2]`. Used to duplicate occupancy `BitBoard`s of each
     /// piece for each player.
     #[inline(always)]

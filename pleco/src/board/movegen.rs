@@ -59,9 +59,8 @@ use board::*;
 
 use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringMove};
 use core::move_list::{MoveList,ScoringMoveList,MVPushable};
-use core::mono_traits::{GenTypeTrait};
 
-use {SQ, BitBoard, Piece, PieceType, Player};
+use {SQ, BitBoard};
 
 
 //                   Legal    PseudoLegal
@@ -148,8 +147,7 @@ impl MoveGen {
         movelist
     }
 
-    /// Extends the current list of moves of a certain Legality, and Generation type. This method
-    /// will correctly set the new length of the list.
+    /// Extends the current list of moves of a certain Legality, and Generation type.
     ///
     /// # Safety
     ///
@@ -282,20 +280,19 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
     fn generate_quiet_checks<L: Legality, P: PlayerTrait>(&mut self) {
         assert!(!self.board.in_check());
         let mut disc_check: BitBoard = self.board.discovered_check_candidates();
-        let target: BitBoard = !self.board.occupied();
 
         // discovered check candidates
         while let Some(from) = disc_check.pop_some_lsb() {
-            let piece: PieceType = self.board.piece_at_sq(from).type_of();
+            let piece: PieceType = self.board.piece_at_sq(from).unwrap();
             if piece != PieceType::P {
-                let mut b: BitBoard = self.moves_bb(piece, from) & target;
+                let mut b: BitBoard = self.moves_bb(piece, from) & !self.board.occupied();
                 if piece == PieceType::K {
                     b &= queen_moves(BitBoard(0), self.board.king_sq(P::opp_player()))
                 }
                 self.move_append_from_bb_flag::<L>(&mut b, from, BitMove::FLAG_QUIET);
             }
         }
-        self.generate_all::<L, QuietChecksGenType, P>(target);
+        self.generate_all::<L, QuietChecksGenType, P>(!self.board.occupied());
     }
 
 
@@ -348,7 +345,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
     fn castling_side<L: Legality, P: PlayerTrait>(&mut self, side: CastleType) {
         // Make sure we can castle AND the space between the king / rook is clear AND the piece at castling_side is a Rook
         if !self.board.castle_impeded(side) && self.board.can_castle(P::player(), side)
-            && self.board.piece_at_sq(self.board.castling_rook_square(side)).type_of() == PieceType::R {
+            && self.board.piece_at_sq(self.board.castling_rook_square(side)) == Some(PieceType::R) {
             let king_side: bool = { side == CastleType::KingSide };
 
             let ksq: SQ = self.board.king_sq(P::player());
@@ -574,7 +571,6 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             PieceType::R => rook_moves(self.occ, square),
             PieceType::Q => queen_moves(self.occ, square),
             PieceType::K => king_moves(square),
-            _ => BitBoard(0)
         }
     }
 
@@ -592,7 +588,6 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             PieceType::R => rook_moves(self.occ, square),
             PieceType::Q => queen_moves(self.occ, square),
             PieceType::K => king_moves(square),
-            _ => BitBoard(0)
         }
     }
 

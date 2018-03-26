@@ -128,17 +128,14 @@ impl Castling {
 
     /// Adds the Right to castle based on an `char`.
     ///
-    /// ```md
     /// `K` -> Add White King-side Castling bit.
     /// `Q` -> Add White Queen-side Castling bit.
     /// `k` -> Add Black King-side Castling bit.
     /// `q` -> Add Black Queen-side Castling bit.
-    /// `-` -> Do nothing.
-    /// ```
     ///
     /// # Panics
     ///
-    /// Panics of the char is not `K`, `Q`, `k`, `q`, or `-`.
+    /// Panics of the char is not `K`, `Q`, `k`, or `q`.
     pub fn add_castling_char(&mut self, c: char) {
         self.bits |= match c {
             'K' => Castling::WHITE_K.bits,
@@ -152,8 +149,8 @@ impl Castling {
 
     /// Returns a pretty String representing the castling state
     ///
-    /// Used for FEN Strings, with (`K` | `Q`) representing white castling abilities,
-    /// and (`k` | `q`) representing black castling abilities. If there are no bits set,
+    /// Used for FEN Strings, with ('K' | 'Q') representing white castling abilities,
+    /// and ('k' | 'q') representing black castling abilities. If there are no bits set,
     /// returns a String containing "-".
     pub fn pretty_string(&self) -> String {
         if self.no_castling() {

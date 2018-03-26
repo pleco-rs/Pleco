@@ -10,7 +10,6 @@ use std::ptr::NonNull;
 use std::heap::{Alloc, Layout, Heap};
 use std::mem;
 use std::ptr;
-use std::ops::*;
 
 pub mod prelude {
     // easier exporting :)
@@ -26,8 +25,8 @@ pub mod prelude {
 // TODO: Create 3DBoard using const generics: https://github.com/rust-lang/rust/issues/44580
 
 
-pub trait StatBoard<T, IDX>: Sized + IndexMut<IDX, Output=T>
-    where T: Copy + Clone + Sized, {
+pub trait StatBoard<T>: Sized
+    where T: Copy + Clone + Sized {
 
     const FILL: T;
 
@@ -51,27 +50,28 @@ pub trait StatBoard<T, IDX>: Sized + IndexMut<IDX, Output=T>
     }
 }
 
-pub trait NumStatBoard<IDX>: StatBoard<i16,IDX>
-{
+pub trait NumStatBoard: StatBoard<i16> {
     const D: i16;
-    fn update(&mut self, idx: IDX, bonus: i16) {
+    fn update(entry: &mut i16, bonus: i16) {
         assert!(bonus.abs() <= Self::D); // Ensure range is [-32 * D, 32 * D]
-        let entry = self.index_mut(idx);
         *entry += bonus * 32 - (*entry) * bonus.abs() / Self::D;
     }
 }
 
-
-pub trait NumStatCube<IDX>: StatBoard<i16,IDX> {
+pub trait NumStatCube: StatBoard<i16> {
     const D: i16;
     const W: i16;
-    fn update(&mut self, idx: IDX, bonus: i16) {
+    fn update(entry: &mut i16, bonus: i16) {
         assert!(bonus.abs() <= Self::D);
-        let entry = self.index_mut(idx);
+
         *entry += bonus * Self::W - (*entry) * bonus.abs() / Self::D;
         assert!((*entry).abs() <= Self::D * Self::W);
     }
 }
+
+//impl StatBoard<i16> where {
+//
+//}
 
 // TODO: Performance increase awaiting with const generics: https://github.com/rust-lang/rust/issues/44580
 

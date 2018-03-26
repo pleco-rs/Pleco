@@ -8,7 +8,6 @@
 use std::mem;
 
 use core::*;
-use core::masks::*;
 use core::sq::SQ;
 use super::FenBuildError;
 
@@ -31,7 +30,7 @@ pub struct PieceLocations {
     // 1xxx -> Black Piece
 
     // array of u8's, with standard ordering mapping index to square
-    data: [Piece; SQ_CNT],
+    data: [u8; 64],
 }
 
 
@@ -39,7 +38,16 @@ pub struct PieceLocations {
 impl PieceLocations {
     /// Constructs a new `PieceLocations` with a default of no pieces on the board.
     pub const fn blank() -> PieceLocations {
-        PieceLocations { data: [Piece::None; 64] }
+        PieceLocations { data: [0b0111; 64] }
+    }
+
+    /// Constructs a new `PieceLocations` with the memory at a default of Zeros.
+    ///
+    /// This function is unsafe as Zeros represent Pawns, and therefore care mus be taken
+    /// to iterate through every square and ensure the correct piece or lack of piece
+    /// is placed.
+    pub const fn default() -> PieceLocations {
+        PieceLocations { data: [0; 64] }
     }
 
     /// Places a given piece for a given player at a certain square.
@@ -49,9 +57,8 @@ impl PieceLocations {
     /// Panics if Square is of index higher than 63.
     #[inline]
     pub fn place(&mut self, square: SQ, player: Player, piece: PieceType) {
-        debug_assert!(square.is_okay());
-        debug_assert!(piece.is_real());
-        self.data[square.0 as usize] = Piece::make_lossy(player, piece);
+        assert!(square.is_okay());
+        self.data[square.0 as usize] = self.create_sq(player, piece);
     }
 
     /// Removes a Square.
@@ -61,8 +68,8 @@ impl PieceLocations {
     /// Panics if Square is of index higher than 63.
     #[inline]
     pub fn remove(&mut self, square: SQ) {
-        debug_assert!(square.is_okay());
-        self.data[square.0 as usize] = Piece::None;
+        assert!(square.is_okay());
+        self.data[square.0 as usize] = 0b0111
     }
 
     /// Returns the Piece at a `SQ`, Or None if the square is empty.
@@ -71,23 +78,119 @@ impl PieceLocations {
     ///
     /// Panics if square is of index higher than 63.
     #[inline]
-    pub fn piece_at(&self, square: SQ) -> Piece {
+    pub fn piece_at(&self, square: SQ) -> Option<PieceType> {
         debug_assert!(square.is_okay());
-        self.data[square.0 as usize]
+        let byte: u8 = self.data[square.0 as usize] & 0b0111;
+        match byte {
+            0b0000 => Some(PieceType::P),
+            0b0001 => Some(PieceType::N),
+            0b0010 => Some(PieceType::B),
+            0b0011 => Some(PieceType::R),
+            0b0100 => Some(PieceType::Q),
+            0b0101 => Some(PieceType::K),
+            0b0110 => unreachable!(), // Undefined
+            0b0111 => None,
+            _ => unreachable!(),
+        }
     }
 
-    /// Returns if a square is occupied.
+    /// Returns the Piece at a `SQ` for a given player.
+    ///
+    /// If there is no piece at that square, or there is a piece of another player at that square,
+    /// returns None.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63.
+    #[inline]
+    pub fn piece_at_for_player(&self, square: SQ, player: Player) -> Option<PieceType> {
+        let op = self.player_piece_at(square);
+        if op.is_some() {
+            let p = op.unwrap();
+            if p.0 == player {
+                Some(p.1)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Returns the `Player` (if any) is occupying a `SQ`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63.
+    #[inline]
+    pub fn player_at(&self, square: SQ) -> Option<Player> {
+        let byte: u8 = self.data[square.0 as usize];
+        if byte == 0b0111 || byte == 0b1111 {
+            return None;
+        }
+        if byte < 8 {
+            Some(Player::White)
+        } else {
+            Some(Player::Black)
+        }
+    }
+
+    /// Returns the `Player` (if any) is occupying a `SQ`.
+    ///
+    /// # Safety
+    ///
+    /// Will return an incorrect result if there is no player at the square.
+    #[inline]
+    pub unsafe fn unchecked_player_at(&self, square: SQ) -> Player {
+        let byte: u8 = self.data[square.0 as usize];
+        if byte < 8 {
+            Player::White
+        } else {
+            Player::Black
+        }
+    }
+
+    /// Returns a Tuple of `(Player,Piece)` of the player and associated piece at a
+    /// given square. Returns None if the square is unoccupied.
+    ///
+    /// # Panics
+    ///
+    /// Panics if Square is of index higher than 63.
+    #[inline]
+    pub fn player_piece_at(&self, square: SQ) -> Option<(Player, PieceType)> {
+        let byte: u8 = self.data[square.0 as usize];
+        match byte {
+            0b0000 => Some((Player::White, PieceType::P)),
+            0b0001 => Some((Player::White, PieceType::N)),
+            0b0010 => Some((Player::White, PieceType::B)),
+            0b0011 => Some((Player::White, PieceType::R)),
+            0b0100 => Some((Player::White, PieceType::Q)),
+            0b0101 => Some((Player::White, PieceType::K)),
+            0b0110 => unreachable!(), // Undefined
+            0b0111 | 0b1111 => None,
+            0b1000 => Some((Player::Black, PieceType::P)),
+            0b1001 => Some((Player::Black, PieceType::N)),
+            0b1010 => Some((Player::Black, PieceType::B)),
+            0b1011 => Some((Player::Black, PieceType::R)),
+            0b1100 => Some((Player::Black, PieceType::Q)),
+            0b1101 => Some((Player::Black, PieceType::K)),
+            0b1110 => unreachable!(), // Undefined
+            _ => unreachable!(),
+        }
+    }
+
+    /// Returns if there is a `SQ` is occupied.
     #[inline]
     pub fn at_square(&self, square: SQ) -> bool {
         assert!(square.is_okay());
-        self.data[square.0 as usize] != Piece::None
-
+        let byte: u8 = self.data[square.0 as usize];
+        byte != 0b0111 && byte != 0b1111
     }
 
     /// Returns the first square (if any) that a piece / player is at.
     #[inline]
     pub fn first_square(&self, piece: PieceType, player: Player) -> Option<SQ> {
-        let target = Piece::make_lossy(player, piece);
+        let target = self.create_sq(player, piece);
         for x in 0..64 {
             if target == self.data[x as usize] {
                 return Some(SQ(x));
@@ -143,6 +246,23 @@ impl PieceLocations {
         }
         Ok(loc)
     }
+
+    /// Helper method to return the bit representation of a given piece and player.
+    #[inline]
+    fn create_sq(&self, player: Player, piece: PieceType) -> u8 {
+        let mut loc: u8 = match piece {
+            PieceType::P => 0b0000,
+            PieceType::N => 0b0001,
+            PieceType::B => 0b0010,
+            PieceType::R => 0b0011,
+            PieceType::Q => 0b0100,
+            PieceType::K => 0b0101,
+        };
+        if player == Player::Black {
+            loc |= 0b1000;
+        }
+        loc
+    }
 }
 
 impl Clone for PieceLocations {
@@ -170,27 +290,24 @@ pub struct PieceLocationsIter {
 }
 
 impl Iterator for PieceLocationsIter {
-    type Item = (SQ,Piece);
+    type Item = (SQ,Player,PieceType);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.sq >= SQ::NONE {
             None
+        } else if let Some((plyr, piece)) = self.locations.player_piece_at(self.sq) {
+            let sq = self.sq;
+            self.sq += SQ(1);
+            Some((sq, plyr, piece))
         } else {
-            let piece = self.locations.piece_at(self.sq);
-            if piece != Piece::None {
-                let sq = self.sq;
-                self.sq += SQ(1);
-                return Some((sq, piece));
-            } else {
-                return self.next();
-            }
+            self.next()
         }
     }
 }
 
 impl IntoIterator for PieceLocations {
-    type Item = (SQ,Piece);
+    type Item = (SQ,Player,PieceType);
     type IntoIter = PieceLocationsIter;
 
     #[inline(always)]
@@ -199,5 +316,50 @@ impl IntoIterator for PieceLocations {
             locations: self,
             sq: SQ(0),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PieceLocations;
+    use {SQ, PieceType, Player};
+
+    #[test]
+    fn piece_loc_blank() {
+        let mut l = PieceLocations::blank();
+        for s in 0..64 {
+            assert!(l.piece_at(SQ(s)).is_none());
+        }
+        l.place(SQ(3), Player::White, PieceType::P);
+        assert_eq!(l.piece_at(SQ(3)).unwrap(), PieceType::P);
+        assert_eq!(l.player_at(SQ(3)).unwrap(), Player::White);
+        assert_eq!(l.player_piece_at(SQ(3)).unwrap(),(Player::White, PieceType::P));
+        assert!(l.at_square(SQ(3)));
+        for s in 0..64 {
+            if s != 3 {
+                assert!(l.piece_at(SQ(s)).is_none());
+            }
+        }
+        l.place(SQ(3), Player::Black, PieceType::K);
+        assert_eq!(l.piece_at(SQ(3)).unwrap(), PieceType::K);
+        assert_eq!(l.player_at(SQ(3)).unwrap(), Player::Black);
+        assert_eq!(l.player_piece_at(SQ(3)).unwrap(),(Player::Black, PieceType::K));
+        assert!(l.at_square(SQ(3)));
+        assert!(l.contains(PieceType::K, Player::Black));
+        for s in 0..64 {
+            if s != 3 {
+                assert!(l.piece_at(SQ(s)).is_none());
+            }
+        }
+        l.remove(SQ(3));
+        for s in 0..64 {
+            assert!(l.piece_at(SQ(s)).is_none());
+        }
+        l.remove(SQ(3));
+        for s in 0..64 {
+            assert!(l.piece_at(SQ(s)).is_none());
+        }
+        let c = l.clone();
+        assert!(c == l);
     }
 }
