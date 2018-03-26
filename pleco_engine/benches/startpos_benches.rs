@@ -1,5 +1,5 @@
 use std::time::Duration;
-use criterion::{Criterion,black_box,Bencher};
+use criterion::{Criterion,black_box,Bencher,BatchSize};
 
 use pleco::{Board};
 
@@ -15,13 +15,13 @@ fn search_singular_engine<D: DepthLimit>(b: &mut Bencher) {
     pre_limit.depth = Some(D::depth());
     let mut searcher = PlecoSearcher::init(false);
     let limit = pre_limit.create();
-    b.iter_with_setup(|| {
+    b.iter_batched(|| {
         threadpool().clear_all();
         searcher.clear_tt();
         Board::start_pos()
     }, |board| {
         black_box(threadpool().search(&board, &limit));
-    })
+    }, BatchSize::PerIteration)
 }
 
 fn bench_engine_evaluations(c: &mut Criterion) {

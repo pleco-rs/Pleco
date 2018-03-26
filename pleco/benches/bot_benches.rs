@@ -7,7 +7,6 @@ use pleco::Board;
 use pleco::bot_prelude::*;
 use pleco::tools::Searcher;
 
-
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         let mut vec = Vec::new();

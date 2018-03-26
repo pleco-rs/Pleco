@@ -1,6 +1,6 @@
 
 use std::time::Duration;
-use criterion::{Criterion,black_box,Bencher,Fun};
+use criterion::{Criterion,black_box,Bencher,Fun, BatchSize};
 
 use pleco::{Board,Player};
 use pleco_engine::tables::pawn_table::{PawnEntry, PawnTable};
@@ -11,7 +11,7 @@ use pleco_engine::search::eval::Evaluation;
 
 fn bench_100_pawn_evals(b: &mut Bencher, boards: &Vec<Board>) {
 
-    b.iter_with_setup(|| {
+    b.iter_batched(|| {
         PawnTable::new()
     }, |mut t| {
         #[allow(unused_variables)]
@@ -21,12 +21,12 @@ fn bench_100_pawn_evals(b: &mut Bencher, boards: &Vec<Board>) {
             score += black_box(entry.pawns_score(Player::White)).0 as i64;
             score += black_box(entry.pawns_score(Player::Black)).0 as i64;
         }
-    })
+    }, BatchSize::PerIteration)
 }
 
 
 fn bench_100_pawn_king_evals(b: &mut Bencher,  boards: &Vec<Board>) {
-    b.iter_with_setup(|| {
+    b.iter_batched(|| {
         PawnTable::new()
     }, |mut t| {
         #[allow(unused_variables)]
@@ -37,11 +37,11 @@ fn bench_100_pawn_king_evals(b: &mut Bencher,  boards: &Vec<Board>) {
             score += black_box(entry.pawns_score(Player::Black)).0 as i64;
             score +=  black_box(entry.king_safety::<WhiteType>(&board, board.king_sq(Player::White))).0 as i64;
         }
-    })
+    }, BatchSize::PerIteration)
 }
 
 fn bench_100_material_eval(b: &mut Bencher,  boards: &Vec<Board>) {
-    b.iter_with_setup(|| {
+    b.iter_batched(|| {
         Material::new()
     }, |mut t| {
         #[allow(unused_variables)]
@@ -50,12 +50,12 @@ fn bench_100_material_eval(b: &mut Bencher,  boards: &Vec<Board>) {
             let entry: &mut MaterialEntry = black_box(t.probe(board));
             score += black_box(entry.value) as i64;
         }
-    })
+    }, BatchSize::PerIteration)
 }
 
 
 fn bench_100_eval(b: &mut Bencher,  boards: &Vec<Board>) {
-    b.iter_with_setup(|| {
+    b.iter_batched(|| {
         let tp: PawnTable = black_box(PawnTable::new());
         let tm: Material = black_box(Material::new());
         (tp, tm)
@@ -65,7 +65,7 @@ fn bench_100_eval(b: &mut Bencher,  boards: &Vec<Board>) {
         for board in boards.iter() {
             score += black_box(Evaluation::evaluate(&board, &mut tp, &mut tm)) as i64;
         }
-    })
+    }, BatchSize::PerIteration)
 }
 
 fn bench_engine_evaluations(c: &mut Criterion) {
