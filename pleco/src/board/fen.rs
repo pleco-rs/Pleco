@@ -1,10 +1,19 @@
-//! Contains fen functions and constants.
+//! Contains various FEN (Forsyth–Edwards Notation) functions and constants.
+//!
+//! A FEN string is a way of describing the particular state of a chess game.
+//!
+//! For example, the start position fen is
+//! `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`.
+//!
+//! See [this Wikipedia article](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
+//! for more information.
 
 
 use super::{Board,FenBuildError};
 use {BitBoard, PieceType, Player, Rank, SQ};
 use super::super::core::sq::NO_SQ;
 
+/// The fen string for the start position.
 pub const OPENING_POS_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 #[doc(hidden)]
@@ -102,8 +111,8 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
         let sq_1bb = checks.lsb();
         let sq_2 = (checks & !sq_1bb).to_sq();
         let sq_1 = sq_1bb.to_sq();
-        let piece_1 = board.piece_at_sq(sq_1).unwrap();
-        let piece_2 = board.piece_at_sq(sq_2).unwrap();
+        let piece_1 = board.piece_at_sq(sq_1).type_of();
+        let piece_2 = board.piece_at_sq(sq_2).type_of();
 
         // Some combinations of pieces can never check the king at the same time.
         if piece_1 == PieceType::P {
@@ -144,8 +153,13 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
                 }
 
                 let ep_p_sq = ep_sq - SQ(8);
-                let ep_player = board.player_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
-                let ep_piece = board.piece_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
+
+                let (ep_player, ep_piece) = board.piece_at_sq(ep_p_sq).player_piece_lossy();
+
+                if ep_piece == PieceType::None {
+                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                }
+
 
                 if ep_player != Player::Black ||  ep_piece != PieceType::P {
                     return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
@@ -157,8 +171,12 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
                 }
 
                 let ep_p_sq = ep_sq + SQ(8);
-                let ep_player = board.player_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
-                let ep_piece = board.piece_at_sq(ep_p_sq).ok_or(FenBuildError::EPSquareInvalid{ep: ep_sq.to_string()})?;
+
+                let (ep_player, ep_piece) = board.piece_at_sq(ep_p_sq).player_piece_lossy();
+
+                if ep_piece == PieceType::None {
+                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                }
 
                 if ep_player != Player::White ||  ep_piece != PieceType::P {
                     return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});

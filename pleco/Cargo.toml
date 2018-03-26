@@ -1,6 +1,6 @@
 [package]
 name = "pleco"
-version = "0.3.10"
+version = "0.3.11"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast chess library."
 homepage = "https://github.com/sfleischman105/Pleco"
