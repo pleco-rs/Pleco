@@ -170,7 +170,7 @@ mod tests {
         assert_eq!(193690690, perft(&b,5));
     }
 
-    // THis passes, but we're gonna ignore it as it takes a long time to use.
+    // This passes, but we're gonna ignore it as it takes a long time to use.
     #[ignore]
     #[test]
     fn perft_kiwipete_all() {

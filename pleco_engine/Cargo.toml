@@ -1,6 +1,6 @@
 [package]
 name = "pleco_engine"
-version = "0.1.2" # Reminder to change in ./engine.rs
+version = "0.1.3" # Reminder to change in ./engine.rs
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -57,7 +57,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "0.4.1" }
+pleco = { path = "../pleco", version = "0.4.2" }
 clippy = {version = "0.0.200", optional = true}
 chrono = "0.4.1"
 rand = "0.4.2"
