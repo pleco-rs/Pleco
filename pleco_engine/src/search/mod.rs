@@ -313,7 +313,7 @@ impl Searcher {
         'iterative_deepening: while !self.stop() && depth < max_depth  {
 
             if self.main_thread() {
-                self.best_move_changes *= 0.400;
+                self.best_move_changes *= 0.500;
                 self.failed_low = false;
             }
 
@@ -324,7 +324,7 @@ impl Searcher {
             // Only applicable for a depth of 5 and beyond.
             if depth >= 5 {
                 let prev_best_score = self.root_moves().first().prev_score;
-                delta = 23;
+                delta = 20;
                 alpha = max(prev_best_score - delta, NEG_INFINITE);
                 beta = min(prev_best_score + delta, INFINITE);
             }
@@ -365,7 +365,7 @@ impl Searcher {
                 } else {
                     break 'aspiration_window;
                 }
-                delta += (delta / 4) + 7;
+                delta += (delta / 4) + 5;
 
                 assert!(alpha >= NEG_INFINITE);
                 assert!(beta <= INFINITE);
@@ -407,7 +407,7 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (215).max((630).min(
+                    let improving_factor: i64 = (246).max((750).min(
                           353
                         + 109 * self.failed_low as i64
                         -   6 * score_diff as i64));
@@ -465,6 +465,7 @@ impl Searcher {
 
         let mut capture_or_promotion: bool;
         let mut gives_check: bool;
+        let mut improving: bool;
 
         let mut pos_eval: i32;
 
@@ -549,7 +550,8 @@ impl Searcher {
         if in_check {
             // A checking position should never be evaluated. We go directly to the moves loop
             // now.
-            pos_eval = NONE;
+            ss.static_eval = NONE;
+            improving = false;
         } else {
             // No checks from here on until moves loop
             if tt_hit {
@@ -558,6 +560,7 @@ impl Searcher {
                 } else {
                     tt_entry.eval as i32
                 };
+                ss.static_eval = pos_eval;
 
                 // check for tt value being a better position evaluation
                 if tt_value != NONE && correct_bound(tt_value, pos_eval, tt_entry.node_type()) {
@@ -565,12 +568,19 @@ impl Searcher {
                 }
             } else {
                 pos_eval = self.eval();
+                ss.static_eval = pos_eval;
                 // Place the evaluation into the tt, as it's otherwise empty
                 tt_entry.place(zob, BitMove::null(),
                                NONE as i16, pos_eval as i16,
                                -6, NodeBound::NoBound,
                                self.tt.time_age());
             }
+
+            improving = {
+                let p_ss = ss.offset(-2).static_eval;
+                ss.static_eval >= p_ss
+                    || p_ss == NONE
+            };
 
             // Razoring. At the lowest depth before qsearch, If the evaluation + a margin still
             // isn't better than alpha, go straight to qsearch.
@@ -767,7 +777,7 @@ impl Searcher {
 
 
         tt_entry.place(zob, best_move, best_value as i16,
-                       pos_eval as i16, depth as i16,
+                       ss.static_eval as i16, depth as i16,
                        node_bound, self.tt.time_age());
 
         best_value
@@ -829,7 +839,7 @@ impl Searcher {
 
         // Evaluate the position statically.
         if in_check {
-            pos_eval = NONE;
+            ss.static_eval = NONE;
             best_value = NEG_INFINITE;
             futility_base = NEG_INFINITE;
         } else {
@@ -837,9 +847,11 @@ impl Searcher {
                 if tt_entry.eval as i32 == NONE {
                     best_value = self.eval();
                     pos_eval = best_value;
+                    ss.static_eval = best_value;
                 } else {
                     best_value = tt_entry.eval as i32;
                     pos_eval = best_value;
+                    ss.static_eval = best_value;
                 }
 
                 if tt_value != NONE && correct_bound(tt_value, best_value, tt_entry.node_type()) {
@@ -848,6 +860,7 @@ impl Searcher {
             } else {
                 best_value = self.eval();
                 pos_eval = best_value;
+                ss.static_eval = best_value;
             }
 
             if best_value >= beta {
@@ -940,7 +953,7 @@ impl Searcher {
                         alpha = value;
                     } else {
                         tt_entry.place(zob, mov, best_value as i16,
-                                       pos_eval as i16, tt_depth as i16,
+                                       ss.static_eval as i16, tt_depth as i16,
                                        NodeBound::LowerBound, self.tt.time_age());
                         return value;
                     }
@@ -958,10 +971,13 @@ impl Searcher {
 
 
         tt_entry.place(zob, best_move, best_value as i16,
-                       pos_eval as i16, tt_depth,
+                       ss.static_eval as i16, tt_depth,
                        node_bound, self.tt.time_age());
 
 
+        if best_value <= NEG_INFINITE {
+            println!("b : {}, ply: {}", best_value, ply);
+        }
         assert!(best_value > NEG_INFINITE);
         assert!(best_value < INFINITE );
         best_value
@@ -1086,13 +1102,17 @@ impl Searcher {
         let elapsed = TIMER.elapsed() as u64;
         let nodes = threadpool().nodes();
         let mut s = String::from("info");
-        let score = if root_move.score == NEG_INFINITE {
+        let mut score = if root_move.score == NEG_INFINITE {
             root_move.prev_score
             } else {
             root_move.score
         };
+
+        score *= 100;
+        score /= PAWN_EG;
+
         s.push_str(&format!(" depth {}", depth));
-        s.push_str(&format!(" score {}", score));
+        s.push_str(&format!(" score cp {}", score));
         if root_move.score >= beta {
             s.push_str(" lowerbound");
         } else if root_move.score <= alpha {
