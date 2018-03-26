@@ -20,7 +20,7 @@ use num_cpus;
 
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
-pub static VERSION: &str = "0.1.1";
+pub static VERSION: &str = "0.1.2";
 
 #[derive(PartialEq)]
 enum SearchType {
