@@ -46,6 +46,16 @@ static START_PLY: [i16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 static mut REDUCTIONS: [[[[i16; 64]; 64]; 2]; 2] = [[[[0; 64]; 64]; 2]; 2];  // [pv][improving][depth][moveNumber]
 static mut FUTILITY_MOVE_COUNTS: [[i32; 16]; 2] = [[0; 16]; 2]; // [improving][depth]
 
+static CAPTURE_PRUNE_MARGIN: [i32; 7] = [
+    0,
+    1 * PAWN_EG * 1055 / 1000,
+    2 * PAWN_EG * 1042 / 1000,
+    3 * PAWN_EG * 963  / 1000,
+    4 * PAWN_EG * 1038 / 1000,
+    5 * PAWN_EG * 950  / 1000,
+    6 * PAWN_EG * 930  / 1000
+];
+
 // used at startup to use lookup tables
 pub fn init() {
     for imp in 0..2 {
@@ -365,7 +375,7 @@ impl Searcher {
             // Loop until we find a value that is within the bounds of alpha, beta, and the delta margin.
             'aspiration_window: loop {
                 // search!
-                best_value = self.search::<PV>(alpha, beta, stack.ply_zero(),depth);
+                best_value = self.search::<PV>(alpha, beta, stack.ply_zero(),depth, false, false);
 
                 // Sort root moves based on the scores
                 self.root_moves().sort();
@@ -474,7 +484,7 @@ impl Searcher {
     }
 
     // The searching function for a specific depth.
-    fn search<N: PVNode>(&mut self, mut alpha: i32, mut beta: i32, ss: &mut Stack, depth: i16) -> i32 {
+    fn search<N: PVNode>(&mut self, mut alpha: i32, mut beta: i32, ss: &mut Stack, depth: i16, cut_node: bool, skip_early_pruning: bool) -> i32 {
         if depth < 1 {
             return self.qsearch::<N>(alpha, beta, ss, 0);
         }
@@ -484,18 +494,21 @@ impl Searcher {
         let is_pv: bool = N::is_pv();
         let ply: u16 = ss.ply;
         let at_root: bool = ply == 0;
-        let zob: u64 = self.board.zobrist();
+        let zob: u64;
         let in_check: bool = self.board.in_check();
 
         let mut extension: i16;
         let mut new_depth: i16;
 
-        let mut best_move = BitMove::null();
+        let mut best_move: BitMove;
+        let excluded_move: BitMove;
+
         let mut value: Value = NEG_INFINITE;
         let mut best_value: Value = NEG_INFINITE;
         let mut moves_played: u32 = 0;
-        ss.move_count = 0;
+        let mut pos_eval: i32;
 
+        ss.move_count = 0;
         let mut moved_piece: Piece;
 
         let mut captures_searched: [BitMove; 32] = [BitMove::null(); 32];
@@ -507,10 +520,10 @@ impl Searcher {
         let mut gives_check: bool;
         let mut tt_capture: bool;
         let mut move_count_pruning: bool;
+        let mut skip_quiets: bool;
+        let singular_extension_node: bool;
         let improving: bool;
         let pv_exact: bool;
-
-        let mut pos_eval: i32;
 
         // If we are the main thread, check the time.
         if self.main_thread() {
@@ -541,7 +554,9 @@ impl Searcher {
         ss.incr().ply = ply + 1;
         // Set the killer moves two plies in advance to be nothing.
         ss.offset(2).killers = [BitMove::null(); 2];
+        best_move = BitMove::null();
         ss.current_move = BitMove::null();
+        ss.offset(1).excluded_move = BitMove::null();
         ss.cont_history = &mut self.cont_history[(Piece::None, SQ(0))] as *mut _;
 
         // square the previous piece moved.
@@ -555,9 +570,12 @@ impl Searcher {
         ss.offset(-2).stat_score = 0;
 
         // probe the transposition table
+        excluded_move = ss.excluded_move;
+        zob = self.board.zobrist() ^ (excluded_move.get_raw() as u64).wrapping_shl(16);
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
         let tt_value: Value = if tt_hit {tt_entry.score as i32} else {NONE};
-        let tt_move: BitMove = if tt_hit {tt_entry.best_move} else {BitMove::null()};
+        let tt_move: BitMove = if at_root {self.root_moves().first().bit_move}
+            else if tt_hit {tt_entry.best_move} else {BitMove::null()};
 
         // At non-PV nodes, check for a better TT value to return.
         if !is_pv
@@ -601,9 +619,9 @@ impl Searcher {
             // A checking position should never be evaluated. We go directly to the moves loop
             // now.
             ss.static_eval = NONE;
+            pos_eval = NONE;
             improving = false;
         } else {
-            // No checks from here on until moves loop
             if tt_hit {
                 pos_eval = if tt_entry.eval as i32 == NONE {
                     self.eval()
@@ -631,7 +649,10 @@ impl Searcher {
                 ss.static_eval >= p_ss
                     || p_ss == NONE
             };
+        }
 
+        if !in_check && !skip_early_pruning &&
+            self.board.non_pawn_material_all() != 0 {
             // Razoring. At the lowest depth before qsearch, If the evaluation + a margin still
             // isn't better than alpha, go straight to qsearch.
             if !is_pv
@@ -658,7 +679,6 @@ impl Searcher {
             ss.offset(-4).cont_history];
 
         let counter: BitMove = self.counter_moves[(self.board.piece_at_sq(prev_sq),prev_sq)];
-        pv_exact = is_pv && tt_entry.node_type() == NodeBound::Exact;
         let mut move_picker = MovePicker::main_search(&self.board,
                                                       depth as i16,
                                                       &self.main_history,
@@ -668,8 +688,19 @@ impl Searcher {
                                                       &ss.killers,
                                                       counter);
 
-        while let Some(mov) = move_picker.next(false) {
-            if !self.board.legal_move(mov) {
+        singular_extension_node = !at_root
+            && depth >= 8
+            && tt_move != BitMove::null()
+            && tt_value != NONE
+            && excluded_move == BitMove::null()
+            && (tt_entry.node_type() as u8 & NodeBound::LowerBound as u8) != 0
+            && tt_entry.depth as i16 >= depth - 3;
+
+        skip_quiets = false;
+        tt_capture = false;
+        pv_exact = is_pv && tt_entry.node_type() == NodeBound::Exact;
+        while let Some(mov) = move_picker.next(skip_quiets) {
+            if mov == excluded_move {
                 continue;
             }
 
@@ -684,9 +715,85 @@ impl Searcher {
             move_count_pruning = depth < 16
                 && moves_played as i32 > unsafe {FUTILITY_MOVE_COUNTS[improving as usize][depth as usize]};
 
+            // Singular extension search. If all moves but one fail low on a search
+            // of (alpha-s, beta-s), and just one fails high on (alpha, beta), then
+            // that move is singular and should be extended. To verify this we do a
+            // reduced search on on all the other moves but the ttMove and if the
+            // result is lower than ttValue minus a margin then we will extend the ttMove.
+            if singular_extension_node
+                && mov == tt_move
+                && self.board.legal_move(mov) {
+                let rbeta: i32 = (-MATE).max(tt_value - 2 * depth as i32);
+                ss.excluded_move = mov;
+                value = self.search::<NonPV>(rbeta - 1, rbeta, ss, depth / 2, cut_node, true);
+                ss.excluded_move = BitMove::null();
+                if value < rbeta {
+                    extension = 1;
+                }
+            } else if gives_check
+                && !move_count_pruning
+                && self.board.see_ge(mov, 0) {
+                extension = 1;
+            }
+
             new_depth = depth - 1 + extension;
 
-            tt_capture = mov == tt_move && capture_or_promotion;
+            // Pruning at a shallow depth
+            if !at_root
+                && self.board.non_pawn_material(self.board.turn()) != 0
+                && best_value > MATED_IN_MAX_PLY {
+
+                if !capture_or_promotion
+                    && !gives_check
+                    && (!self.board.advanced_pawn_push(mov)
+                    || self.board.non_pawn_material_all() >= 5000) {
+
+                    if move_count_pruning {
+                        skip_quiets = true;
+                        continue;
+                    }
+
+                    // Reduced depth of the next LMR search
+                    let lmr_depth: i16 = (new_depth - reduction::<PV>(improving, depth, moves_played))
+                        .max(0);
+
+                    // Countermoves based pruning
+                    unsafe {
+                        if lmr_depth < 3
+                         && (*cont_hists[0])[(moved_piece, mov.get_dest())] < 0
+                         && (*cont_hists[1])[(moved_piece, mov.get_dest())] < 0 {
+                            continue;
+                        }
+                    }
+
+                    // Futility pruning: parent node
+                    if lmr_depth < 7
+                        && !in_check
+                        && ss.static_eval + 256 + 200 * lmr_depth as i32 <= alpha {
+                        continue;
+                    }
+
+                    // Prune moves with negative SEE
+                    if lmr_depth < 8
+                        && !self.board.see_ge(mov, -35 * lmr_depth as i32 * lmr_depth as i32) {
+                        continue;
+                    }
+                } else if depth < 7
+                    && extension == 0
+                    && !self.board.see_ge(mov, -CAPTURE_PRUNE_MARGIN[depth as usize]) {
+                    continue;
+                }
+            }
+
+            if !self.board.legal_move(mov) {
+                ss.move_count -= 1;
+                moves_played -= 1;
+                continue;
+            }
+
+            if mov == tt_move && capture_or_promotion {
+                tt_capture = true;
+            }
             ss.current_move = mov;
             ss.cont_history = &mut self.cont_history[(moved_piece,mov.get_dest())] as *mut _;
 
@@ -748,7 +855,7 @@ impl Searcher {
 
                 let d = (new_depth - r).max(1);
 
-                value = -self.search::<NonPV>(-(alpha+1), -alpha, ss.incr(), d);
+                value = -self.search::<NonPV>(-(alpha+1), -alpha, ss.incr(), d, true, false);
                 value > alpha && d != new_depth
             } else {
                 !is_pv || moves_played > 1
@@ -756,13 +863,13 @@ impl Searcher {
 
             // If the value is potentially better, do a full depth search.
             if do_full_depth {
-                value = -self.search::<NonPV>(-(alpha + 1), -alpha, ss.incr(), new_depth);
+                value = -self.search::<NonPV>(-(alpha + 1), -alpha, ss.incr(), new_depth, !cut_node, false);
             }
 
             // If on the PV node and the node might be a continuation, search for a full depth
             // with a PV value.
             if is_pv && (moves_played == 1 || (value > alpha && (at_root || value < beta))) {
-                value = -self.search::<PV>(-beta, -alpha, ss.incr(), new_depth);
+                value = -self.search::<PV>(-beta, -alpha, ss.incr(), new_depth, false, false);
             }
 
             self.board.undo_move();
@@ -830,7 +937,9 @@ impl Searcher {
 
         // check for checkmate or draw.
         if moves_played == 0 {
-            if in_check {
+            if excluded_move != BitMove::null() {
+                return alpha;
+            } else if in_check {
                 return -MATE as i32 + (ply as i32);
             } else {
                 return DRAW as i32;
@@ -871,9 +980,11 @@ impl Searcher {
                 else {NodeBound::UpperBound};
 
 
-        tt_entry.place(zob, best_move, best_value as i16,
-                       ss.static_eval as i16, depth as i16,
-                       node_bound, self.tt.time_age());
+        if excluded_move != BitMove::null() {
+            tt_entry.place(zob, best_move, best_value as i16,
+                           ss.static_eval as i16, depth as i16,
+                           node_bound, self.tt.time_age());
+        }
 
         best_value
     }

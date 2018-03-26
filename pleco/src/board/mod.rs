@@ -1603,6 +1603,14 @@ impl Board {
         self.state.nonpawn_material[player as usize]
     }
 
+    /// Returns the current non-pawn material value for both players.
+    #[inline(always)]
+    pub fn non_pawn_material_all(&self) -> Value {
+        self.state.nonpawn_material[Player::White as usize]
+            + self.state.nonpawn_material[Player::Black as usize]
+    }
+
+
     //  ------- CHECKING  -------
 
     /// Returns if current side to move is in check.
