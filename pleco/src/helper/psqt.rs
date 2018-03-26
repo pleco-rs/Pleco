@@ -1,18 +1,8 @@
-use {Player,SQ,File,PieceType,Piece};
+use {Player,SQ,File,PieceType};
 use core::masks::*;
 use core::score::*;
 
 const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
-    [    // NO PIECE
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-    ],
     [ // Pawn
         [ Score(  0, 0), Score(  0, 0), Score(  0, 0), Score( 0, 0) ],
         [ Score(-11, 7), Score(  6,-4), Score(  7, 8), Score( 3,-2) ],
@@ -72,31 +62,19 @@ const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
         [ Score(118, 95), Score(159,155), Score( 84,176), Score( 41,174) ],
         [ Score( 87, 50), Score(128, 99), Score( 63,122), Score( 20,139) ],
         [ Score( 63,  9), Score( 88, 55), Score( 47, 80), Score(  0, 90) ]
-    ],
-    [    // ALL PIECE
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
-        [ Score(0, 0), Score(0, 0), Score(0, 0), Score(0, 0)],
     ]
 ];
 
-static mut PSQ: [[Score; SQ_CNT]; PIECE_CNT] =
-    [[Score(0,0); SQ_CNT]; PIECE_CNT];
+static mut PSQ: [[[Score; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT] =
+    [[[Score(0,0); SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT];
 
 static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
-    [[0, 0],                 // Empty
-    [ PAWN_MG,    PAWN_EG],  // White Pawn
+    [[ PAWN_MG,    PAWN_EG],  // White Pawn
     [ KNIGHT_MG,  KNIGHT_EG],// White Knight
     [ BISHOP_MG,  BISHOP_EG],// White Bishop
     [ ROOK_MG,    ROOK_EG],  // White Rook
     [ QUEEN_MG,   QUEEN_MG], // White Queen
-    [ ZERO,       ZERO],     // White King
-    [0, 0]];                 // All
+    [ ZERO,       ZERO]];    // White King
 
 #[cold]
 pub fn init_psqt() {
@@ -107,8 +85,8 @@ pub fn init_psqt() {
             let f: File = sq.file().min(!sq.file());
             let score = v + BONUS[piece][sq.rank() as usize][f as usize];
             unsafe {
-                PSQ[(Player::White as usize) << 3 | piece][s] = score;
-                PSQ[(Player::Black as usize) << 3 | piece][sq.flip().0 as usize] = -score;
+                PSQ[Player::White as usize][piece][s] = score;
+                PSQ[Player::Black as usize][piece][sq.flip().0 as usize] = -score;
             }
         }
     }
@@ -116,10 +94,10 @@ pub fn init_psqt() {
 
 /// Returns the score for a player's piece being at a particular square.
 #[inline(always)]
-pub fn psq(piece: Piece, sq: SQ) -> Score{
+pub fn psq(piece: PieceType, player: Player, sq: SQ) -> Score{
     debug_assert!(sq.is_okay());
     unsafe {
-        *(PSQ.get_unchecked(piece as usize)).get_unchecked(sq.0 as usize)
+        (*(*(PSQ.get_unchecked(player as usize)).get_unchecked(piece as usize)).get_unchecked(sq.0 as usize))
     }
 }
 
@@ -139,10 +117,10 @@ mod tests {
     #[test]
     fn psq_tes() {
         init_psqt();
-        assert_eq!(psq(Piece::WhiteQueen, SQ::A1), -psq(Piece::BlackQueen, SQ::A8));
-        assert_eq!(psq(Piece::WhiteRook, SQ::A1), -psq( Piece::BlackRook, SQ::A8));
-        assert_eq!(psq(Piece::WhitePawn, SQ::B1), -psq( Piece::BlackPawn, SQ::B8));
-        assert_eq!(psq(Piece::BlackKnight,  SQ::B4), -psq(Piece::WhiteKnight,SQ::B5));
+        assert_eq!(psq(PieceType::Q, Player::White, SQ::A1), -psq(PieceType::Q, Player::Black, SQ::A8));
+        assert_eq!(psq(PieceType::R, Player::White, SQ::A1), -psq(PieceType::R, Player::Black, SQ::A8));
+        assert_eq!(psq(PieceType::P, Player::White, SQ::B1), -psq(PieceType::P, Player::Black, SQ::B8));
+        assert_eq!(psq(PieceType::N, Player::Black, SQ::B4), -psq(PieceType::N, Player::White, SQ::B5));
     }
 
 }

@@ -16,7 +16,7 @@ use super::zobrist;
 use super::magic;
 use super::boards;
 
-use {SQ,BitBoard,Player,PieceType,File,Rank,Piece};
+use {SQ,BitBoard,Player,PieceType,File,Rank};
 use core::score::{Score,Value};
 
 use std::sync::atomic::{AtomicBool,Ordering,fence,compiler_fence};
@@ -184,8 +184,8 @@ pub fn passed_pawn_mask(player: Player, sq: SQ) -> BitBoard {
 
 /// Returns the Zobrist hash for a given square, and player / piece at that square.
 #[inline(always)]
-pub fn z_square(sq: SQ, piece: Piece) -> u64 {
-    zobrist::z_square(sq, piece)
+pub fn z_square(sq: SQ, player: Player, piece: PieceType) -> u64 {
+    zobrist::z_square(sq, player, piece)
 }
 
 /// Returns the zobrist hash for a given zobrist square.
@@ -218,8 +218,8 @@ pub fn z_no_pawns() -> u64 {
 
 /// Returns the score for a player's piece being at a particular square.
 #[inline(always)]
-pub fn psq(piece: Piece, sq: SQ) -> Score {
-    psqt::psq(piece, sq)
+pub fn psq(piece: PieceType, player: Player, sq: SQ) -> Score {
+    psqt::psq(piece, player, sq)
 }
 
 /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,

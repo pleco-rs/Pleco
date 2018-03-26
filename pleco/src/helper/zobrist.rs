@@ -1,4 +1,4 @@
-use {Player,SQ,PieceType,BitBoard,Piece};
+use {Player,SQ,PieceType,BitBoard};
 use tools::prng::PRNG;
 use core::masks::*;
 
@@ -6,8 +6,8 @@ use core::masks::*;
 const ZOBRIST_SEED: u64 = 23_081;
 
 /// Zobrist key for each piece on each square.
-static mut ZOBRIST_PIECE_SQUARE: [[u64; PIECE_CNT]; SQ_CNT] =
-    [[0; PIECE_CNT]; SQ_CNT];
+static mut ZOBRIST_PIECE_SQUARE: [[[u64; PIECE_TYPE_CNT]; PLAYER_CNT]; SQ_CNT] =
+    [[[0; PIECE_TYPE_CNT]; PLAYER_CNT]; SQ_CNT];
 
 /// Zobrist key for each possible en-passant capturable file.
 static mut ZOBRIST_ENPASSANT: [u64; FILE_CNT] = [0; FILE_CNT]; // 8 * 8
@@ -28,9 +28,9 @@ pub fn init_zobrist() {
 
     unsafe {
         for i in 0..SQ_CNT {
-            for j in (Piece::WhitePawn as usize)..(Piece::BlackKing as usize) {
-                ZOBRIST_PIECE_SQUARE[i][j] = rng.rand();
-                ZOBRIST_PIECE_SQUARE[i][j] = rng.rand();
+            for j in 0..PIECE_TYPE_CNT {
+                ZOBRIST_PIECE_SQUARE[i][0][j] = rng.rand();
+                ZOBRIST_PIECE_SQUARE[i][1][j] = rng.rand();
             }
         }
 
@@ -56,10 +56,10 @@ pub fn init_zobrist() {
 }
 
 #[inline(always)]
-pub fn z_square(sq: SQ, piece: Piece) -> u64 {
+pub fn z_square(sq: SQ, player: Player, piece: PieceType) -> u64 {
     debug_assert!(sq.is_okay());
     unsafe {
-        *(*ZOBRIST_PIECE_SQUARE.get_unchecked(sq.0 as usize)).get_unchecked(piece as usize)
+        ZOBRIST_PIECE_SQUARE[sq.0 as usize][player as usize][piece as usize]
     }
 }
 

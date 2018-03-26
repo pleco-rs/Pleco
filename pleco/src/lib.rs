@@ -105,7 +105,7 @@ pub use core::move_list::{MoveList,ScoringMoveList};
 pub use core::sq::SQ;
 pub use core::bitboard::BitBoard;
 pub use helper::Helper;
-pub use core::{Player, PieceType, Rank, File, Piece};
+pub use core::{Player, PieceType, Rank, File};
 
 
 pub mod bot_prelude {

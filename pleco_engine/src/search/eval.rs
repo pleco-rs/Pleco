@@ -5,7 +5,7 @@
 
 use std::ops::Add;
 use std::mem;
-use pleco::{Board,BitBoard,SQ,Rank,File,Player,PieceType,Piece};
+use pleco::{Board,BitBoard,SQ,Rank,File,Player,PieceType};
 use pleco::core::mono_traits::*;
 use pleco::core::score::*;
 use pleco::core::masks::*;
@@ -22,11 +22,10 @@ const KING_SIDE: BitBoard = BitBoard(FILE_E | FILE_F | FILE_G | FILE_H);
 
 const KING_FLANK: [BitBoard; FILE_CNT] = [QUEEN_SIDE, QUEEN_SIDE, QUEEN_SIDE, CENTER_FILES, CENTER_FILES, KING_SIDE, KING_SIDE, KING_SIDE];
 
-const KING_ATTACKS_WEIGHT: [i32; PIECE_TYPE_CNT] = [0, 0, 78, 56, 45, 11, 0, 0];
+const KING_ATTACKS_WEIGHT: [i32; PIECE_TYPE_CNT] = [0, 78, 56, 45, 11, 0];
 
 
 const MOBILITY_BONUS: [[Score; 32]; PIECE_TYPE_CNT] = [
-[   Score::ZERO; 32], // No Piece
 [   Score::ZERO; 32], // Pawns
 [   Score(-75,-76), Score(-57,-54), Score( -9,-28), Score( -2,-10), Score(  6,  5), Score( 14, 12), // Knights
     Score( 22, 26), Score( 29, 29), Score( 36, 29), Score::ZERO,          Score::ZERO,           Score::ZERO,
@@ -56,11 +55,10 @@ const MOBILITY_BONUS: [[Score; 32]; PIECE_TYPE_CNT] = [
     Score(106,184), Score(109,191), Score(113,206), Score(116,212), Score::ZERO,          Score::ZERO,
     Score::ZERO,          Score::ZERO
 ],
-[   Score::ZERO; 32],
-[   Score::ZERO; 32] // All piece
+[Score::ZERO; 32]
 ];
 
-const KING_PROTECTOR: [Score; PIECE_TYPE_CNT] = [Score(0,0), Score(0,0), Score(-3, -5), Score(-4, -3), Score(-3, 0), Score(-1, 1), Score(0,0), Score(0,0)];
+const KING_PROTECTOR: [Score; PIECE_TYPE_CNT] = [Score(0,0), Score(-3, -5), Score(-4, -3), Score(-3, 0), Score(-1, 1), Score(0,0) ];
 
 // Outpost[knight/bishop][supported by pawn] contains bonuses for minor
 // pieces if they can reach an outpost square, bigger if that square is
@@ -78,11 +76,11 @@ const ROOK_ON_FILE: [Score; 2] = [Score(20, 7), Score(45, 20)];
 // which piece type attacks which one. Attacks on lesser pieces which are
 // pawn-defended are not considered.
 const THREAT_BY_MINOR: [Score; PIECE_TYPE_CNT] = [
-    Score(0, 0), Score(0, 0), Score(0, 33), Score(45, 43), Score(46, 47), Score(72, 107), Score(48, 118), Score(0, 0)
+    Score(0, 0), Score(0, 33), Score(45, 43), Score(46, 47), Score(72, 107), Score(48, 118)
 ];
 
 const THREAT_BY_ROOK: [Score; PIECE_TYPE_CNT] = [
-    Score(0, 0), Score(0, 0), Score(0, 25), Score(40, 62), Score(40, 59), Score(0, 34), Score(35, 48), Score(0, 0),
+    Score(0, 0), Score(0, 25), Score(40, 62), Score(40, 59), Score(0, 34), Score(35, 48)
 ];
 
 // ThreatByKing[on one/on many] contains bonuses for king attacks on
@@ -655,7 +653,7 @@ impl <'a> Evaluation <'a> {
                                     | self.attacked_by[us as usize][PieceType::B as usize]);
 
             while let Some(s) = b.pop_some_lsb() {
-                let piece = self.board.piece_at_sq(s).type_of();
+                let piece = self.board.piece_at_sq(s).unwrap();
                 score += THREAT_BY_MINOR[piece as usize];
                 if piece != PieceType::P {
                     score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
@@ -664,7 +662,7 @@ impl <'a> Evaluation <'a> {
 
             b = (self.board.piece_bb(them, PieceType::Q) | weak) & self.attacked_by[us as usize][PieceType::R as usize];
             while let Some(s) = b.pop_some_lsb() {
-                let piece = self.board.piece_at_sq(s).type_of();
+                let piece = self.board.piece_at_sq(s).unwrap();
                 score += THREAT_BY_ROOK[piece as usize];
                 if piece != PieceType::P {
                     score += THREAT_BY_RANK * them.relative_rank_of_sq(s) as u8;
@@ -743,7 +741,7 @@ impl <'a> Evaluation <'a> {
                     ebonus -= self.king_distance(us, P::up(block_sq)) as i32 * rr;
                 }
 
-                if self.board.piece_at_sq(block_sq) == Piece::None {
+                if self.board.piece_at_sq(block_sq).is_none() {
                     // If there is a rook or queen attacking/defending the pawn from behind,
                     // consider all the squaresToQueen. Otherwise consider only the squares
                     // in the pawn's path attacked or occupied by the enemy.

@@ -1,26 +1,17 @@
 //! perft, or Performance Test, Move Path Enumeration, tests the correctness of move-generation.
 //!
-//! Use these functions on a [`Board`] to test that the correct amount of leaf nodes are created.
-//!
-//! [`Board`]: ../struct.Board.html
+//! Use these functions on a `Board` to test that the correct amount of leaf nodes are created.
 
 use super::{Board,MoveList};
 
 /// Holds all information about the number of nodes counted.
 pub struct PerftNodes {
-    /// Total number of nodes counted.
     pub nodes: u64,
-    /// Number of capturing moves, including en-passant moves.
     pub captures: u64,
-    /// Number of En-Passant moves.
     pub en_passant: u64,
-    /// Number of Castles.
     pub castles: u64,
-    /// The number of promotions
     pub promotions: u64,
-    /// The number of checking moves.
     pub checks: u64,
-    /// The number of moves resulting in a checkmate.
     pub checkmates: u64,
 }
 

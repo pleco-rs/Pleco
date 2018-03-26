@@ -76,7 +76,7 @@ pub struct BoardState {
     /// Array of BitBoards where for Each Piece, gives a spot the piece can move to where
     /// the opposing player's king would be in check.
     pub check_sqs: [BitBoard; PIECE_TYPE_CNT],
-    /// The previous move, if any, that was played. Returns `BitMove::NULL` if there was no
+    /// returns the previous move, if any, that was played. Returns `BitMove::NULL` if there was no
     /// previous move played.
     pub prev_move: BitMove,
     /// Previous State of the board (from one move ago).
@@ -140,11 +140,11 @@ impl BoardState {
         self.nonpawn_material = [0; 2];
 
         let us = board.turn;
-        let them = !us;
+        let them = us.other_player();
         let ksq = board.king_sq(us);
 
-        self.checkers_bb = board.attackers_to(ksq, board.occupied())
-            & board.bbs_player[them as usize];
+        self.checkers_bb = board.attackers_to(ksq, board.occ_all)
+            & board.occ[them as usize];
 
         self.set_check_info(board);
         self.set_zob_hash(board);
@@ -192,11 +192,11 @@ impl BoardState {
     fn set_zob_hash(&mut self, board: &Board) {
         let mut b: BitBoard = board.occupied();
         while let Some(sq) = b.pop_some_lsb() {
-            let piece =  board.piece_locations.piece_at(sq);
-            self.psq += psq(piece,sq);
-            let key = z_square(sq, piece);
+            let (player, piece) = board.piece_locations.player_piece_at(sq).unwrap();
+            self.psq += psq(piece,player,sq);
+            let key = z_square(sq, player, piece);
             self.zobrast ^= key;
-            if piece.type_of() == PieceType::P {
+            if piece == PieceType::P {
                 self.pawn_key ^= key;
             }
         }
@@ -220,7 +220,7 @@ impl BoardState {
             for piece in &ALL_PIECE_TYPES {
                 let count = board.piece_bb(*player, *piece).count_bits();
                 for n in 0..count {
-                    self.material_key ^= z_square(SQ(n), Piece::make_lossy(*player, *piece));
+                    self.material_key ^= z_square(SQ(n), *player, *piece);
                 }
                 if *piece != PieceType::P && *piece != PieceType::K {
                     self.nonpawn_material[*player as usize] +=
@@ -231,14 +231,12 @@ impl BoardState {
     }
 
     /// Return the previous BoardState from one move ago.
-    ///
-    /// If there was no previous state, returns `None`.
     #[inline]
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
         (&self).prev.as_ref().cloned()
     }
 
-    /// Iterates through all previous `BoardStates` and prints debug information for each.
+    /// Iterates through all previous `BoardStates` and prints their information.
     ///
     /// Used primarily for debugging.
     pub fn backtrace(&self) {

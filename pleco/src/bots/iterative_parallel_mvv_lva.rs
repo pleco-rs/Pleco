@@ -292,7 +292,7 @@ fn q_science_criteria(m: BitMove, _board: &Board) -> bool {
 
 fn mvv_lva_sort(moves: &mut [BitMove], board: &Board) {
     moves.sort_by_key(|a| {
-        let piece = board.piece_at_sq((*a).get_src()).type_of();
+        let piece = board.piece_at_sq((*a).get_src()).unwrap();
 
         if a.is_capture() {
             board.captured_piece(*a).unwrap().value() - piece.value()

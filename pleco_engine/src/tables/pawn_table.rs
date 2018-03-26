@@ -374,7 +374,7 @@ impl PawnEntry {
         self.pawns_on_squares[P::player() as usize][Player::White as usize] = board.count_piece(P::player(), PieceType::P) - pawns_on_dark;
 
         while let Some(s) = p1.pop_some_lsb() {
-            assert_eq!(board.piece_at_sq(s).type_of(), PieceType::P);
+            assert_eq!(board.piece_at_sq(s).unwrap(), PieceType::P);
 
             let f: File = s.file();
 
