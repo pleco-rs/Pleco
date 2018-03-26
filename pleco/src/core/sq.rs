@@ -79,13 +79,10 @@ impl SQ {
     pub const NONE: SQ = NO_SQ;
 
     /// Returns the UCI String representation of a `SQ`.
-    #[inline]
+    #[inline(never)]
     pub fn to_string(self) -> String {
         assert!(self.is_okay());
-        let mut str = String::default();
-        str.push(FILE_DISPLAYS[self.file() as usize]);
-        str.push(RANK_DISPLAYS[self.rank() as usize]);
-        str
+        String::from(SQ_DISPLAY[self.0 as usize])
     }
 
     /// Returns if a `SQ` is within the legal bounds of a square,
@@ -403,7 +400,7 @@ impl SQ {
 
 impl fmt::Display for SQ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.pad(&self.to_string())
+        write!(f, "{}", SQ_DISPLAY[self.0 as usize])
     }
 }
 

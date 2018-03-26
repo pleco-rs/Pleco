@@ -76,7 +76,6 @@
 #![feature(const_fn)]
 #![feature(stdsimd)]
 #![feature(const_let)]
-#![feature(min_const_fn)]
 #![feature(const_slice_len)]
 #![allow(dead_code)]
 

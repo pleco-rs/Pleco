@@ -172,18 +172,16 @@ pub struct PieceLocationsIter {
 impl Iterator for PieceLocationsIter {
     type Item = (SQ,Piece);
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.sq >= SQ::NONE {
-            None
-        } else {
-            let piece = self.locations.piece_at(self.sq);
+        loop {
+            let cur_sq = self.sq;
+            if cur_sq >= SQ::NONE {
+                return None;
+            }
+            let piece = self.locations.data[cur_sq.0 as usize];
+            self.sq += SQ(1);
             if piece != Piece::None {
-                let sq = self.sq;
-                self.sq += SQ(1);
-                return Some((sq, piece));
-            } else {
-                return self.next();
+                return Some((cur_sq, piece));
             }
         }
     }
@@ -199,5 +197,21 @@ impl IntoIterator for PieceLocations {
             locations: self,
             sq: SQ(0),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use Board;
+
+    #[test]
+    fn stack_overflow_test() {
+        let board = Board::start_pos();
+        let piece_locations = board.get_piece_locations();
+        let mut v = Vec::new();
+        for (sq, _) in piece_locations {
+            v.push(sq);
+        }
+        assert_eq!(v.len(), 32);
     }
 }
