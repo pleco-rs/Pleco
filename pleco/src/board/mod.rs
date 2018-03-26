@@ -324,11 +324,16 @@ impl Board {
     ///
     /// let board = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
     /// assert_eq!(board.count_all_pieces(),32);
+    ///
+    ///
+    /// let obviously_not_a_fen = "This shouldn't parse!";
+    /// let bad_board = Board::from_fen(obviously_not_a_fen);
+    /// assert!(bad_board.is_err());
     /// ```
     ///
-    /// # Panics
+    /// # Safety
     ///
-    /// The FEN string must be valid, or else the method will panic.
+    /// The FEN string must be valid, or else the method will return an Error.
     ///
     /// There is a possibility of the FEN string representing an unvalid position, with no panics resulting.
     /// The Constructed Board may have some Undefined Behavior as a result. It is up to the user to give a
@@ -2025,7 +2030,6 @@ impl Board {
     }
 
 
-
     fn min_attacker<P>(&self, to: SQ, stm_attackers: BitBoard, occupied: &mut BitBoard,
                         attackers: &mut BitBoard) -> PieceType
         where P: PieceTrait {
@@ -2063,6 +2067,8 @@ impl Board {
 
     /// Returns the piece that was moved from a given BitMove.
     ///
+    /// Simply put, this method will return the `Piece` at a move's from square.
+    ///
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
@@ -2074,6 +2080,8 @@ impl Board {
     }
 
     /// Returns the piece that was captured, if any from a given BitMove.
+    ///
+    /// If the move is not a capture, `PieceType::None` will be returned.
     ///
     /// # Safety
     ///

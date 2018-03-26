@@ -196,6 +196,8 @@ pub fn z_ep(sq: SQ) -> u64 {
 }
 
 /// Returns the Zobrish hash for a castling right.
+///
+/// Undefined behavior will occur if the bits are greater than 15.
 #[inline(always)]
 pub fn z_castle(castle: u8) -> u64 {
     zobrist::z_castle(castle)
@@ -223,14 +225,14 @@ pub fn psq(piece: Piece, sq: SQ) -> Score {
     psqt::psq(piece, sq)
 }
 
-/// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+/// Returns the value of a `Piece`. If `eg` is true, it returns the end game value. Otherwise,
 /// it'll return the midgame value.
 #[inline(always)]
 pub fn piece_value(piece: Piece, eg: bool) -> Value {
     psqt::piece_value(piece, eg)
 }
 
-/// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+/// Returns the value of a `PieceType`. If `eg` is true, it returns the end game value. Otherwise,
 /// it'll return the midgame value.
 #[inline(always)]
 pub fn piecetype_value(piece_type: PieceType, eg: bool) -> Value {

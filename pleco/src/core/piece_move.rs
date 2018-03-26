@@ -208,6 +208,7 @@ impl BitMove {
     }
 
 
+    /// Returns the promotion flag bits of a `PieceType`.
     #[inline(always)]
     fn promotion_piece_flag(piece: PieceType) -> u16 {
         match piece {

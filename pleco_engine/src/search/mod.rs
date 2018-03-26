@@ -404,9 +404,9 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (185).max((630).min(
+                    let improving_factor: i64 = (215).max((630).min(
                           353
-                        + 100 * self.failed_low as i64
+                        + 109 * self.failed_low as i64
                         -   6 * score_diff as i64));
 
                     time_reduction = 1.0;
@@ -955,8 +955,6 @@ impl Searcher {
 
     }
 
-    // TODO: Implement this inside the main search
-    // Right now this is a stub.
     fn update_quiet_stats(&mut self, mov: BitMove, ss: &mut Stack,
                           quiets: &[BitMove], bonus: i32) {
         if ss.killers[0] != mov {

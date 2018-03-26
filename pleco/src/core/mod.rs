@@ -196,6 +196,10 @@ pub enum GenTypes {
 }
 
 /// All possible Types of Pieces on a chessboard.
+///
+/// For a representation of pieces considering color as well, see [`Piece`]
+///
+/// [`Piece`]: ./enum.Piece
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum PieceType {
@@ -222,14 +226,6 @@ impl PieceType {
             PieceType::Q => 8,
             _ => 0,
 
-        }
-    }
-
-    pub fn as_option(self) -> Option<PieceType> {
-        if self == PieceType::None {
-            None
-        } else {
-            Some(self)
         }
     }
 
@@ -299,6 +295,10 @@ impl fmt::Display for PieceType {
 // TODO: documentation
 
 /// All possible Types of Pieces on a chessboard, for both colors.
+///
+/// For a representation of Only Pieces (with no color attached), see [`PieceType`]
+///
+/// [`Piece`]: ./enum.PieceType
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {
@@ -699,6 +699,7 @@ pub enum CastleType {
     QueenSide = 1,
 }
 
+#[doc(hidden)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
 pub enum Phase {
