@@ -7,9 +7,6 @@ use std::sync::atomic::{Ordering,AtomicBool,AtomicU64};
 use std::cell::UnsafeCell;
 use std::mem;
 
-use rand;
-use rand::Rng;
-
 use pleco::{Board,BitMove,SQ};
 use pleco::core::*;
 use pleco::tools::tt::*;
@@ -301,9 +298,6 @@ impl Searcher {
         let mut stack: ThreadStack = ThreadStack::new();
 
         stack.ply_zero().ply = 0;
-
-        // Shuffle (or possibly sort) the root moves so each thread searches different moves.
-        self.shuffle();
 
         // Iterative deeping. Start at the base ply (determined by thread_id), and then increment
         // by the skip size after searching that depth. If searching for depth, non-main threads
@@ -953,42 +947,11 @@ impl Searcher {
         USE_STDOUT.load(Ordering::Relaxed)
     }
 
-    pub fn shuffle(&mut self) {
-        if self.id == 0 || self.id >= 20 {
-            self.rm_mvv_laa_sort();
-        } else {
-            rand::thread_rng().shuffle(self.root_moves().as_mut());
-        }
-    }
-
     #[inline]
     pub fn root_moves(&self) -> &mut RootMoveList {
         unsafe {
             &mut *self.root_moves.get()
         }
-    }
-
-    #[inline]
-    fn rm_mvv_laa_sort(&mut self) {
-        let board = &self.board;
-        self.root_moves().sort_by_key(|root_move| {
-            let a = root_move.bit_move;
-            let piece = board.piece_at_sq((a).get_src()).type_of();
-
-            if a.is_capture() {
-                piece.value() - board.captured_piece(a).value()
-            } else if a.is_castle() {
-                1
-            } else if piece == PieceType::P {
-                if a.is_double_push().0 {
-                    2
-                } else {
-                    3
-                }
-            } else {
-                4
-            }
-        });
     }
 
     /// Useful information to tell to the GUI
@@ -1028,7 +991,7 @@ impl Drop for Searcher {
 }
 
 fn correct_bound_eq(tt_value: i32, beta: i32, bound: NodeBound) -> bool {
-    if tt_value as i32 >= beta {
+    if tt_value >= beta {
         bound as u8 & NodeBound::LowerBound as u8 != 0
     } else {
         bound as u8 & NodeBound::UpperBound as u8 != 0
@@ -1036,7 +999,7 @@ fn correct_bound_eq(tt_value: i32, beta: i32, bound: NodeBound) -> bool {
 }
 
 fn correct_bound(tt_value: i32, val: i32, bound: NodeBound) -> bool {
-    if tt_value as i32 >= val {
+    if tt_value >= val {
         bound as u8 & NodeBound::LowerBound as u8 != 0
     } else {
         bound as u8 & NodeBound::UpperBound as u8 != 0
