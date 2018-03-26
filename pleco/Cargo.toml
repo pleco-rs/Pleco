@@ -57,9 +57,9 @@ codegen-units = 4
 
 
 [dependencies]
-clippy = {version = "0.0.200", optional = true}
+clippy = {version = "0.0.302", optional = true}
 bitflags = "1.0.4"
-rand = "0.5.5"
+rand = "0.6.0"
 rayon = "1.0.2"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"

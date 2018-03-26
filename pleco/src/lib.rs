@@ -56,13 +56,7 @@
 //! [`MoveList`]: core/move_list/struct.MoveList.html
 //! [`Board`]: board/struct.Board.html
 #![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", allow(inline_always))]
-#![cfg_attr(feature="clippy", allow(unreadable_literal))]
-#![cfg_attr(feature="clippy", allow(large_digit_groups))]
-#![cfg_attr(feature="clippy", allow(cast_lossless))]
-#![cfg_attr(feature="clippy", allow(doc_markdown))]
-#![cfg_attr(feature="clippy", allow(inconsistent_digit_grouping))]
+//#![cfg_attr(feature="clippy", plugin(clippy))]
 
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
@@ -77,6 +71,7 @@
 #![feature(stdsimd)]
 #![feature(const_let)]
 #![feature(const_slice_len)]
+#![feature(alloc_layout_extra)]
 #![allow(dead_code)]
 
 #[macro_use]

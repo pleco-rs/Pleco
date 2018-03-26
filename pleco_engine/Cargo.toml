@@ -58,12 +58,12 @@ doctest = true
 
 [dependencies]
 pleco = { path = "../pleco", version = "0.4.3" }
-clippy = {version = "0.0.200", optional = true}
-chrono = "0.4.5"
-rand = "0.5.5"
+clippy = {version = "0.0.302", optional = true}
+chrono = "0.4.6"
+rand = "0.6.0"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"
-crossbeam-utils = "0.5.0"
+# crossbeam-utils = "0.5.0"  <- NOTE: allows unchecked spawning if doesn't stabilize
 
 [features]
 default = []
