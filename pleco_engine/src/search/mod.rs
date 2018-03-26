@@ -45,6 +45,7 @@ static START_PLY: [i16; THREAD_DIST] = [0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 0, 1
 
 static mut REDUCTIONS: [[[[i16; 64]; 64]; 2]; 2] = [[[[0; 64]; 64]; 2]; 2];  // [pv][improving][depth][moveNumber]
 static mut FUTILITY_MOVE_COUNTS: [[i32; 16]; 2] = [[0; 16]; 2]; // [improving][depth]
+static RAZOR_MARGIN: [i32; 3] = [0, 590, 604];
 
 static CAPTURE_PRUNE_MARGIN: [i32; 7] = [
     0,
@@ -656,9 +657,13 @@ impl Searcher {
             // Razoring. At the lowest depth before qsearch, If the evaluation + a margin still
             // isn't better than alpha, go straight to qsearch.
             if !is_pv
-                && depth <= 1
-                && pos_eval + RAZORING_MARGIN <= alpha {
-                return self.qsearch::<NonPV>(alpha, alpha+1, ss, 0);
+                && depth < 3
+                && pos_eval <= alpha - RAZOR_MARGIN[depth as usize] {
+                let r_alpha = alpha - (depth >= 2) as i32 * RAZOR_MARGIN[depth as usize];
+                let v =  self.qsearch::<NonPV>(r_alpha, r_alpha+1, ss, 0);
+                if depth < 2 || v <= r_alpha {
+                    return v;
+                }
             }
 
             // Futility Pruning. Disregard moves that have little chance of raising the callee's
@@ -809,7 +814,7 @@ impl Searcher {
             // At higher depths, do a search of a lower ply to see if this move is
             // worth searching. We don't do this for capturing or promotion moves.
             let do_full_depth: bool = if moves_played > 1
-                && depth >= 4
+                && depth >= 3
                 && (!capture_or_promotion || move_count_pruning) {
 
                 let mut r: i16 = reduction::<PV>(improving, depth, moves_played);
@@ -1007,8 +1012,6 @@ impl Searcher {
 
         let ply: u16 = ss.ply;
         let zob: u64 = self.board.zobrist();
-        let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
-        let tt_value: Value = if tt_hit {value_from_tt(tt_entry.score, ss.ply)} else {NONE};
 
         let mut value: Value;
         let mut best_value: Value;
@@ -1021,9 +1024,6 @@ impl Searcher {
 
         let in_check: bool = self.board.in_check();
 
-        // Determine whether or not to include checking moves.
-        let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
-
         if ply >= MAX_PLY {
             if !in_check {
                 return self.eval();
@@ -1031,6 +1031,12 @@ impl Searcher {
                 return ZERO;
             }
         }
+
+        let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
+        let tt_value: Value = if tt_hit {value_from_tt(tt_entry.score, ss.ply)} else {NONE};
+
+        // Determine whether or not to include checking moves.
+        let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
 
         // increment the next ply
         ss.incr().ply = ply + 1;
