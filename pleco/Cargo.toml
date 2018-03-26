@@ -66,7 +66,7 @@ prefetch = "0.2.0"
 mucow = "0.1.0"
 
 [dependencies.lazy_static]
-version = "1.1.0"   # 1.2.0
+version = "1.1.0"
 features = ["nightly"]
 
 [features]
@@ -74,7 +74,7 @@ default = []
 dev = ["clippy"]
 
 [dev-dependencies]
-criterion = { version = '0.2.4', default-features = false, features=['real_blackbox'] }
+criterion = { version = '0.2.7', default-features = false, features=['real_blackbox'] }
 
 [[bench]]
 name = "bench_main"
