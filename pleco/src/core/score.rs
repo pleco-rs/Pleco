@@ -4,6 +4,7 @@
 //! the first to determine the mid-game score, and the second to determine the end-game score.
 
 use std::ops::*;
+use std::fmt;
 
 /// Type for `i16` to determine the `Value` of an evaluation.
 pub type Value = i32;
@@ -67,6 +68,20 @@ impl Score {
     /// Returns the end-game score.
     pub fn eg(self) -> Value {
         self.1
+    }
+
+    /// Gives the value of the score in centi-pawns
+    pub fn centipawns(self) -> (f64, f64) {
+        let mg: f64 = self.mg() as f64 / PAWN_EG as f64;
+        let eg: f64 = self.eg() as f64 / PAWN_EG as f64;
+        (mg, eg)
+    }
+}
+
+impl fmt::Display for Score {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (mg, eg) = self.centipawns();
+        write!(f, "{:5.2} {:5.2}",mg, eg)
     }
 }
 

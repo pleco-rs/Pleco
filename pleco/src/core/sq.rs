@@ -257,6 +257,13 @@ impl SQ {
     pub fn flip(self) -> SQ {
         SQ(self.0 ^ 0b111000)
     }
+
+    /// Determines if two squares are on opposite colors.
+    #[inline(always)]
+    pub fn opposite_colors(self, other: SQ) -> bool {
+        let s: u8 = self.0 as u8 ^ other.0 as u8;
+        ((s >> 3) ^ s) & 1 != 0
+    }
 }
 
 // constants
