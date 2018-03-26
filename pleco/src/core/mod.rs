@@ -22,7 +22,7 @@ use std::mem;
 use std::ops::Not;
 
 /// Array of all possible pieces, indexed by their enum value.
-pub const ALL_PIECE_TYPES: [PieceType; PIECE_TYPE_CNT] =
+pub const ALL_PIECE_TYPES: [PieceType; PIECE_TYPE_CNT - 2] =
     [PieceType::P, PieceType::N, PieceType::B, PieceType::R, PieceType::Q, PieceType::K];
 
 
@@ -56,6 +56,7 @@ pub static ALL_RANKS: [Rank; RANK_CNT] = [
 
 /// Enum to represent the Players White & Black.
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum Player {
     White = 0,
     Black = 1,
@@ -74,10 +75,7 @@ impl Player {
     /// ```
     #[inline(always)]
     pub fn other_player(&self) -> Player {
-        match *self {
-            Player::White => Player::Black,
-            Player::Black => Player::White,
-        }
+        !(*self)
     }
 
     /// Returns the relative square from a given square.
@@ -142,6 +140,17 @@ impl Player {
     }
 }
 
+impl Not for Player {
+    type Output = Player;
+
+    fn not(self) -> Self::Output {
+        let other: u8 = (self as u8) ^ 0b0000_0001;
+        unsafe {
+            mem::transmute(other)
+        }
+    }
+}
+
 
 impl fmt::Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -190,12 +199,14 @@ pub enum GenTypes {
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum PieceType {
-    K = 5,
-    Q = 4,
-    R = 3,
-    B = 2,
-    N = 1,
-    P = 0,
+    None = 0,
+    P = 1,
+    N = 2,
+    B = 3,
+    R = 4,
+    Q = 5,
+    K = 6,
+    All = 7
 }
 
 impl PieceType {
@@ -210,8 +221,22 @@ impl PieceType {
             PieceType::N | PieceType::B => 3,
             PieceType::R => 5,
             PieceType::Q => 8,
-            PieceType::K => 0,
+            _ => 0,
+
         }
+    }
+
+    pub fn as_option(self) -> Option<PieceType> {
+        if self == PieceType::None {
+            None
+        } else {
+            Some(self)
+        }
+    }
+
+    #[inline(always)]
+    pub fn is_real(self) -> bool {
+        self != PieceType::None && self != PieceType::All
     }
 
     /// Return the lowercase character of a `Piece`.
@@ -224,6 +249,7 @@ impl PieceType {
             PieceType::R => 'r',
             PieceType::Q => 'q',
             PieceType::K => 'k',
+            _ => panic!(),
         }
     }
 
@@ -237,6 +263,7 @@ impl PieceType {
             PieceType::R => 'R',
             PieceType::Q => 'Q',
             PieceType::K => 'K',
+            _ => panic!(),
         }
     }
 }
@@ -249,11 +276,119 @@ impl fmt::Display for PieceType {
             PieceType::B => "Bishop",
             PieceType::R => "Rook",
             PieceType::Q => "Queen",
-            PieceType::K => "King"
+            PieceType::K => "King",
+            PieceType::All => "All",
+            PieceType::None => "",
         };
         f.pad(s)
     }
 }
+
+// TODO: documentation
+
+/// All possible Types of Pieces on a chessboard.
+#[repr(u8)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum Piece {
+    None        = 0b0000,
+    WhitePawn   = 0b0001,
+    WhiteKnight = 0b0010,
+    WhiteBishop = 0b0011,
+    WhiteRook   = 0b0100,
+    WhiteQueen  = 0b0101,
+    WhiteKing   = 0b0110,
+    BlackPawn   = 0b1001,
+    BlackKnight = 0b1010,
+    BlackBishop = 0b1011,
+    BlackRook   = 0b1100,
+    BlackQueen  = 0b1101,
+    BlackKing   = 0b1110
+}
+
+impl Piece {
+    #[inline(always)]
+    pub fn player(self) -> Option<Player> {
+        if self as u8 & 0b0111 == 0 {
+            None
+        } else {
+            Some(self.player_lossy())
+        }
+    }
+
+    #[inline(always)]
+    pub fn player_lossy(self) -> Player {
+        assert_ne!(self, Piece::None);
+        unsafe {
+            mem::transmute((self as u8 >> 3) & 0b1)
+        }
+    }
+
+    #[inline(always)]
+    pub fn type_of(self) -> PieceType {
+        unsafe {
+            mem::transmute(self as u8 & 0b111)
+        }
+    }
+
+    #[inline(always)]
+    pub fn player_piece(self) -> Option<(Player, PieceType)> {
+        if self == Piece::None {
+            None
+        } else {
+            Some(self.player_piece_lossy())
+        }
+    }
+
+    #[inline(always)]
+    pub fn player_piece_lossy(self) -> (Player, PieceType) {
+        (self.player_lossy(), self.type_of())
+    }
+
+    #[inline(always)]
+    pub fn make(player: Player, piece_type: PieceType) -> Option<Piece> {
+        match piece_type {
+            PieceType::None => Some(Piece::None),
+            PieceType::All => None,
+            _ => Some(Piece::make_lossy(player, piece_type))
+        }
+    }
+
+    #[inline(always)]
+    pub fn make_lossy(player: Player, piece_type: PieceType) -> Piece {
+        debug_assert_ne!(piece_type, PieceType::All);
+        unsafe {
+            let bits: u8 = (player as u8) << 3 | piece_type as u8;
+            mem::transmute(bits)
+        }
+    }
+
+    pub fn character(self) -> Option<char> {
+        if self == Piece::None {
+            None
+        } else {
+            Some(self.character_lossy())
+        }
+    }
+
+    pub fn character_lossy(self) -> char {
+        match self {
+            Piece::None        => panic!(),
+            Piece::WhitePawn   => 'P',
+            Piece::WhiteKnight => 'N',
+            Piece::WhiteBishop => 'B',
+            Piece::WhiteRook   => 'R',
+            Piece::WhiteQueen  => 'Q',
+            Piece::WhiteKing   => 'K',
+            Piece::BlackPawn   => 'p',
+            Piece::BlackKnight => 'n',
+            Piece::BlackBishop => 'b',
+            Piece::BlackRook   => 'r',
+            Piece::BlackQueen  => 'q',
+            Piece::BlackKing   => 'k'
+        }
+    }
+}
+
 
 /// Enum for the Files of a Chessboard.
 #[repr(u8)]

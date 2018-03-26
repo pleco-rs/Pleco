@@ -19,7 +19,7 @@ mod psqt;
 pub mod prelude;
 
 
-use {SQ,BitBoard,Player,PieceType,File,Rank};
+use {SQ,BitBoard,Player,PieceType,File,Rank,Piece};
 use core::score::{Score,Value};
 
 /// Helper structure for accessing statically-initialized tables and other constants.
@@ -182,8 +182,8 @@ impl Helper {
 
     /// Returns the zobrist hash of a specific player's piece being at a particular square.
     #[inline(always)]
-    pub fn z_square(&self, sq: SQ, player: Player, piece: PieceType) -> u64 {
-        prelude::z_square(sq, player, piece)
+    pub fn z_square(&self, sq: SQ, piece: Piece) -> u64 {
+        prelude::z_square(sq, piece)
     }
 
     /// Returns the zobrist hash of a given file having an en-passant square.
@@ -206,8 +206,8 @@ impl Helper {
 
     /// Returns the score for a player's piece being at a particular square.
     #[inline(always)]
-    pub fn psq(&self, piece: PieceType, player: Player, sq: SQ) -> Score {
-        prelude::psq(piece, player, sq)
+    pub fn psq(&self, piece: Piece,  sq: SQ) -> Score {
+        prelude::psq(piece, sq)
     }
 
     /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,

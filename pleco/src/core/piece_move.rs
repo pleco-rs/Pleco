@@ -68,13 +68,13 @@ use super::*;
 use super::sq::SQ;
 
 // Castles have the src as the king bit and the dst as the rook
-const SRC_MASK: u16 = 0b0000_000000_111111;
-const DST_MASK: u16 = 0b0000_111111_000000;
+const SRC_MASK: u16     = 0b0000_000000_111111;
+const DST_MASK: u16     = 0b0000_111111_000000;
 const FROM_TO_MASK: u16 = 0b0000_111111_111111;
-const PR_MASK: u16 = 0b1000_000000_000000;
-const CP_MASK: u16 = 0b0100_000000_000000;
-const FLAG_MASK: u16 = 0b1111_000000_000000;
-const SP_MASK: u16 = 0b0011_000000_000000;
+const PR_MASK: u16      = 0b1000_000000_000000;
+const CP_MASK: u16      = 0b0100_000000_000000;
+const FLAG_MASK: u16    = 0b1111_000000_000000;
+const SP_MASK: u16      = 0b0011_000000_000000;
 
 /// Represents a singular move. 
 ///
@@ -116,16 +116,16 @@ pub enum MoveFlag {
 
 /// A Subset of `MoveFlag`, used to determine the overall classification of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[repr(u8)]
+#[repr(u16)]
 pub enum MoveType {
     /// The move is "Normal", So its not a castle, promotion, or en-passant.
-    Normal,
-    /// The move is a promotion.
-    Promotion,
+    Normal = 0,    //0b000x
     /// The move is castling move.
-    Castle,
+    Castle = 1,    //0b001x
     /// The move is an en-passant capture.
-    EnPassant,
+    EnPassant = 5, // 0b0101
+    /// The move is a promotion.
+    Promotion = 8,      //0b1xxx
 }
 
 /// Useful pre-encoding of a move's information before it is compressed into a `BitMove` struct.
