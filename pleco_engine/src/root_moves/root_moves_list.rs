@@ -99,7 +99,7 @@ impl RootMoveList {
     }
 
     #[inline]
-    pub fn insert_score_depth(&mut self, index: usize, score: i32, depth: u16) {
+    pub fn insert_score_depth(&mut self, index: usize, score: i32, depth: i16) {
         unsafe {
             let rm: &mut RootMove = self.get_unchecked_mut(index);
             rm.score = score;

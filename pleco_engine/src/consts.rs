@@ -11,6 +11,7 @@ use pleco::helper::prelude;
 
 
 use threadpool;
+use search;
 
 pub const MAX_PLY: u16 = 126;
 pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -37,6 +38,7 @@ pub fn init_globals() {
         compiler_fence(Ordering::SeqCst);
         lazy_static::initialize(&TT_TABLE); // Transposition Table
         threadpool::init_threadpool();  // Make Threadpool
+        search::init();
     });
 }
 

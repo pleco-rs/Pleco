@@ -16,7 +16,7 @@ pub struct RootMove {
     pub score: i32,
     pub prev_score: i32,
     pub bit_move: BitMove,
-    pub depth_reached: u16,
+    pub depth_reached: i16,
 }
 
 
@@ -35,7 +35,7 @@ impl RootMove {
     /// Places the current score into the previous_score field, and then updates
     /// the score and depth.
     #[inline]
-    pub fn rollback_insert(&mut self, score: i32, depth: u16) {
+    pub fn rollback_insert(&mut self, score: i32, depth: i16) {
         self.prev_score = self.score;
         self.score = score;
         self.depth_reached = depth;
@@ -43,7 +43,7 @@ impl RootMove {
 
     /// Inserts a score and depth.
     #[inline]
-    pub fn insert(&mut self, score: i32, depth: u16) {
+    pub fn insert(&mut self, score: i32, depth: i16) {
         self.score = score;
         self.depth_reached = depth;
     }
