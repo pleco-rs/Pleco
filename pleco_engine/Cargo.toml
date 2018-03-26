@@ -10,7 +10,7 @@ keywords = ["chess","ai","engine","game","uci"]
 license = "MIT"
 categories = ["games","game-engines","command-line-utilities"]
 repository = "https://github.com/sfleischman105/Pleco"
-
+autobenches = false
 
 include = [
     "src/*",
@@ -43,22 +43,12 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-panic = "abort"
 
 [profile.test]
 opt-level = 3
 debug = true
 debug-assertions = true
 codegen-units = 1
-panic = "unwind"
-
-[profile.doc]
-opt-level = 0
-debug = true
-lto = false
-debug-assertions = true
-codegen-units = 4
-panic = "unwind"
 
 [lib]
 name = "pleco_engine"
@@ -68,7 +58,7 @@ doctest = true
 
 [dependencies]
 pleco = { path = "../pleco", version = "0.4.1" }
-clippy = {version = "0.0.191", optional = true}
+clippy = {version = "0.0.200", optional = true}
 chrono = "0.4.1"
 rand = "0.4.2"
 num_cpus = "1.8.0"
@@ -87,7 +77,8 @@ doc = false
 
 [dev-dependencies]
 criterion = {  version = '0.2.2', default-features = false, features=['real_blackbox'] }
-lazy_static = {version = "1.0.0", features = ["nightly"]}
+lazy_static = {version = "1.0.0"}
+#lazy_static = {version = "1.0.0", features = ["nightly"]}
 
 [[bench]]
 name = "bench_engine_main"

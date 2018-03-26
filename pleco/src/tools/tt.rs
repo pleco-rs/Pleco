@@ -35,7 +35,7 @@
 
 use std::ptr::NonNull;
 use std::mem;
-use std::heap::{Alloc, Layout, Global};
+use std::heap::{Alloc, Layout, Global, oom};
 use std::cmp::min;
 use std::cell::UnsafeCell;
 
@@ -484,7 +484,7 @@ fn alloc_room(size: usize) -> NonNull<Cluster> {
 
         let new_ptr = match ptr {
             Ok(ptr) => ptr.cast(),
-            Err(_err) => Global.oom(),
+            Err(_err) => oom(),
         };
         new_ptr
     }

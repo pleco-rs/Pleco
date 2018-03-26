@@ -76,7 +76,6 @@
 #![feature(allocator_api)]
 #![feature(const_fn)]
 #![feature(pointer_methods)]
-#![feature(cfg_target_feature, target_feature)]
 #![feature(stdsimd)]
 #![feature(nonnull_cast)]
 
