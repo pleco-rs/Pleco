@@ -1610,7 +1610,7 @@ impl Board {
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
-        !self.in_check() && (self.generate_moves().is_empty() || self.state.rule_50 >= 50)
+        !self.in_check() && (self.state.rule_50 >= 50 || self.generate_moves().is_empty())
     }
 
     /// Return the `BitBoard` of all checks on the current player's king. If the current side
@@ -1702,7 +1702,7 @@ impl Board {
         }
 
         // If Moving the king, check if the square moved to is not being attacked
-        // Castles are checked during move gen for check, so we're good there.
+        // Castles are checked during move-generation for check, so we're good there.
         if piece.type_of() == PieceType::K {
             return m.move_type() == MoveType::Castle
                 || (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
