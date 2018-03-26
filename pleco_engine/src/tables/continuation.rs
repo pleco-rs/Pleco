@@ -3,7 +3,7 @@ use std::ops::{Index,IndexMut};
 
 use pleco::core::masks::*;
 use pleco::{SQ,Piece};
-use super::{StatBoard,NumStatBoard};
+use super::{StatBoard,NumStatCube};
 
 
 /// PieceToBoards are addressed by a move's [piece]][to] information
@@ -18,6 +18,7 @@ type PTH_idx = (Piece, SQ);
 impl Index<PTH_idx> for PieceToHistory {
     type Output = i16;
 
+    #[inline(always)]
     fn index(&self, idx: PTH_idx) -> &Self::Output {
         unsafe {
             self.a.get_unchecked(idx.0 as usize)      // [Piece moved]
@@ -27,6 +28,7 @@ impl Index<PTH_idx> for PieceToHistory {
 }
 
 impl IndexMut<PTH_idx> for PieceToHistory {
+    #[inline(always)]
     fn index_mut(&mut self, idx: PTH_idx) -> &mut Self::Output {
         unsafe {
             self.a.get_unchecked_mut(idx.0 as usize)    // [Piece moved]
@@ -39,8 +41,9 @@ impl StatBoard<i16, PTH_idx> for PieceToHistory {
     const FILL: i16 = 0;
 }
 
-impl NumStatBoard<PTH_idx> for PieceToHistory {
-    const D: i16 = 936;
+impl NumStatCube<PTH_idx> for PieceToHistory {
+    const D: i32 = 936;
+    const W: i32 = 32;
 }
 
 /// ContinuationHistory is the history of a given pair of moves, usually the
@@ -67,6 +70,7 @@ type CH_idx = (Piece, SQ);
 impl Index<CH_idx> for ContinuationHistory {
     type Output = PieceToHistory;
 
+    #[inline(always)]
     fn index(&self, idx: CH_idx) -> &Self::Output {
         unsafe {
             self.a.get_unchecked(idx.0 as usize)    // [moved piece]
@@ -76,6 +80,7 @@ impl Index<CH_idx> for ContinuationHistory {
 }
 
 impl IndexMut<CH_idx> for ContinuationHistory {
+    #[inline(always)]
     fn index_mut(&mut self, idx: CH_idx) -> &mut Self::Output {
         unsafe {
             self.a.get_unchecked_mut(idx.0 as usize)    // [moved Piece]

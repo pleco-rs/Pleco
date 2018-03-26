@@ -17,6 +17,7 @@ type CP_idx = (Piece, SQ, PieceType);
 impl Index<CP_idx> for CapturePieceToHistory {
     type Output = i16;
 
+    #[inline(always)]
     fn index(&self, idx: CP_idx) -> &Self::Output {
         unsafe {
             self.a.get_unchecked(idx.0 as usize)    // [Moved Piece]
@@ -27,6 +28,7 @@ impl Index<CP_idx> for CapturePieceToHistory {
 }
 
 impl IndexMut<CP_idx> for CapturePieceToHistory {
+    #[inline(always)]
     fn index_mut(&mut self, idx: CP_idx) -> &mut Self::Output {
         unsafe {
             self.a.get_unchecked_mut(idx.0 as usize)    // [Moved Piece]
@@ -41,6 +43,6 @@ impl StatBoard<i16, CP_idx> for CapturePieceToHistory {
 }
 
 impl NumStatCube<CP_idx> for CapturePieceToHistory {
-    const D: i16 = 324;
-    const W: i16 = 2;
+    const D: i32 = 324;
+    const W: i32 = 2;
 }

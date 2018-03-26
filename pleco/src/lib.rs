@@ -77,7 +77,6 @@
 #![feature(pointer_methods)]
 #![feature(cfg_target_feature, target_feature)]
 #![feature(stdsimd)]
-#![feature(conservative_impl_trait)]
 
 #![allow(dead_code)]
 
@@ -90,7 +89,6 @@ extern crate rand;
 extern crate rayon;
 extern crate prefetch;
 extern crate mucow;
-extern crate test;
 extern crate unreachable;
 
 pub mod core;

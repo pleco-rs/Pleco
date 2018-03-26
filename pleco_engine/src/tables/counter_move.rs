@@ -18,6 +18,7 @@ type CM_idx = (Piece, SQ);
 impl Index<CM_idx> for CounterMoveHistory {
     type Output = BitMove;
 
+    #[inline(always)]
     fn index(&self, idx: CM_idx) -> &Self::Output {
         unsafe {
             self.a.get_unchecked(idx.0 as usize)    // [Piece Moved]
@@ -27,6 +28,7 @@ impl Index<CM_idx> for CounterMoveHistory {
 }
 
 impl IndexMut<CM_idx> for CounterMoveHistory {
+    #[inline(always)]
     fn index_mut(&mut self, idx: CM_idx) -> &mut Self::Output {
         unsafe {
             self.a.get_unchecked_mut(idx.0 as usize)    // [Piece Moved]

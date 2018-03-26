@@ -6,11 +6,6 @@ use super::*;
 use rayon;
 
 
-#[allow(unused_imports)]
-use test::Bencher;
-#[allow(unused_imports)]
-use test;
-
 const MAX_PLY: u16 = 5;
 
 const DIVIDE_CUTOFF: usize = 6;

@@ -32,4 +32,4 @@ panic = "unwind"
 
 
 [dependencies]
-clippy = {version = "0.0.174", optional = true}
+clippy = {version = "0.0.174", default-features = false, optional = true}

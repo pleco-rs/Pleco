@@ -63,13 +63,14 @@ pub trait NumStatBoard<IDX>: StatBoard<i16,IDX>
 
 
 pub trait NumStatCube<IDX>: StatBoard<i16,IDX> {
-    const D: i16;
-    const W: i16;
-    fn update(&mut self, idx: IDX, bonus: i16) {
+    const D: i32;
+    const W: i32;
+
+    fn update(&mut self, idx: IDX, bonus: i32) {
         assert!(bonus.abs() <= Self::D);
         let entry = self.index_mut(idx);
-        *entry += bonus * Self::W - (*entry) * bonus.abs() / Self::D;
-        assert!((*entry).abs() <= Self::D * Self::W);
+        *entry += (bonus * Self::W - (*entry) as i32 * bonus.abs() / Self::D) as i16;
+        assert!(((*entry) as i32).abs() <= Self::D * Self::W);
     }
 }
 

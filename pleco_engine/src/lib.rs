@@ -39,13 +39,11 @@
 #[macro_use]
 extern crate lazy_static;
 
-extern crate test;
 extern crate num_cpus;
 extern crate rand;
 extern crate pleco;
 extern crate chrono;
 extern crate crossbeam_utils;
-extern crate generic_array;
 
 pub mod threadpool;
 pub mod sync;
