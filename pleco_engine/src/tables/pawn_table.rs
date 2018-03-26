@@ -4,6 +4,10 @@
 //! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
 //! unique to a pawn structure, but it's very likely that there will be no collisions.
 
+use std::mem::transmute;
+
+use prefetch::prefetch::*;
+
 use pleco::{Player, File, SQ, BitBoard, Board, PieceType, Rank, Piece};
 use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
@@ -11,10 +15,9 @@ use pleco::core::mono_traits::*;
 use pleco::board::castle_rights::Castling;
 use pleco::core::CastleType;
 use pleco::helper::prelude::*;
+use pleco::tools::PreFetchable;
 
 use super::TableBase;
-
-use std::mem::transmute;
 
 
 
@@ -77,11 +80,13 @@ const STORM_DANGER: [[[Value; RANK_CNT]; 4]; 4] = [
       [ 21,   23,  116, 41, 15, 0, 0, 0 ] ]
 ];
 
-//[[[[Score; 2]; 2] ;3]; RANK_CNT] =
-lazy_static!{
-    static ref CONNECTED: [[[[Score; RANK_CNT]; 3] ;2]; 2] = {
+
+pub static mut CONNECTED: [[[[Score; RANK_CNT]; 3] ;2]; 2] = [[[[Score(0,0); RANK_CNT]; 3] ;2]; 2];
+
+/// Initalizes the CONNECTED table.
+pub fn init() {
+    unsafe {
         let seed: [i32; 8] = [0, 13, 24, 18, 76, 100, 175, 330];
-        let mut a: [[[[Score; RANK_CNT]; 3] ;2]; 2] = [[[[Score(0,0); RANK_CNT]; 3] ;2]; 2];
         for opposed in 0..2 {
             for phalanx in 0..2 {
                 for support in 0..3 {
@@ -89,14 +94,12 @@ lazy_static!{
                         let mut v: i32 = 17 * support;
                         v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
                         let eg: i32 = v * (r as i32 - 2) / 4;
-//                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
-                        a[opposed as usize][phalanx as usize][support as usize][r as usize] = Score(v, eg);
+                        CONNECTED[opposed as usize][phalanx as usize][support as usize][r as usize] = Score(v, eg);
                     }
                 }
             }
         }
-        a
-    };
+    }
 }
 
 fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
@@ -172,6 +175,28 @@ impl PawnTable {
 
         entry.asymmetry = (all_passed | BitBoard(exclusive_open_files as u64)).count_bits() as i16;
         entry
+    }
+}
+
+impl PreFetchable for PawnTable {
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
+    /// access.
+    #[inline(always)]
+    fn prefetch(&self, key: u64) {
+        unsafe {
+            let ptr = self.table.get_ptr(key);
+            prefetch::<Write, High, Data, PawnEntry>(ptr);
+        }
+    }
+
+    #[inline(always)]
+    fn prefetch2(&self, key: u64) {
+        unsafe {
+            let ptr = self.table.get_ptr(key);
+            prefetch::<Write, High, Data, PawnEntry>(ptr);
+            let ptr_2 = (ptr as *mut u8).offset(64) as *mut PawnEntry;
+            prefetch::<Write, High, Data, PawnEntry>(ptr_2);
+        }
     }
 }
 
@@ -439,14 +464,12 @@ impl PawnEntry {
             }
 
             if supported.is_not_empty() | supported.is_not_empty() {
-                score += CONNECTED[opposed as usize]
-                    [phalanx.is_not_empty() as usize]
-                    [supported.count_bits() as usize]
-                    [P::player().relative_rank_of_sq(s) as usize];
-//                score += CONNECTED[P::player().relative_rank_of_sq(s) as usize]
-//                    [supported.count_bits() as usize]
-//                    [phalanx.is_not_empty() as usize]
-//                    [opposed as usize];
+                score += unsafe {
+                    CONNECTED[opposed as usize]
+                        [phalanx.is_not_empty() as usize]
+                        [supported.count_bits() as usize]
+                        [P::player().relative_rank_of_sq(s) as usize]
+                };
             } else if neighbours.is_empty() {
                 score -= ISOLATED;
                 self.weak_unopposed[P::player() as usize] += (!opposed) as i16;
@@ -462,6 +485,7 @@ impl PawnEntry {
         score
     }
 }
+
 
 #[cfg(test)]
 mod tests {

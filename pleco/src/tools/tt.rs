@@ -41,6 +41,7 @@ use std::cell::UnsafeCell;
 
 use prefetch::prefetch::*;
 
+use super::PreFetchable;
 use core::piece_move::BitMove;
 
 // TODO: investigate potention for SIMD in key lookup
@@ -447,21 +448,22 @@ impl TranspositionTable {
             (hits * 100.0) / (clusters_scanned * CLUSTER_SIZE as u64) as f64
         }
     }
-
-    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
-    /// access.
-    #[inline(always)]
-    pub fn prefetch(&self, key: u64) {
-        let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
-         unsafe {
-             let ptr = (*self.clusters.get()).as_ptr().offset(index as isize);
-             prefetch::<Write, High, Data, Cluster>(ptr);
-        };
-    }
 }
 
 unsafe impl Sync for TranspositionTable {}
 
+impl PreFetchable for TranspositionTable {
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
+    /// access.
+    #[inline(always)]
+    fn prefetch(&self, key: u64) {
+        let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
+        unsafe {
+            let ptr = (*self.clusters.get()).as_ptr().offset(index as isize);
+            prefetch::<Write, High, Data, Cluster>(ptr);
+        };
+    }
+}
 
 impl Drop for TranspositionTable {
     fn drop(&mut self) {

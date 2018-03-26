@@ -13,6 +13,7 @@ use pleco::core::*;
 use pleco::tools::tt::*;
 use pleco::core::score::*;
 use pleco::tools::pleco_arc::Arc;
+use pleco::tools::PreFetchable;
 use pleco::helper::prelude::*;
 use pleco::core::piece_move::MoveType;
 //use pleco::board::movegen::{MoveGen,PseudoLegal};
@@ -300,8 +301,6 @@ impl Searcher {
 
     // The per thread searching function
     fn search_root(&mut self) {
-
-
         // Early return. This shouldn't notmally happen.
         if self.stop() {
             return;
@@ -444,15 +443,14 @@ impl Searcher {
 
             // Main thread only from here on!
 
-
             // check for time
             if let Some(_) = self.limit.use_time_management() {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (246).max((750).min(
-                          353
-                        + 109 * self.failed_low as i64
+                    let improving_factor: i64 = (246).max((832).min(
+                          306
+                        + 119 * self.failed_low as i64
                         -   6 * score_diff as i64));
 
                     time_reduction = 1.0;
@@ -460,17 +458,17 @@ impl Searcher {
                     // If the bestMove is stable over several iterations, reduce time accordingly
                     for i in 3..6 {
                         if self.last_best_move_depth * i < self.depth_completed {
-                            time_reduction *= 1.43;
+                            time_reduction *= 1.40;
                         }
                     }
 
                     // Use part of the gained time from a previous stable move for the current move
                     let mut unstable_factor: f64 = 1.0 + self.best_move_changes;
-                    unstable_factor *= self.previous_time_reduction.powf(0.42) / time_reduction;
+                    unstable_factor *= self.previous_time_reduction.powf(0.46) / time_reduction;
 
                     // Stop the search if we have only one legal move, or if available time elapsed
                     if self.root_moves().len() == 1
-                        || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 609.0) as i64 {
+                        || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 600.0) as i64 {
                         threadpool().set_stop(true);
                         break 'iterative_deepening;
                     }
@@ -663,7 +661,7 @@ impl Searcher {
 
             // Futility Pruning. Disregard moves that have little chance of raising the callee's
             // alpha value. Rather, return the position evaluation as an estimate for the current
-            // move's strenth
+            // move's strength
             if !at_root
                 && depth < 7
                 && pos_eval - futility_margin(depth, improving) >= beta
@@ -785,6 +783,9 @@ impl Searcher {
                 }
             }
 
+            // speculative prefetch for the next key.
+            self.tt.prefetch(self.board.key_after(mov));
+
             if !self.board.legal_move(mov) {
                 ss.move_count -= 1;
                 moves_played -= 1;
@@ -800,7 +801,7 @@ impl Searcher {
             // do the move
             self.apply_move(mov, gives_check);
 
-            // prefetch the zobrist key
+            // prefetch next TT entry
             self.tt.prefetch(self.board.zobrist());
 
             // At higher depths, do a search of a lower ply to see if this move is
@@ -1125,6 +1126,8 @@ impl Searcher {
                 continue;
             }
 
+            self.tt.prefetch(self.board.key_after(mov));
+
             if !self.board.legal_move(mov) {
                 moves_played -= 1;
                 continue;
@@ -1132,7 +1135,10 @@ impl Searcher {
 
             ss.current_move = mov;
             self.apply_move(mov, gives_check);
+
+            // prefetch next TT entry
             self.tt.prefetch(self.board.zobrist());
+
             assert_eq!(gives_check, self.board.in_check());
 
             value = -self.qsearch::<N>(-beta, -alpha, ss.incr(),rev_depth - 1);
@@ -1176,10 +1182,6 @@ impl Searcher {
                        ss.static_eval as i16, tt_depth,
                        node_bound, self.tt.time_age());
 
-
-        if best_value <= NEG_INFINITE {
-            println!("b : {}, ply: {}", best_value, ply);
-        }
         assert!(best_value > NEG_INFINITE);
         assert!(best_value < INFINITE );
         best_value
@@ -1249,7 +1251,7 @@ impl Searcher {
     #[inline(always)]
     fn apply_move(&mut self, mov: BitMove, gives_check: bool) {
         self.nodes.fetch_add(1, Ordering::Relaxed);
-        self.board.apply_unknown_move(mov, gives_check);
+        self.board.apply_move_pft_chk(mov, gives_check, &self.pawns, &self.material);
     }
 
     pub fn eval(&mut self) -> Value {
@@ -1321,8 +1323,8 @@ impl Searcher {
             s.push_str(" upperbound");
         }
         s.push_str(&format!(" nodes {}", nodes));
-        s.push_str(&format!(" nps {}", (nodes * 1000) / elapsed));
         if elapsed > 1000 {
+            s.push_str(&format!(" nps {}", (nodes * 1000) / elapsed));
             s.push_str(&format!(" hashfull {:.2}", self.tt.hash_percent()));
         }
         s.push_str(&format!(" time {}", elapsed));

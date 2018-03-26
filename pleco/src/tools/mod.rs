@@ -21,3 +21,15 @@ pub trait Searcher {
         where
             Self: Sized;
 }
+
+/// Allows an object to have it's entries pre-fetchable.
+pub trait PreFetchable {
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster access.
+    fn prefetch(&self, key: u64);
+
+    /// Pre-fetches a particular key, alongside the next key.
+    fn prefetch2(&self, key: u64) {
+        self.prefetch(key);
+        self.prefetch(key + 1);
+    }
+}

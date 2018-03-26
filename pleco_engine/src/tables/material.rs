@@ -1,9 +1,12 @@
 //! Table to map from position -> material value;
 
+use prefetch::prefetch::*;
+
 use pleco::{Player, Board, PieceType};
 use pleco::core::masks::{PLAYER_CNT,PIECE_TYPE_CNT};
 use pleco::core::score::*;
 use pleco::core::mono_traits::*;
+use pleco::tools::PreFetchable;
 
 use super::TableBase;
 
@@ -60,6 +63,18 @@ impl MaterialEntry {
 
 pub struct Material {
     table: TableBase<MaterialEntry>,
+}
+
+impl PreFetchable for Material {
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
+    /// access.
+    #[inline(always)]
+    fn prefetch(&self, key: u64) {
+        unsafe {
+            let ptr = self.table.get_ptr(key);
+            prefetch::<Write, High, Data, MaterialEntry>(ptr);
+        }
+    }
 }
 
 unsafe impl Send for Material {}
