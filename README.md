@@ -1,6 +1,6 @@
 # Pleco
 
-Pleco is a chess Engine & Library inspired by Stockfish, written entirely in Rust.
+Pleco is a chess Engine & Library derived from Stockfish, written entirely in Rust.
 
 [![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
 [![Pleco crate](https://img.shields.io/crates/v/pleco_engine.svg)](https://crates.io/crates/pleco_engine)
@@ -8,34 +8,16 @@ Pleco is a chess Engine & Library inspired by Stockfish, written entirely in Rus
 
 
 This project is split into two crates, `pleco`, which contains the library functionality, and `pleco_engine`, which contains the
-UCI (Universal Chess Interface) compatible Engine & AI. 
+UCI (Universal Chess Interface) compatible engine. 
 
 The overall goal for this project is to utilize the efficiency of Rust to create a Chess AI matching the speed of modern chess engines.
+For the engine, the majority of the code is a direct port of Stockfish's C++ code. See [their website](https://stockfishchess.org/) for
+more information about the engine. As such, the credit for all of the advanced algorithms used for searching, evaluation,
+and many others, go directly to the maintainers and authors of Stockfish. This project is simply for speed comparisons
+between the two languages, as well as for educational purposes.
 
 - [Documentation](https://docs.rs/pleco), [crates.io](https://crates.io/crates/pleco) for library functionality
-- [Documentation](https://docs.rs/pleco_engine), [crates.io](https://crates.io/crates/pleco_engine) for UCI Engine and Advanced Searching functionality.
-
-Planned & Implemented features
--------
-
-
-The Library aims to have the following features upon completion
-- [x] Bitboard Representation of Piece Locations:
-- [x] Ability for concurrent Board State access, for use by parallel searchers
-- [x] Full Move-generation Capabilities, including generation of pseudo-legal moves
-- [x] Statically computed lookup-tables (including Magic Bitboards)
-- [x] Zobrist Hashing
-- [ ] PGN Parsing
-
-The AI Bot aims to have the following features:
-- [x] Multi-threaded search using a shared hash-table
-- [x] Queiscience-search
-- [x] Iterative Deepening
-- [x] Aspiration Windows
-- [x] Futility Pruning
-- [x] Transposition Tables
-- [x] Killer Moves
-- [ ] Null Move Heuristic
+- [Documentation](https://docs.rs/pleco_engine), [crates.io](https://crates.io/crates/pleco_engine) for the Engine.
 
 Standalone Installation and Use
 -------

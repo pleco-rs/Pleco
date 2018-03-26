@@ -1,4 +1,5 @@
-//! A blazingly fast Chess Library.
+//! A Rust re-write of the basic building blocks of the [Stockfish](https://stockfishchess.org/)
+//! chess engine.
 //!
 //! This package is separated into two parts. Firstly, the board representation & associated functions
 //! (the current crate, `pleco`), and secondly, the AI implementations using these chess foundations,

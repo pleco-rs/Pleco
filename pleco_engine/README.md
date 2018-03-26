@@ -1,9 +1,6 @@
 # Pleco Engine
 
-Pleco Engine is a chess Engine inspired by Stockfish, written entirely in Rust.
-
-This project aims to utilize the efficiency of Rust to create a Chess Bot with the speed of modern chess engines.
-
+Pleco Engine is a Rust re-write of the [Stockfish](https://stockfishchess.org/) chess engine. 
 
 [![Pleco crate](https://img.shields.io/crates/v/pleco_engine.svg)](https://crates.io/crates/pleco_engine)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
@@ -12,24 +9,13 @@ This project aims to utilize the efficiency of Rust to create a Chess Bot with t
 This project is split into two crates, `pleco_engine` (the current folder), which contains the
 UCI (Universal Chess Interface) compatible Engine & AI, and `pleco`, which contains the library functionality. 
 
-The overall goal for this project is to utilize the efficiency of Rust to create a Chess AI matching the speed of modern chess engines.
+The overall goal of pleco is to recreate the Stockfish engine in rust, for comparison and
+educational purposes. As such, the majority of the algorithms used here are a direct port of stockfish's, and the
+credit for all of the advanced algorithms used for searching, evaluation, and many others, go directly to the 
+maintainers and authors of Stockfish. 
 
 - [Documentation](https://docs.rs/pleco_engine)
 - [crates.io](https://crates.io/crates/pleco_engine)
-
-Planned & Implemented features
--------
-
-
-The AI  aims to have the following features:
-- [x] Multi-threaded search using a shared hash-table
-- [x] Queiscience-search
-- [x] Iterative Deepening
-- [x] Aspiration Windows
-- [x] Futility Pruning
-- [x] Transposition Tables
-- [x] Killer Moves
-- [ ] Null Move Heuristic
 
 Standalone Installation and Use
 -------
@@ -63,7 +49,7 @@ Contributing
 Any and all contributions are welcome! Open up a PR to contribute some improvements. Look at the Issues tab to see what needs some help. 
 
 
-  
+ 
 License
 -------
 Pleco is distributed under the terms of the MIT license. See LICENSE-MIT for details. Opening a pull requests is assumed to signal agreement with these licensing terms.
