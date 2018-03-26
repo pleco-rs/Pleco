@@ -355,7 +355,7 @@ impl Searcher {
         'iterative_deepening: while !self.stop() && depth < max_depth  {
 
             if self.main_thread() {
-                self.best_move_changes *= 0.500;
+                self.best_move_changes *= 0.440;
                 self.failed_low = false;
             }
 
@@ -448,7 +448,7 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (241).max((800).min(
+                    let improving_factor: i64 = (240).max((787).min(
                           306
                         + 119 * self.failed_low as i64
                         -   6 * score_diff as i64));
@@ -458,20 +458,20 @@ impl Searcher {
                     // If the bestMove is stable over several iterations, reduce time accordingly
                     for i in 3..6 {
                         if self.last_best_move_depth * i < self.depth_completed {
-                            time_reduction *= 1.40;
+                            time_reduction *= 1.41;
                         }
                     }
 
                     // Use part of the gained time from a previous stable move for the current move
                     let mut unstable_factor: f64 = 1.0 + self.best_move_changes;
-                    unstable_factor *= self.previous_time_reduction.powf(0.46) / time_reduction;
+                    unstable_factor *= self.previous_time_reduction.powf(0.40) / time_reduction;
 
                     // Stop the search if we have only one legal move, or if available time elapsed
                     if self.root_moves().len() == 1
                         || self.time_man.elapsed() >=
                         (self.time_man.ideal_time() as f64
                             * unstable_factor as f64
-                            * improving_factor as f64 / 600.0) as i64 {
+                            * improving_factor as f64 / 580.0) as i64 {
                         threadpool().set_stop(true);
                         break 'iterative_deepening;
                     }
