@@ -233,6 +233,18 @@ impl PieceType {
         }
     }
 
+    /// Returns if the piece is `PieceType::None`
+    #[inline(always)]
+    pub fn is_none(self) -> bool {
+        self == PieceType::None
+    }
+
+    /// Returns if the piece is not `PieceType::None`
+    #[inline(always)]
+    pub fn is_some(self) -> bool {
+        !self.is_none()
+    }
+
     /// Checks if the piece is actually real, as in the Piece is not `None` or `All`.
     #[inline(always)]
     pub fn is_real(self) -> bool {

@@ -32,7 +32,7 @@ coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = 
 opt-level = 3
 debug = false
 debug-assertions = false
-panic = "panic"
+panic = "abort"
 codegen-units = 1
 lto = true
 
@@ -43,7 +43,7 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-panic = "panic"
+panic = "abort"
 
 [profile.test]
 opt-level = 3

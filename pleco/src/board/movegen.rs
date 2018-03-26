@@ -61,7 +61,7 @@ use core::piece_move::{MoveFlag, BitMove, PreMoveInfo, ScoringMove};
 use core::move_list::{MoveList,ScoringMoveList,MVPushable};
 use core::mono_traits::{GenTypeTrait};
 
-use {SQ, BitBoard, Piece, PieceType, Player};
+use {SQ, BitBoard, PieceType, Player};
 
 
 //                   Legal    PseudoLegal

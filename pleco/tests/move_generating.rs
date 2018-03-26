@@ -15,7 +15,7 @@ fn test_movegen_captures() {
         for m in moves {
             if !m.is_promo() {
                 assert!(m.is_capture());
-                assert!(b.captured_piece(m).is_some());
+                assert!(b.captured_piece(m).is_real());
             }
         }
     })
@@ -30,7 +30,7 @@ fn test_movegen_quiets() {
         for m in moves {
             if !m.is_promo() && !m.is_castle() {
                 assert!(!m.is_capture());
-                assert!(b.captured_piece(m).is_none());
+                assert!(!b.captured_piece(m).is_real());
             }
         }
     })

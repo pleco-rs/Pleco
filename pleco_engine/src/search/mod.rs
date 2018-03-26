@@ -775,7 +775,7 @@ impl Searcher {
                 && futility_base > -10000
                 && !self.board.advanced_pawn_push(mov) {
                 let piece_at = self.board.piece_at_sq(mov.get_src()).type_of();
-                futility_value = futility_base + piece_value(piece_at, true);
+                futility_value = futility_base + piecetype_value(piece_at, true);
 
                 if futility_value <= alpha {
                     best_value = best_value.max(futility_value);
@@ -801,9 +801,6 @@ impl Searcher {
                 moves_played -= 1;
                 continue;
             }
-
-
-
 
             ss.current_move = mov;
             self.apply_move(mov, gives_check);
@@ -879,14 +876,14 @@ impl Searcher {
         let moved_piece = self.board.moved_piece(mov);
         let to_sq = mov.get_dest();
         self.main_history.update((us, mov), bonus as i16);
-        self.update_continuation_histories(ss, us, moved_piece, to_sq, bonus);
+        self.update_continuation_histories(ss, moved_piece, to_sq, bonus);
 
         {
             let ss_bef: &mut Stack = ss.offset(-1);
             if ss_bef.current_move.is_okay() {
                 let prev_sq = ss_bef.current_move.get_dest();
-                let (player, piece) = self.board.piece_at_sq(prev_sq).player_piece_lossy();
-                self.counter_moves[(player, piece, prev_sq)] = mov;
+                let piece = self.board.piece_at_sq(prev_sq);
+                self.counter_moves[(piece, prev_sq)] = mov;
             }
         }
 
@@ -894,18 +891,17 @@ impl Searcher {
             self.main_history.update((us, *q_mov), -bonus as i16);
             let q_moved_piece = self.board.moved_piece(*q_mov);
             let to_sq = q_mov.get_dest();
-            self.update_continuation_histories(ss, us, q_moved_piece, to_sq, -bonus);
+            self.update_continuation_histories(ss, q_moved_piece, to_sq, -bonus);
         }
     }
 
-    fn update_continuation_histories(&mut self, ss: &mut Stack, player: Player, piece: PieceType,
-                                     to: SQ, bonus: i32) {
+    fn update_continuation_histories(&mut self, ss: &mut Stack, piece: Piece, to: SQ, bonus: i32) {
         for i in [1,2,4].iter() {
             let i_ss: &mut Stack = ss.offset(-i as isize);
             if i_ss.current_move.is_okay() {
                 unsafe  {
                     let cont_his: &mut PieceToHistory = &mut *i_ss.cont_history;
-                    cont_his.update((player, piece, to), bonus as i16);
+                    cont_his.update((piece, to), bonus as i16);
                 }
             }
 
@@ -980,7 +976,7 @@ impl Searcher {
             let piece = board.piece_at_sq((a).get_src()).type_of();
 
             if a.is_capture() {
-                piece.value() - board.captured_piece(a).unwrap().value()
+                piece.value() - board.captured_piece(a).value()
             } else if a.is_castle() {
                 1
             } else if piece == PieceType::P {

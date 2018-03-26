@@ -95,7 +95,7 @@ impl RootMoveList {
             let piece = board.piece_at_sq((a).get_src()).type_of();
 
             if a.is_capture() {
-                piece.value() - board.captured_piece(a).unwrap().value()
+                piece.value() - board.captured_piece(a).value()
             } else if a.is_castle() {
                 1
             } else if piece == PieceType::P {

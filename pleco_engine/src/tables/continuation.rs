@@ -2,27 +2,26 @@ use std::mem;
 use std::ops::{Index,IndexMut};
 
 use pleco::core::masks::*;
-use pleco::{PieceType, SQ,Player};
+use pleco::{SQ,Piece};
 use super::{StatBoard,NumStatBoard};
 
 
-/// PieceToBoards are addressed by a move's [player][piece][to] information
+/// PieceToBoards are addressed by a move's [piece]][to] information
 pub struct PieceToHistory {
-    a: [[[i16; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT]
+    a: [[i16; SQ_CNT]; PIECE_CNT]
 }
 
 // [Us][Our Piece][To SQ]
 #[allow(non_camel_case_types)]
-type PTH_idx = (Player, PieceType, SQ);
+type PTH_idx = (Piece, SQ);
 
 impl Index<PTH_idx> for PieceToHistory {
     type Output = i16;
 
     fn index(&self, idx: PTH_idx) -> &Self::Output {
         unsafe {
-            self.a.get_unchecked(idx.0 as usize)    // [player]
-                .get_unchecked(idx.1 as usize)      // [Piece moved]
-                .get_unchecked((idx.2).0 as usize)  // [To SQ]
+            self.a.get_unchecked(idx.0 as usize)      // [Piece moved]
+                .get_unchecked((idx.1).0 as usize)  // [To SQ]
         }
     }
 }
@@ -30,9 +29,8 @@ impl Index<PTH_idx> for PieceToHistory {
 impl IndexMut<PTH_idx> for PieceToHistory {
     fn index_mut(&mut self, idx: PTH_idx) -> &mut Self::Output {
         unsafe {
-            self.a.get_unchecked_mut(idx.0 as usize)    // [player]
-                .get_unchecked_mut(idx.1 as usize)      // [Piece moved]
-                .get_unchecked_mut((idx.2).0 as usize)  // [To SQ]
+            self.a.get_unchecked_mut(idx.0 as usize)    // [Piece moved]
+                .get_unchecked_mut((idx.1).0 as usize)  // [To SQ]
         }
     }
 }
@@ -49,7 +47,7 @@ impl NumStatBoard<PTH_idx> for PieceToHistory {
 /// current one given a previous one. History table is based on PieceToBoards
 /// instead of ButterflyBoards.
 pub struct ContinuationHistory {
-    a: [[[PieceToHistory; SQ_CNT]; PIECE_TYPE_CNT]; PLAYER_CNT]
+    a: [[PieceToHistory; SQ_CNT]; PIECE_CNT]
 }
 
 impl ContinuationHistory {
@@ -64,16 +62,15 @@ impl ContinuationHistory {
 
 // [player][Our Moved Piece][To SQ]
 #[allow(non_camel_case_types)]
-type CH_idx = (Player, PieceType, SQ);
+type CH_idx = (Piece, SQ);
 
 impl Index<CH_idx> for ContinuationHistory {
     type Output = PieceToHistory;
 
     fn index(&self, idx: CH_idx) -> &Self::Output {
         unsafe {
-            self.a.get_unchecked(idx.0 as usize)    // [player]
-                .get_unchecked(idx.1 as usize)      // [moved piece]
-                .get_unchecked((idx.2).0 as usize)  // [To SQ]
+            self.a.get_unchecked(idx.0 as usize)    // [moved piece]
+                .get_unchecked((idx.1).0 as usize)  // [To SQ]
         }
     }
 }
@@ -81,9 +78,8 @@ impl Index<CH_idx> for ContinuationHistory {
 impl IndexMut<CH_idx> for ContinuationHistory {
     fn index_mut(&mut self, idx: CH_idx) -> &mut Self::Output {
         unsafe {
-            self.a.get_unchecked_mut(idx.0 as usize)    // [player]
-                .get_unchecked_mut(idx.1 as usize)      // [moved Piece]
-                .get_unchecked_mut((idx.2).0 as usize)  // [To SQ]
+            self.a.get_unchecked_mut(idx.0 as usize)    // [moved Piece]
+                .get_unchecked_mut((idx.1).0 as usize)  // [To SQ]
         }
     }
 }

@@ -63,7 +63,7 @@ pub struct BoardState {
     /// The value of each player's non-pawn pieces.
     pub nonpawn_material: [Value; PLAYER_CNT],
     /// The last captured Piece, if any.
-    pub captured_piece: Option<PieceType>,
+    pub captured_piece: PieceType,
     /// A `BitBoard` of the current pieces giving check.
     pub checkers_bb: BitBoard,
     /// Per each player, `BitBoard` of pieces blocking an attack on a that player's king.
@@ -96,7 +96,7 @@ impl BoardState {
             pawn_key: 0,
             material_key: 0,
             nonpawn_material: [0; PLAYER_CNT],
-            captured_piece: None,
+            captured_piece: PieceType::None,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
             pinners_king: [BitBoard(0); PLAYER_CNT],
@@ -121,7 +121,7 @@ impl BoardState {
             pawn_key: self.pawn_key,
             material_key: self.material_key,
             nonpawn_material: self.nonpawn_material,
-            captured_piece: None,
+            captured_piece: self.captured_piece,
             checkers_bb: BitBoard(0),
             blockers_king: [BitBoard(0); PLAYER_CNT],
             pinners_king: [BitBoard(0); PLAYER_CNT],
@@ -224,7 +224,7 @@ impl BoardState {
                 }
                 if *piece != PieceType::P && *piece != PieceType::K {
                     self.nonpawn_material[*player as usize] +=
-                        count as i32 * piece_value(*piece, false);
+                        count as i32 * piecetype_value(*piece, false);
                 }
             }
         }
@@ -251,9 +251,6 @@ impl BoardState {
     /// Prints information about the current `BoardState`.
     pub fn print_info(&self) {
         print!("ply: {}, move played: {} ",self.ply, self.prev_move);
-        if let Some(piece) = self.captured_piece {
-            print!("cap {}", piece);
-        }
         if !self.checkers_bb.is_empty() {
             print!("in check {}", self.checkers_bb.to_sq());
         }

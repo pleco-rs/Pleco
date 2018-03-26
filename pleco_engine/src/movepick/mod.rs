@@ -6,7 +6,7 @@ use std::mem;
 #[allow(unused_imports)]
 use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList,PieceType};
 use pleco::board::movegen::{PseudoLegal,MoveGen};
-use pleco::helper::prelude::piece_value;
+use pleco::helper::prelude::{piece_value,piecetype_value};
 use pleco::core::mono_traits::*;
 
 use self::pick::*;
@@ -148,12 +148,12 @@ impl MovePicker {
             while ptr < self.end_ptr {
                 let mov: BitMove = (*ptr).bit_move;
                 if mov.is_promo() {
-                    (*ptr).score = piece_value(mov.promo_piece(),false) as i16
-                        - piece_value(PieceType::P,false) as i16;
+                    (*ptr).score = piecetype_value(mov.promo_piece(),false) as i16
+                        - piecetype_value(PieceType::P,false) as i16;
                 } else {
                     let piece_moved = self.board().moved_piece(mov);
-                    let piece_cap = self.board().captured_piece(mov).unwrap();
-                    (*ptr).score = piece_value(piece_cap,false) as i16
+                    let piece_cap = self.board().captured_piece(mov);
+                    (*ptr).score = piecetype_value(piece_cap,false) as i16
                         - piece_value(piece_moved,false) as i16;
                 }
                 ptr = ptr.add(1);
@@ -168,8 +168,8 @@ impl MovePicker {
                 let mov: BitMove = (*ptr).bit_move;
                 if self.board().is_capture(mov) {
                     let piece_moved = self.board().moved_piece(mov);
-                    let piece_cap = self.board().captured_piece(mov).unwrap();
-                    (*ptr).score = piece_value(piece_cap,false) as i16
+                    let piece_cap = self.board().captured_piece(mov);
+                    (*ptr).score = piecetype_value(piece_cap,false) as i16
                         - piece_value(piece_moved,false) as i16;
                 }
                 ptr = ptr.add(1);

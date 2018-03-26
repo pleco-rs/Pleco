@@ -295,7 +295,7 @@ fn mvv_lva_sort(moves: &mut [BitMove], board: &Board) {
         let piece = board.piece_at_sq((*a).get_src()).type_of();
 
         if a.is_capture() {
-            board.captured_piece(*a).unwrap().value() - piece.value()
+            board.captured_piece(*a).value() - piece.value()
         } else if piece == PieceType::P {
             if a.is_double_push().0 {
                 -2
