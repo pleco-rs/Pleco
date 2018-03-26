@@ -182,7 +182,7 @@ pub fn passed_pawn_mask(player: Player, sq: SQ) -> u64 {
 
 // ------------- GENERATION FUNCTIONS -------------
 
-
+#[cold]
 fn gen_knight_moves() {
     unsafe {
         for (index, spot) in KNIGHT_TABLE.iter_mut().enumerate() {
@@ -226,6 +226,7 @@ fn gen_knight_moves() {
     }
 }
 
+#[cold]
 unsafe fn gen_king_moves() {
     for index in 0..64 {
         let mut mask: u64 = 0;
@@ -266,6 +267,7 @@ unsafe fn gen_king_moves() {
     }
 }
 
+#[cold]
 unsafe fn gen_distance_table() {
     for i in 0..64 as u8 {
         for j in 0..64 as u8 {
@@ -275,6 +277,7 @@ unsafe fn gen_distance_table() {
     }
 }
 
+#[cold]
 unsafe fn gen_between_and_line_bbs() {
     for i in 0..64 as u8 {
         for j in 0..64 as u8 {
@@ -298,6 +301,7 @@ unsafe fn gen_between_and_line_bbs() {
     }
 }
 
+#[cold]
 unsafe fn gen_pawn_attacks() {
     // gen white pawn attacks
     for i in 0..56 as u8 {
@@ -324,6 +328,7 @@ unsafe fn gen_pawn_attacks() {
     }
 }
 
+#[cold]
 unsafe fn gen_ring_distance_bb() {
     for i in 0..64 {
         for j in 0..64 {
@@ -335,6 +340,7 @@ unsafe fn gen_ring_distance_bb() {
     }
 }
 
+#[cold]
 unsafe fn gen_forward_ranks_bb() {
     for i in 0..7 {
         FORWARD_RANKS_BB[i + 1][Player::Black as usize] = FORWARD_RANKS_BB[i][Player::Black as usize] | RANK_BB[i as usize];
@@ -342,6 +348,7 @@ unsafe fn gen_forward_ranks_bb() {
     }
 }
 
+#[cold]
 unsafe fn gen_pawn_attacks_span() {
     for p in 0..2 {
         for s in 0..64 {
@@ -352,8 +359,3 @@ unsafe fn gen_pawn_attacks_span() {
     }
 }
 
-
-#[cfg(test)]
-mod tests {
-
-}

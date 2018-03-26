@@ -84,6 +84,7 @@ const STORM_DANGER: [[[Value; RANK_CNT]; 4]; 4] = [
 pub static mut CONNECTED: [[[[Score; RANK_CNT]; 3] ;2]; 2] = [[[[Score(0,0); RANK_CNT]; 3] ;2]; 2];
 
 /// Initalizes the CONNECTED table.
+#[cold]
 pub fn init() {
     unsafe {
         let seed: [i32; 8] = [0, 13, 24, 18, 76, 100, 175, 330];

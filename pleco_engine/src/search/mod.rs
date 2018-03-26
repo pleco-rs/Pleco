@@ -58,6 +58,7 @@ static CAPTURE_PRUNE_MARGIN: [i32; 7] = [
 ];
 
 // used at startup to use lookup tables
+#[cold]
 pub fn init() {
     for imp in 0..2 {
         for d in 1..64 {

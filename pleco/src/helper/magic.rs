@@ -117,6 +117,7 @@ impl PreSMagic {
 
 /// Creates the `MagicTable` struct. The table size is relative to the piece for computation,
 /// and the deltas are the directions on the board the piece can go.
+#[cold]
 unsafe fn gen_magic_board(table_size: usize, deltas: &[i8; 4], static_magics: *mut SMagic, attacks: *mut u64) {
     // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
     let mut pre_sq_table: [PreSMagic; 64] = PreSMagic::init64();
