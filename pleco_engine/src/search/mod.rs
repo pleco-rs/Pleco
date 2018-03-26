@@ -475,6 +475,9 @@ impl Searcher {
 
     // The searching function for a specific depth.
     fn search<N: PVNode>(&mut self, mut alpha: i32, mut beta: i32, ss: &mut Stack, depth: i16) -> i32 {
+        if depth < 1 {
+            return self.qsearch::<N>(alpha, beta, ss, 0);
+        }
 
         assert!(depth >= 1);
         assert!(depth < MAX_PLY as i16);
@@ -634,7 +637,7 @@ impl Searcher {
             if !is_pv
                 && depth <= 1
                 && pos_eval + RAZORING_MARGIN <= alpha {
-                return self.qsearch::<NonPV, NoCheck>(alpha, alpha+1, ss, 0);
+                return self.qsearch::<NonPV>(alpha, alpha+1, ss, 0);
             }
 
             // Futility Pruning. Disregard moves that have little chance of raising the callee's
@@ -753,23 +756,13 @@ impl Searcher {
 
             // If the value is potentially better, do a full depth search.
             if do_full_depth {
-                value = if depth <= 1 {
-                    if gives_check { -self.qsearch::<NonPV,InCheck>(-(alpha+1), -alpha, ss.incr(), 0)
-                    } else { -self.qsearch::<NonPV,NoCheck>(-(alpha+1), -alpha, ss.incr(), 0) }
-                } else {
-                    -self.search::<NonPV>(-(alpha+1), -alpha, ss.incr(),  depth - 1)
-                };
+                value = -self.search::<NonPV>(-(alpha + 1), -alpha, ss.incr(), new_depth);
             }
 
             // If on the PV node and the node might be a continuation, search for a full depth
             // with a PV value.
             if is_pv && (moves_played == 1 || (value > alpha && (at_root || value < beta))) {
-                value = if depth <= 1 {
-                    if gives_check { -self.qsearch::<PV,InCheck>(-(alpha+1), -alpha, ss.incr(), 0)}
-                        else {    -self.qsearch::<PV,NoCheck>(-(alpha+1), -alpha, ss.incr(), 0)}
-                } else {
-                    -self.search::<PV>(-beta, -alpha, ss.incr(),depth -1)
-                };
+                value = -self.search::<PV>(-beta, -alpha, ss.incr(), new_depth);
             }
 
             self.board.undo_move();
@@ -889,16 +882,14 @@ impl Searcher {
     /// and possible checking moves, unless its in check.
     ///
     /// Depth must be less than or equal to zero,
-    fn qsearch<N: PVNode, C: CheckState>(&mut self, mut alpha: i32, beta: i32, ss: &mut Stack, rev_depth: i16) -> i32 {
+    fn qsearch<N: PVNode>(&mut self, mut alpha: i32, beta: i32, ss: &mut Stack, rev_depth: i16) -> i32 {
         let is_pv: bool = N::is_pv();
-        let in_check: bool = C::in_check();
 
         assert!(alpha >= NEG_INFINITE);
         assert!(beta <= INFINITE);
         assert!(alpha < beta);
         assert!(rev_depth <= 0);
         assert!(is_pv || (alpha == beta - 1));
-        assert_eq!(in_check, self.board.in_check());
 
         let ply: u16 = ss.ply;
         let zob: u64 = self.board.zobrist();
@@ -913,6 +904,8 @@ impl Searcher {
         let mut evasion_prunable: bool;
         let mut moves_played: u32 = 0;
         let old_alpha = alpha;
+
+        let in_check: bool = self.board.in_check();
 
         // Determine whether or not to include checking moves.
         let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
@@ -1031,11 +1024,7 @@ impl Searcher {
             self.tt.prefetch(self.board.zobrist());
             assert_eq!(gives_check, self.board.in_check());
 
-            value = if gives_check {
-                -self.qsearch::<N,InCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
-            } else {
-                -self.qsearch::<N,NoCheck>(-beta, -alpha, ss.incr(),rev_depth - 1)
-            };
+            value = -self.qsearch::<N>(-beta, -alpha, ss.incr(),rev_depth - 1);
 
             self.board.undo_move();
 
