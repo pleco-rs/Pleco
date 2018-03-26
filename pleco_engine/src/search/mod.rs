@@ -19,12 +19,11 @@ use pleco::core::piece_move::MoveType;
 //use pleco::board::movegen::{MoveGen,PseudoLegal};
 //use pleco::core::mono_traits::{QuietChecksGenType};
 
-use {MAX_PLY,TT_TABLE,THREAD_STACK_SIZE};
+use {MAX_PLY,THREAD_STACK_SIZE};
 
 use threadpool::threadpool;
 use time::time_management::TimeManager;
 use time::uci_timer::*;
-use threadpool::TIMER;
 use sync::{GuardedBool,LockLatch};
 use root_moves::RootMove;
 use root_moves::root_moves_list::RootMoveList;
@@ -187,8 +186,8 @@ impl Searcher {
             depth_completed: 0,
             limit: Limits::blank(),
             board: Board::start_pos(),
-            time_man: &TIMER,
-            tt: &TT_TABLE,
+            time_man: timer(),
+            tt: tt(),
             pawns: PawnTable::new(16384),
             material: Material::new(8192),
             root_moves: UnsafeCell::new(RootMoveList::new()),
@@ -389,7 +388,7 @@ impl Searcher {
 
                 if self.use_stdout() && self.main_thread()
                     && (best_value <= alpha || best_value >= beta)
-                    && TIMER.elapsed() > 3000 {
+                    && self.time_man.elapsed() > 3000 {
                     println!("{}",self.pv(depth, alpha, beta));
                 }
 
@@ -414,7 +413,7 @@ impl Searcher {
             }
 
             // Main Thread provides an update to the GUI
-            if self.use_stdout() && self.main_thread() && TIMER.elapsed() > 6 {
+            if self.use_stdout() && self.main_thread() && self.time_man.elapsed() > 6 {
                 if self.stop() {
                     println!("{}",self.pv(depth, NEG_INFINITE, INFINITE));
                 } else {
@@ -468,7 +467,10 @@ impl Searcher {
 
                     // Stop the search if we have only one legal move, or if available time elapsed
                     if self.root_moves().len() == 1
-                        || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 600.0) as i64 {
+                        || self.time_man.elapsed() >=
+                        (self.time_man.ideal_time() as f64
+                            * unstable_factor as f64
+                            * improving_factor as f64 / 600.0) as i64 {
                         threadpool().set_stop(true);
                         break 'iterative_deepening;
                     }
@@ -570,7 +572,7 @@ impl Searcher {
         // probe the transposition table
         excluded_move = ss.excluded_move;
         zob = self.board.zobrist() ^ (excluded_move.get_raw() as u64).wrapping_shl(16);
-        let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
+        let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
         let tt_value: Value = if tt_hit {tt_entry.score as i32} else {NONE};
         let tt_move: BitMove = if at_root {self.root_moves().first().bit_move}
             else if tt_hit {tt_entry.best_move} else {BitMove::null()};
@@ -1005,7 +1007,7 @@ impl Searcher {
 
         let ply: u16 = ss.ply;
         let zob: u64 = self.board.zobrist();
-        let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
+        let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
         let tt_value: Value = if tt_hit {tt_entry.score as i32} else {NONE};
 
         let mut value: Value;
@@ -1272,7 +1274,7 @@ impl Searcher {
 
     fn check_time(&mut self) {
         if self.limit.use_time_management().is_some()
-            && TIMER.elapsed() >= TIMER.maximum_time() {
+            && self.time_man.elapsed() >= self.time_man.maximum_time() {
             threadpool().set_stop(true);
         } else if let Some(time) = self.limit.use_movetime() {
             if self.limit.elapsed() >= time as i64 {
@@ -1303,7 +1305,7 @@ impl Searcher {
     /// Useful information to tell to the GUI
     fn pv(&self, depth: i16, alpha: i32, beta: i32) -> String {
         let root_move: &RootMove= self.root_moves().first();
-        let elapsed = TIMER.elapsed() as u64;
+        let elapsed = self.time_man.elapsed() as u64;
         let nodes = threadpool().nodes();
         let mut s = String::from("info");
         let mut score = if root_move.score == NEG_INFINITE {

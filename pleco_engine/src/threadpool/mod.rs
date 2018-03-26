@@ -17,7 +17,6 @@ use pleco::core::piece_move::BitMove;
 
 use sync::LockLatch;
 use time::uci_timer::*;
-use time::time_management::TimeManager;
 use search::Searcher;
 
 use consts::*;
@@ -58,11 +57,6 @@ pub fn threadpool() -> &'static mut ThreadPool {
     unsafe {
         THREADPOOL.as_mut()
     }
-}
-
-/// Global Timer
-lazy_static! {
-    pub static ref TIMER: TimeManager = TimeManager::uninitialized();
 }
 
 // Dummy struct to allow us to pass a pointer into a spawned thread.
@@ -295,10 +289,10 @@ impl ThreadPool {
     pub fn uci_search(&mut self, board: &Board, limits: &Limits) {
 
         // Start the timer!
-        if let Some(timer) = limits.use_time_management() {
-            TIMER.init(limits.start, &timer, board.turn(), board.moves_played());
+        if let Some(uci_timer) = limits.use_time_management() {
+            timer().init(limits.start, &uci_timer, board.turn(), board.moves_played());
         } else {
-            TIMER.start_timer(limits.start);
+            timer().start_timer(limits.start);
         }
 
         let root_moves: MoveList = board.generate_moves();

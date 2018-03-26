@@ -1,6 +1,7 @@
 //! Constant values and static structures.
-use lazy_static;
+use std::heap::{Alloc, Layout, Heap};
 
+use std::ptr::{NonNull, self};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::{ONCE_INIT,Once};
@@ -9,7 +10,7 @@ use std::sync::atomic::compiler_fence;
 use pleco::tools::tt::TranspositionTable;
 use pleco::helper::prelude;
 
-
+use time::time_management::TimeManager;
 use threadpool;
 use search;
 use tables::pawn_table;
@@ -29,21 +30,63 @@ pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
 /// Global Timer
 //pub static TIMER: TimeManager = TimeManager::uninitialized();
 
-lazy_static! {
-    pub static ref TT_TABLE: TranspositionTable = TranspositionTable::new(DEFAULT_TT_SIZE);
-}
+static mut TT_TABLE: NonNull<TranspositionTable> = unsafe
+    {NonNull::new_unchecked(ptr::null_mut())};
+
+static mut TIMER: NonNull<TimeManager> = unsafe
+    {NonNull::new_unchecked(ptr::null_mut())};
 
 pub fn init_globals() {
     INITALIZED.call_once(|| {
         prelude::init_statics();   // Initialize static tables
         compiler_fence(Ordering::SeqCst);
-        lazy_static::initialize(&TT_TABLE); // Transposition Table
+        init_tt();                 // Transposition Table
+        init_timer();              // Global timer manager
         pawn_table::init();
         threadpool::init_threadpool();  // Make Threadpool
         search::init();
     });
 }
 
+// initalizes the transposition table
+fn init_tt() {
+    unsafe {
+        let layout = Layout::new::<TranspositionTable>();
+        let result = Heap.alloc_zeroed(layout);
+        let new_ptr: *mut TranspositionTable = match result {
+            Ok(ptr) => ptr as *mut TranspositionTable,
+            Err(err) => Heap.oom(err),
+        };
+        ptr::write(new_ptr, TranspositionTable::new(DEFAULT_TT_SIZE));
+        TT_TABLE = NonNull::new_unchecked(new_ptr);
+    }
+}
+
+fn init_timer() {
+    unsafe {
+        let layout = Layout::new::<TimeManager>();
+        let result = Heap.alloc_zeroed(layout);
+        let new_ptr: *mut TimeManager = match result {
+            Ok(ptr) => ptr as *mut TimeManager,
+            Err(err) => Heap.oom(err),
+        };
+        ptr::write(new_ptr, TimeManager::uninitialized());
+        TIMER = NonNull::new_unchecked(new_ptr);
+    }
+}
+
+pub fn timer() -> &'static TimeManager {
+    unsafe {
+        &*TIMER.as_ptr()
+    }
+}
+
+/// Returns access to the global transposition table
+pub fn tt() -> &'static TranspositionTable {
+    unsafe {
+        &*TT_TABLE.as_ptr()
+    }
+}
 
 
 pub trait PVNode {
