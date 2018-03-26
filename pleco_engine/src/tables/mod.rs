@@ -109,18 +109,11 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
         }
     }
 
-    /// Returns the size of the Table.
-    #[inline]
-    pub fn size(&self) -> usize {
-        T::ENTRY_COUNT
-    }
-
     /// Gets a mutable reference to an entry with a certain key.
-    #[inline]
+    #[inline(always)]
     pub fn get_mut(&mut self, key: u64) -> &mut T {
-        let index: usize =  (key & (T::ENTRY_COUNT as u64 - 1)) as usize;
         unsafe {
-            &mut *self.table.as_ptr().offset(index as isize)
+            &mut *self.get_ptr(key)
         }
     }
 
@@ -130,7 +123,7 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
     ///
     /// Unsafe due to returning a raw pointer that may dangle if the `TableBase` is
     /// dropped prematurely.
-    #[inline]
+    #[inline(always)]
     pub unsafe fn get_ptr(&self, key: u64) -> *mut T {
         let index: usize = (key & (T::ENTRY_COUNT as u64 - 1)) as usize;
         self.table.as_ptr().offset(index as isize)

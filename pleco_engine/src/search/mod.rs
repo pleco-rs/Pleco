@@ -447,7 +447,7 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (246).max((832).min(
+                    let improving_factor: i64 = (241).max((800).min(
                           306
                         + 119 * self.failed_low as i64
                         -   6 * score_diff as i64));
@@ -542,8 +542,8 @@ impl Searcher {
 
             // Mate distance pruning. This ensures that checkmates closer to the root
             // have a higher value than otherwise.
-            alpha = alpha.max(-MATE + ply as i32);
-            beta = beta.min(MATE - ply as i32);
+            alpha = alpha.max(mated_in(ply));
+            beta = beta.min(mate_in(ply + 1));
             if alpha >= beta {
                 return alpha
             }
@@ -573,7 +573,7 @@ impl Searcher {
         excluded_move = ss.excluded_move;
         zob = self.board.zobrist() ^ (excluded_move.get_raw() as u64).wrapping_shl(16);
         let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
-        let tt_value: Value = if tt_hit {tt_entry.score as i32} else {NONE};
+        let tt_value: Value = if tt_hit {value_from_tt(tt_entry.score, ss.ply)} else {NONE};
         let tt_move: BitMove = if at_root {self.root_moves().first().bit_move}
             else if tt_hit {tt_entry.best_move} else {BitMove::null()};
 
@@ -895,7 +895,7 @@ impl Searcher {
                     if moves_played == 1 || value > alpha {
                         rm.depth_reached = depth;
                         rm.score = value;
-                        if moves_played > 1 && self.main_thread() {
+                        if moves_played > 1 && self.main_thread() && depth > 5 {
                             incr_bmc = true;
                         }
                     } else {
@@ -943,7 +943,7 @@ impl Searcher {
             if excluded_move != BitMove::null() {
                 return alpha;
             } else if in_check {
-                return -MATE as i32 + (ply as i32);
+                return mated_in(ss.ply);
             } else {
                 return DRAW as i32;
             }
@@ -984,7 +984,7 @@ impl Searcher {
 
 
         if excluded_move != BitMove::null() {
-            tt_entry.place(zob, best_move, best_value as i16,
+            tt_entry.place(zob, best_move, value_to_tt(best_value, ss.ply),
                            ss.static_eval as i16, depth as i16,
                            node_bound, self.tt.time_age());
         }
@@ -1008,7 +1008,7 @@ impl Searcher {
         let ply: u16 = ss.ply;
         let zob: u64 = self.board.zobrist();
         let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
-        let tt_value: Value = if tt_hit {tt_entry.score as i32} else {NONE};
+        let tt_value: Value = if tt_hit {value_from_tt(tt_entry.score, ss.ply)} else {NONE};
 
         let mut value: Value;
         let mut best_value: Value;
@@ -1074,7 +1074,7 @@ impl Searcher {
 
             if best_value >= beta {
                 if !tt_hit {
-                    tt_entry.place(zob, BitMove::null(), best_value as i16,
+                    tt_entry.place(zob, BitMove::null(), value_to_tt(best_value, ss.ply),
                                    pos_eval as i16, -6,
                                    NodeBound::LowerBound, self.tt.time_age());
                 }
@@ -1162,7 +1162,7 @@ impl Searcher {
                         best_move = mov;
                         alpha = value;
                     } else {
-                        tt_entry.place(zob, mov, best_value as i16,
+                        tt_entry.place(zob, mov, value_to_tt(best_value, ss.ply),
                                        ss.static_eval as i16, tt_depth as i16,
                                        NodeBound::LowerBound, self.tt.time_age());
                         return value;
@@ -1173,14 +1173,14 @@ impl Searcher {
 
         // If in checkmate, return so
         if in_check && best_value == NEG_INFINITE {
-            return -MATE + ss.ply as i32;
+            return mated_in(ss.ply);
         }
 
         let node_bound = if  is_pv && best_value > old_alpha {NodeBound::Exact}
                 else {NodeBound::UpperBound};
 
 
-        tt_entry.place(zob, best_move, best_value as i16,
+        tt_entry.place(zob, best_move, value_to_tt(best_value, ss.ply),
                        ss.static_eval as i16, tt_depth,
                        node_bound, self.tt.time_age());
 
@@ -1355,6 +1355,36 @@ fn correct_bound(tt_value: i32, val: i32, bound: NodeBound) -> bool {
         bound as u8 & NodeBound::LowerBound as u8 != 0
     } else {
         bound as u8 & NodeBound::UpperBound as u8 != 0
+    }
+}
+
+fn mate_in(ply: u16) -> i32 {
+    MATE - ply as i32
+}
+
+fn mated_in(ply: u16) -> i32 {
+    -MATE + ply as i32
+}
+
+fn value_to_tt(value: i32, ply: u16) -> i16 {
+    if value >= MATE_IN_MAX_PLY {
+        (value + ply as i32) as i16
+    } else if value <= MATED_IN_MAX_PLY {
+        (value - ply as i32) as i16
+    } else {
+        value as i16
+    }
+}
+
+fn value_from_tt(value: i16, ply: u16) -> i32 {
+    if value as i32 == NONE {
+        NONE
+    } else if value as i32 >= MATE_IN_MAX_PLY {
+        value as i32 - ply as i32
+    } else if value as i32 <= MATED_IN_MAX_PLY {
+        value as i32 + ply as i32
+    } else {
+        value as i32
     }
 }
 

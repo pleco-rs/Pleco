@@ -22,23 +22,26 @@ Planned & Implemented features
 
 
 The AI  aims to have the following features:
-- [x] Alpha-Beta pruning
-- [x] Multi-threaded search with rayon.rs
-- [ ] Queiscience-search
-- [x] MVV-LVA sorting
+- [x] Multi-threaded search using a shared hash-table
+- [x] Queiscience-search
 - [x] Iterative Deepening
 - [x] Aspiration Windows
 - [x] Futility Pruning
 - [x] Transposition Tables
-- [ ] Null Move Heuristic
 - [x] Killer Moves
+- [ ] Null Move Heuristic
 
 Standalone Installation and Use
 -------
 
-Currently, Pleco's use as a standalone program is limited in functionality. A UCI client is needed to properly interact with the program. As a recommendation, check out [Arena](http://www.playwitharena.com/).
+Currently, Pleco's use as a standalone program is limited in functionality. A UCI client is needed to properly interact with the program. 
+As a recommendation, check out [Arena](http://www.playwitharena.com/).
 
-Firstly, clone the repo and navigate into the created folder with the following commands:
+The easiest way to use the engine would be to check out the "releases" tab, 
+[here](https://github.com/sfleischman105/Pleco/releases).
+
+If you would rather build it yourself (for a specific architecture, or otherwise), clone the repo
+and navigate into the created folder with the following commands:
 
 ```
 $ git clone https://github.com/sfleischman105/Pleco --branch master

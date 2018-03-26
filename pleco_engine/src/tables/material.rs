@@ -55,6 +55,7 @@ impl MaterialEntry {
         Score(self.value, self.value)
     }
 
+    #[inline(always)]
     pub fn scale_factor(&self, player: Player) -> u8 {
         self.factor[player as usize]
     }

@@ -25,11 +25,11 @@ fn search_singular_engine<D: DepthLimit>(b: &mut Bencher) {
 }
 
 fn bench_engine_evaluations(c: &mut Criterion) {
-    c.bench_function("Search Singular Depth 3", search_singular_engine::<Depth3>);
-    c.bench_function("Search Singular Depth 4", search_singular_engine::<Depth4>);
     c.bench_function("Search Singular Depth 5", search_singular_engine::<Depth5>);
     c.bench_function("Search Singular Depth 6", search_singular_engine::<Depth6>);
     c.bench_function("Search Singular Depth 7", search_singular_engine::<Depth7>);
+    c.bench_function("Search Singular Depth 8", search_singular_engine::<Depth8>);
+    c.bench_function("Search Singular Depth 9", search_singular_engine::<Depth9>);
 }
 
 criterion_group!(name = search_singular;

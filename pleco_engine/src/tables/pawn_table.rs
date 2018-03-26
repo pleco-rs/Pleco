@@ -294,7 +294,6 @@ impl PawnEntry {
         self.pawns_on_squares[player as usize][sq.square_color_index()]
     }
 
-
     /// Returns the current king safety `Score` for a given player and king square.
     pub fn king_safety<P: PlayerTrait>(&mut self, board: &Board, ksq: SQ) -> Score {
         if self.king_squares[P::player_idx()] == ksq

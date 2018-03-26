@@ -49,19 +49,19 @@ fn search_startpos_3moves_engine<D: DepthLimit>(b: &mut Bencher) {
 }
 
 fn bench_engine_evaluations(c: &mut Criterion) {
-    c.bench_function("Search MuliMove Depth 4", search_startpos_3moves_engine::<Depth4>);
     c.bench_function("Search MuliMove Depth 5", search_startpos_3moves_engine::<Depth5>);
     c.bench_function("Search MuliMove Depth 6", search_startpos_3moves_engine::<Depth6>);
     c.bench_function("Search MuliMove Depth 7", search_startpos_3moves_engine::<Depth7>);
-    c.bench_function("Search KiwiPete MuliMove Depth 4", search_kiwipete_3moves_engine::<Depth4>);
+    c.bench_function("Search MuliMove Depth 8", search_startpos_3moves_engine::<Depth8>);
     c.bench_function("Search KiwiPete MuliMove Depth 5", search_kiwipete_3moves_engine::<Depth5>);
     c.bench_function("Search KiwiPete MuliMove Depth 6", search_kiwipete_3moves_engine::<Depth6>);
     c.bench_function("Search KiwiPete MuliMove Depth 7", search_kiwipete_3moves_engine::<Depth7>);
+    c.bench_function("Search KiwiPete MuliMove Depth 8", search_kiwipete_3moves_engine::<Depth8>);
 }
 
 criterion_group!(name = search_multimove;
      config = Criterion::default()
-        .sample_size(22)
+        .sample_size(26)
         .warm_up_time(Duration::from_millis(100));
     targets = bench_engine_evaluations
 );
