@@ -42,7 +42,7 @@ pub fn init_threadpool() {
                 let result = Global.alloc_zeroed(layout);
                 let new_ptr: *mut ThreadPool = match result {
                     Ok(ptr) => ptr.cast().as_ptr() as *mut ThreadPool,
-                    Err(_err) => oom(),
+                    Err(_err) => oom(layout),
                 };
                 ptr::write(new_ptr, ThreadPool::new());
                 THREADPOOL = NonNull::new_unchecked(new_ptr);
@@ -141,7 +141,7 @@ impl ThreadPool {
             let result = Global.alloc_zeroed(layout);
             let new_ptr: *mut Searcher = match result {
                 Ok(ptr) => ptr.cast().as_ptr() as *mut Searcher,
-                Err(_err) => oom(),
+                Err(_err) => oom(layout),
             };
             ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));

@@ -138,10 +138,11 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
 
     // allocates space.
     unsafe fn alloc() -> NonNull<T> {
-        let ptr = Global.alloc_zeroed(Layout::array::<T>(T::ENTRY_COUNT).unwrap());
+        let layout = Layout::array::<T>(T::ENTRY_COUNT).unwrap();
+        let ptr = Global.alloc_zeroed(layout);
         let new_ptr = match ptr {
             Ok(ptr) => ptr.cast().as_ptr(),
-            Err(_err) => oom(),
+            Err(_err) => oom(layout),
         };
         NonNull::new(new_ptr as *mut T).unwrap()
     }
