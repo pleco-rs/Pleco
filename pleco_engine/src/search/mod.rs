@@ -267,7 +267,6 @@ impl Searcher {
         // iterate through each thread, and find the best move available (based on score)
         let mut best_move = self.root_moves().first().bit_move;
         let mut best_score = self.root_moves().first().score;
-        let mut best_depth = self.depth_completed;
         if !self.limit.limits_type.is_depth()  {
             let mut best_thread: &Searcher = &self;
             threadpool().threads.iter()
@@ -281,16 +280,15 @@ impl Searcher {
             });
             best_move  = best_thread.root_moves().first().bit_move;
             best_score = best_thread.root_moves().first().score;
-            best_depth = best_thread.depth_completed;
+
+            // Cases where the MainTHread did not have the correct best move, display it.
+            if self.use_stdout() && best_thread.id != self.id {
+                best_thread.pv(best_thread.depth_completed, NEG_INFINITE, INFINITE);
+            }
         }
 
         self.previous_score = best_score;
         self.best_move = best_move;
-
-        // Cases where the MainTHread did not have the correct best move, display it.
-        if self.use_stdout() && best_move != self.root_moves().first().bit_move {
-            println!("{}",self.pv(best_depth, NEG_INFINITE, INFINITE));
-        }
 
 
         if self.use_stdout() {
@@ -390,7 +388,7 @@ impl Searcher {
                 if self.use_stdout() && self.main_thread()
                     && (best_value <= alpha || best_value >= beta)
                     && self.time_man.elapsed() > 3000 {
-                    println!("{}",self.pv(depth, alpha, beta));
+                    self.pv(depth, alpha, beta);
                 }
 
                 // Check for incorrect search window. If the value if less than alpha
@@ -416,9 +414,9 @@ impl Searcher {
             // Main Thread provides an update to the GUI
             if self.use_stdout() && self.main_thread() && self.time_man.elapsed() > 6 {
                 if self.stop() {
-                    println!("{}",self.pv(depth, NEG_INFINITE, INFINITE));
+                    self.pv(depth, NEG_INFINITE, INFINITE);
                 } else {
-                    println!("{}",self.pv(depth, alpha, beta));
+                    self.pv(depth, alpha, beta);
                 }
             }
 
@@ -448,7 +446,7 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (240).max((787).min(
+                    let improving_factor: i64 = (232).max((787).min(
                           306
                         + 119 * self.failed_low as i64
                         -   6 * score_diff as i64));
@@ -458,7 +456,7 @@ impl Searcher {
                     // If the bestMove is stable over several iterations, reduce time accordingly
                     for i in 3..6 {
                         if self.last_best_move_depth * i < self.depth_completed {
-                            time_reduction *= 1.41;
+                            time_reduction *= 1.42;
                         }
                     }
 
@@ -471,7 +469,7 @@ impl Searcher {
                         || self.time_man.elapsed() >=
                         (self.time_man.ideal_time() as f64
                             * unstable_factor as f64
-                            * improving_factor as f64 / 580.0) as i64 {
+                            * improving_factor as f64 / 600.0) as i64 {
                         threadpool().set_stop(true);
                         break 'iterative_deepening;
                     }
@@ -1309,22 +1307,35 @@ impl Searcher {
     }
 
     /// Useful information to tell to the GUI
-    fn pv(&self, depth: i16, alpha: i32, beta: i32) -> String {
+    fn pv(&self, depth: i16, alpha: i32, beta: i32) {
         let root_move: &RootMove= self.root_moves().first();
         let elapsed = self.time_man.elapsed() as u64;
         let nodes = threadpool().nodes();
-        let mut s = String::from("info");
         let mut score = if root_move.score == NEG_INFINITE {
             root_move.prev_score
             } else {
             root_move.score
         };
 
-        score *= 100;
-        score /= PAWN_EG;
+        if score == NEG_INFINITE {
+            return;
+        }
 
+        let mut s = String::from("info");
         s.push_str(&format!(" depth {}", depth));
-        s.push_str(&format!(" score cp {}", score));
+        if score.abs() < MATE - MAX_PLY as i32 {
+            score *= 100;
+            score /= PAWN_EG;
+            s.push_str(&format!(" score cp {}", score));
+        } else {
+            let mut mate_in = if score > 0 {
+                MATE - score + 1
+            } else {
+                -MATE - score
+            };
+            mate_in /= 2;
+            s.push_str(&format!(" score mate {}", mate_in));
+        }
         if root_move.score >= beta {
             s.push_str(" lowerbound");
         } else if root_move.score <= alpha {
@@ -1337,7 +1348,7 @@ impl Searcher {
         }
         s.push_str(&format!(" time {}", elapsed));
         s.push_str(&format!(" pv {}", root_move.bit_move.to_string()));
-        s
+        println!("{}",s);
     }
 }
 

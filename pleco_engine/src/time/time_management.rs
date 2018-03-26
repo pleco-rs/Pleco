@@ -19,7 +19,7 @@ const MIN_THINKING_TIME: i64 = 20;
 const MOVE_OVERHEAD: i64 = 100;
 
 // Lower values means places less importance on the current move
-const SLOW_MOVER: i64 = 30;
+const SLOW_MOVER: i64 = 22;
 
 #[derive(PartialEq)]
 enum TimeCalc {
