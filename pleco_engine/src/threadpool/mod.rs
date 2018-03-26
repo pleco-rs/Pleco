@@ -22,22 +22,23 @@ use search::Searcher;
 
 use consts::*;
 
+const KILOBYTE: usize = 1000;
+const THREAD_STACK_SIZE: usize = 18000 * KILOBYTE;
+
+// The Global threadpool!
 pub static mut THREADPOOL: NonNull<ThreadPool> = unsafe {NonNull::new_unchecked(ptr::null_mut())};
 
 static THREADPOOL_INIT: Once = ONCE_INIT;
 
-const KILOBYTE: usize = 1000;
-const THREAD_STACK_SIZE: usize = 18000 * KILOBYTE;
-
 pub fn init_threadpool() {
     THREADPOOL_INIT.call_once(|| {
-
         unsafe {
+            // We have a spawned thread create all structures, as a stack overflow can
+            // occur otherwise
             let builder = thread::Builder::new()
                 .name("Starter".to_string())
                 .stack_size(THREAD_STACK_SIZE);
-            let handle = scoped::builder_spawn_unsafe(builder,
-                                                      move || {
+            let handle = scoped::builder_spawn_unsafe(builder, move || {
                 let layout = Layout::new::<ThreadPool>();
                 let result = Heap.alloc_zeroed(layout);
                 let new_ptr: *mut ThreadPool = match result {
@@ -52,7 +53,7 @@ pub fn init_threadpool() {
     });
 }
 
-/// Returns access to the global thread pool
+/// Returns access to the global thread pool.
 pub fn threadpool() -> &'static mut ThreadPool {
     unsafe {
         THREADPOOL.as_mut()
@@ -64,6 +65,7 @@ lazy_static! {
     pub static ref TIMER: TimeManager = TimeManager::uninitialized();
 }
 
+// Dummy struct to allow us to pass a pointer into a spawned thread.
 struct SearcherPtr {
     ptr: UnsafeCell<*mut Searcher>
 }
@@ -71,7 +73,7 @@ struct SearcherPtr {
 unsafe impl Sync for SearcherPtr {}
 unsafe impl Send for SearcherPtr {}
 
-/// The thread-pool for the chess engine
+/// The thread-pool for the chess engine.
 pub struct ThreadPool {
     /// Access to each thread's Structure
     pub threads: Vec<UnsafeCell<*mut Searcher>>,
@@ -91,7 +93,7 @@ pub struct ThreadPool {
 // and lastly determining the "best move" from all the threads.
 ///
 // While we spawn all the other threads, We mostly communicate with the
-// MainThread to do anything useful. We let the mainthread handle anything fun.
+// MainThread to do anything useful. The mainthread handles anything fun.
 // The goal of the ThreadPool is to be NON BLOCKING, unless we want to await a
 // result.
 impl ThreadPool {
@@ -132,21 +134,11 @@ impl ThreadPool {
         };
     }
 
-    /// Returns a pointer to the main thread.
-    fn main(&mut self) -> &mut Searcher {
-        unsafe {
-            let main_thread: *mut Searcher = *self.threads.get_unchecked(0).get();
-            return &mut *main_thread;
-        }
-    }
-
-    /// Returns the number of threads
-    #[inline(always)]
-    fn size(&self) -> usize {
-        self.threads.len()
-    }
-
     /// Allocates a thread structure and pushes it to the threadstack.
+    ///
+    /// This does not spawn a thread, just creates the structure in the heap for the thread.
+    ///
+    /// Only to be called by `attach_thread()`.
     fn create_thread(&mut self) -> SearcherPtr {
         let len: usize = self.threads.len();
         let layout = Layout::new::<Searcher>();
@@ -163,6 +155,19 @@ impl ThreadPool {
         }
     }
 
+    /// Returns the number of threads
+    #[inline(always)]
+    pub fn size(&self) -> usize {
+        self.threads.len()
+    }
+
+    /// Returns a pointer to the main thread.
+    fn main(&mut self) -> &mut Searcher {
+        unsafe {
+            let main_thread: *mut Searcher = *self.threads.get_unchecked(0).get();
+            return &mut *main_thread;
+        }
+    }
 
     /// Sets the use of standard out. This can be changed mid search as well.
     #[inline(always)]

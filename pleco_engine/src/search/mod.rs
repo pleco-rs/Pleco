@@ -291,7 +291,9 @@ impl Searcher {
             self.failed_low = false;
         }
 
+        // The depth to start searching at based on the thread ID.
         let start_ply: u16 = START_PLY[self.id % THREAD_DIST];
+        // The number of plies to skip each iteration.
         let skip_size: u16 = SKIP_SIZE[self.id % THREAD_DIST];
         let mut depth: u16 = start_ply + 1;
 
@@ -332,6 +334,7 @@ impl Searcher {
                 // search!
                 best_value = self.search::<PV>(alpha, beta, stack.ply_zero(),depth);
 
+                // Sort root moves based on the scores
                 self.root_moves().sort();
 
                 if self.stop() {
@@ -423,8 +426,6 @@ impl Searcher {
                     unstable_factor *= self.previous_time_reduction.powf(0.42) / time_reduction;
 
                     // Stop the search if we have only one legal move, or if available time elapsed
-//                    let new_time = (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 602.0) as i64;
-//                    println!("new time: {}", new_time);
                     if self.root_moves().len() == 1
                         || TIMER.elapsed() >= (TIMER.ideal_time() as f64 * unstable_factor as f64 * improving_factor as f64 / 609.0) as i64 {
                         threadpool().set_stop(true);
@@ -494,10 +495,12 @@ impl Searcher {
 
         // increment the next ply
         ss.incr().ply = ply + 1;
+        // Set the killer moves two plies in advance to be nothing.
         ss.offset(2).killers = [BitMove::null(); 2];
         ss.current_move = BitMove::null();
         ss.cont_history = &mut self.cont_history[(Piece::None, SQ(0))] as *mut _;
 
+        // square the previous piece moved.
         let prev_sq: SQ = ss.offset(-1).current_move.get_src();
 
         // probe the transposition table
@@ -544,11 +547,11 @@ impl Searcher {
 
         // Get and set the position eval
         if in_check {
-            // A checking position should never be evaluated
+            // A checking position should never be evaluated. We go directly to the moves loop
+            // now.
             pos_eval = NONE;
         } else {
             // No checks from here on until moves loop
-
             if tt_hit {
                 pos_eval = if tt_entry.eval as i32 == NONE {
                     self.eval()
@@ -588,10 +591,13 @@ impl Searcher {
             }
         }
 
+        // Continuation histories of the previous moved from 1, 2, and 4 moves ago.
         let cont_hists = [ss.offset(-1).cont_history,
             ss.offset(-2).cont_history,
             ptr::null(),
             ss.offset(-4).cont_history];
+
+        let counter: BitMove = self.counter_moves[(self.board.piece_at_sq(prev_sq),prev_sq)];
 
         let mut move_picker = MovePicker::main_search(&self.board,
                                                       depth as i16,
@@ -599,7 +605,8 @@ impl Searcher {
                                                       &self.capture_history,
                                                       &cont_hists as *const _,
                                                       tt_move,
-                                                      &ss.killers, BitMove::null());
+                                                      &ss.killers,
+                                                      counter);
 
         while let Some(mov) = move_picker.next(false) {
             if self.board.legal_move(mov) {
@@ -617,8 +624,13 @@ impl Searcher {
                 // prefetch the zobrist key
                 self.tt.prefetch(self.board.zobrist());
 
-                // At higher depths, only do a lower
-                let do_full_depth: bool = if depth >= 4 && moves_played > 1 && !mov.is_capture() && !mov.is_promo() {
+                // At higher depths, do a search of a lower ply to see if this move is
+                // worth searching. We don't do this for capturing or promotion moves.
+                let do_full_depth: bool = if depth >= 4
+                    && moves_played > 1
+                    && !mov.is_capture()
+                    && !mov.is_promo() {
+
                     let new_depth = if in_check || gives_check {depth - 2} else {depth - 3};
                     value = -self.search::<NonPV>(-(alpha+1), -alpha, ss.incr(), new_depth);
                     value > alpha
@@ -626,6 +638,7 @@ impl Searcher {
                     !is_pv || moves_played > 1
                 };
 
+                // If the value is potentially better, do a full depth search.
                 if do_full_depth {
                     value = if depth <= 1 {
                         if gives_check { -self.qsearch::<NonPV,InCheck>(-(alpha+1), -alpha, ss.incr(), 0)
@@ -635,6 +648,8 @@ impl Searcher {
                     };
                 }
 
+                // If on the PV node and the node might be a continuation, search for a full depth
+                // with a PV value.
                 if is_pv && (moves_played == 1 || (value > alpha && (at_root || value < beta))) {
                     value = if depth <= 1 {
                         if gives_check { -self.qsearch::<PV,InCheck>(-(alpha+1), -alpha, ss.incr(), 0)}
@@ -648,6 +663,7 @@ impl Searcher {
                 assert!(value > NEG_INFINITE);
                 assert!(value < INFINITE );
 
+                // Unsafe to return any other value here when the threads are stopped.
                 if self.stop() {
                     return ZERO;
                 }
@@ -670,6 +686,7 @@ impl Searcher {
                             rm.score = NEG_INFINITE;
                         }
                     }
+                    // If we have a new best move at root, update the nmber of best_move changes.
                     if incr_bmc {
                         self.best_move_changes += 1.0;
                     }
@@ -693,6 +710,7 @@ impl Searcher {
                     }
                 }
 
+                // If best_move wasnt found, add it to the list of quiets / captures that failed
                 if mov != best_move {
                     if capture_or_promotion && captures_count < 32 {
                         captures_searched[captures_count] = mov;
@@ -705,13 +723,15 @@ impl Searcher {
             }
         }
 
+        // check for checkmate or draw.
         if moves_played == 0 {
-            if self.board.in_check() {
+            if in_check {
                 return -MATE as i32 + (ply as i32);
             } else {
                 return DRAW as i32;
             }
         } else if best_move != BitMove::null() {
+            // If the best move is quiet, update move heuristics
             if !self.board.is_capture_or_promotion(best_move) {
                 self.update_quiet_stats(best_move, ss,
                                          &quiets_searched[0..quiets_count],
@@ -722,6 +742,7 @@ impl Searcher {
                                           stat_bonus(depth));
             }
 
+            // penalize quiet TT move that was refuted.
             if ss.offset(-1).move_count == 1 && self.board.piece_captured_last_turn().is_none() {
                 let piece_at_sq = self.board.piece_at_sq(prev_sq);
                 self.update_continuation_histories(ss.offset(-1),
@@ -733,6 +754,7 @@ impl Searcher {
             && self.board.piece_captured_last_turn().is_none()
             && ss.offset(-1).current_move.is_okay() {
             let piece_at_sq = self.board.piece_at_sq(prev_sq);
+            // bonus for counter move that failed low
             self.update_continuation_histories(ss.offset(-1),
                                                piece_at_sq,
                                                prev_sq,
@@ -777,11 +799,11 @@ impl Searcher {
         let futility_base: Value;
         let mut futility_value: Value;
         let mut evasion_prunable: bool;
-        #[allow(unused_variables)]
         let mut moves_played: u32 = 0;
         let old_alpha = alpha;
-        let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
 
+        // Determine whether or not to include checking moves.
+        let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
 
         if ply >= MAX_PLY {
             if !in_check {
@@ -805,6 +827,7 @@ impl Searcher {
             return tt_value;
         }
 
+        // Evaluate the position statically.
         if in_check {
             pos_eval = NONE;
             best_value = NEG_INFINITE;
@@ -852,8 +875,8 @@ impl Searcher {
 
         while let Some(mov) = move_picker.next(false) {
             let gives_check: bool = self.board.gives_check(mov);
-
             moves_played += 1;
+
             // futility pruning
             if !in_check
                 && !gives_check
@@ -878,6 +901,7 @@ impl Searcher {
                 && best_value > MATED_IN_MAX_PLY
                 && !self.board.is_capture(mov);
 
+            // Don't search moves that lead to a negative static exhange
             if (!in_check || evasion_prunable) && !self.board.see_ge(mov, 0) {
                 continue;
             }
@@ -903,6 +927,7 @@ impl Searcher {
             assert!(value > NEG_INFINITE);
             assert!(value < INFINITE );
 
+            // Check for new best value
             if value > best_value {
                 best_value = value;
 
@@ -923,6 +948,7 @@ impl Searcher {
             }
         }
 
+        // If in checkmate, return so
         if in_check && best_value == NEG_INFINITE {
             return -MATE + ss.ply as i32;
         }
@@ -941,6 +967,7 @@ impl Searcher {
         best_value
     }
 
+    /// If a new capturing best move is found, updating sorting heuristics.
     fn update_capture_stats(&mut self, mov: BitMove, captures: &[BitMove], bonus: i32) {
         let cap_hist: &mut CapturePieceToHistory = &mut self.capture_history;
         let mut moved_piece: Piece = self.board.moved_piece(mov);
@@ -955,6 +982,7 @@ impl Searcher {
 
     }
 
+    /// If a new quiet best move is found, updating sorting heuristics.
     fn update_quiet_stats(&mut self, mov: BitMove, ss: &mut Stack,
                           quiets: &[BitMove], bonus: i32) {
         if ss.killers[0] != mov {
@@ -985,6 +1013,8 @@ impl Searcher {
         }
     }
 
+    // updates histories of the move pairs formed by the current move of one, two, and four
+    // moves ago
     fn update_continuation_histories(&mut self, ss: &mut Stack, piece: Piece, to: SQ, bonus: i32) {
         for i in [1,2,4].iter() {
             let i_ss: &mut Stack = ss.offset(-i as isize);
@@ -1119,5 +1149,5 @@ fn stat_bonus(depth: u16) -> i32 {
 #[test]
 fn how_big() {
     let x = mem::size_of::<Searcher>() / 1000;
-    println!("size {} KB",x);
+    println!("size of searcher: {} KB",x);
 }

@@ -19,7 +19,7 @@ use num_cpus;
 
 pub static ID_NAME: &str = "Pleco";
 pub static ID_AUTHORS: &str = "Stephen Fleischman";
-pub static VERSION: &str = "0.0.8";
+pub static VERSION: &str = "0.1.1";
 
 #[derive(PartialEq)]
 enum SearchType {
@@ -58,7 +58,7 @@ impl PlecoSearcher {
                 "" => continue,
                 "uci" => self.uci_startup(),
                 "setoption" => self.apply_option(&full_command),
-                "options" | "alloptions" => {},
+                "options" | "alloptions" => self.options.display_all(),
                 "ucinewgame" => self.clear_search(),
                 "isready" => println!("readyok"),
                 "position" => {
@@ -84,7 +84,6 @@ impl PlecoSearcher {
                 _ => print!("Unknown Command: {}",full_command)
             }
             self.apply_all_options();
-
         }
     }
 
@@ -103,11 +102,11 @@ impl PlecoSearcher {
         args.next().unwrap();  // setoption
         if let Some(non_name) = args.next() {
             if non_name != "name" {
-                println!("setoption `name`");
+                println!("setoption [name]");
                 return;
             }
         } else {
-            println!("setoption `name`");
+            println!("setoption name [name] ");
             return;
         }
         let mut name = String::new();
@@ -116,7 +115,7 @@ impl PlecoSearcher {
         if let Some(third_arg) = args.next() { //[should be name of the option]
             name += third_arg;
         } else {
-            println!("setoption needs a name!");
+            println!("setoption name [name]");
             return;
         }
 
@@ -137,10 +136,8 @@ impl PlecoSearcher {
             }
         }
 
-        println!("name :{}: value :{}:",name,value);
-
         if !self.options.apply_option(&name, &value) {
-            println!("unable to apply option: {}",full_command);
+            println!("unable to apply option: '{}'", full_command);
         } else {
             self.apply_all_options();
         }
@@ -170,7 +167,6 @@ impl PlecoSearcher {
     pub fn search(&mut self, board: &Board, limit: &PreLimits) {
         self.search_mode = SearchType::Search;
         threadpool().uci_search(board, &(limit.clone().create()));
-
     }
 
     pub fn halt(&mut self) {
