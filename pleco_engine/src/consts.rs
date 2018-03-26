@@ -1,6 +1,7 @@
 //! Constant values and static structures.
 use std::heap::{Alloc, Layout, Global, oom};
 
+use std::mem;
 use std::ptr::{NonNull, self};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -20,21 +21,26 @@ pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
 pub const MAX_THREADS: usize = 256;
 
 pub const DEFAULT_TT_SIZE: usize = 256;
-
 pub const PAWN_TABLE_SIZE: usize = 16384;
 pub const MATERIAL_TABLE_SIZE: usize = 8192;
 
-static INITALIZED: Once = ONCE_INIT;
+const TT_ALLOC_SIZE: usize = mem::size_of::<TranspositionTable>();
+
+// A object that is the same size as a transposition table
+type DummyTranspositionTable = [u8; TT_ALLOC_SIZE];
 
 pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
-/// Global Timer
-//pub static TIMER: TimeManager = TimeManager::uninitialized();
 
-static mut TT_TABLE: NonNull<TranspositionTable> = unsafe
-    {NonNull::new_unchecked(ptr::null_mut())};
+static INITALIZED: Once = ONCE_INIT;
 
+
+/// Global Transposition Table
+static mut TT_TABLE: DummyTranspositionTable = [0; TT_ALLOC_SIZE];
+
+// Global Timer
 static mut TIMER: NonNull<TimeManager> = unsafe
     {NonNull::new_unchecked(ptr::null_mut())};
+
 
 pub fn init_globals() {
     INITALIZED.call_once(|| {
@@ -51,14 +57,8 @@ pub fn init_globals() {
 // initalizes the transposition table
 fn init_tt() {
     unsafe {
-        let layout = Layout::new::<TranspositionTable>();
-        let result = Global.alloc_zeroed(layout);
-        let new_ptr: *mut TranspositionTable = match result {
-            Ok(ptr) => ptr.cast().as_ptr() as *mut TranspositionTable,
-            Err(_err) => oom(layout),
-        };
-        ptr::write(new_ptr, TranspositionTable::new(DEFAULT_TT_SIZE));
-        TT_TABLE = NonNull::new_unchecked(new_ptr);
+        let tt: *mut TranspositionTable = mem::transmute(&mut TT_TABLE);
+        ptr::write(tt, TranspositionTable::new(DEFAULT_TT_SIZE));
     }
 }
 
@@ -75,6 +75,7 @@ fn init_timer() {
     }
 }
 
+// Returns access to the global timer
 pub fn timer() -> &'static TimeManager {
     unsafe {
         &*TIMER.as_ptr()
@@ -82,9 +83,10 @@ pub fn timer() -> &'static TimeManager {
 }
 
 /// Returns access to the global transposition table
+#[inline(always)]
 pub fn tt() -> &'static TranspositionTable {
     unsafe {
-        &*TT_TABLE.as_ptr()
+        mem::transmute(&TT_TABLE)
     }
 }
 
@@ -113,7 +115,7 @@ impl PVNode for NonPV {
 mod tests {
     use super::*;
     #[test]
-    fn test_da() {
+    fn initializing_threadpool() {
         threadpool::init_threadpool();
 
     }

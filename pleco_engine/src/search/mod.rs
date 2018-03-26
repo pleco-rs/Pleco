@@ -150,7 +150,6 @@ pub struct Searcher {
     pub limit: Limits,
     pub board: Board,
     pub time_man: &'static TimeManager,
-    pub tt: &'static TranspositionTable,
     pub pawns: PawnTable,
     pub material: Material,
     pub root_moves: UnsafeCell<RootMoveList>,
@@ -188,7 +187,6 @@ impl Searcher {
             limit: Limits::blank(),
             board: Board::start_pos(),
             time_man: timer(),
-            tt: tt(),
             pawns: PawnTable::new(),
             material: Material::new(),
             root_moves: UnsafeCell::new(RootMoveList::new()),
@@ -250,7 +248,7 @@ impl Searcher {
         // set the global limit
 
         // Increment the TT search table.
-        self.tt.new_search();
+        tt().new_search();
         // Start each of the threads!
         threadpool().thread_cond.set();
 
@@ -571,7 +569,7 @@ impl Searcher {
         // probe the transposition table
         excluded_move = ss.excluded_move;
         zob = self.board.zobrist() ^ (excluded_move.get_raw() as u64).wrapping_shl(16);
-        let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
+        let (tt_hit, tt_entry): (bool, &mut Entry) = tt().probe(zob);
         let tt_value: Value = if tt_hit {value_from_tt(tt_entry.score, ss.ply)} else {NONE};
         let tt_move: BitMove = if at_root {self.root_moves().first().bit_move}
             else if tt_hit {tt_entry.best_move} else {BitMove::null()};
@@ -640,7 +638,7 @@ impl Searcher {
                 tt_entry.place(zob, BitMove::null(),
                                NONE as i16, pos_eval as i16,
                                -6, NodeBound::NoBound,
-                               self.tt.time_age());
+                               tt().time_age());
             }
 
             improving = {
@@ -789,7 +787,7 @@ impl Searcher {
             }
 
             // speculative prefetch for the next key.
-            self.tt.prefetch(self.board.key_after(mov));
+            tt().prefetch(self.board.key_after(mov));
 
             if !self.board.legal_move(mov) {
                 ss.move_count -= 1;
@@ -807,7 +805,7 @@ impl Searcher {
             self.apply_move(mov, gives_check);
 
             // prefetch next TT entry
-            self.tt.prefetch(self.board.zobrist());
+            tt().prefetch(self.board.zobrist());
 
             // At higher depths, do a search of a lower ply to see if this move is
             // worth searching. We don't do this for capturing or promotion moves.
@@ -989,7 +987,7 @@ impl Searcher {
         if excluded_move != BitMove::null() {
             tt_entry.place(zob, best_move, value_to_tt(best_value, ss.ply),
                            ss.static_eval as i16, depth as i16,
-                           node_bound, self.tt.time_age());
+                           node_bound, tt().time_age());
         }
 
         best_value
@@ -1030,7 +1028,7 @@ impl Searcher {
             }
         }
 
-        let (tt_hit, tt_entry): (bool, &mut Entry) = self.tt.probe(zob);
+        let (tt_hit, tt_entry): (bool, &mut Entry) = tt().probe(zob);
         let tt_value: Value = if tt_hit {value_from_tt(tt_entry.score, ss.ply)} else {NONE};
 
         // Determine whether or not to include checking moves.
@@ -1080,7 +1078,7 @@ impl Searcher {
                 if !tt_hit {
                     tt_entry.place(zob, BitMove::null(), value_to_tt(best_value, ss.ply),
                                    pos_eval as i16, -6,
-                                   NodeBound::LowerBound, self.tt.time_age());
+                                   NodeBound::LowerBound, tt().time_age());
                 }
                 return best_value;
             }
@@ -1132,7 +1130,7 @@ impl Searcher {
                 continue;
             }
 
-            self.tt.prefetch(self.board.key_after(mov));
+            tt().prefetch(self.board.key_after(mov));
 
             if !self.board.legal_move(mov) {
                 moves_played -= 1;
@@ -1143,7 +1141,7 @@ impl Searcher {
             self.apply_move(mov, gives_check);
 
             // prefetch next TT entry
-            self.tt.prefetch(self.board.zobrist());
+            tt().prefetch(self.board.zobrist());
 
             assert_eq!(gives_check, self.board.in_check());
 
@@ -1168,7 +1166,7 @@ impl Searcher {
                     } else {
                         tt_entry.place(zob, mov, value_to_tt(best_value, ss.ply),
                                        ss.static_eval as i16, tt_depth as i16,
-                                       NodeBound::LowerBound, self.tt.time_age());
+                                       NodeBound::LowerBound, tt().time_age());
                         return value;
                     }
                 }
@@ -1186,7 +1184,7 @@ impl Searcher {
 
         tt_entry.place(zob, best_move, value_to_tt(best_value, ss.ply),
                        ss.static_eval as i16, tt_depth,
-                       node_bound, self.tt.time_age());
+                       node_bound, tt().time_age());
 
         assert!(best_value > NEG_INFINITE);
         assert!(best_value < INFINITE );
@@ -1344,7 +1342,7 @@ impl Searcher {
         s.push_str(&format!(" nodes {}", nodes));
         if elapsed > 1000 {
             s.push_str(&format!(" nps {}", (nodes * 1000) / elapsed));
-            s.push_str(&format!(" hashfull {:.2}", self.tt.hash_percent()));
+            s.push_str(&format!(" hashfull {:.2}", tt().hash_percent()));
         }
         s.push_str(&format!(" time {}", elapsed));
         s.push_str(&format!(" pv {}", root_move.bit_move.to_string()));

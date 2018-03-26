@@ -23,15 +23,20 @@ use consts::*;
 
 const KILOBYTE: usize = 1000;
 const THREAD_STACK_SIZE: usize = 18000 * KILOBYTE;
-
-// The Global threadpool!
 const POOL_SIZE: usize = mem::size_of::<ThreadPool>();
+
+// An object that is the same size as a thread pool.
 type DummyThreadPool = [u8; POOL_SIZE];
 
+// The Global threadpool! Yes, this is *technically* an array the same
+// size as a ThreadPool object. This is a cheap hack to get a global value, as
+// Rust isn't particularily fond of mutable global statics.
 pub static mut THREADPOOL: DummyThreadPool = [0; POOL_SIZE];
 
+// ONCE for the Threadpool
 static THREADPOOL_INIT: Once = ONCE_INIT;
 
+// Initializes the threadpool, called once on startup.
 pub fn init_threadpool() {
     THREADPOOL_INIT.call_once(|| {
         unsafe {
