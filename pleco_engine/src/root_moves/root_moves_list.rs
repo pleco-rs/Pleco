@@ -92,7 +92,7 @@ impl RootMoveList {
     pub fn mvv_lva_sort(&mut self, board: &Board) {
         self.sort_by_key(|root_move| {
             let a = root_move.bit_move;
-            let piece = board.piece_at_sq((a).get_src()).unwrap();
+            let piece = board.piece_at_sq((a).get_src()).type_of();
 
             if a.is_capture() {
                 piece.value() - board.captured_piece(a).unwrap().value()

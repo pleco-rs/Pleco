@@ -17,18 +17,18 @@ pub const SCALE_FACTOR_MAX: u8    = 128;
 pub const SCALE_FACTOR_NONE: u8   = 255;
 
 // Polynomial material imbalance parameters
-const QUADRATIC_OURS: [[i32; PIECE_TYPE_CNT]; PIECE_TYPE_CNT] = [
-    [1667,    0,   0,     0,     0,   0 ], // Bishop pair
-    [  40,    0,   0,     0,     0,   0 ], // Pawn
-    [  32,  255,  -3,     0,     0,   0 ], // Knight      OUR PIECES
-    [   0,  104,   4,     0,     0,   0 ], // Bishop
-    [ -26,   -2,  47,   105,  -149,   0 ], // Rook
-    [-189,   24, 117,   133,  -134, -10 ]  // Queen
+const QUADRATIC_OURS: [[i32; PIECE_TYPE_CNT - 2]; PIECE_TYPE_CNT - 2] = [
+    [1667,    0,   0,     0,     0,   0], // Bishop pair
+    [  40,    0,   0,     0,     0,   0], // Pawn
+    [  32,  255,  -3,     0,     0,   0], // Knight      OUR PIECES
+    [   0,  104,   4,     0,     0,   0], // Bishop
+    [ -26,   -2,  47,   105,  -149,   0], // Rook
+    [-189,   24, 117,   133,  -134, -10]  // Queen
 ]; // pair pawn knight bishop rook queen
    //            OUR PIECES
 
 
-const QUADRATIC_THEIRS: [[i32; PIECE_TYPE_CNT]; PIECE_TYPE_CNT] = [
+const QUADRATIC_THEIRS: [[i32; PIECE_TYPE_CNT - 2]; PIECE_TYPE_CNT - 2] = [
     [   0,    0,   0,     0,    0,    0 ], // Bishop pair
     [  36,    0,   0,     0,    0,    0 ], // Pawn
     [   9,   63,   0,     0,    0,    0 ], // Knight      OUR PIECES
@@ -127,7 +127,7 @@ impl Material {
         let w_pair_bish: u8 = (w_bishop_count > 1) as u8;
         let b_pair_bish: u8 = (b_bishop_count > 1) as u8;
 
-        let piece_counts: [[u8; PIECE_TYPE_CNT]; PLAYER_CNT] = [
+        let piece_counts: [[u8; PIECE_TYPE_CNT - 2]; PLAYER_CNT] = [
             [w_pair_bish, w_pawn_count, w_knight_count, w_bishop_count, w_rook_count, w_queen_count],
             [b_pair_bish, b_pawn_count, b_knight_count, b_bishop_count, b_rook_count, b_queen_count]];
 
@@ -137,7 +137,7 @@ impl Material {
     }
 }
 
-fn imbalance<P: PlayerTrait>(piece_counts: &[[u8; PIECE_TYPE_CNT]; PLAYER_CNT]) -> i32 {
+fn imbalance<P: PlayerTrait>(piece_counts: &[[u8; PIECE_TYPE_CNT - 2]; PLAYER_CNT]) -> i32 {
     let mut bonus: i32 = 0;
 
     for pt1 in 0..6 {
