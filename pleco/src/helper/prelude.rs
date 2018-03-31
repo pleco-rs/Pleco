@@ -21,6 +21,7 @@ use core::score::{Score,Value};
 
 use std::sync::atomic::{AtomicBool,Ordering,fence,compiler_fence};
 use std::sync::{Once, ONCE_INIT};
+use std::mem;
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -195,6 +196,8 @@ pub fn z_ep(sq: SQ) -> u64 {
 }
 
 /// Returns the Zobrish hash for a castling right.
+///
+/// Undefined behavior will occur if the bits are greater than 15.
 #[inline(always)]
 pub fn z_castle(castle: u8) -> u64 {
     zobrist::z_castle(castle)
@@ -222,22 +225,17 @@ pub fn psq(piece: Piece, sq: SQ) -> Score {
     psqt::psq(piece, sq)
 }
 
-/// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+/// Returns the value of a `Piece`. If `eg` is true, it returns the end game value. Otherwise,
 /// it'll return the midgame value.
 #[inline(always)]
-pub fn piece_value(piece: PieceType, eg: bool) -> Value {
+pub fn piece_value(piece: Piece, eg: bool) -> Value {
     psqt::piece_value(piece, eg)
 }
 
-/// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
+/// Returns the value of a `PieceType`. If `eg` is true, it returns the end game value. Otherwise,
 /// it'll return the midgame value.
-///
-/// If the piece is `None`, returns zero
 #[inline(always)]
-pub fn piece_value_op(op_piece: Option<PieceType>, eg: bool) -> Value {
-    if let Some(piece) = op_piece {
-        psqt::piece_value(piece, eg)
-    } else {
-        0
-    }
+pub fn piecetype_value(piece_type: PieceType, eg: bool) -> Value {
+    let piece: Piece = unsafe {mem::transmute(piece_type)};
+    psqt::piece_value(piece, eg)
 }

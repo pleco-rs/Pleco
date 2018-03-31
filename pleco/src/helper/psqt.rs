@@ -1,4 +1,4 @@
-use {Player,SQ,File,PieceType,Piece};
+use {Player,SQ,File,Piece};
 use core::masks::*;
 use core::score::*;
 
@@ -88,7 +88,7 @@ const BONUS: [[[Score; (FILE_CNT / 2)]; RANK_CNT]; PIECE_TYPE_CNT] = [
 static mut PSQ: [[Score; SQ_CNT]; PIECE_CNT] =
     [[Score(0,0); SQ_CNT]; PIECE_CNT];
 
-static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
+static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_CNT] =
     [[0, 0],                 // Empty
     [ PAWN_MG,    PAWN_EG],  // White Pawn
     [ KNIGHT_MG,  KNIGHT_EG],// White Knight
@@ -96,7 +96,16 @@ static PIECE_VALUE: [[Value; PHASE_CNT]; PIECE_TYPE_CNT] =
     [ ROOK_MG,    ROOK_EG],  // White Rook
     [ QUEEN_MG,   QUEEN_MG], // White Queen
     [ ZERO,       ZERO],     // White King
-    [0, 0]];                 // All
+    [0, 0],
+    [0, 0],                 // Empty
+    [ PAWN_MG,    PAWN_EG],  // Black Pawn
+    [ KNIGHT_MG,  KNIGHT_EG],// Black Knight
+    [ BISHOP_MG,  BISHOP_EG],// Black Bishop
+    [ ROOK_MG,    ROOK_EG],  // Black Rook
+    [ QUEEN_MG,   QUEEN_MG], // Black Queen
+    [ ZERO,       ZERO],     // Black King
+    [0, 0],
+    ];
 
 #[cold]
 pub fn init_psqt() {
@@ -126,7 +135,7 @@ pub fn psq(piece: Piece, sq: SQ) -> Score{
 /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
 /// it'll return the midgame value.
 #[inline(always)]
-pub fn piece_value(piece: PieceType, eg: bool) -> Value {
+pub fn piece_value(piece: Piece, eg: bool) -> Value {
     unsafe {
         (*(PIECE_VALUE.get_unchecked(piece as usize)).get_unchecked(eg as usize))
     }

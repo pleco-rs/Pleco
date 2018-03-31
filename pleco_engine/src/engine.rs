@@ -231,7 +231,8 @@ impl PlecoSearcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
+
+
     fn ply_3() {
         let mut limit = PreLimits::blank();
         limit.depth = Some(3);

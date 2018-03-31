@@ -32,7 +32,7 @@ coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = 
 opt-level = 3
 debug = false
 debug-assertions = false
-panic = "panic"
+panic = "abort"
 codegen-units = 1
 lto = true
 
@@ -43,7 +43,7 @@ rpath = false
 lto = true
 debug-assertions = false
 codegen-units = 1
-panic = "panic"
+panic = "abort"
 
 [profile.test]
 opt-level = 3
@@ -68,13 +68,12 @@ doctest = true
 
 [dependencies]
 pleco = { path = "../pleco", version = "0.3.11" }
-clippy = {version = "0.0.187", optional = true}
-chrono = "0.4.0"
+clippy = {version = "0.0.191", optional = true}
+chrono = "0.4.1"
 rand = "0.4.2"
-rayon = "1.0.0"
+rayon = "1.0.1"
 num_cpus = "1.8.0"
 crossbeam-utils = "0.3.2"
-generic-array = "0.10.0"
 
 [dependencies.lazy_static]
 version = "1.0.0"
@@ -92,7 +91,7 @@ test = false
 doc = false
 
 [dev-dependencies]
-criterion = { version = '0.2', features=['real_blackbox'] }
+criterion = { version = '0.2.2', default-features = false, features=['real_blackbox'] }
 
 [[bench]]
 name = "bench_engine_main"

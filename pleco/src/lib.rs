@@ -77,7 +77,6 @@
 #![feature(pointer_methods)]
 #![feature(cfg_target_feature, target_feature)]
 #![feature(stdsimd)]
-#![feature(conservative_impl_trait)]
 
 #![allow(dead_code)]
 
@@ -90,7 +89,6 @@ extern crate rand;
 extern crate rayon;
 extern crate prefetch;
 extern crate mucow;
-extern crate test;
 extern crate unreachable;
 
 pub mod core;
@@ -105,7 +103,7 @@ pub use core::move_list::{MoveList,ScoringMoveList};
 pub use core::sq::SQ;
 pub use core::bitboard::BitBoard;
 pub use helper::Helper;
-pub use core::{Player, PieceType, Rank, File, Piece};
+pub use core::{Player, Piece, PieceType, Rank, File};
 
 
 pub mod bot_prelude {

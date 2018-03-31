@@ -324,11 +324,16 @@ impl Board {
     ///
     /// let board = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap();
     /// assert_eq!(board.count_all_pieces(),32);
+    ///
+    ///
+    /// let obviously_not_a_fen = "This shouldn't parse!";
+    /// let bad_board = Board::from_fen(obviously_not_a_fen);
+    /// assert!(bad_board.is_err());
     /// ```
     ///
-    /// # Panics
+    /// # Safety
     ///
-    /// The FEN string must be valid, or else the method will panic.
+    /// The FEN string must be valid, or else the method will return an Error.
     ///
     /// There is a possibility of the FEN string representing an unvalid position, with no panics resulting.
     /// The Constructed Board may have some Undefined Behavior as a result. It is up to the user to give a
@@ -621,7 +626,7 @@ impl Board {
                 let rook = Piece::make_lossy(us, PieceType::R);
                 new_state.psq += psq(rook, r_dst) - psq(rook, r_src);
                 zob ^= z_square(r_src, rook) ^ z_square(r_dst, rook);
-                new_state.captured_piece = None;
+                new_state.captured_piece = PieceType::None;
             } else if captured != Piece::None {
                 let mut cap_sq: SQ = to;
                 if captured.type_of() == PieceType::P {
@@ -642,7 +647,7 @@ impl Board {
                     }
                     pawn_key ^= z_square(cap_sq, captured);
                 } else {
-                    new_state.nonpawn_material[them as usize] -= piece_value(captured.type_of(), false);
+                    new_state.nonpawn_material[them as usize] -= piece_value(captured, false);
                     self.remove_piece_c(captured, cap_sq);
                 }
                 zob ^= z_square(cap_sq, captured);
@@ -651,7 +656,7 @@ impl Board {
                 new_state.psq -= psq(captured, cap_sq);
                 // Reset Rule 50
                 new_state.rule_50 = 0;
-                new_state.captured_piece = Some(captured.type_of());
+                new_state.captured_piece = captured.type_of();
             }
 
             // Update hash for moving piece
@@ -702,14 +707,14 @@ impl Board {
                         ^ z_square(SQ(pawn_count), piece);
 
                     new_state.psq += psq(us_promo,to) - psq(piece, to);
-                    new_state.nonpawn_material[us as usize] += piece_value(promo_piece, false);
+                    new_state.nonpawn_material[us as usize] += piece_value(us_promo, false);
                 }
                 pawn_key ^= z_square(from, piece) ^ z_square(to, piece);
                 new_state.rule_50 = 0;
             }
 
             new_state.psq += psq(piece, to) - psq(piece, from);
-            new_state.captured_piece = captured.type_of().as_option();
+            new_state.captured_piece = captured.type_of();
             new_state.zobrast = zob;
             new_state.pawn_key = pawn_key;
             new_state.material_key = material_key;
@@ -811,7 +816,8 @@ impl Board {
             self.remove_castling(us, from, to);
         } else {
             self.move_piece_c(piece_on, to, from);
-            if let Some(cap_piece) = self.state.captured_piece {
+            let cap_piece = self.state.captured_piece;
+            if !cap_piece.is_none() {
                 let mut cap_sq: SQ = to;
                 if undo_move.is_en_passant() {
                     match us {
@@ -1234,7 +1240,7 @@ impl Board {
 
     /// Return the Piece, if any, that was last captured.
     #[inline(always)]
-    pub fn piece_captured_last_turn(&self) -> Option<PieceType> {
+    pub fn piece_captured_last_turn(&self) -> PieceType {
         self.state.captured_piece
     }
 
@@ -1575,7 +1581,7 @@ impl Board {
     /// Returns if the piece (if any) that was captured last move. This method does not
     /// distinguish between not having any last move played and not having a piece last captured.
     #[inline(always)]
-    pub fn piece_last_captured(&self) -> Option<PieceType> {
+    pub fn piece_last_captured(&self) -> PieceType {
         self.state.captured_piece
     }
 
@@ -1610,7 +1616,7 @@ impl Board {
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
-        !self.in_check() && (self.generate_moves().is_empty() || self.state.rule_50 >= 50)
+        !self.in_check() && (self.state.rule_50 >= 50 || self.generate_moves().is_empty())
     }
 
     /// Return the `BitBoard` of all checks on the current player's king. If the current side
@@ -1702,7 +1708,7 @@ impl Board {
         }
 
         // If Moving the king, check if the square moved to is not being attacked
-        // Castles are checked during move gen for check, so we're good there.
+        // Castles are checked during move-generation for check, so we're good there.
         if piece.type_of() == PieceType::K {
             return m.move_type() == MoveType::Castle
                 || (self.attackers_to(dst, self.occupied()) & self.get_occupied_player(them)).is_empty();
@@ -1955,7 +1961,7 @@ impl Board {
 
 
         // Values of the pieces taken by us minus opponent's ones
-        let mut balance: i32 = piece_value(self.piece_at_sq(to).type_of(), false) - threshold;
+        let mut balance: i32 = piece_value(self.piece_at_sq(to), false) - threshold;
 
         if balance < 0 {
             return false;
@@ -1964,7 +1970,7 @@ impl Board {
         // If it is enough (like in PxQ) then return immediately. Note that
         // in case nextVictim == KING we always return here, this is ok
         // if the given move is legal.
-        balance -= piece_value(next_victim, false);
+        balance -= piecetype_value(next_victim, false);
 
         if balance >= 0 {
             return true;
@@ -2002,7 +2008,7 @@ impl Board {
             //      (balance, balance+1) -> (-balance-1, -balance)
             //
             assert!(balance < 0);
-            balance = -balance - 1 - piece_value(next_victim, false);
+            balance = -balance - 1 - piecetype_value(next_victim, false);
 
             // If balance is still non-negative after giving away nextVictim then we
             // win. The only thing to be careful about it is that we should revert
@@ -2022,7 +2028,6 @@ impl Board {
 
         us != stm
     }
-
 
 
     fn min_attacker<P>(&self, to: SQ, stm_attackers: BitBoard, occupied: &mut BitBoard,
@@ -2062,28 +2067,32 @@ impl Board {
 
     /// Returns the piece that was moved from a given BitMove.
     ///
+    /// Simply put, this method will return the `Piece` at a move's from square.
+    ///
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
     #[inline(always)]
-    pub fn moved_piece(&self, m: BitMove) -> PieceType {
+    pub fn moved_piece(&self, m: BitMove) -> Piece {
         let src = m.get_src();
-        self.piece_at_sq(src).type_of()
+        self.piece_at_sq(src)
 
     }
 
     /// Returns the piece that was captured, if any from a given BitMove.
     ///
+    /// If the move is not a capture, `PieceType::None` will be returned.
+    ///
     /// # Safety
     ///
     /// Assumes the move is legal for the current board.
     #[inline(always)]
-    pub fn captured_piece(&self, m: BitMove) -> Option<PieceType> {
+    pub fn captured_piece(&self, m: BitMove) -> PieceType {
         if m.is_en_passant() {
-            return Some(PieceType::P);
+            return PieceType::P;
         }
         let dst = m.get_dest();
-        self.piece_at_sq(dst).type_of().as_option()
+        self.piece_at_sq(dst).type_of()
     }
 
     /// Returns the Zobrist key after a move is played. Doesn't recognize special
@@ -2576,8 +2585,8 @@ mod tests {
         assert!(!b.stalemate());
 
         let bmove: BitMove = BitMove::make_pawn_push(SQ::A2,SQ::A4);
-        assert_eq!(b.moved_piece(bmove), PieceType::P);
-        assert_eq!(b.captured_piece(bmove), None);
+        assert_eq!(b.moved_piece(bmove).type_of(), PieceType::P);
+        assert_eq!(b.captured_piece(bmove), PieceType::None);
     }
 
 

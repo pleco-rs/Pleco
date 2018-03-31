@@ -6,10 +6,11 @@ use std::mem;
 #[allow(unused_imports)]
 use pleco::{BitMove,Board,ScoringMove,ScoringMoveList,SQ,MoveList,PieceType};
 use pleco::board::movegen::{PseudoLegal,MoveGen};
-use pleco::helper::prelude::piece_value;
+use pleco::helper::prelude::{piecetype_value};
 use pleco::core::mono_traits::*;
 
 use self::pick::*;
+use tables::prelude::*;
 
 // TODO: use Generators once stabilized.
 
@@ -23,14 +24,22 @@ pub struct MovePicker {
     cm: BitMove,
     recapture_sq: SQ,
     threshold: i32,
+    main_hist: *const ButterflyHistory,
+    capture_hist: *const CapturePieceToHistory,
+    cont_hist: *const [*const PieceToHistory; 4],
     cur_ptr: *mut ScoringMove,
     end_ptr: *mut ScoringMove,
     end_bad_captures: *mut ScoringMove,
 }
 
 impl MovePicker {
+
     /// MovePicker constructor for the main search
-    pub fn main_search(board: &Board, depth: i16, mut ttm: BitMove,
+    pub fn main_search(board: &Board, depth: i16,
+                       main_hist: &ButterflyHistory,
+                       cap_hist: &CapturePieceToHistory,
+                       cont_hist: *const [*const PieceToHistory; 4],
+                       mut ttm: BitMove,
                        killers: &[BitMove; 2], counter_move: BitMove) -> Self {
         assert!(depth > 0);
         let mut pick = if board.in_check() {Pick::EvasionSearch} else {Pick::MainSearch};
@@ -53,6 +62,9 @@ impl MovePicker {
             cm: counter_move,
             recapture_sq: unsafe {mem::uninitialized()},
             threshold: unsafe {mem::uninitialized()},
+            main_hist: main_hist,
+            capture_hist: cap_hist,
+            cont_hist: cont_hist,
             cur_ptr: first,
             end_ptr: first,
             end_bad_captures: first,
@@ -62,7 +74,10 @@ impl MovePicker {
 
 
     /// MovePicker constructor for quiescence search
-    pub fn qsearch(board: &Board, depth: i16, ttm: BitMove, recapture_sq: SQ) -> Self {
+    pub fn qsearch(board: &Board, depth: i16, ttm: BitMove,
+                   main_hist: &ButterflyHistory,
+                   cap_hist: &CapturePieceToHistory,
+                   recapture_sq: SQ) -> Self {
         assert!(depth <= 0);
         let mut moves = ScoringMoveList::default();
         let first: *mut ScoringMove = moves.as_mut_ptr();
@@ -76,6 +91,9 @@ impl MovePicker {
             cm: unsafe { mem::uninitialized() },
             recapture_sq: unsafe { mem::uninitialized() },
             threshold: unsafe {mem::uninitialized()},
+            main_hist: main_hist,
+            capture_hist: cap_hist,
+            cont_hist: unsafe {mem::uninitialized()},
             cur_ptr: first,
             end_ptr: first,
             end_bad_captures: first,
@@ -128,9 +146,30 @@ impl MovePicker {
             cm: unsafe { mem::uninitialized() },
             recapture_sq: unsafe { mem::uninitialized() },
             threshold,
+            main_hist: unsafe {mem::uninitialized()},
+            capture_hist: unsafe {mem::uninitialized()},
+            cont_hist: unsafe {mem::uninitialized()},
             cur_ptr: first,
             end_ptr: first,
             end_bad_captures: first,
+        }
+    }
+
+    fn main_hist(&self) -> &ButterflyHistory {
+        unsafe {
+            &*self.main_hist
+        }
+    }
+
+    fn capture_hist(&self) -> &CapturePieceToHistory {
+        unsafe {
+            &*self.capture_hist
+        }
+    }
+
+    fn cont_hist(&self, idx: usize) -> &PieceToHistory {
+        unsafe {
+            &*((&*self.cont_hist)[idx])
         }
     }
 
@@ -147,15 +186,11 @@ impl MovePicker {
         unsafe {
             while ptr < self.end_ptr {
                 let mov: BitMove = (*ptr).bit_move;
-                if mov.is_promo() {
-                    (*ptr).score = piece_value(mov.promo_piece(),false) as i16
-                        - piece_value(PieceType::P,false) as i16;
-                } else {
-                    let piece_moved = self.board().moved_piece(mov);
-                    let piece_cap = self.board().captured_piece(mov).unwrap();
-                    (*ptr).score = piece_value(piece_cap,false) as i16
-                        - piece_value(piece_moved,false) as i16;
-                }
+                let piece_moved = self.board().moved_piece(mov);
+                let piece_cap = self.board().captured_piece(mov);
+                (*ptr).score = piecetype_value(piece_cap,false) as i16
+                        + self.capture_hist()[(piece_moved, mov.get_dest(), piece_cap)];
+
                 ptr = ptr.add(1);
             }
         }
@@ -168,9 +203,11 @@ impl MovePicker {
                 let mov: BitMove = (*ptr).bit_move;
                 if self.board().is_capture(mov) {
                     let piece_moved = self.board().moved_piece(mov);
-                    let piece_cap = self.board().captured_piece(mov).unwrap();
-                    (*ptr).score = piece_value(piece_cap,false) as i16
-                        - piece_value(piece_moved,false) as i16;
+                    let piece_cap = self.board().captured_piece(mov);
+                    (*ptr).score = piecetype_value(piece_cap,false) as i16
+                        - piece_moved.type_of() as i16;
+                } else {
+                    (*ptr).score = self.main_hist()[(self.board().turn(),mov)];
                 }
                 ptr = ptr.add(1);
             }
@@ -182,11 +219,12 @@ impl MovePicker {
         unsafe {
             while ptr < self.end_ptr {
                 let mov: BitMove = (*ptr).bit_move;
-                if mov.is_castle() {
-                    (*ptr).score = 200;
-                } else if mov.is_double_push().0 {
-                    (*ptr).score = 194;
-                }
+                let to_sq: SQ = mov.get_dest();
+                let moved_piece = self.board().moved_piece(mov);
+                (*ptr).score = self.main_hist()[(self.board().turn(), mov)]
+                    + self.cont_hist(0)[(moved_piece, to_sq)]
+                    + self.cont_hist(1)[(moved_piece, to_sq)]
+                    + self.cont_hist(3)[(moved_piece, to_sq)];
                 ptr = ptr.add(1);
             }
         }
@@ -430,7 +468,7 @@ mod tests {
 
     use std::panic;
     use std::i16::{MAX,MIN};
-
+    use std::mem;
 
     use super::*;
     use pleco::MoveList;
@@ -676,7 +714,17 @@ mod tests {
 
         let result = panic::catch_unwind(|| {
             let mut moves_mp = MoveList::default();
-            let mut mp = MovePicker::main_search(&b, depth, ttm, &killers, cm);
+            let main_hist: ButterflyHistory = unsafe {mem::zeroed()};
+            let cap_hist: CapturePieceToHistory = unsafe {mem::zeroed()};
+            let cont_hist1: PieceToHistory = unsafe {mem::zeroed()};
+            let cont_hist2: PieceToHistory = unsafe {mem::zeroed()};
+            let cont_hist3: PieceToHistory = unsafe {mem::zeroed()};
+            let cont_hist4: PieceToHistory = unsafe {mem::zeroed()};
+            let cont_hist = [&cont_hist1 as *const _, &cont_hist2 as *const _,
+                &cont_hist3 as *const _, &cont_hist4 as *const _];
+            let mut mp = MovePicker::main_search(&b, depth, &main_hist, &cap_hist,
+                                                 &cont_hist as *const _,
+                                                 ttm, &killers, cm);
 
             let mut mp_next = mp.next_mov( false);
             while mp_next != BitMove::null() {

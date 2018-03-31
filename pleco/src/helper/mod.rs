@@ -19,7 +19,7 @@ mod psqt;
 pub mod prelude;
 
 
-use {SQ,BitBoard,Player,PieceType,File,Rank,Piece};
+use {SQ,BitBoard,Player,File,Rank,Piece};
 use core::score::{Score,Value};
 
 /// Helper structure for accessing statically-initialized tables and other constants.
@@ -213,7 +213,7 @@ impl Helper {
     /// Returns the value of a piece for a player. If `eg` is true, it returns the end game value. Otherwise,
     /// it'll return the midgame value.
     #[inline(always)]
-    pub fn piece_value(&self, piece: PieceType, eg: bool) -> Value {
+    pub fn piece_value(&self, piece: Piece, eg: bool) -> Value {
         prelude::piece_value(piece, eg)
     }
 }

@@ -1,4 +1,4 @@
-use {Player,SQ,PieceType,BitBoard,Piece};
+use {SQ,BitBoard,Piece};
 use tools::prng::PRNG;
 use core::masks::*;
 
@@ -10,16 +10,16 @@ static mut ZOBRIST_PIECE_SQUARE: [[u64; PIECE_CNT]; SQ_CNT] =
     [[0; PIECE_CNT]; SQ_CNT];
 
 /// Zobrist key for each possible en-passant capturable file.
-static mut ZOBRIST_ENPASSANT: [u64; FILE_CNT] = [0; FILE_CNT]; // 8 * 8
+static mut ZOBRIST_ENPASSANT: [u64; FILE_CNT] = [0; FILE_CNT];
 
 /// Zobrist key for each possible castling rights.
-static mut ZOBRIST_CASTLE: [u64; ALL_CASTLING_RIGHTS] =[0; ALL_CASTLING_RIGHTS]; // 8 * 4
+static mut ZOBRIST_CASTLE: [u64; ALL_CASTLING_RIGHTS] =[0; ALL_CASTLING_RIGHTS];
 
 /// Zobrist key for the side to move.
-static mut ZOBRIST_SIDE: u64 = 0; // 8
+static mut ZOBRIST_SIDE: u64 = 0;
 
 /// Zobrist key for having no pawns;
-static mut ZOBRIST_NO_PAWNS: u64 = 0; // 8
+static mut ZOBRIST_NO_PAWNS: u64 = 0;
 
 /// initialize the zobrist hash
 #[cold]

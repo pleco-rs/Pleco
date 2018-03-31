@@ -29,35 +29,35 @@ const MOBILITY_BONUS: [[Score; 32]; PIECE_TYPE_CNT] = [
 [   Score::ZERO; 32], // No Piece
 [   Score::ZERO; 32], // Pawns
 [   Score(-75,-76), Score(-57,-54), Score( -9,-28), Score( -2,-10), Score(  6,  5), Score( 14, 12), // Knights
-    Score( 22, 26), Score( 29, 29), Score( 36, 29), Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,          Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO
+    Score( 22, 26), Score( 29, 29), Score( 36, 29), Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO
 ],
 [   Score(-48,-59), Score(-20,-23), Score( 16, -3), Score( 26, 13), Score( 38, 24), Score( 51, 42), // Bishops
     Score( 55, 54), Score( 63, 57), Score( 63, 65), Score( 68, 73), Score( 81, 78), Score( 81, 86),
-    Score( 91, 88), Score( 98, 97), Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO
+    Score( 91, 88), Score( 98, 97), Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO
 ],
 [   Score(-58,-76), Score(-27,-18), Score(-15, 28), Score(-10, 55), Score( -5, 69), Score( -2, 82), // Rooks
     Score(  9,112), Score( 16,118), Score( 30,132), Score( 29,142), Score( 32,155), Score( 38,165),
-    Score( 46,166), Score( 48,169), Score( 58,171), Score::ZERO,          Score::ZERO,          Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO,           Score::ZERO,          Score::ZERO,          Score::ZERO,           Score::ZERO,
-    Score::ZERO,          Score::ZERO
+    Score( 46,166), Score( 48,169), Score( 58,171), Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO
 ],
 [   Score(-39,-36), Score(-21,-15), Score(  3,  8), Score(  3, 18), Score( 14, 34), Score( 22, 54), // Queens
     Score( 28, 61), Score( 41, 73), Score( 43, 79), Score( 48, 92), Score( 56, 94), Score( 60,104),
     Score( 60,113), Score( 66,120), Score( 67,123), Score( 70,126), Score( 71,133), Score( 73,136),
     Score( 79,140), Score( 88,143), Score( 88,148), Score( 99,166), Score(102,170), Score(102,175),
-    Score(106,184), Score(109,191), Score(113,206), Score(116,212), Score::ZERO,          Score::ZERO,
-    Score::ZERO,          Score::ZERO
+    Score(106,184), Score(109,191), Score(113,206), Score(116,212), Score::ZERO,    Score::ZERO,
+    Score::ZERO,    Score::ZERO
 ],
-[   Score::ZERO; 32],
-[   Score::ZERO; 32] // All piece
+[   Score::ZERO; 32], // King
+[   Score::ZERO; 32]  // All piece
 ];
 
 const KING_PROTECTOR: [Score; PIECE_TYPE_CNT] = [Score(0,0), Score(0,0), Score(-3, -5), Score(-4, -3), Score(-3, 0), Score(-1, 1), Score(0,0), Score(0,0)];

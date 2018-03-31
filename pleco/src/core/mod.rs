@@ -196,6 +196,10 @@ pub enum GenTypes {
 }
 
 /// All possible Types of Pieces on a chessboard.
+///
+/// For a representation of pieces considering color as well, see [`Piece`]
+///
+/// [`Piece`]: ./enum.Piece
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum PieceType {
@@ -210,7 +214,6 @@ pub enum PieceType {
 }
 
 impl PieceType {
-
     /// Returns the relative value of a piece.
     ///
     /// Used for sorting moves.
@@ -226,14 +229,19 @@ impl PieceType {
         }
     }
 
-    pub fn as_option(self) -> Option<PieceType> {
-        if self == PieceType::None {
-            None
-        } else {
-            Some(self)
-        }
+    /// Returns if the piece is `PieceType::None`
+    #[inline(always)]
+    pub fn is_none(self) -> bool {
+        self == PieceType::None
     }
 
+    /// Returns if the piece is not `PieceType::None`
+    #[inline(always)]
+    pub fn is_some(self) -> bool {
+        !self.is_none()
+    }
+
+    /// Checks if the piece is actually real, as in the Piece is not `None` or `All`.
     #[inline(always)]
     pub fn is_real(self) -> bool {
         self != PieceType::None && self != PieceType::All
@@ -286,7 +294,11 @@ impl fmt::Display for PieceType {
 
 // TODO: documentation
 
-/// All possible Types of Pieces on a chessboard.
+/// All possible Types of Pieces on a chessboard, for both colors.
+///
+/// For a representation of Only Pieces (with no color attached), see [`PieceType`]
+///
+/// [`Piece`]: ./enum.PieceType
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Piece {
@@ -306,6 +318,31 @@ pub enum Piece {
 }
 
 impl Piece {
+    /// Returns the `Player` of a piece, if any.
+    ///
+    /// For an unsafe, "lossy" determination of a `Player`, see [`Piece::player_lossy`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,Player};
+    ///
+    /// let black_knight = Piece::BlackKnight;
+    /// let player: Player = black_knight.player().unwrap();
+    ///
+    /// assert_eq!(player, Player::Black);
+    /// ```
+    ///
+    /// The only discriminant that will return `None`:
+    ///
+    /// ```
+    /// use pleco::{Piece,Player};
+    ///
+    /// let piece = Piece::None;
+    /// assert!(piece.player().is_none());
+    /// ```
+    ///
+    /// [`Piece::player_lossy`]: ./enum.Piece.html#method.player_lossy
     #[inline(always)]
     pub fn player(self) -> Option<Player> {
         if self as u8 & 0b0111 == 0 {
@@ -315,14 +352,59 @@ impl Piece {
         }
     }
 
+    /// Returns the `Player` of a `Piece`.
+    ///
+    /// # Undefined Behavior
+    ///
+    /// If the discriminant is `Piece::None`, the returned `Player` will be undefined. This method
+    /// must be used only when a returned `Piece` is guaranteed to exist.
+    ///
+    /// For a safer version of this method that accounts for an undetermined player,
+    /// see [`Piece::player`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,Player};
+    ///
+    /// let white_pawn = Piece::WhitePawn;
+    /// let player: Player = white_pawn.player_lossy();
+    ///
+    /// assert_eq!(player, Player::White);
+    /// ```
+    ///
+    /// The following will invoke undefined behavior, so do not use it.
+    ///
+    /// ```
+    /// use pleco::{Piece,Player};
+    ///
+    /// let piece = Piece::None;
+    /// let fake_player: Player = piece.player_lossy();
+    /// ```
+    /// [`Piece::player`]: ./enum.Piece.html#method.player
     #[inline(always)]
     pub fn player_lossy(self) -> Player {
-        assert_ne!(self, Piece::None);
         unsafe {
             mem::transmute((self as u8 >> 3) & 0b1)
         }
     }
 
+    /// Returns the `PieceType`.
+    ///
+   /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType};
+    ///
+    /// let white_queen = Piece::WhiteQueen;
+    /// let no_piece = Piece::None;
+    ///
+    /// assert_eq!(white_queen.type_of(), PieceType::Q);
+    /// assert_eq!(no_piece.type_of(), PieceType::None);
+    ///
+    /// let black_queen = Piece::BlackQueen;
+    /// assert_eq!(white_queen.type_of(), black_queen.type_of());
+    /// ```
     #[inline(always)]
     pub fn type_of(self) -> PieceType {
         unsafe {
@@ -330,6 +412,25 @@ impl Piece {
         }
     }
 
+    /// Returns the `Player` and `PieceType` of this piece, if any. If the discriminant is
+    /// `Piece::None`, `None` will be returned.
+    ///
+    /// For an unsafe, "lossy" determination of a `Player` and `Piece`,
+    /// see [`Piece::player_piece_lossy`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType,Player};
+    ///
+    /// let white_queen = Piece::WhiteQueen;
+    /// let (player, piece) = white_queen.player_piece().unwrap();
+    ///
+    /// assert_eq!(piece, PieceType::Q);
+    /// assert_eq!(player, Player::White);
+    /// ```
+    ///
+    /// [`Piece::player_piece_lossy`]: ./enum.Piece.html#method.player_piece_lossy
     #[inline(always)]
     pub fn player_piece(self) -> Option<(Player, PieceType)> {
         if self == Piece::None {
@@ -339,11 +440,64 @@ impl Piece {
         }
     }
 
+    /// Returns the `Player` and `PieceType` of a `Piece`.
+    ///
+    /// # Undefined Behavior
+    ///
+    /// If the discriminant is `Piece::None`, the returned `PieceType` will be correct, but
+    /// the `Player` will be undefined.
+    ///
+    /// For a safer version of this method that accounts for an undetermined player,
+    /// see [`Piece::player_piece`].
+    ///
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType,Player};
+    ///
+    /// let white_queen = Piece::WhiteQueen;
+    /// let (player, piece) = white_queen.player_piece_lossy();
+    ///
+    /// assert_eq!(piece, PieceType::Q);
+    /// assert_eq!(player, Player::White);
+    /// ```
+    ///
+    /// Undefined behavior can be encountered by doing something akin to:
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType,Player};
+    ///
+    /// let not_a_piece = Piece::None;
+    ///
+    /// let (wrong_player, piece) = not_a_piece.player_piece_lossy();
+    /// ```
+    ///
+    /// [`Piece::player_piece`]: ./enum.Piece.html#method.player_piece
     #[inline(always)]
     pub fn player_piece_lossy(self) -> (Player, PieceType) {
         (self.player_lossy(), self.type_of())
     }
 
+    /// Creates a `Piece` from a `Player` and `PieceType`. If the `PieceType` is either
+    /// `PieceType::All` or `PieceType::None`, the returned value will be `None`.
+    ///
+    /// For an unsafe, lossy version of this method, see [`Piece::make_lossy`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType,Player};
+    ///
+    /// let black_knight = Piece::make(Player::Black, PieceType::N).unwrap();
+    ///
+    /// assert_eq!(black_knight.type_of(), PieceType::N);
+    /// assert_eq!(black_knight.player().unwrap(), Player::Black);
+    ///
+    /// let illegal_piece = Piece::make(Player::White, PieceType::All);
+    /// assert!(illegal_piece.is_none());
+    /// ```
+    /// [`Piece::make_lossy`]: ./enum.Piece.html#method.make_lossy
     #[inline(always)]
     pub fn make(player: Player, piece_type: PieceType) -> Option<Piece> {
         match piece_type {
@@ -353,15 +507,42 @@ impl Piece {
         }
     }
 
+    /// Creates a `Piece` from a `Player` and `PieceType`.
+    ///
+    /// # Undefined Behavior
+    ///
+    /// If the `PieceType` is either `PieceType::All` or `PieceType::None`, undefined behavior will
+    /// follow. See [`Piece::make`] for a safer version of this method.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType,Player};
+    ///
+    /// let black_knight = Piece::make_lossy(Player::Black, PieceType::N);
+    ///
+    /// assert_eq!(black_knight.type_of(), PieceType::N);
+    /// assert_eq!(black_knight.player().unwrap(), Player::Black);
+    /// ```
+    ///
+    /// The following code snippet will give undefined behavior:
+    ///
+    /// ```
+    /// use pleco::{Piece,PieceType,Player};
+    ///
+    /// let illegal_piece = Piece::make_lossy(Player::Black, PieceType::All);
+    /// ```
+    /// [`Piece::make`]: ./enum.Piece.html#method.make
     #[inline(always)]
     pub fn make_lossy(player: Player, piece_type: PieceType) -> Piece {
-        debug_assert_ne!(piece_type, PieceType::All);
         unsafe {
             let bits: u8 = (player as u8) << 3 | piece_type as u8;
             mem::transmute(bits)
         }
     }
 
+    /// Returns the character of a `Piece`. If the Piece is `Piece::None`, `None` will be returned.
+    #[inline]
     pub fn character(self) -> Option<char> {
         if self == Piece::None {
             None
@@ -370,6 +551,11 @@ impl Piece {
         }
     }
 
+    /// Returns the character of a `Piece`.
+    ///
+    /// # Panics
+    ///
+    /// If the Piece is `Piece::None`, a panic will occur.
     pub fn character_lossy(self) -> char {
         match self {
             Piece::None        => panic!(),
@@ -513,6 +699,7 @@ pub enum CastleType {
     QueenSide = 1,
 }
 
+#[doc(hidden)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 #[repr(u8)]
 pub enum Phase {

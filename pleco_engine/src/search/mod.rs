@@ -6,9 +6,7 @@ use std::cmp::{min,max};
 use std::sync::atomic::{Ordering,AtomicBool,AtomicU64};
 use std::cell::UnsafeCell;
 use std::mem;
-
-use rand;
-use rand::Rng;
+use std::ptr;
 
 use pleco::{Board,BitMove,SQ};
 use pleco::core::*;
@@ -271,6 +269,12 @@ impl Searcher {
             println!("info id {} start", self.id);
         }
 
+        let mut stack: ThreadStack = ThreadStack::new();
+
+        for i in [0,1,2,3,4].iter() {
+            stack.get(*i).cont_history = &mut self.cont_history[(Piece::None, SQ(0))] as *mut _;
+        }
+
         // If use a max_depth limit, use that as the max depth.
         let max_depth = if self.main_thread() {
             if let LimitsType::Depth(d) = self.limit.limits_type {
@@ -298,12 +302,8 @@ impl Searcher {
         let mut beta: i32 = INFINITE as i32;
 
         let mut time_reduction: f64 = 1.0;
-        let mut stack: ThreadStack = ThreadStack::new();
 
         stack.ply_zero().ply = 0;
-
-        // Shuffle (or possibly sort) the root moves so each thread searches different moves.
-        self.shuffle();
 
         // Iterative deeping. Start at the base ply (determined by thread_id), and then increment
         // by the skip size after searching that depth. If searching for depth, non-main threads
@@ -404,9 +404,9 @@ impl Searcher {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
-                    let improving_factor: i64 = (185).max((630).min(
+                    let improving_factor: i64 = (215).max((630).min(
                           353
-                        + 100 * self.failed_low as i64
+                        + 109 * self.failed_low as i64
                         -   6 * score_diff as i64));
 
                     time_reduction = 1.0;
@@ -450,10 +450,20 @@ impl Searcher {
         let in_check: bool = self.board.in_check();
 
         let mut best_move = BitMove::null();
-
         let mut value: Value = NEG_INFINITE;
         let mut best_value: Value = NEG_INFINITE;
-        let mut moves_played = 0;
+        let mut moves_played: u32 = 0;
+        ss.move_count = 0;
+
+        let mut moved_piece: Piece;
+
+        let mut captures_searched: [BitMove; 32] = [BitMove::null(); 32];
+        let mut captures_count = 0;
+        let mut quiets_searched: [BitMove; 64] = [BitMove::null(); 64];
+        let mut quiets_count = 0;
+
+        let mut capture_or_promotion: bool;
+        let mut gives_check: bool;
 
         let mut pos_eval: i32;
 
@@ -486,8 +496,9 @@ impl Searcher {
         ss.incr().ply = ply + 1;
         ss.offset(2).killers = [BitMove::null(); 2];
         ss.current_move = BitMove::null();
+        ss.cont_history = &mut self.cont_history[(Piece::None, SQ(0))] as *mut _;
 
-        let _prev_sq: SQ = ss.offset(-1).current_move.get_src();
+        let prev_sq: SQ = ss.offset(-1).current_move.get_src();
 
         // probe the transposition table
         let (tt_hit, tt_entry): (bool, &mut Entry) = TT_TABLE.probe(zob);
@@ -502,8 +513,29 @@ impl Searcher {
             && correct_bound_eq(tt_value, beta, tt_entry.node_type()) {
 
             if tt_move != BitMove::null() {
-                if !self.board.is_capture_or_promotion(tt_move) {
-                    self.update_quiet_stats(tt_move, ss);
+                if tt_value >= beta {
+                    if !self.board.is_capture_or_promotion(tt_move) {
+                        self.update_quiet_stats(tt_move, ss,
+                                                &quiets_searched[0..0],
+                                                stat_bonus(depth));
+                    }
+
+                    // Extra penalty for a quiet TT move in previous ply when it gets refuted
+                    if ss.offset(-1).move_count == 1 &&
+                        self.board.piece_captured_last_turn().is_none() {
+                        let piece_at_sq = self.board.piece_at_sq(prev_sq);
+                        self.update_continuation_histories(ss.offset(-1),
+                                                           piece_at_sq,
+                                                           prev_sq,
+                                                           -stat_bonus(depth + 1));
+                    }
+                } else if !self.board.is_capture_or_promotion(tt_move) {
+                    // Penalty for a quiet ttMove that fails low
+                    let penalty = -stat_bonus(depth);
+                    let turn = self.board.turn();
+                    let moved_piece = self.board.moved_piece(tt_move);
+                    self.main_history.update((turn, tt_move), penalty);
+                    self.update_continuation_histories(ss, moved_piece, tt_move.get_dest(), penalty);
                 }
             }
 
@@ -556,13 +588,30 @@ impl Searcher {
             }
         }
 
-        let mut move_picker = MovePicker::main_search(&self.board, depth as i16, tt_move, &ss.killers, BitMove::null());
+        let cont_hists = [ss.offset(-1).cont_history,
+            ss.offset(-2).cont_history,
+            ptr::null(),
+            ss.offset(-4).cont_history];
+
+        let mut move_picker = MovePicker::main_search(&self.board,
+                                                      depth as i16,
+                                                      &self.main_history,
+                                                      &self.capture_history,
+                                                      &cont_hists as *const _,
+                                                      tt_move,
+                                                      &ss.killers, BitMove::null());
 
         while let Some(mov) = move_picker.next(false) {
             if self.board.legal_move(mov) {
                 moves_played += 1;
-                let gives_check: bool = self.board.gives_check(mov);
+                ss.move_count = moves_played;
+
+                gives_check = self.board.gives_check(mov);
+                capture_or_promotion = self.board.is_capture_or_promotion(mov);
+                moved_piece = self.board.moved_piece(mov);
+
                 ss.current_move = mov;
+                ss.cont_history = &mut self.cont_history[(moved_piece,mov.get_dest())] as *mut _;
                 self.apply_move(mov, gives_check);
 
                 // prefetch the zobrist key
@@ -643,6 +692,16 @@ impl Searcher {
                         }
                     }
                 }
+
+                if mov != best_move {
+                    if capture_or_promotion && captures_count < 32 {
+                        captures_searched[captures_count] = mov;
+                        captures_count += 1;
+                    } else if !capture_or_promotion && quiets_count < 64 {
+                        quiets_searched[quiets_count] = mov;
+                        quiets_count += 1;
+                    }
+                }
             }
         }
 
@@ -654,8 +713,30 @@ impl Searcher {
             }
         } else if best_move != BitMove::null() {
             if !self.board.is_capture_or_promotion(best_move) {
-                self.update_quiet_stats(best_move, ss);
+                self.update_quiet_stats(best_move, ss,
+                                         &quiets_searched[0..quiets_count],
+                                         stat_bonus(depth));
+            } else {
+                self.update_capture_stats(best_move,
+                                          &captures_searched[0..captures_count],
+                                          stat_bonus(depth));
             }
+
+            if ss.offset(-1).move_count == 1 && self.board.piece_captured_last_turn().is_none() {
+                let piece_at_sq = self.board.piece_at_sq(prev_sq);
+                self.update_continuation_histories(ss.offset(-1),
+                                                   piece_at_sq,
+                                                   prev_sq,
+                                                   -stat_bonus(depth + 1));
+            }
+        } else if depth >= 3
+            && self.board.piece_captured_last_turn().is_none()
+            && ss.offset(-1).current_move.is_okay() {
+            let piece_at_sq = self.board.piece_at_sq(prev_sq);
+            self.update_continuation_histories(ss.offset(-1),
+                                               piece_at_sq,
+                                               prev_sq,
+                                               stat_bonus(depth));
         }
 
         let node_bound = if best_value as i32 >= beta {NodeBound::LowerBound}
@@ -697,7 +778,7 @@ impl Searcher {
         let mut futility_value: Value;
         let mut evasion_prunable: bool;
         #[allow(unused_variables)]
-        let mut moves_played = 0;
+        let mut moves_played: u32 = 0;
         let old_alpha = alpha;
         let tt_depth: i16 = if in_check || rev_depth >= 0 {0} else {-1};
 
@@ -763,7 +844,11 @@ impl Searcher {
         }
 
         let recap_sq = ss.offset(-1).current_move.get_dest();
-        let mut move_picker = MovePicker::qsearch(&self.board, rev_depth, tt_move, recap_sq);
+        let mut move_picker = MovePicker::qsearch(&self.board, rev_depth,
+                                                  tt_move,
+                                                  &self.main_history,
+                                                  &self.capture_history,
+                                                  recap_sq);
 
         while let Some(mov) = move_picker.next(false) {
             let gives_check: bool = self.board.gives_check(mov);
@@ -775,7 +860,7 @@ impl Searcher {
                 && futility_base > -10000
                 && !self.board.advanced_pawn_push(mov) {
                 let piece_at = self.board.piece_at_sq(mov.get_src()).type_of();
-                futility_value = futility_base + piece_value(piece_at, true);
+                futility_value = futility_base + piecetype_value(piece_at, true);
 
                 if futility_value <= alpha {
                     best_value = best_value.max(futility_value);
@@ -801,9 +886,6 @@ impl Searcher {
                 moves_played -= 1;
                 continue;
             }
-
-
-
 
             ss.current_move = mov;
             self.apply_move(mov, gives_check);
@@ -859,16 +941,21 @@ impl Searcher {
         best_value
     }
 
-    fn update_quiet_stats(&self, mov: BitMove, ss: &mut Stack) {
-        if ss.killers[0] != mov {
-            ss.killers[1] = ss.killers[0];
-            ss.killers[0] = mov;
+    fn update_capture_stats(&mut self, mov: BitMove, captures: &[BitMove], bonus: i32) {
+        let cap_hist: &mut CapturePieceToHistory = &mut self.capture_history;
+        let mut moved_piece: Piece = self.board.moved_piece(mov);
+        let mut captured: PieceType = self.board.captured_piece(mov);
+        cap_hist.update((moved_piece, mov.get_dest(), captured), bonus);
+
+        for m in captures.iter() {
+            moved_piece = self.board.moved_piece(*m);
+            captured =  self.board.captured_piece(*m);
+            cap_hist.update((moved_piece, m.get_dest(), captured), -bonus);
         }
+
     }
 
-    // TODO: Implement this inside the main search
-    // Right now this is a stub.
-    fn update_quiet_stats2(&mut self, mov: BitMove, ss: &mut Stack,
+    fn update_quiet_stats(&mut self, mov: BitMove, ss: &mut Stack,
                           quiets: &[BitMove], bonus: i32) {
         if ss.killers[0] != mov {
             ss.killers[1] = ss.killers[0];
@@ -878,34 +965,33 @@ impl Searcher {
         let us: Player = self.board.turn();
         let moved_piece = self.board.moved_piece(mov);
         let to_sq = mov.get_dest();
-        self.main_history.update((us, mov), bonus as i16);
-        self.update_continuation_histories(ss, us, moved_piece, to_sq, bonus);
+        self.main_history.update((us, mov), bonus);
+        self.update_continuation_histories(ss, moved_piece, to_sq, bonus);
 
         {
             let ss_bef: &mut Stack = ss.offset(-1);
             if ss_bef.current_move.is_okay() {
                 let prev_sq = ss_bef.current_move.get_dest();
-                let (player, piece) = self.board.piece_at_sq(prev_sq).player_piece_lossy();
-                self.counter_moves[(player, piece, prev_sq)] = mov;
+                let piece = self.board.piece_at_sq(prev_sq);
+                self.counter_moves[(piece, prev_sq)] = mov;
             }
         }
 
         for q_mov in quiets.iter() {
-            self.main_history.update((us, *q_mov), -bonus as i16);
+            self.main_history.update((us, *q_mov), -bonus);
             let q_moved_piece = self.board.moved_piece(*q_mov);
             let to_sq = q_mov.get_dest();
-            self.update_continuation_histories(ss, us, q_moved_piece, to_sq, -bonus);
+            self.update_continuation_histories(ss, q_moved_piece, to_sq, -bonus);
         }
     }
 
-    fn update_continuation_histories(&mut self, ss: &mut Stack, player: Player, piece: PieceType,
-                                     to: SQ, bonus: i32) {
+    fn update_continuation_histories(&mut self, ss: &mut Stack, piece: Piece, to: SQ, bonus: i32) {
         for i in [1,2,4].iter() {
             let i_ss: &mut Stack = ss.offset(-i as isize);
             if i_ss.current_move.is_okay() {
                 unsafe  {
                     let cont_his: &mut PieceToHistory = &mut *i_ss.cont_history;
-                    cont_his.update((player, piece, to), bonus as i16);
+                    cont_his.update((piece, to), bonus);
                 }
             }
 
@@ -957,42 +1043,11 @@ impl Searcher {
         USE_STDOUT.load(Ordering::Relaxed)
     }
 
-    pub fn shuffle(&mut self) {
-        if self.id == 0 || self.id >= 20 {
-            self.rm_mvv_laa_sort();
-        } else {
-            rand::thread_rng().shuffle(self.root_moves().as_mut());
-        }
-    }
-
     #[inline]
     pub fn root_moves(&self) -> &mut RootMoveList {
         unsafe {
             &mut *self.root_moves.get()
         }
-    }
-
-    #[inline]
-    fn rm_mvv_laa_sort(&mut self) {
-        let board = &self.board;
-        self.root_moves().sort_by_key(|root_move| {
-            let a = root_move.bit_move;
-            let piece = board.piece_at_sq((a).get_src()).type_of();
-
-            if a.is_capture() {
-                piece.value() - board.captured_piece(a).unwrap().value()
-            } else if a.is_castle() {
-                1
-            } else if piece == PieceType::P {
-                if a.is_double_push().0 {
-                    2
-                } else {
-                    3
-                }
-            } else {
-                4
-            }
-        });
     }
 
     /// Useful information to tell to the GUI
@@ -1032,7 +1087,7 @@ impl Drop for Searcher {
 }
 
 fn correct_bound_eq(tt_value: i32, beta: i32, bound: NodeBound) -> bool {
-    if tt_value as i32 >= beta {
+    if tt_value >= beta {
         bound as u8 & NodeBound::LowerBound as u8 != 0
     } else {
         bound as u8 & NodeBound::UpperBound as u8 != 0
@@ -1040,7 +1095,7 @@ fn correct_bound_eq(tt_value: i32, beta: i32, bound: NodeBound) -> bool {
 }
 
 fn correct_bound(tt_value: i32, val: i32, bound: NodeBound) -> bool {
-    if tt_value as i32 >= val {
+    if tt_value >= val {
         bound as u8 & NodeBound::LowerBound as u8 != 0
     } else {
         bound as u8 & NodeBound::UpperBound as u8 != 0
@@ -1050,4 +1105,19 @@ fn correct_bound(tt_value: i32, val: i32, bound: NodeBound) -> bool {
 #[inline]
 fn futility_margin(depth: u16) -> i32 {
     depth as i32 * 150
+}
+
+fn stat_bonus(depth: u16) -> i32 {
+    if depth > 17 {
+        0
+    } else {
+        let d = depth as i32;
+        d * d + 2 * d - 2
+    }
+}
+
+#[test]
+fn how_big() {
+    let x = mem::size_of::<Searcher>() / 1000;
+    println!("size {} KB",x);
 }

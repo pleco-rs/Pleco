@@ -35,7 +35,7 @@ use std::mem;
 use std::ops::*;
 use std::fmt;
 
-/// Defines an object to define a bitboard. A `BitBoard` is simply a u64 where each
+/// A `BitBoard` is simply a 64 bit long integer where each
 /// bit maps to a specific square. Used for mapping occupancy, where '1' represents
 /// a piece being at that index's square, and a '0' represents a lack of a piece.
 #[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]

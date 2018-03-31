@@ -27,19 +27,27 @@ pub static mut THREADPOOL: NonNull<ThreadPool> = unsafe {NonNull::new_unchecked(
 static THREADPOOL_INIT: Once = ONCE_INIT;
 
 const KILOBYTE: usize = 1000;
-const THREAD_STACK_SIZE: usize = 4000 * KILOBYTE;
+const THREAD_STACK_SIZE: usize = 18000 * KILOBYTE;
 
 pub fn init_threadpool() {
     THREADPOOL_INIT.call_once(|| {
+
         unsafe {
-            let layout = Layout::new::<ThreadPool>();
-            let result = Heap.alloc_zeroed(layout);
-            let new_ptr: *mut ThreadPool = match result {
-                Ok(ptr) => ptr as *mut ThreadPool,
-                Err(err) => Heap.oom(err),
-            };
-            ptr::write(new_ptr, ThreadPool::new());
-            THREADPOOL = NonNull::new_unchecked(new_ptr);
+            let builder = thread::Builder::new()
+                .name("Starter".to_string())
+                .stack_size(THREAD_STACK_SIZE);
+            let handle = scoped::builder_spawn_unsafe(builder,
+                                                      move || {
+                let layout = Layout::new::<ThreadPool>();
+                let result = Heap.alloc_zeroed(layout);
+                let new_ptr: *mut ThreadPool = match result {
+                    Ok(ptr) => ptr as *mut ThreadPool,
+                    Err(err) => Heap.oom(err),
+                };
+                ptr::write(new_ptr, ThreadPool::new());
+                THREADPOOL = NonNull::new_unchecked(new_ptr);
+            });
+            handle.unwrap().join().unwrap();
         }
     });
 }
