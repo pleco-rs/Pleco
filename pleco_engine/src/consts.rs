@@ -33,11 +33,10 @@ lazy_static! {
 
 pub fn init_globals() {
     INITALIZED.call_once(|| {
-        prelude::init_statics();
+        prelude::init_statics();   // Initialize static tables
         compiler_fence(Ordering::SeqCst);
-        lazy_static::initialize(&TT_TABLE);
-        threadpool::init_threadpool();
-
+        lazy_static::initialize(&TT_TABLE); // Transposition Table
+        threadpool::init_threadpool();  // Make Threadpool
     });
 }
 
