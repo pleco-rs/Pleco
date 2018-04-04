@@ -13,6 +13,8 @@ use TT_TABLE;
 use consts::*;
 use threadpool::threadpool;
 
+use search::eval::Evaluation;
+
 use num_cpus;
 
 // --------- STATIC VARIABLES
@@ -74,13 +76,14 @@ impl PlecoSearcher {
                     } else {
                         println!("unable to parse board");
                     }
-                }
+                },
                 "go" => self.uci_go(&args[1..]),
                 "quit" => {
                     self.halt();
                     break;
                 },
                 "stop" => self.halt(),
+                "eval" => Evaluation::trace(&self.board),
                 _ => print!("Unknown Command: {}",full_command)
             }
             self.apply_all_options();

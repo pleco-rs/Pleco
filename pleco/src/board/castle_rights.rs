@@ -104,7 +104,7 @@ impl Castling {
     #[inline]
     pub fn player_can_castle(&self, player: Player) -> Castling {
         Castling {
-            bits: self.bits & (Castling::WHITE_ALL.bits << (2 * player as u16))
+            bits: self.bits & (Castling::WHITE_ALL.bits >> (2 * player as u16))
         }
     }
 

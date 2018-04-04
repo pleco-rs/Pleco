@@ -51,8 +51,11 @@ impl MaterialEntry {
     pub fn score(&self) -> Score {
         Score(self.value, self.value)
     }
-}
 
+    pub fn scale_factor(&self, player: Player) -> u8 {
+        self.factor[player as usize]
+    }
+}
 
 
 pub struct Material {
@@ -86,7 +89,7 @@ impl Material {
         }
 
         entry.key = key;
-        entry.factor = [0; PLAYER_CNT];
+        entry.factor = [SCALE_FACTOR_NORMAL; PLAYER_CNT];
 
         let npm_w: Value = board.non_pawn_material(Player::White);
         let npm_b: Value = board.non_pawn_material(Player::Black);
@@ -107,13 +110,20 @@ impl Material {
         let b_queen_count: u8 =  board.count_piece(Player::Black, PieceType::Q);
 
         if w_pawn_count == 0 && npm_w - npm_b <= BISHOP_MG {
-            entry.factor[Player::White as usize] = if npm_w < ROOK_MG { SCALE_FACTOR_DRAW
-            } else if npm_b <= BISHOP_MG { 4 } else { 14 };
+            entry.factor[Player::White as usize] = if npm_w < ROOK_MG {
+                SCALE_FACTOR_DRAW
+            } else if npm_b <= BISHOP_MG {
+                4
+            } else { 14 };
         }
 
         if b_pawn_count == 0 && npm_b - npm_w <= BISHOP_MG {
-            entry.factor[Player::Black as usize] = if npm_b < ROOK_MG { SCALE_FACTOR_DRAW
-            } else if npm_w <= BISHOP_MG { 4 } else { 14 };
+            entry.factor[Player::Black as usize] = if npm_b < ROOK_MG {
+                SCALE_FACTOR_DRAW
+            } else if
+                npm_w <= BISHOP_MG {
+                4
+            } else { 14 };
         }
 
         if w_pawn_count == 1 && npm_w - npm_b <= BISHOP_MG {

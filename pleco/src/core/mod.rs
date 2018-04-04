@@ -16,6 +16,7 @@ pub mod score;
 use self::bit_twiddles::*;
 use self::masks::*;
 use self::sq::SQ;
+use self::bitboard::BitBoard;
 
 use std::fmt;
 use std::mem;
@@ -653,6 +654,11 @@ impl File {
             other as u8 - self as u8
         }
     }
+
+    /// Returns the file `BitBoard`.
+    pub fn bb(self) -> BitBoard {
+        BitBoard(file_bb(self as u8))
+    }
 }
 
 impl Not for File {
@@ -688,6 +694,11 @@ impl Rank {
         } else {
             other as u8 - self as u8
         }
+    }
+
+    /// Returns the rank `BitBoard`.
+    pub fn bb(self) -> BitBoard {
+        BitBoard(rank_bb(self as u8))
     }
 }
 

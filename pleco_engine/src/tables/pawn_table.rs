@@ -4,12 +4,13 @@
 //! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
 //! unique to a pawn structure, but it's very likely that there will be no collisions.
 
-use pleco::{Player, File, SQ, BitBoard, Board, PieceType, Rank};
+use pleco::{Player, File, SQ, BitBoard, Board, PieceType, Rank, Piece};
 use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
 use pleco::core::mono_traits::*;
 use pleco::board::castle_rights::Castling;
 use pleco::core::CastleType;
+use pleco::helper::prelude::*;
 
 use super::TableBase;
 
@@ -57,29 +58,30 @@ const SHELTER_WEAKNESS: [[[Value; RANK_CNT]; 4]; 2] = [
 // Danger of enemy pawns moving toward our king by [type][distance from edge][rank].
 // For the unopposed and unblocked cases, RANK_1 = 0 is used when opponent has
 // no pawn on the given file, or their pawn is behind our king.
-const STORM_DANGER: [[[Value; 5]; 4]; 4] = [
-    [ [  0, -290, -274, 57, 41 ],  // BlockedByKing
-      [  0,   60,  144, 39, 13 ],
-      [  0,   65,  141, 41, 34 ],
-      [  0,   53,  127, 56, 14 ] ],
-    [ [  4,   73,  132, 46, 31 ],  // Unopposed
-      [  1,   64,  143, 26, 13 ],
-      [  1,   47,  110, 44, 24 ],
-      [  0,   72,  127, 50, 31 ] ],
-    [ [  0,    0,   79, 23,  1 ],  // BlockedByPawn
-      [  0,    0,  148, 27,  2 ],
-      [  0,    0,  161, 16,  1 ],
-      [  0,    0,  171, 22, 15 ] ],
-    [ [ 22,   45,  104, 62,  6 ],  // Unblocked
-      [ 31,   30,   99, 39, 19 ],
-      [ 23,   29,   96, 41, 15 ],
-      [ 21,   23,  116, 41, 15 ] ]
+const STORM_DANGER: [[[Value; RANK_CNT]; 4]; 4] = [
+    [ [  0, -290, -274, 57, 41, 0, 0, 0 ],  // BlockedByKing
+      [  0,   60,  144, 39, 13, 0, 0, 0 ],
+      [  0,   65,  141, 41, 34, 0, 0, 0 ],
+      [  0,   53,  127, 56, 14, 0, 0, 0 ] ],
+    [ [  4,   73,  132, 46, 31, 0, 0, 0 ],  // Unopposed
+      [  1,   64,  143, 26, 13, 0, 0, 0 ],
+      [  1,   47,  110, 44, 24, 0, 0, 0 ],
+      [  0,   72,  127, 50, 31, 0, 0, 0 ] ],
+    [ [  0,    0,   79, 23,  1, 0, 0, 0 ],  // BlockedByPawn
+      [  0,    0,  148, 27,  2, 0, 0, 0 ],
+      [  0,    0,  161, 16,  1, 0, 0, 0 ],
+      [  0,    0,  171, 22, 15, 0, 0, 0 ] ],
+    [ [ 22,   45,  104, 62,  6, 0, 0, 0 ],  // Unblocked
+      [ 31,   30,   99, 39, 19, 0, 0, 0 ],
+      [ 23,   29,   96, 41, 15, 0, 0, 0 ],
+      [ 21,   23,  116, 41, 15, 0, 0, 0 ] ]
 ];
 
+//[[[[Score; 2]; 2] ;3]; RANK_CNT] =
 lazy_static!{
-    static ref CONNECTED: [[[[Score; 2]; 2] ;3]; RANK_CNT] = {
+    static ref CONNECTED: [[[[Score; RANK_CNT]; 3] ;2]; 2] = {
         let seed: [i32; 8] = [0, 13, 24, 18, 76, 100, 175, 330];
-        let mut a: [[[[Score; 2]; 2] ;3]; 8] = [[[[Score(0,0); 2]; 2] ;3]; 8];
+        let mut a: [[[[Score; RANK_CNT]; 3] ;2]; 2] = [[[[Score(0,0); RANK_CNT]; 3] ;2]; 2];
         for opposed in 0..2 {
             for phalanx in 0..2 {
                 for support in 0..3 {
@@ -87,7 +89,8 @@ lazy_static!{
                         let mut v: i32 = 17 * support;
                         v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
                         let eg: i32 = v * (r as i32 - 2) / 4;
-                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
+//                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
+                        a[opposed as usize][phalanx as usize][support as usize][r as usize] = Score(v, eg);
                     }
                 }
             }
@@ -157,9 +160,17 @@ impl PawnTable {
         }
 
         entry.key = key;
-        entry.score = entry.evaluate::<WhiteType>(board) - entry.evaluate::<BlackType>(board);
-        entry.asymmetry = (entry.semiopen_files[Player::White as usize] ^ entry.semiopen_files[Player::Black as usize]).count_ones() as i16;
-        entry.open_files = (entry.semiopen_files[Player::White as usize] ^ entry.semiopen_files[Player::Black as usize]).count_ones() as u8;
+        entry.score[Player::White as usize] = entry.evaluate::<WhiteType>(board);
+        entry.score[Player::Black as usize] = entry.evaluate::<BlackType>(board);
+        entry.open_files = (entry.semiopen_files[Player::White as usize]
+            & entry.semiopen_files[Player::Black as usize]).count_ones() as u8;
+
+        let all_passed: BitBoard = entry.passed_pawns[Player::White as usize]
+            | entry.passed_pawns[Player::Black as usize];
+        let exclusive_open_files = entry.semiopen_files[Player::White as usize]
+            ^ entry.semiopen_files[Player::Black as usize];
+
+        entry.asymmetry = (all_passed | BitBoard(exclusive_open_files as u64)).count_bits() as i16;
         entry
     }
 }
@@ -169,7 +180,7 @@ impl PawnTable {
 /// This information is computed upon access.
 pub struct PawnEntry {
     key: u64,
-    score: Score,
+    score: [Score; PLAYER_CNT],
     passed_pawns: [BitBoard; PLAYER_CNT],
     pawn_attacks: [BitBoard; PLAYER_CNT],
     pawn_attacks_span: [BitBoard; PLAYER_CNT],
@@ -186,10 +197,10 @@ pub struct PawnEntry {
 
 impl PawnEntry {
 
-    /// Returns the current score of the pawn scructure.
+    /// Returns the current score of the pawn structure.
     #[inline(always)]
-    pub fn pawns_score(&self) -> Score {
-        self.score
+    pub fn pawns_score(&self, player: Player) -> Score {
+        self.score[player as usize]
     }
 
     /// Returns the possible pawn attacks `BitBoard` of a player.
@@ -273,7 +284,7 @@ impl PawnEntry {
 
         let pawns: BitBoard = board.piece_bb(P::player(), PieceType::P);
         if !pawns.is_empty() {
-            while (board.magic_helper.ring_distance(ksq, min_king_distance as u8) & pawns).is_empty() {
+            while (ring_distance(ksq, min_king_distance as u8) & pawns).is_empty() {
                 min_king_distance += 1;
             }
         }
@@ -293,13 +304,15 @@ impl PawnEntry {
 
 
     fn shelter_storm<P: PlayerTrait>(&self, board: &Board, ksq: SQ) -> Value {
+        let center: File = (File::B).max(File::G.min(ksq.file()));
+
         let mut b: BitBoard = board.piece_bb_both_players(PieceType::P)
-            & (board.magic_helper.forward_rank_bb(P::player(), ksq.rank()) | ksq.rank_bb());
+            & (forward_rank_bb(P::player(), ksq.rank()) | ksq.rank_bb())
+            & (adjacent_file(center) | SQ(center as u8).file_bb());
 
         let our_pawns: BitBoard = b & board.get_occupied_player(P::player());
         let their_pawns: BitBoard = b & board.get_occupied_player(P::opp_player());
         let mut safety: Value = MAX_SAFETY_BONUS;
-        let center: File = (File::B).max(File::G.min(ksq.file()));
 
         for file in ((center as u8) - 1)..((center as u8) + 2) {
             b = our_pawns & SQ(file).file_bb();
@@ -318,11 +331,13 @@ impl PawnEntry {
             };
             let d: File = unsafe { (transmute::<u8,File>(file)).min(!transmute::<u8,File>(file)) };
 
+            // TODO: Simplify
             let r = if file == ksq.file() as u8 {
                 1
             } else {
                 0
             };
+
             let storm_danger_idx: usize = if file == ksq.file() as u8 && P::player().relative_rank_of_sq(ksq) as u8 + 1 == rk_them as u8 {
                 0   // Blocked By King
             } else if rk_us == Rank::R1 {
@@ -334,9 +349,8 @@ impl PawnEntry {
             };
 
             safety -= SHELTER_WEAKNESS[r as usize][d as usize][rk_us as usize];
-            if rk_them <= Rank::R5 {
-                safety -= STORM_DANGER[storm_danger_idx][d as usize][rk_them as usize];
-            }
+            safety -= STORM_DANGER[storm_danger_idx][d as usize][rk_them as usize];
+
         }
         safety
     }
@@ -368,31 +382,29 @@ impl PawnEntry {
 
         let pawns_on_dark: u8 = (our_pawns & BitBoard::DARK_SQUARES).count_bits();
         self.pawns_on_squares[P::player() as usize][Player::Black as usize] = pawns_on_dark;
-        if pawns_on_dark > board.count_piece(P::player(), PieceType::P) {
-            println!("Error: pawns on dark: {}, total: {}",pawns_on_dark, board.count_piece(P::player(), PieceType::P));
-        }
         self.pawns_on_squares[P::player() as usize][Player::White as usize] = board.count_piece(P::player(), PieceType::P) - pawns_on_dark;
 
         while let Some(s) = p1.pop_some_lsb() {
-            assert_eq!(board.piece_at_sq(s).type_of(), PieceType::P);
+            assert_eq!(board.piece_at_sq(s), Piece::make_lossy(P::player(),PieceType::P));
 
             let f: File = s.file();
 
             self.semiopen_files[P::player() as usize] &= !(1 << f as u8);
-            self.pawn_attacks[P::player() as usize] |= board.magic_helper.pawn_attacks_span(P::player(), s);
+            self.pawn_attacks[P::player() as usize] |= pawn_attacks_span(P::player(), s);
 
-            opposed = (their_pawns & board.magic_helper.forward_file_bb(P::player(),s)).is_not_empty();
-            stoppers = their_pawns & board.magic_helper.passed_pawn_mask(P::player(),s);
-            lever = their_pawns & board.magic_helper.pawn_attacks_from(s, P::player());
-            lever_push = their_pawns & board.magic_helper.pawn_attacks_from(P::up(s), P::player());
+            opposed = (their_pawns & forward_file_bb(P::player(),s)).is_not_empty();
+            stoppers = their_pawns & passed_pawn_mask(P::player(),s);
+            lever = their_pawns & pawn_attacks_from(s, P::player());
+            lever_push = their_pawns & pawn_attacks_from(P::up(s), P::player());
             doubled = our_pawns & (P::down(s)).to_bb();
-            neighbours = our_pawns & board.magic_helper.adjacent_file(f);
+            neighbours = our_pawns & adjacent_file(f);
             phalanx = neighbours & s.rank_bb();
-            supported = neighbours & (P::up(s)).rank_bb();
+            supported = neighbours & (P::down(s)).rank_bb();
 
             // A pawn is backward when it is behind all pawns of the same color on the
             // adjacent files and cannot be safely advanced.
-            if neighbours.is_empty() || !lever.is_empty() || P::player().relative_rank_of_sq(s) >= Rank::R5 {
+            if neighbours.is_empty() || lever.is_not_empty()
+                || P::player().relative_rank_of_sq(s) >= Rank::R5 {
                 backward = false;
             } else {
                 // Find the backmost rank with neighbours or stoppers
@@ -401,30 +413,40 @@ impl PawnEntry {
                 // The pawn is backward when it cannot safely progress to that rank:
                 // either there is a stopper in the way on this rank, or there is a
                 // stopper on adjacent file which controls the way to that rank.
-                backward = ((b | P::shift_up(b & board.magic_helper.adjacent_file(f))) & stoppers).is_not_empty();
+                backward = ((b | P::shift_up(b & adjacent_file(f))) & stoppers)
+                    .is_not_empty();
 
-                assert!(!(backward && (board.magic_helper.forward_rank_bb(P::opp_player(), P::up(s).rank()) & neighbours).is_not_empty()));
+                assert!(!(backward && (forward_rank_bb(P::opp_player(), P::up(s).rank()) & neighbours).is_not_empty()));
             }
+
             // Passed pawns will be properly scored in evaluation because we need
             // full attack info to evaluate them. Include also not passed pawns
             // which could become passed after one or two pawn pushes when are
             // not attacked more times than defended.
             if    (stoppers ^ lever ^ lever_push).is_empty()
-                && (our_pawns & board.magic_helper.forward_file_bb(P::player(),s)).is_empty()
-                && supported.count_bits() >= lever.count_bits()
+                && (our_pawns & forward_file_bb(P::player(),s)).is_empty()
+                && supported.count_bits() as i8 >= lever.count_bits() as i8 - 1
                 && phalanx.count_bits()   >= lever_push.count_bits() {
                 self.passed_pawns[P::player() as usize] |= s.to_bb();
+
             } else if stoppers == P::up(s).to_bb() && P::player().relative_rank_of_sq(s) >= Rank::R5 {
                 b = P::shift_up(supported) & !their_pawns;
                 while let Some(b_sq) = b.pop_some_lsb() {
-                    if !(their_pawns & board.magic_helper.pawn_attacks_from(b_sq, P::player())).more_than_one() {
+                    if !(their_pawns & pawn_attacks_from(b_sq, P::player())).more_than_one() {
                         self.passed_pawns[P::player() as usize] |= s.to_bb();
                     }
                 }
             }
 
             if supported.is_not_empty() | supported.is_not_empty() {
-                score += CONNECTED[P::player().relative_rank_of_sq(s) as usize][supported.count_bits() as usize][phalanx.is_not_empty() as usize][opposed as usize];
+                score += CONNECTED[opposed as usize]
+                    [phalanx.is_not_empty() as usize]
+                    [supported.count_bits() as usize]
+                    [P::player().relative_rank_of_sq(s) as usize];
+//                score += CONNECTED[P::player().relative_rank_of_sq(s) as usize]
+//                    [supported.count_bits() as usize]
+//                    [phalanx.is_not_empty() as usize]
+//                    [opposed as usize];
             } else if neighbours.is_empty() {
                 score -= ISOLATED;
                 self.weak_unopposed[P::player() as usize] += (!opposed) as i16;
@@ -435,10 +457,6 @@ impl PawnEntry {
 
             if doubled.is_not_empty() && supported.is_empty() {
                 score -= DOUBLED;
-            }
-
-            if lever.is_not_empty() {
-                score += LEVER[P::player().relative_rank_of_sq(s) as usize];
             }
         }
         score
@@ -456,8 +474,9 @@ mod tests {
         let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(9);
         let mut score: i64 = 0;
         boards.iter().for_each(|b| {
-            score += t.probe(b).pawns_score().0 as i64;
+            let entry = t.probe(b);
+            score += entry.pawns_score(Player::White).0 as i64;
+            score += entry.pawns_score(Player::Black).0 as i64;
         });
     }
-
 }

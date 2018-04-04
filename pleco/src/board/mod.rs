@@ -1538,6 +1538,12 @@ impl Board {
         self.state.pinners_king[player as usize]
     }
 
+    /// Returns the raw castling rights bits of the board.
+    #[inline(always)]
+    pub fn castling_bits(&self) -> u8 {
+        self.state.castling.bits()
+    }
+
     /// Return if a player has the possibility of castling for a given CastleType.
     /// This does not ensure a castling is possible for the player, just that the player
     /// has the castling-right available.
@@ -1596,6 +1602,14 @@ impl Board {
     pub fn non_pawn_material(&self, player: Player) -> Value {
         self.state.nonpawn_material[player as usize]
     }
+
+    /// Returns the current non-pawn material value for both players.
+    #[inline(always)]
+    pub fn non_pawn_material_all(&self) -> Value {
+        self.state.nonpawn_material[Player::White as usize]
+            + self.state.nonpawn_material[Player::Black as usize]
+    }
+
 
     //  ------- CHECKING  -------
 
@@ -1816,6 +1830,19 @@ impl Board {
             }
         }
         true
+    }
+
+    /// Returns if the board contains only two bishops, one for each color, and each being
+    /// on different squares.
+    #[inline(always)]
+    pub fn opposite_bishops(&self) -> bool {
+        self.piece_counts[Player::White as usize][PieceType::B as usize] == 1
+        && self.piece_counts[Player::Black as usize][PieceType::B as usize] == 1
+        && {
+            let w_bishop = self.bbs_player[Player::White as usize] & self.bbs[PieceType::B as usize];
+            let b_bishop = self.bbs_player[Player::Black as usize] & self.bbs[PieceType::B as usize];
+            w_bishop.to_sq().opposite_colors(b_bishop.to_sq())
+        }
     }
 
     /// Checks if a move is an advanced pawn push, meaning it passes into enemy territory.
