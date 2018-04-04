@@ -71,14 +71,9 @@ pleco = { path = "../pleco", version = "0.4.0" }
 clippy = {version = "0.0.191", optional = true}
 chrono = "0.4.1"
 rand = "0.4.2"
-rayon = "1.0.1"
 num_cpus = "1.8.0"
+prefetch = "0.2.0"
 crossbeam-utils = "0.3.2"
-
-[dependencies.lazy_static]
-version = "1.0.0"
-features = ["nightly"]
-
 
 [features]
 default = []
@@ -91,7 +86,8 @@ test = false
 doc = false
 
 [dev-dependencies]
-criterion = { version = '0.2.2', default-features = false, features=['real_blackbox'] }
+criterion = {  version = '0.2.2', default-features = false, features=['real_blackbox'] }
+lazy_static = {version = "1.0.0", features = ["nightly"]}
 
 [[bench]]
 name = "bench_engine_main"

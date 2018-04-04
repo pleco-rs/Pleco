@@ -12,17 +12,21 @@ trait DepthLimit {
     fn depth() -> u16;
 }
 
-struct Depth3 {}
-struct Depth4 {}
+
+
 struct Depth5 {}
 struct Depth6 {}
 struct Depth7 {}
+struct Depth8 {}
+struct Depth9 {}
 
-impl DepthLimit for Depth3 { fn depth() -> u16 {3} }
-impl DepthLimit for Depth4 { fn depth() -> u16 {4} }
+
+
 impl DepthLimit for Depth5 { fn depth() -> u16 {5} }
 impl DepthLimit for Depth6 { fn depth() -> u16 {6} }
 impl DepthLimit for Depth7 { fn depth() -> u16 {7} }
+impl DepthLimit for Depth8 { fn depth() -> u16 {8} }
+impl DepthLimit for Depth9 { fn depth() -> u16 {9} }
 
 criterion_main!{
     eval_benches::eval_benches,

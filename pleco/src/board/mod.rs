@@ -27,7 +27,7 @@ use tools::pleco_arc::{Arc,UniqueArc};
 use helper::Helper;
 use helper::prelude::*;
 use tools::prng::PRNG;
-use tools::Searcher;
+use tools::{Searcher,PreFetchable};
 use bot_prelude::AlphaBetaSearcher;
 
 use self::castle_rights::Castling;
@@ -84,6 +84,14 @@ impl fmt::Debug for FenBuildError {
             FenBuildError::PawnOnLastRow => writeln!(f,  "Pawn on first or last row"),
         }
     }
+}
+
+struct PreFetchDummy {
+
+}
+
+impl PreFetchable for PreFetchDummy {
+    fn prefetch(&self, _key: u64) {}
 }
 
 
@@ -544,16 +552,23 @@ impl Board {
     /// `Board::generate_moves()`, which guarantees that only Legal moves will be created.
     pub fn apply_move(&mut self, bit_move: BitMove) {
         let gives_check: bool = self.gives_check(bit_move);
-        self.apply_unknown_move(bit_move, gives_check);
+        let pt_d = PreFetchDummy {};
+        let mt_d = PreFetchDummy {};
+        self.apply_move_pft_chk::<PreFetchDummy,PreFetchDummy>(bit_move, gives_check, &pt_d, &mt_d);
     }
 
     /// Applies a move to the Board. This method is only useful if before a move is applied to
     /// a board, the ability of the move to give check is applied. If it is not needed to know
     /// if the move gives check or not, consider using `Board::apply_move` instead.
     ///
+    /// This method also takes in two generic parameters implementing `PreFetchable`, one of which
+    /// will prefetch from the A table taking in a pawn key, the other of which pre-fetching
+    /// from a table utilizing the material key.
+    ///
     /// # Safety
     ///
-    /// The passed in `BitMove` must be a legal move for the current position.
+    /// The passed in `BitMove` must be a legal move for the current position, and the gives_check
+    /// parameter must be correct for the move.
     ///
     /// # Panics
     ///
@@ -564,7 +579,9 @@ impl Board {
     /// The second parameter, `gives_check`, must be true if the move gives check, or false
     /// if the move doesn't give check. If an incorrect `gives_check` is supplied, undefined
     /// behavior will follow.
-    pub fn apply_unknown_move(&mut self, bit_move: BitMove, gives_check: bool) {
+    pub fn apply_move_pft_chk<PT, MT>(&mut self, bit_move: BitMove, gives_check: bool,
+                                      pawn_table: &PT, material_table: &MT)
+    where PT: PreFetchable, MT: PreFetchable {
 
         // Check for stupidity
         assert_ne!(bit_move.get_src(), bit_move.get_dest());
@@ -578,9 +595,9 @@ impl Board {
         // New Arc for the board to have by making a partial clone of the current state
         let mut next_arc_state = UniqueArc::new(self.state.partial_clone());
 
+        // Seperate Block to allow derefencing the BoardState
+        // As there is garunteed only one owner of the Arc, this is allowed
         {
-            // Seperate Block to allow derefencing the BoardState
-            // As there is garunteed only one owner of the Arc, this is allowed
             let new_state: &mut BoardState = &mut *next_arc_state;
 
             // Set the prev state
@@ -651,9 +668,13 @@ impl Board {
                     self.remove_piece_c(captured, cap_sq);
                 }
                 zob ^= z_square(cap_sq, captured);
+
+                // update material key and prefetch access to a Material Table
                 let cap_count = self.count_piece(them, captured.type_of());
                 material_key ^= z_square(SQ(cap_count), captured);
+                material_table.prefetch(material_key);
                 new_state.psq -= psq(captured, cap_sq);
+
                 // Reset Rule 50
                 new_state.rule_50 = 0;
                 new_state.captured_piece = captured.type_of();
@@ -709,7 +730,10 @@ impl Board {
                     new_state.psq += psq(us_promo,to) - psq(piece, to);
                     new_state.nonpawn_material[us as usize] += piece_value(us_promo, false);
                 }
+
+                // update pawn key and prefetch access
                 pawn_key ^= z_square(from, piece) ^ z_square(to, piece);
+                pawn_table.prefetch2(pawn_key);
                 new_state.rule_50 = 0;
             }
 

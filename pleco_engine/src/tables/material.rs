@@ -1,11 +1,14 @@
 //! Table to map from position -> material value;
 
+use prefetch::prefetch::*;
+
 use pleco::{Player, Board, PieceType};
 use pleco::core::masks::{PLAYER_CNT,PIECE_TYPE_CNT};
 use pleco::core::score::*;
 use pleco::core::mono_traits::*;
+use pleco::tools::PreFetchable;
 
-use super::TableBase;
+use super::{TableBase,TableBaseConst};
 
 pub const PHASE_END_GAME: u16 = 0;
 pub const PHASE_MID_GAME: u16 = 128;
@@ -52,14 +55,33 @@ impl MaterialEntry {
         Score(self.value, self.value)
     }
 
+    #[inline(always)]
     pub fn scale_factor(&self, player: Player) -> u8 {
         self.factor[player as usize]
     }
 }
 
+// TODO: Use const-generics once it becomes available
+impl TableBaseConst for MaterialEntry {
+    const ENTRY_COUNT: usize = 8192;
+}
 
+//pawns: PawnTable::new(16384),
+//material: Material::new(8192),
 pub struct Material {
     table: TableBase<MaterialEntry>,
+}
+
+impl PreFetchable for Material {
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
+    /// access.
+    #[inline(always)]
+    fn prefetch(&self, key: u64) {
+        unsafe {
+            let ptr = self.table.get_ptr(key);
+            prefetch::<Write, High, Data, MaterialEntry>(ptr);
+        }
+    }
 }
 
 unsafe impl Send for Material {}
@@ -70,15 +92,14 @@ impl Material {
     /// # Panics
     ///
     /// Panics if size is not a power of 2.
-    pub fn new(size: usize) -> Self {
+    pub fn new() -> Self {
         Material {
-            table: TableBase::new(size).unwrap()
+            table: TableBase::new().unwrap()
         }
     }
 
     pub fn clear(&mut self) {
-        let size = self.table.size();
-        self.table.resize(size);
+        self.table.clear();
     }
 
     pub fn probe(&mut self, board: &Board) -> &mut MaterialEntry {

@@ -36,14 +36,12 @@
 
 //#![crate_type = "staticlib"]
 
-#[macro_use]
-extern crate lazy_static;
-
 extern crate num_cpus;
 extern crate rand;
 extern crate pleco;
 extern crate chrono;
 extern crate crossbeam_utils;
+extern crate prefetch;
 
 pub mod threadpool;
 pub mod sync;

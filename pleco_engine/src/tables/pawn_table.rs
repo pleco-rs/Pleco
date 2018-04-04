@@ -4,6 +4,10 @@
 //! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
 //! unique to a pawn structure, but it's very likely that there will be no collisions.
 
+use std::mem::transmute;
+
+use prefetch::prefetch::*;
+
 use pleco::{Player, File, SQ, BitBoard, Board, PieceType, Rank, Piece};
 use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
@@ -11,10 +15,9 @@ use pleco::core::mono_traits::*;
 use pleco::board::castle_rights::Castling;
 use pleco::core::CastleType;
 use pleco::helper::prelude::*;
+use pleco::tools::PreFetchable;
 
-use super::TableBase;
-
-use std::mem::transmute;
+use super::{TableBase,TableBaseConst};
 
 
 
@@ -77,11 +80,13 @@ const STORM_DANGER: [[[Value; RANK_CNT]; 4]; 4] = [
       [ 21,   23,  116, 41, 15, 0, 0, 0 ] ]
 ];
 
-//[[[[Score; 2]; 2] ;3]; RANK_CNT] =
-lazy_static!{
-    static ref CONNECTED: [[[[Score; RANK_CNT]; 3] ;2]; 2] = {
+
+pub static mut CONNECTED: [[[[Score; RANK_CNT]; 3] ;2]; 2] = [[[[Score(0,0); RANK_CNT]; 3] ;2]; 2];
+
+/// Initalizes the CONNECTED table.
+pub fn init() {
+    unsafe {
         let seed: [i32; 8] = [0, 13, 24, 18, 76, 100, 175, 330];
-        let mut a: [[[[Score; RANK_CNT]; 3] ;2]; 2] = [[[[Score(0,0); RANK_CNT]; 3] ;2]; 2];
         for opposed in 0..2 {
             for phalanx in 0..2 {
                 for support in 0..3 {
@@ -89,14 +94,12 @@ lazy_static!{
                         let mut v: i32 = 17 * support;
                         v += (seed[r] + (phalanx * ((seed[r as usize +1] - seed[r as usize]) / 2))) >> opposed;
                         let eg: i32 = v * (r as i32 - 2) / 4;
-//                        a[r as usize][support as usize][phalanx as usize][opposed as usize] = Score(v, eg);
-                        a[opposed as usize][phalanx as usize][support as usize][r as usize] = Score(v, eg);
+                        CONNECTED[opposed as usize][phalanx as usize][support as usize][r as usize] = Score(v, eg);
                     }
                 }
             }
         }
-        a
-    };
+    }
 }
 
 fn init_connected() -> [[[[Score; 2]; 2] ;3]; RANK_CNT] {
@@ -130,9 +133,9 @@ impl PawnTable {
     /// # Panics
     ///
     /// Panics if size is not a power of 2.
-    pub fn new(size: usize) -> Self {
+    pub fn new() -> Self {
         PawnTable {
-            table: TableBase::new(size).unwrap()
+            table: TableBase::new().unwrap()
         }
     }
 
@@ -145,8 +148,7 @@ impl PawnTable {
 
     /// Clears the table and resets to another size.
     pub fn clear(&mut self) {
-        let size = self.table.size();
-        self.table.resize(size);
+        self.table.clear();
     }
 
     /// Retrieves the entry of a specified key. If the `Entry` doesn't a matching key,
@@ -175,6 +177,28 @@ impl PawnTable {
     }
 }
 
+impl PreFetchable for PawnTable {
+    /// Pre-fetches a particular key. This means bringing it into the cache for faster eventual
+    /// access.
+    #[inline(always)]
+    fn prefetch(&self, key: u64) {
+        unsafe {
+            let ptr = self.table.get_ptr(key);
+            prefetch::<Write, High, Data, PawnEntry>(ptr);
+        }
+    }
+
+    #[inline(always)]
+    fn prefetch2(&self, key: u64) {
+        unsafe {
+            let ptr = self.table.get_ptr(key);
+            prefetch::<Write, High, Data, PawnEntry>(ptr);
+            let ptr_2 = (ptr as *mut u8).offset(64) as *mut PawnEntry;
+            prefetch::<Write, High, Data, PawnEntry>(ptr_2);
+        }
+    }
+}
+
 /// Information on a the pawn structure for a given position.
 ///
 /// This information is computed upon access.
@@ -194,6 +218,11 @@ pub struct PawnEntry {
     asymmetry: i16,
     open_files: u8
 }
+
+impl TableBaseConst for PawnEntry {
+    const ENTRY_COUNT: usize = 16384;
+}
+
 
 impl PawnEntry {
 
@@ -264,7 +293,6 @@ impl PawnEntry {
     pub fn pawns_on_same_color_squares(&self, player: Player, sq: SQ) -> u8 {
         self.pawns_on_squares[player as usize][sq.square_color_index()]
     }
-
 
     /// Returns the current king safety `Score` for a given player and king square.
     pub fn king_safety<P: PlayerTrait>(&mut self, board: &Board, ksq: SQ) -> Score {
@@ -439,14 +467,12 @@ impl PawnEntry {
             }
 
             if supported.is_not_empty() | supported.is_not_empty() {
-                score += CONNECTED[opposed as usize]
-                    [phalanx.is_not_empty() as usize]
-                    [supported.count_bits() as usize]
-                    [P::player().relative_rank_of_sq(s) as usize];
-//                score += CONNECTED[P::player().relative_rank_of_sq(s) as usize]
-//                    [supported.count_bits() as usize]
-//                    [phalanx.is_not_empty() as usize]
-//                    [opposed as usize];
+                score += unsafe {
+                    CONNECTED[opposed as usize]
+                        [phalanx.is_not_empty() as usize]
+                        [supported.count_bits() as usize]
+                        [P::player().relative_rank_of_sq(s) as usize]
+                };
             } else if neighbours.is_empty() {
                 score -= ISOLATED;
                 self.weak_unopposed[P::player() as usize] += (!opposed) as i16;
@@ -463,6 +489,7 @@ impl PawnEntry {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -470,7 +497,7 @@ mod tests {
 
     #[test]
     fn pawn_eval() {
-        let mut t: PawnTable = PawnTable::new(1 << 7);
+        let mut t: PawnTable = PawnTable::new();
         let boards: Vec<Board> = Board::random().pseudo_random(2222212).many(9);
         let mut score: i64 = 0;
         boards.iter().for_each(|b| {

@@ -9,7 +9,6 @@ use pleco::BitMove;
 use time::uci_timer::{PreLimits};
 use uci::options::{OptionsMap,OptionWork};
 use uci::parse;
-use TT_TABLE;
 use consts::*;
 use threadpool::threadpool;
 
@@ -207,15 +206,15 @@ impl PlecoSearcher {
     }
 
     pub fn hash_percent(&self) -> f64 {
-        TT_TABLE.hash_percent()
+        tt().hash_percent()
     }
 
     pub fn clear_tt(&mut self) {
-        unsafe {TT_TABLE.clear() };
+        unsafe {tt().clear() };
     }
 
     pub fn resize_tt(&mut self, mb: usize) {
-        unsafe {TT_TABLE.resize_to_megabytes(mb)};
+        unsafe {tt().resize_to_megabytes(mb)};
     }
 
     pub fn use_stdout(&mut self, stdout: bool) {

@@ -28,16 +28,14 @@ The Library aims to have the following features upon completion
 - [ ] PGN Parsing
 
 The AI Bot aims to have the following features:
-- [x] Alpha-Beta pruning
-- [x] Multi-threaded search with rayon.rs
+- [x] Multi-threaded search using a shared hash-table
 - [x] Queiscience-search
-- [x] MVV-LVA sorting
 - [x] Iterative Deepening
 - [x] Aspiration Windows
 - [x] Futility Pruning
 - [x] Transposition Tables
-- [ ] Null Move Heuristic
 - [x] Killer Moves
+- [ ] Null Move Heuristic
 
 Standalone Installation and Use
 -------

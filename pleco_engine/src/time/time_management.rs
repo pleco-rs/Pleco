@@ -11,13 +11,15 @@ use std::f64;
 
 
 const MOVE_HORIZON: i64 = 50;
-const MAX_RATIO: f64 = 5.10;
-const STEAL_RATIO: f64 = 0.32;
+const MAX_RATIO: f64 = 6.32;
+const STEAL_RATIO: f64 = 0.34;
 
 // TODO: These should be made into UCIOptions
 const MIN_THINKING_TIME: i64 = 20;
-const MOVE_OVERHEAD: i64 = 105;
-const SLOW_MOVER: i64 = 30;
+const MOVE_OVERHEAD: i64 = 100;
+
+// Lower values means places less importance on the current move
+const SLOW_MOVER: i64 = 22;
 
 #[derive(PartialEq)]
 enum TimeCalc {
