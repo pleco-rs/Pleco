@@ -1,4 +1,4 @@
-//! A rust-based UCI compatible chess AI.
+//! A Rust re-write of the Stockfish chess engine.
 //!
 //! This crate is not intended to be used by other crates as a dependency, as it's a mostly useful as a direct
 //! executable.
@@ -6,11 +6,7 @@
 //! If you are interested in using the direct chess library functions (The Boards, move generation, etc), please
 //! checkout the core library, `pleco`, available on [on crates.io](https://crates.io/crates/pleco).
 //!
-//! # Usage as a Dependency
-//!
-//! This crate is [on crates.io](https://crates.io/crates/pleco_engine) and can be
-//! used by adding `pleco_engine` to the dependencies in your project's `Cargo.toml`.
-//!
+
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 #![cfg_attr(feature="clippy", allow(inline_always))]

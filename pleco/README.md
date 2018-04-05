@@ -1,20 +1,22 @@
 # Pleco
 
-Pleco is a Chess Library inspired by Stockfish, written entirely in Rust.
-
-This project aims to utilize the efficiency of Rust to create a Chess Library & AI with the speed of modern chess engines. 
-
+Pleco is a Chess Library, containing the building blocks of the chess engine [Stockfish](https://stockfishchess.org/), 
+re-written entirely in Rust.
 
 [![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
 [![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
 
-This project is split into two crates, `pleco` (the library you are currently in), which contains the library functionality, and `pleco_engine`, which contains the
-UCI (Universal Chess Interface) compatible Engine & AI. 
+This project is split into two crates, `pleco` (the library you are currently in), which contains the library functionality,
+and `pleco_engine`, which contains the UCI (Universal Chess Interface) compatible Engine & AI. 
+
+The overall goal of pleco is to recreate the Stockfish engine in rust, for comparison and
+educational purposes. As such, the majority of the algorithms used here are a direct port of Stockfish's, and the
+credit for the majority of the code go directly to the maintainers and authors of Stockfish. 
 
 - [Documentation](https://docs.rs/pleco)
 - [crates.io](https://crates.io/crates/pleco)
 
-For the chess engine implemented using the features provided by `pleco`, 
+For the chess engine implemented using this library provided by `pleco`, 
 see [pleco_engine](https://github.com/sfleischman105/Pleco/tree/master/pleco_engine).
 
 Features
