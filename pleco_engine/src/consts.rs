@@ -1,5 +1,5 @@
 //! Constant values and static structures.
-use std::heap::{Alloc, Layout, Heap};
+use std::heap::{Alloc, Layout, Global};
 
 use std::ptr::{NonNull, self};
 use std::sync::atomic::AtomicBool;
@@ -52,10 +52,10 @@ pub fn init_globals() {
 fn init_tt() {
     unsafe {
         let layout = Layout::new::<TranspositionTable>();
-        let result = Heap.alloc_zeroed(layout);
+        let result = Global.alloc_zeroed(layout);
         let new_ptr: *mut TranspositionTable = match result {
-            Ok(ptr) => ptr as *mut TranspositionTable,
-            Err(err) => Heap.oom(err),
+            Ok(ptr) => ptr.cast().as_ptr() as *mut TranspositionTable,
+            Err(_err) => Global.oom(),
         };
         ptr::write(new_ptr, TranspositionTable::new(DEFAULT_TT_SIZE));
         TT_TABLE = NonNull::new_unchecked(new_ptr);
@@ -65,10 +65,10 @@ fn init_tt() {
 fn init_timer() {
     unsafe {
         let layout = Layout::new::<TimeManager>();
-        let result = Heap.alloc_zeroed(layout);
+        let result = Global.alloc_zeroed(layout);
         let new_ptr: *mut TimeManager = match result {
-            Ok(ptr) => ptr as *mut TimeManager,
-            Err(err) => Heap.oom(err),
+            Ok(ptr) => ptr.cast().as_ptr() as *mut TimeManager,
+            Err(_err) => Global.oom(),
         };
         ptr::write(new_ptr, TimeManager::uninitialized());
         TIMER = NonNull::new_unchecked(new_ptr);

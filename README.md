@@ -13,7 +13,7 @@ UCI (Universal Chess Interface) compatible engine.
 The overall goal for this project is to utilize the efficiency of Rust to create a Chess AI matching the speed of modern chess engines.
 For the engine, the majority of the code is a direct port of Stockfish's C++ code. See [their website](https://stockfishchess.org/) for
 more information about the engine. As such, the credit for all of the advanced algorithms used for searching, evaluation,
-and many others, go directly to the maintainers and authors of Stockfish. This project is simply for speed comparisons
+and many others, go directly to the maintainers and authors of Stockfish. This project is for speed comparisons
 between the two languages, as well as for educational purposes.
 
 - [Documentation](https://docs.rs/pleco), [crates.io](https://crates.io/crates/pleco) for library functionality

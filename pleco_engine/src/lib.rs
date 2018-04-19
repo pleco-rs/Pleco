@@ -29,6 +29,7 @@
 #![feature(fused)]
 #![feature(const_fn)]
 #![feature(box_into_raw_non_null)]
+#![feature(nonnull_cast)]
 
 //#![crate_type = "staticlib"]
 

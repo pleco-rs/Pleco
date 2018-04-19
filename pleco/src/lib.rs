@@ -78,6 +78,7 @@
 #![feature(pointer_methods)]
 #![feature(cfg_target_feature, target_feature)]
 #![feature(stdsimd)]
+#![feature(nonnull_cast)]
 
 #![allow(dead_code)]
 

@@ -1,6 +1,6 @@
 //! Contains the ThreadPool and the individual Threads.
 
-use std::heap::{Alloc, Layout, Heap};
+use std::heap::{Alloc, Layout, Global};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::{Once, ONCE_INIT};
@@ -39,10 +39,10 @@ pub fn init_threadpool() {
                 .stack_size(THREAD_STACK_SIZE);
             let handle = scoped::builder_spawn_unsafe(builder, move || {
                 let layout = Layout::new::<ThreadPool>();
-                let result = Heap.alloc_zeroed(layout);
+                let result = Global.alloc_zeroed(layout);
                 let new_ptr: *mut ThreadPool = match result {
-                    Ok(ptr) => ptr as *mut ThreadPool,
-                    Err(err) => Heap.oom(err),
+                    Ok(ptr) => ptr.cast().as_ptr() as *mut ThreadPool,
+                    Err(_err) => Global.oom(),
                 };
                 ptr::write(new_ptr, ThreadPool::new());
                 THREADPOOL = NonNull::new_unchecked(new_ptr);
@@ -138,10 +138,10 @@ impl ThreadPool {
         let layout = Layout::new::<Searcher>();
         let cond = if len == 0 {self.main_cond.clone()} else {self.thread_cond.clone()};
         unsafe {
-            let result = Heap.alloc_zeroed(layout);
+            let result = Global.alloc_zeroed(layout);
             let new_ptr: *mut Searcher = match result {
-                Ok(ptr) => ptr as *mut Searcher,
-                Err(err) => Heap.oom(err),
+                Ok(ptr) => ptr.cast().as_ptr() as *mut Searcher,
+                Err(_err) => Global.oom(),
             };
             ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));
@@ -217,7 +217,7 @@ impl ThreadPool {
             while let Some(unc) = self.threads.pop() {
                 let th: *mut Searcher = *unc.get();
                 let layout = Layout::new::<Searcher>();
-                Heap.dealloc(th as *mut _, layout);
+                Global.dealloc(NonNull::new_unchecked(th).as_opaque(), layout);
             }
         }
 
