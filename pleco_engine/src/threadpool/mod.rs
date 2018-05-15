@@ -1,6 +1,6 @@
 //! Contains the ThreadPool and the individual Threads.
 
-use std::heap::{Alloc, Layout, Global};
+use std::heap::{Alloc, Layout, Global, oom};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::{Once, ONCE_INIT};
@@ -42,7 +42,7 @@ pub fn init_threadpool() {
                 let result = Global.alloc_zeroed(layout);
                 let new_ptr: *mut ThreadPool = match result {
                     Ok(ptr) => ptr.cast().as_ptr() as *mut ThreadPool,
-                    Err(_err) => Global.oom(),
+                    Err(_err) => oom(),
                 };
                 ptr::write(new_ptr, ThreadPool::new());
                 THREADPOOL = NonNull::new_unchecked(new_ptr);
@@ -141,7 +141,7 @@ impl ThreadPool {
             let result = Global.alloc_zeroed(layout);
             let new_ptr: *mut Searcher = match result {
                 Ok(ptr) => ptr.cast().as_ptr() as *mut Searcher,
-                Err(_err) => Global.oom(),
+                Err(_err) => oom(),
             };
             ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));

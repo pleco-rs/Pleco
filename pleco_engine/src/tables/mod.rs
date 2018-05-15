@@ -7,7 +7,7 @@ pub mod capture_piece_history;
 pub mod butterfly;
 
 use std::ptr::NonNull;
-use std::heap::{Alloc, Layout, Global};
+use std::heap::{Alloc, Layout, Global, oom};
 use std::mem;
 use std::ptr;
 use std::ops::*;
@@ -141,7 +141,7 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
         let ptr = Global.alloc_zeroed(Layout::array::<T>(T::ENTRY_COUNT).unwrap());
         let new_ptr = match ptr {
             Ok(ptr) => ptr.cast().as_ptr(),
-            Err(_err) => Global.oom(),
+            Err(_err) => oom(),
         };
         NonNull::new(new_ptr as *mut T).unwrap()
     }

@@ -1068,7 +1068,7 @@ impl Searcher {
                 }
 
                 if tt_value != NONE && correct_bound(tt_value, best_value, tt_entry.node_type()) {
-                    best_value == tt_value;
+                    best_value = tt_value;
                 }
             } else {
                 best_value = self.eval();

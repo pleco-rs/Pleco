@@ -1,5 +1,5 @@
 //! Constant values and static structures.
-use std::heap::{Alloc, Layout, Global};
+use std::heap::{Alloc, Layout, Global, oom};
 
 use std::ptr::{NonNull, self};
 use std::sync::atomic::AtomicBool;
@@ -55,7 +55,7 @@ fn init_tt() {
         let result = Global.alloc_zeroed(layout);
         let new_ptr: *mut TranspositionTable = match result {
             Ok(ptr) => ptr.cast().as_ptr() as *mut TranspositionTable,
-            Err(_err) => Global.oom(),
+            Err(_err) => oom(),
         };
         ptr::write(new_ptr, TranspositionTable::new(DEFAULT_TT_SIZE));
         TT_TABLE = NonNull::new_unchecked(new_ptr);
@@ -68,7 +68,7 @@ fn init_timer() {
         let result = Global.alloc_zeroed(layout);
         let new_ptr: *mut TimeManager = match result {
             Ok(ptr) => ptr.cast().as_ptr() as *mut TimeManager,
-            Err(_err) => Global.oom(),
+            Err(_err) => oom(),
         };
         ptr::write(new_ptr, TimeManager::uninitialized());
         TIMER = NonNull::new_unchecked(new_ptr);

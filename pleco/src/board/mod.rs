@@ -86,9 +86,7 @@ impl fmt::Debug for FenBuildError {
     }
 }
 
-struct PreFetchDummy {
-
-}
+struct PreFetchDummy {}
 
 impl PreFetchable for PreFetchDummy {
     fn prefetch(&self, _key: u64) {}
