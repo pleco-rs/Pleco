@@ -55,7 +55,7 @@ pub struct BoardState {
     // These fields MUST be Recomputed after a move
 
     /// The Zobrist key of the board.
-    pub zobrast: u64,
+    pub zobrist: u64,
     /// The Hash key of the current pawn configuration.
     pub pawn_key: u64,
     /// The Hash key of the current material configuration.
@@ -92,7 +92,7 @@ impl BoardState {
             ply: 0,
             ep_square: NO_SQ,
             psq: Score::ZERO,
-            zobrast: 0,
+            zobrist: 0,
             pawn_key: 0,
             material_key: 0,
             nonpawn_material: [0; PLAYER_CNT],
@@ -117,7 +117,7 @@ impl BoardState {
             ply: self.ply,
             ep_square: self.ep_square,
             psq: self.psq,
-            zobrast: self.zobrast,
+            zobrist: self.zobrist,
             pawn_key: self.pawn_key,
             material_key: self.material_key,
             nonpawn_material: self.nonpawn_material,
@@ -134,7 +134,7 @@ impl BoardState {
     /// Sets the current position completely. Used only when initializing a `Board`, not when
     /// applying a move.
     pub(crate) fn set(&mut self, board: &Board) {
-        self.zobrast = 0;
+        self.zobrist = 0;
         self.material_key = 0;
         self.pawn_key = z_no_pawns();
         self.nonpawn_material = [0; 2];
@@ -195,21 +195,21 @@ impl BoardState {
             let piece =  board.piece_locations.piece_at(sq);
             self.psq += psq(piece,sq);
             let key = z_square(sq, piece);
-            self.zobrast ^= key;
+            self.zobrist ^= key;
             if piece.type_of() == PieceType::P {
                 self.pawn_key ^= key;
             }
         }
 
-        self.zobrast ^= z_castle(self.castling.bits());
+        self.zobrist ^= z_castle(self.castling.bits());
 
         let ep = self.ep_square;
         if ep != NO_SQ {
-            self.zobrast ^= z_ep(ep);
+            self.zobrist ^= z_ep(ep);
         }
 
         match board.turn {
-            Player::Black => self.zobrast ^= z_side(),
+            Player::Black => self.zobrist ^= z_side(),
             Player::White => {}
         };
     }
@@ -263,7 +263,7 @@ impl PartialEq for BoardState {
         self.castling == other.castling &&
             self.rule_50 == other.rule_50 &&
             self.ep_square == other.ep_square &&
-            self.zobrast == other.zobrast &&
+            self.zobrist == other.zobrist &&
             self.captured_piece == other.captured_piece &&
             self.checkers_bb == other.checkers_bb &&
             self.blockers_king == other.blockers_king &&
