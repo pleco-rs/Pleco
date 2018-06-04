@@ -586,7 +586,7 @@ impl Board {
 
         // Zobrist Hash
         let mut pawn_key: u64 = self.state.pawn_key;
-        let mut zob: u64 = self.state.zobrast ^ z_side();
+        let mut zob: u64 = self.state.zobrist ^ z_side();
         let mut material_key: u64 = self.state.material_key;
 
 
@@ -737,7 +737,7 @@ impl Board {
 
             new_state.psq += psq(piece, to) - psq(piece, from);
             new_state.captured_piece = captured.type_of();
-            new_state.zobrast = zob;
+            new_state.zobrist = zob;
             new_state.pawn_key = pawn_key;
             new_state.material_key = material_key;
 
@@ -891,7 +891,7 @@ impl Board {
     pub unsafe fn apply_null_move(&mut self) {
         assert!(self.checkers().is_empty());
 
-        let mut zob: u64 = self.state.zobrast ^ z_side();
+        let mut zob: u64 = self.state.zobrist ^ z_side();
 
         self.depth += 1;
         // New Arc for the board to have by making a partial clone of the current state
@@ -911,7 +911,7 @@ impl Board {
                 new_state.ep_square = NO_SQ;
             }
 
-            new_state.zobrast = zob;
+            new_state.zobrist = zob;
             self.turn = self.turn.other_player();
 
             // Set the checking information
@@ -1218,7 +1218,7 @@ impl Board {
     /// Return the Zobrist Hash of the board.
     #[inline(always)]
     pub fn zobrist(&self) -> u64 {
-        self.state.zobrast
+        self.state.zobrist
     }
 
     /// Return the pawn key of the board.
@@ -2238,7 +2238,7 @@ impl Board {
             self.state.ply,
             self.depth
         );
-        println!("Zobrist: {:x}", self.state.zobrast);
+        println!("Zobrist: {:x}", self.state.zobrist);
         println!();
     }
 }

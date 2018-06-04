@@ -192,7 +192,7 @@ impl Helper {
         prelude::z_ep(sq)
     }
 
-    /// Returns a zobrast hash of the castling rights, as defined by the Board.
+    /// Returns a zobrist hash of the castling rights, as defined by the Board.
     #[inline(always)]
     pub fn z_castle(&self, castle: u8) -> u64 {
         prelude::z_castle(castle)
