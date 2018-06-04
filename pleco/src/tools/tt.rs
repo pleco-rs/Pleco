@@ -480,11 +480,12 @@ unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
 #[inline]
 fn alloc_room(size: usize) -> NonNull<Cluster> {
     unsafe {
-        let ptr = Global.alloc_zeroed(Layout::array::<Cluster>(size).unwrap());
+        let layout = Layout::array::<Cluster>(size).unwrap();
+        let ptr = Global.alloc_zeroed(layout);
 
         let new_ptr = match ptr {
             Ok(ptr) => ptr.cast(),
-            Err(_err) => oom(),
+            Err(_err) => oom(layout),
         };
         new_ptr
     }

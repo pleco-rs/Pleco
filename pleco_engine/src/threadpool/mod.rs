@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::{Once, ONCE_INIT};
 use std::ptr::NonNull;
-use std::ptr;
+use std::{ptr,mem};
 use std::cell::UnsafeCell;
 
 use crossbeam_utils::scoped;
@@ -23,12 +23,20 @@ use consts::*;
 
 const KILOBYTE: usize = 1000;
 const THREAD_STACK_SIZE: usize = 18000 * KILOBYTE;
+const POOL_SIZE: usize = mem::size_of::<ThreadPool>();
 
-// The Global threadpool!
-pub static mut THREADPOOL: NonNull<ThreadPool> = unsafe {NonNull::new_unchecked(ptr::null_mut())};
+// An object that is the same size as a thread pool.
+type DummyThreadPool = [u8; POOL_SIZE];
 
+// The Global threadpool! Yes, this is *technically* an array the same
+// size as a ThreadPool object. This is a cheap hack to get a global value, as
+// Rust isn't particularily fond of mutable global statics.
+pub static mut THREADPOOL: DummyThreadPool = [0; POOL_SIZE];
+
+// ONCE for the Threadpool
 static THREADPOOL_INIT: Once = ONCE_INIT;
 
+// Initializes the threadpool, called once on startup.
 pub fn init_threadpool() {
     THREADPOOL_INIT.call_once(|| {
         unsafe {
@@ -37,15 +45,11 @@ pub fn init_threadpool() {
             let builder = thread::Builder::new()
                 .name("Starter".to_string())
                 .stack_size(THREAD_STACK_SIZE);
+
             let handle = scoped::builder_spawn_unsafe(builder, move || {
-                let layout = Layout::new::<ThreadPool>();
-                let result = Global.alloc_zeroed(layout);
-                let new_ptr: *mut ThreadPool = match result {
-                    Ok(ptr) => ptr.cast().as_ptr() as *mut ThreadPool,
-                    Err(_err) => oom(),
-                };
-                ptr::write(new_ptr, ThreadPool::new());
-                THREADPOOL = NonNull::new_unchecked(new_ptr);
+                let pool: *mut ThreadPool = mem::transmute(&mut THREADPOOL);
+                ptr::write(pool, ThreadPool::new());
+
             });
             handle.unwrap().join().unwrap();
         }
@@ -53,9 +57,10 @@ pub fn init_threadpool() {
 }
 
 /// Returns access to the global thread pool.
+#[inline(always)]
 pub fn threadpool() -> &'static mut ThreadPool {
     unsafe {
-        THREADPOOL.as_mut()
+        mem::transmute::<&mut DummyThreadPool, &'static mut ThreadPool>(&mut THREADPOOL)
     }
 }
 
@@ -141,7 +146,7 @@ impl ThreadPool {
             let result = Global.alloc_zeroed(layout);
             let new_ptr: *mut Searcher = match result {
                 Ok(ptr) => ptr.cast().as_ptr() as *mut Searcher,
-                Err(_err) => oom(),
+                Err(_err) => oom(layout),
             };
             ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));
