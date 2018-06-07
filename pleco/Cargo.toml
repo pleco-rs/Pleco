@@ -59,7 +59,7 @@ codegen-units = 4
 [dependencies]
 clippy = {version = "0.0.200", optional = true}
 bitflags = "1.0.3"
-rand = "0.4.2"
+rand = "0.5.0"
 rayon = "1.0.1"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"
@@ -75,7 +75,7 @@ default = []
 dev = ["clippy"]
 
 [dev-dependencies]
-criterion = { version = '0.2.2', default-features = false, features=['real_blackbox'] }
+criterion = { version = '0.2.3', default-features = false, features=['real_blackbox'] }
 
 [[bench]]
 name = "bench_main"

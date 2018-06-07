@@ -41,7 +41,7 @@ static mut TT_TABLE: DummyTranspositionTable = [0; TT_ALLOC_SIZE];
 static mut TIMER: NonNull<TimeManager> = unsafe
     {NonNull::new_unchecked(ptr::null_mut())};
 
-
+#[cold]
 pub fn init_globals() {
     INITALIZED.call_once(|| {
         prelude::init_statics();   // Initialize static tables
@@ -54,7 +54,8 @@ pub fn init_globals() {
     });
 }
 
-// initalizes the transposition table
+// Initializes the transposition table
+#[cold]
 fn init_tt() {
     unsafe {
         let tt: *mut TranspositionTable = mem::transmute(&mut TT_TABLE);
@@ -62,6 +63,8 @@ fn init_tt() {
     }
 }
 
+// Initializes the global Timer
+#[cold]
 fn init_timer() {
     unsafe {
         let layout = Layout::new::<TimeManager>();
@@ -117,6 +120,5 @@ mod tests {
     #[test]
     fn initializing_threadpool() {
         threadpool::init_threadpool();
-
     }
 }

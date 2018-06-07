@@ -37,6 +37,7 @@ pub static mut THREADPOOL: DummyThreadPool = [0; POOL_SIZE];
 static THREADPOOL_INIT: Once = ONCE_INIT;
 
 // Initializes the threadpool, called once on startup.
+#[cold]
 pub fn init_threadpool() {
     THREADPOOL_INIT.call_once(|| {
         unsafe {
