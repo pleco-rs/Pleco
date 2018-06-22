@@ -1,6 +1,6 @@
 //! Contains the ThreadPool and the individual Threads.
 
-use std::heap::{Alloc, Layout, Global, oom};
+use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::{Once, ONCE_INIT};
@@ -147,7 +147,7 @@ impl ThreadPool {
             let result = Global.alloc_zeroed(layout);
             let new_ptr: *mut Searcher = match result {
                 Ok(ptr) => ptr.cast().as_ptr() as *mut Searcher,
-                Err(_err) => oom(layout),
+                Err(_err) => handle_alloc_error(layout),
             };
             ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));
@@ -222,8 +222,9 @@ impl ThreadPool {
             // De-allocate each thread.
             while let Some(unc) = self.threads.pop() {
                 let th: *mut Searcher = *unc.get();
+                let ptr: NonNull<u8> = mem::transmute(NonNull::new_unchecked(th));
                 let layout = Layout::new::<Searcher>();
-                Global.dealloc(NonNull::new_unchecked(th).as_opaque(), layout);
+                Global.dealloc(ptr, layout);
             }
         }
 

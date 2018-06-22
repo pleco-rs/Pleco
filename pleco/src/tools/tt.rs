@@ -35,7 +35,7 @@
 
 use std::ptr::NonNull;
 use std::mem;
-use std::heap::{Alloc, Layout, Global, oom};
+use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
 use std::cmp::min;
 use std::cell::UnsafeCell;
 
@@ -423,7 +423,8 @@ impl TranspositionTable {
 
     /// De-allocates the current heap.
     unsafe fn de_alloc(&self) {
-        Global.dealloc((*self.clusters.get()).as_opaque(), Layout::array::<Cluster>(*self.cap.get()).unwrap());
+        let ptr: NonNull<u8> = mem::transmute(*self.clusters.get());
+        Global.dealloc(ptr, Layout::array::<Cluster>(*self.cap.get()).unwrap());
     }
 
     /// Returns the % of the hash table that is full.
@@ -485,7 +486,7 @@ fn alloc_room(size: usize) -> NonNull<Cluster> {
 
         let new_ptr = match ptr {
             Ok(ptr) => ptr.cast(),
-            Err(_err) => oom(layout),
+            Err(_err) => handle_alloc_error(layout),
         };
         new_ptr
     }

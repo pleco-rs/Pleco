@@ -1,5 +1,5 @@
 //! Constant values and static structures.
-use std::heap::{Alloc, Layout, Global, oom};
+use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
 
 use std::mem;
 use std::ptr::{NonNull, self};
@@ -71,7 +71,7 @@ fn init_timer() {
         let result = Global.alloc_zeroed(layout);
         let new_ptr: *mut TimeManager = match result {
             Ok(ptr) => ptr.cast().as_ptr() as *mut TimeManager,
-            Err(_err) => oom(layout),
+            Err(_err) => handle_alloc_error(layout),
         };
         ptr::write(new_ptr, TimeManager::uninitialized());
         TIMER = NonNull::new_unchecked(new_ptr);
