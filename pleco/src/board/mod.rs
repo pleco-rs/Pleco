@@ -12,6 +12,7 @@
 use std::option::*;
 use std::{fmt, char,num};
 use std::cmp::{PartialEq,max,min};
+use std::hint::unreachable_unchecked;
 
 use rand;
 
@@ -1947,7 +1948,7 @@ impl Board {
                     PieceType::Q => {
                         queen_moves(self.occupied() ^ src_bb, dst)
                     }
-                    _ => unreachable!(),
+                    _ => unsafe { unreachable_unchecked() }
                 };
                 (attacks_bb & opp_king_sq.to_bb()).is_not_empty()
             }

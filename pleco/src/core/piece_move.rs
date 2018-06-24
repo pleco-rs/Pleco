@@ -117,7 +117,7 @@ pub enum MoveFlag {
 
 /// A Subset of `MoveFlag`, used to determine the overall classification of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[repr(u16)]
+#[repr(u8)]
 pub enum MoveType {
     /// The move is "Normal", So its not a castle, promotion, or en-passant.
     Normal = 0,    //0b000x
