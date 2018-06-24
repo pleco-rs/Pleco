@@ -39,6 +39,7 @@ use std::fmt;
 /// bit maps to a specific square. Used for mapping occupancy, where '1' represents
 /// a piece being at that index's square, and a '0' represents a lack of a piece.
 #[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]
+#[repr(transparent)]
 pub struct BitBoard(pub u64);
 
 impl_bit_ops!(BitBoard, u64);
