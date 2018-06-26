@@ -50,8 +50,8 @@ pub fn init_threadpool() {
             let handle = scoped::builder_spawn_unsafe(builder, move || {
                 let pool: *mut ThreadPool = mem::transmute(&mut THREADPOOL);
                 ptr::write(pool, ThreadPool::new());
-
             });
+
             handle.unwrap().join().unwrap();
         }
     });
@@ -332,7 +332,10 @@ impl ThreadPool {
 
     /// Returns the best move of a search
     pub fn best_move(&mut self) -> BitMove {
-        self.main().root_moves().get(0).unwrap().bit_move
+        self.main().root_moves()
+            .get(0)
+            .unwrap()
+            .bit_move
     }
 
     /// Returns total number of nodes searched so far.

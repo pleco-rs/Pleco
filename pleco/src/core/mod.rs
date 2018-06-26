@@ -82,7 +82,7 @@ impl Player {
     /// Returns the relative square from a given square.
     #[inline(always)]
     pub fn relative_square(&self, sq: SQ) -> SQ {
-        assert!(sq.is_okay());
+        debug_assert!(sq.is_okay());
         sq ^ SQ((*self) as u8 * 56)
     }
 

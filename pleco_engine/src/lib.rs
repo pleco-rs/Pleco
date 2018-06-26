@@ -34,12 +34,15 @@
 //#![crate_type = "staticlib"]
 
 extern crate num_cpus;
+#[macro_use]
+extern crate bitflags;
 extern crate rand;
 extern crate pleco;
 extern crate chrono;
 extern crate crossbeam_utils;
 extern crate prefetch;
 
+pub mod endgame;
 pub mod threadpool;
 pub mod sync;
 pub mod time;
