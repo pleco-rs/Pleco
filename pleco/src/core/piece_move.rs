@@ -84,6 +84,7 @@ const SP_MASK: u16      = 0b0011_000000_000000;
 /// A `BitMove` should never be created directly, but rather instigated with a `PreMoveInfo`. This is because
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[repr(transparent)]
 pub struct BitMove {
     data: u16,
 }
@@ -116,7 +117,7 @@ pub enum MoveFlag {
 
 /// A Subset of `MoveFlag`, used to determine the overall classification of a move.
 #[derive(Copy, Clone, PartialEq, Debug)]
-#[repr(u16)]
+#[repr(u8)]
 pub enum MoveType {
     /// The move is "Normal", So its not a castle, promotion, or en-passant.
     Normal = 0,    //0b000x

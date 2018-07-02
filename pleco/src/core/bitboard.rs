@@ -34,11 +34,13 @@ use super::Player;
 use std::mem;
 use std::ops::*;
 use std::fmt;
+use std::hint::unreachable_unchecked;
 
 /// A `BitBoard` is simply a 64 bit long integer where each
 /// bit maps to a specific square. Used for mapping occupancy, where '1' represents
 /// a piece being at that index's square, and a '0' represents a lack of a piece.
 #[derive(Copy, Clone, Default, Hash, PartialEq, Eq, Debug)]
+#[repr(transparent)]
 pub struct BitBoard(pub u64);
 
 impl_bit_ops!(BitBoard, u64);
@@ -373,7 +375,7 @@ impl RandBitBoard {
                 RandAmount::Sparse => self.prng.sparse_rand(),   // Average 8 bits
                 RandAmount::VerySparse => self.prng.sparse_rand() & (self.prng.rand() | self.prng.rand()), // Average 6 bits
                 RandAmount::ExtremelySparse => self.prng.sparse_rand() & self.prng.rand(),   // Average 4 bits
-                RandAmount::Singular => unreachable!()
+                RandAmount::Singular => unsafe {unreachable_unchecked()}
             };
             let count = popcount64(num) as u16;
             if count >= self.min && count <= self.max {

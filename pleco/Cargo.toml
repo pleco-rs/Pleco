@@ -1,6 +1,6 @@
 [package]
 name = "pleco"
-version = "0.4.2"
+version = "0.4.3"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast chess library."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -59,12 +59,11 @@ codegen-units = 4
 [dependencies]
 clippy = {version = "0.0.200", optional = true}
 bitflags = "1.0.3"
-rand = "0.5.0"
+rand = "0.5.2"
 rayon = "1.0.1"
 num_cpus = "1.8.0"
 prefetch = "0.2.0"
 mucow = "0.1.0"
-unreachable = "1.0.0"
 
 [dependencies.lazy_static]
 version = "1.0.0"

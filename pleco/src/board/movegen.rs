@@ -54,6 +54,7 @@
 use std::mem;
 use std::ptr;
 use std::ops::Index;
+use std::hint::unreachable_unchecked;
 
 use board::*;
 
@@ -253,7 +254,7 @@ impl<'a, MP: MVPushable> InnerMoveGen<'a, MP>
             GenTypes::NonEvasions => !self.us_occ,
             GenTypes::Captures => self.them_occ,
             GenTypes::Quiets => !(self.us_occ | self.them_occ),
-            _ => unreachable!()
+            _ => unsafe { unreachable_unchecked() }
         };
 
         self.generate_all::<L, G, P>(target);

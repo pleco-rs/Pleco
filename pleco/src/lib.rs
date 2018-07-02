@@ -90,7 +90,6 @@ extern crate rand;
 extern crate rayon;
 extern crate prefetch;
 extern crate mucow;
-extern crate unreachable;
 
 pub mod core;
 pub mod board;

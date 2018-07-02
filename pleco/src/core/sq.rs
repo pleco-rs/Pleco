@@ -64,6 +64,7 @@ use std::mem::transmute;
 
 /// Represents a singular square of a chessboard.
 #[derive(Copy, Clone, Default, Hash, PartialEq, PartialOrd, Eq, Debug)]
+#[repr(transparent)]
 pub struct SQ(pub u8);
 
 impl_bit_ops!(SQ, u8);
