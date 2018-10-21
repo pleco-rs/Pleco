@@ -301,7 +301,7 @@ impl fmt::Display for PieceType {
 ///
 /// [`Piece`]: ./enum.PieceType
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Piece {
     None        = 0b0000,
     WhitePawn   = 0b0001,
@@ -576,6 +576,36 @@ impl Piece {
     }
 }
 
+impl fmt::Display for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if *self != Piece::None {
+            write!(f, "{}", self.character_lossy())
+        } else {
+            write!(f, "X")
+        }
+    }
+}
+
+impl fmt::Debug for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match *self {
+             Piece::None        => "None",
+             Piece::WhitePawn   => "WhitePawn",
+             Piece::WhiteKnight => "WhiteKnight",
+             Piece::WhiteBishop => "WhiteBishop",
+             Piece::WhiteRook   => "WhiteRook",
+             Piece::WhiteQueen  => "WhiteQueen",
+             Piece::WhiteKing   => "WhiteKing",
+             Piece::BlackPawn   => "BlackPawn",
+             Piece::BlackKnight => "BlackKnight",
+             Piece::BlackBishop => "BlackBishop",
+             Piece::BlackRook   => "BlackRook",
+             Piece::BlackQueen  => "BlackQueen",
+             Piece::BlackKing   => "BlackKing",
+        };
+        write!(f, "{}", s)
+    }
+}
 
 /// Enum for the Files of a Chessboard.
 #[repr(u8)]
@@ -592,7 +622,6 @@ pub enum File {
 }
 
 impl File {
-
     /// Returns the bit-set of all files to the left of the current file.
     #[inline]
     pub const fn left_side_mask(self) -> u8 {

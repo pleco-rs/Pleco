@@ -1,8 +1,6 @@
 //! Constant values and static structures.
-use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
-
 use std::mem;
-use std::ptr::{NonNull, self};
+use std::ptr;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::{ONCE_INIT,Once};
@@ -25,21 +23,21 @@ pub const PAWN_TABLE_SIZE: usize = 16384;
 pub const MATERIAL_TABLE_SIZE: usize = 8192;
 
 const TT_ALLOC_SIZE: usize = mem::size_of::<TranspositionTable>();
+const TIMER_ALLOC_SIZE: usize = mem::size_of::<TimeManager>();
 
 // A object that is the same size as a transposition table
 type DummyTranspositionTable = [u8; TT_ALLOC_SIZE];
+type DummyTimeManager = [u8; TIMER_ALLOC_SIZE];
 
 pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
 
 static INITALIZED: Once = ONCE_INIT;
 
-
 /// Global Transposition Table
 static mut TT_TABLE: DummyTranspositionTable = [0; TT_ALLOC_SIZE];
 
 // Global Timer
-static mut TIMER: NonNull<TimeManager> = unsafe
-    {NonNull::new_unchecked(ptr::null_mut())};
+static mut TIMER: DummyTimeManager = [0; TIMER_ALLOC_SIZE];
 
 #[cold]
 pub fn init_globals() {
@@ -67,21 +65,15 @@ fn init_tt() {
 #[cold]
 fn init_timer() {
     unsafe {
-        let layout = Layout::new::<TimeManager>();
-        let result = Global.alloc_zeroed(layout);
-        let new_ptr: *mut TimeManager = match result {
-            Ok(ptr) => ptr.cast().as_ptr() as *mut TimeManager,
-            Err(_err) => handle_alloc_error(layout),
-        };
-        ptr::write(new_ptr, TimeManager::uninitialized());
-        TIMER = NonNull::new_unchecked(new_ptr);
+        let timer: *mut TimeManager = mem::transmute(&mut TIMER);
+        ptr::write(timer, TimeManager::uninitialized());
     }
 }
 
 // Returns access to the global timer
 pub fn timer() -> &'static TimeManager {
     unsafe {
-        &*TIMER.as_ptr()
+        mem::transmute(&TIMER)
     }
 }
 

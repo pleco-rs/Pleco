@@ -20,17 +20,6 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
 use super::piece_move::{BitMove, ScoringMove};
 
-
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use std::simd::u16x32;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use std::mem::transmute;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use super::bitboard::BitBoard;
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-use super::sq::SQ;
-
-
 pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
 
     /// Adds a `BitMove` to the end of the list.
@@ -68,20 +57,6 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     ///
     /// Unsafe due to allow modification of elements possibly not inside the length.
     unsafe fn over_bounds_ptr(&mut self) -> *mut Self::Output;
-
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
-    /// Appends a number of moves from the bits of `dst` to the List, with the src SQ and
-    /// flags. Returns a pointer to the next available square.
-    ///
-    /// # Notes
-    ///
-    /// This is an experimental feature, attempting to use SIMD to speed-up move generation.
-    /// It proved slow, so as of now there is no use for it.
-    ///
-    /// # Safety,
-    ///
-    /// As it returns a raw pointer (and takes in one!), this method is completely unsafe to use.
-    unsafe fn avx_append(ptr: *mut Self::Output, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut Self::Output;
 }
 
 const MAX_MOVES: usize = 256;
@@ -284,31 +259,6 @@ impl MVPushable for MoveList {
     #[inline(always)]
     unsafe fn over_bounds_ptr(&mut self) -> *mut BitMove {
         self.as_mut_ptr().add(self.len)
-    }
-
-
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
-    #[doc(hidden)]
-    #[inline(always)]
-    unsafe fn avx_append(mut ptr: *mut BitMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut BitMove {
-        let mut i = 0;
-        let mut v = u16x32::splat(0);
-
-        while let Some(dst_sq) = dst.pop_some_lsb() {
-            v = v.replace_unchecked(i, dst_sq.0 as u16);
-            i += 1;
-        }
-
-        if i != 0 {
-            v <<= 6;
-            v |= u16x32::splat(flags << 12 | src.0 as u16);
-            for x in 0..i {
-                *ptr = transmute(v.extract_unchecked(x));
-                ptr = ptr.add(1);
-            }
-        }
-
-        ptr
     }
 }
 
@@ -591,29 +541,6 @@ impl MVPushable for ScoringMoveList {
     unsafe fn over_bounds_ptr(&mut self) -> *mut ScoringMove {
         self.as_mut_ptr().add(self.len)
     }
-
-    #[cfg(all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "avx2"))]
-    #[doc(hidden)]
-    #[inline(always)]
-    unsafe fn avx_append(mut ptr: *mut ScoringMove, src: SQ, dst: &mut BitBoard, flags: u16) -> *mut ScoringMove {
-        let mut i = 0;
-        let mut v = u16x32::splat(0);
-        while let Some(dst_sq) = dst.pop_some_lsb() {
-            v = v.replace_unchecked(i, dst_sq.0 as u16);
-            i += 1;
-        }
-
-        if i != 0 {
-            v *= u16x32::splat(64);
-            v |= u16x32::splat(flags << 12 | src.0 as u16);
-
-            for x in 0..i {
-                (*ptr).bit_move = transmute(v.extract_unchecked(x));
-                ptr = ptr.add(1);
-            }
-        }
-        ptr
-    }
 }
 
 pub struct ScoreMoveIter<'a> {
@@ -720,18 +647,3 @@ impl ExactSizeIterator for ScoreMoveIntoIter {}
 impl FusedIterator for ScoreMoveIntoIter {}
 
 unsafe impl TrustedLen for ScoreMoveIntoIter {}
-
-#[cfg(test)]
-#[cfg(all(any(target_arch = "x86_64", target_arch = "x86"), target_feature = "avx2"))]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn check_avx2() {
-        let mut arr = [BitMove::null(); 16];
-        let mut bb = BitBoard::FILE_B;
-        unsafe {
-            MoveList::avx_append(arr.as_mut_ptr(), SQ::A1, &mut bb, 0b1111);
-        }
-    }
-}

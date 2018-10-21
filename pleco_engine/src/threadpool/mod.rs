@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 use std::{ptr,mem};
 use std::cell::UnsafeCell;
 
-use crossbeam_utils::scoped;
+use crossbeam_utils::thread as crossbeam;
 
 use pleco::MoveList;
 use pleco::tools::pleco_arc::Arc;
@@ -47,10 +47,11 @@ pub fn init_threadpool() {
                 .name("Starter".to_string())
                 .stack_size(THREAD_STACK_SIZE);
 
-            let handle = scoped::builder_spawn_unsafe(builder, move || {
-                let pool: *mut ThreadPool = mem::transmute(&mut THREADPOOL);
-                ptr::write(pool, ThreadPool::new());
-
+            let handle = crossbeam::builder_spawn_unchecked(
+                builder,
+                move || {
+                    let pool: *mut ThreadPool = mem::transmute(&mut THREADPOOL);
+                    ptr::write(pool, ThreadPool::new());
             });
             handle.unwrap().join().unwrap();
         }
@@ -124,7 +125,7 @@ impl ThreadPool {
                  .name(self.size().to_string())
                  .stack_size(THREAD_STACK_SIZE);
 
-             let handle = scoped::builder_spawn_unsafe(builder,
+             let handle = crossbeam::builder_spawn_unchecked(builder,
                 move || {
                     let thread = &mut **thread_ptr.ptr.get();
                     thread.cond.lock();
@@ -349,4 +350,3 @@ impl Drop for ThreadPool {
         self.kill_all();
     }
 }
-

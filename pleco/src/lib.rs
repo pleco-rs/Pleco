@@ -69,16 +69,14 @@
 
 //#![crate_type = "rlib"]
 
-#![feature(fused)]
 #![feature(trusted_len)]
 #![feature(test)]
 #![feature(integer_atomics)]
 #![feature(allocator_api)]
 #![feature(const_fn)]
-#![feature(pointer_methods)]
 #![feature(stdsimd)]
-#![feature(nonnull_cast)]
-
+#![feature(const_let)]
+#![feature(const_slice_len)]
 #![allow(dead_code)]
 
 #[macro_use]

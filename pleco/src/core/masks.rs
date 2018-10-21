@@ -119,7 +119,7 @@ pub const SOUTH_EAST: i8 = -7;
 pub const SOUTH_WEST: i8 = -9;
 
 /// Array for starting occupancy boards for both players.
-pub const START_OCC_BOARDS: [u64; PLAYER_CNT] = [START_WHITE_OCC, START_BLACK_OCC];
+pub static START_OCC_BOARDS: [u64; PLAYER_CNT] = [START_WHITE_OCC, START_BLACK_OCC];
 
 /// Bits for starting occupancy boards for a white pawn.
 pub const START_W_PAWN: u64 =
@@ -192,7 +192,7 @@ pub const C_BLACK_K_MASK: u8 = 0b0000_0010;
 pub const C_BLACK_Q_MASK: u8 = 0b0000_0001;
 
 /// Array containing all the starting rook positions for each side, for each player.
-pub const CASTLING_ROOK_START: [[u8; CASTLING_SIDES]; PLAYER_CNT] =
+pub static CASTLING_ROOK_START: [[u8; CASTLING_SIDES]; PLAYER_CNT] =
     [
         [ROOK_WHITE_KSIDE_START, ROOK_WHITE_QSIDE_START],
         [ROOK_BLACK_KSIDE_START, ROOK_BLACK_QSIDE_START],
@@ -216,17 +216,17 @@ pub const CASTLING_PATH_BLACK_Q_SIDE: u64 = (1 as u64) << SQ::B8.0 as u32 |
 
 /// Array for the bits representing the castling path for a white castle, indexed
 /// per the side available (king-side, queen-side).
-pub const CASTLING_PATH_WHITE: [u64; CASTLING_SIDES] =
+pub static CASTLING_PATH_WHITE: [u64; CASTLING_SIDES] =
     [CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE];
 
 /// Array for the bits representing the castling path for a white castle, indexed
 /// per the side available (king-side, queen-side).
-pub const CASTLING_PATH_BLACK: [u64; CASTLING_SIDES] =
+pub static CASTLING_PATH_BLACK: [u64; CASTLING_SIDES] =
     [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE];
 
 /// Array for the bits representing the castling path for castle, indexed
 /// per the side available (king-side, queen-side), as well as indexed per player.
-pub const CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] =
+pub static CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] =
     [
         [CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE],
         [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE],
@@ -234,7 +234,7 @@ pub const CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] =
 
 /// Display order for a squares. Used for printing, and for answering the question
 /// of which square to print first.
-pub const SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
+pub static SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
     48, 49, 50, 51, 52, 53, 54, 55,
     40, 41, 42, 43, 44, 45, 46, 47,
     32, 33, 34, 35, 36, 37, 38, 39,
@@ -243,14 +243,24 @@ pub const SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
     8,  9,  10, 11, 12, 13, 14, 15,
     0,  1,   2,  3,  4,  5,  6,  7];
 
+pub static SQ_DISPLAY: [&str; SQ_CNT] = [
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
+    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"];
+
 /// Characters for each combination of player and piece.
-pub const PIECE_DISPLAYS: [[char; PIECE_TYPE_CNT]; PLAYER_CNT] = [
+pub static PIECE_DISPLAYS: [[char; PIECE_TYPE_CNT]; PLAYER_CNT] = [
     ['_', 'P', 'N', 'B', 'R', 'Q', 'K', '*'],
     ['_', 'p', 'n', 'b', 'r', 'q', 'k', '*'],
 ];
 
 /// Characters for each file, index from file A to file H.
-pub const FILE_DISPLAYS: [char; FILE_CNT] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+pub static FILE_DISPLAYS: [char; FILE_CNT] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 /// Characters for each rank, index from rank 1 to rank 8.
-pub const RANK_DISPLAYS: [char; FILE_CNT] = ['1', '2', '3', '4', '5', '6', '7', '8'];
+pub static RANK_DISPLAYS: [char; FILE_CNT] = ['1', '2', '3', '4', '5', '6', '7', '8'];

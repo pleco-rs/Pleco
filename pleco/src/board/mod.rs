@@ -2639,7 +2639,6 @@ mod tests {
         assert_eq!(b.captured_piece(bmove), PieceType::None);
     }
 
-
     #[test]
     fn see_ge_all_fens() {
         for b in super::fen::ALL_FENS.iter() {
