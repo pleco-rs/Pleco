@@ -1,8 +1,11 @@
 [workspace]
 members = [
     "pleco",
-    "pleco_engine",
-]
+    "pleco_engine",]
+
+default-members = [
+    "pleco",
+    "pleco_engine",]
 
 [profile.release]
 opt-level = 3
@@ -27,7 +30,3 @@ debug = true
 rpath = false
 debug-assertions = true
 codegen-units = 4
-
-
-[dependencies]
-clippy = {version = "0.0.200", default-features = false, optional = true}

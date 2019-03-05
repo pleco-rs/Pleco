@@ -98,7 +98,7 @@ fn multi_lookup_stutter(b: &mut Bencher) {
 
 criterion_group!(name = lookup_benches;
      config = Criterion::default()
-        .sample_size(100)
-        .warm_up_time(Duration::from_millis(1));
+        .sample_size(250)
+        .warm_up_time(Duration::from_millis(3));
     targets = lookup_tables
 );

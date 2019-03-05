@@ -6,16 +6,6 @@
 //! If you are interested in using the direct chess library functions (The Boards, move generation, etc), please
 //! checkout the core library, `pleco`, available on [on crates.io](https://crates.io/crates/pleco).
 //!
-
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", allow(inline_always))]
-#![cfg_attr(feature="clippy", allow(unreadable_literal))]
-#![cfg_attr(feature="clippy", allow(large_digit_groups))]
-#![cfg_attr(feature="clippy", allow(cast_lossless))]
-#![cfg_attr(feature="clippy", allow(doc_markdown))]
-#![cfg_attr(feature="clippy", allow(inconsistent_digit_grouping))]
-
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
@@ -28,6 +18,8 @@
 #![feature(trusted_len)]
 #![feature(const_fn)]
 #![feature(box_into_raw_non_null)]
+#![feature(alloc_layout_extra)]
+#![feature(thread_spawn_unchecked)]
 
 //#![crate_type = "staticlib"]
 
@@ -35,7 +27,6 @@ extern crate num_cpus;
 extern crate rand;
 extern crate pleco;
 extern crate chrono;
-extern crate crossbeam_utils;
 extern crate prefetch;
 
 pub mod threadpool;
