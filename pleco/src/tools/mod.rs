@@ -22,6 +22,7 @@ pub trait Searcher {
             Self: Sized;
 }
 
+// https://doc.rust-lang.org/core/arch/x86_64/fn._mm_prefetch.html
 /// Allows an object to have it's entries pre-fetchable.
 pub trait PreFetchable {
     /// Pre-fetches a particular key. This means bringing it into the cache for faster access.

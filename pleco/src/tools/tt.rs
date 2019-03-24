@@ -35,7 +35,7 @@
 
 use std::ptr::NonNull;
 use std::mem;
-use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
+use std::alloc::{Layout, handle_alloc_error, self};
 use std::cmp::min;
 use std::cell::UnsafeCell;
 
@@ -283,7 +283,7 @@ impl TranspositionTable {
     ///
     /// This is function is unsafe to use if the TT is currently being accessed, Or any thread of
     /// structure contains a current reference to a `TTEntry`. Otherwise, using this function will
-    /// absolutely lead to Segmentation Fault.
+    /// absolutely lead to a Segmentation Fault.
     pub unsafe fn resize_round_up(&self, size: usize) {
         self.resize(size.next_power_of_two());
     }
@@ -323,7 +323,7 @@ impl TranspositionTable {
     ///
     /// This is function is unsafe to use if the TT is currently being accessed, Or any thread of
     /// structure contains a current reference to a `TTEntry`. Otherwise, using this function will
-    /// absolutely lead to Segmentation Fault.
+    /// absolutely lead to a Segmentation Fault.
     pub unsafe fn clear(&self) {
         let size = self.cap.get();
         self.resize(*size);
@@ -423,8 +423,10 @@ impl TranspositionTable {
 
     /// De-allocates the current heap.
     unsafe fn de_alloc(&self) {
-        let ptr: NonNull<u8> = mem::transmute(*self.clusters.get());
-        Global.dealloc(ptr, Layout::array::<Cluster>(*self.cap.get()).unwrap());
+        let layout = Layout::from_size_align(*self.cap.get(), 2).unwrap();
+        let ptr: *mut u8 = mem::transmute(*self.clusters.get());
+//        alloc::dealloc(ptr, Layout::array::<Cluster>(*self.cap.get()).unwrap());
+        alloc::dealloc(ptr, layout);
     }
 
     /// Returns the % of the hash table that is full.
@@ -481,12 +483,13 @@ unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
 #[inline]
 fn alloc_room(size: usize) -> NonNull<Cluster> {
     unsafe {
-        let layout = Layout::array::<Cluster>(size).unwrap();
-        let ptr = Global.alloc_zeroed(layout);
-
-        let new_ptr = match ptr {
-            Ok(ptr) => ptr.cast(),
-            Err(_err) => handle_alloc_error(layout),
+        let size = size * mem::size_of::<Cluster>();
+        let layout = Layout::from_size_align(size, 2).unwrap();
+        //let layout = Layout::array::<Cluster>(size).unwrap();
+        let ptr: *mut u8 = alloc::alloc_zeroed(layout);
+        let new_ptr: NonNull<Cluster> = match NonNull::new(ptr) {
+            Some(ptr) => ptr.cast(),
+            _ => handle_alloc_error(layout),
         };
         new_ptr
     }
@@ -510,6 +513,16 @@ mod tests {
     const HALF_GIG: usize = 2 << 24;
     // around 30 MB
     const THIRTY_MB: usize = 2 << 20;
+
+//    #[test]
+//    fn cluster_alloc_size_align() {
+//        for i in 0..10 {
+//            let size = 1 << i;
+//            let layout = Layout::array::<Cluster>(1 << i).unwrap();
+//            assert_eq!(layout.align(), 2);
+//            assert_eq!(layout.size(),  mem::size_of::<Cluster>() * size);
+//        }
+//    }
 
     #[test]
     fn tt_alloc_realloc() {

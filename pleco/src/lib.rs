@@ -61,14 +61,16 @@
 
 //#![crate_type = "rlib"]
 
-#![feature(trusted_len)]
-#![feature(test)]
-#![feature(integer_atomics)]
-#![feature(allocator_api)]
-#![feature(const_fn)]
-#![feature(stdsimd)]
-#![feature(const_slice_len)]
-#![feature(alloc_layout_extra)]
+// Unneeded I think
+//#![feature(test)]
+//#![feature(integer_atomics)]
+//#![feature(const_fn)]
+//#![feature(stdsimd)]
+
+// Need these for nightly
+#![feature(const_slice_len)] // General Usage
+#![feature(trusted_len)]     // used in MoveList
+
 #![allow(dead_code)]
 
 #[macro_use]
@@ -78,6 +80,7 @@ extern crate lazy_static;
 extern crate num_cpus;
 extern crate rand;
 extern crate rayon;
+// This requires nightly, probably should find a better way to prefetch.
 extern crate prefetch;
 extern crate mucow;
 
