@@ -278,9 +278,9 @@ pub static PIECE_DISPLAYS: [[char; PIECE_TYPE_CNT]; PLAYER_CNT] = [
 /// ```
 /// use pleco::core::masks::FILE_DISPLAYS;
 ///
-/// assert_eq!(FILE_DISPLAYS[0], "a");
-/// assert_eq!(FILE_DISPLAYS[1], "b");
-/// assert_eq!(FILE_DISPLAYS[7], "h");
+/// assert_eq!(FILE_DISPLAYS[0], 'a');
+/// assert_eq!(FILE_DISPLAYS[1], 'b');
+/// assert_eq!(FILE_DISPLAYS[7], 'h');
 /// ```
 pub static FILE_DISPLAYS: [char; FILE_CNT] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -291,8 +291,8 @@ pub static FILE_DISPLAYS: [char; FILE_CNT] = ['a', 'b', 'c', 'd', 'e', 'f', 'g',
 /// ```
 /// use pleco::core::masks::RANK_DISPLAYS;
 ///
-/// assert_eq!(RANK_DISPLAYS[0], "1");
-/// assert_eq!(RANK_DISPLAYS[1], "2");
-/// assert_eq!(RANK_DISPLAYS[7], "8");
+/// assert_eq!(RANK_DISPLAYS[0], '1');
+/// assert_eq!(RANK_DISPLAYS[1], '2');
+/// assert_eq!(RANK_DISPLAYS[7], '8');
 /// ```
 pub static RANK_DISPLAYS: [char; FILE_CNT] = ['1', '2', '3', '4', '5', '6', '7', '8'];

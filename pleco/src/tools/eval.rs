@@ -52,7 +52,7 @@ fn flatten(arr: [[i32; FILE_CNT]; RANK_CNT]) -> [i32; SQ_CNT] {
 ///
 /// let board = Board::start_pos();
 /// let score = Eval::eval_low(&board);
-/// println!("Score: {}");
+/// println!("Score: {}", score);
 /// ```
 pub struct Eval;
 
