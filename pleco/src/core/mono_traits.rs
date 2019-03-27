@@ -4,7 +4,7 @@
 //! This modules only use is to allow for compile-time mono-morphization of
 //! functions / methods, where each method created can be optimized further.
 //!
-//! We are awaiting the stabilization of `const fn` to remove these traits.
+//! We are awaiting the stabilization of `const fn` and constant generics to remove these traits.
 
 use super::{Player, PieceType, GenTypes};
 use super::sq::SQ;

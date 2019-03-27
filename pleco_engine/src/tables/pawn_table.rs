@@ -6,8 +6,6 @@
 
 use std::mem::transmute;
 
-use prefetch::prefetch::*;
-
 use pleco::{Player, File, SQ, BitBoard, Board, PieceType, Rank, Piece};
 use pleco::core::masks::{PLAYER_CNT,RANK_CNT};
 use pleco::core::score::*;
@@ -15,7 +13,7 @@ use pleco::core::mono_traits::*;
 use pleco::board::castle_rights::Castling;
 use pleco::core::CastleType;
 use pleco::helper::prelude::*;
-use pleco::tools::PreFetchable;
+use pleco::tools::{PreFetchable,prefetch_write};
 
 use super::{TableBase,TableBaseConst};
 
@@ -185,7 +183,7 @@ impl PreFetchable for PawnTable {
     fn prefetch(&self, key: u64) {
         unsafe {
             let ptr = self.table.get_ptr(key);
-            prefetch::<Write, High, Data, PawnEntry>(ptr);
+            prefetch_write(ptr);
         }
     }
 
@@ -193,9 +191,9 @@ impl PreFetchable for PawnTable {
     fn prefetch2(&self, key: u64) {
         unsafe {
             let ptr = self.table.get_ptr(key);
-            prefetch::<Write, High, Data, PawnEntry>(ptr);
+            prefetch_write(ptr);
             let ptr_2 = (ptr as *mut u8).offset(64) as *mut PawnEntry;
-            prefetch::<Write, High, Data, PawnEntry>(ptr_2);
+            prefetch_write(ptr_2);
         }
     }
 }

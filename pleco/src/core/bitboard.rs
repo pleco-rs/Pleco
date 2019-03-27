@@ -163,6 +163,13 @@ impl BitBoard {
 
     /// Returns the index (as a square) of the least significant bit and removes
     /// that bit from the `BitBoard`.
+    ///
+    /// # Safety
+    ///
+    /// Panics if the `BitBoard` is empty. See [`BitBoard::pop_some_lsb`] for a
+    /// non-panicking version of the method.
+    ///
+    /// [`BitBoard::pop_some_lsb`]: struct.BitBoard.html#method.pop_some_lsb
     #[inline(always)]
     pub fn pop_lsb(&mut self) -> SQ {
         let sq = self.bit_scan_forward();
@@ -170,7 +177,8 @@ impl BitBoard {
         sq
     }
 
-    /// Returns the least significant bit of a `BitBoard`, if it has any.
+    /// Returns the least significant bit of a `BitBoard`, if it has any. If there is a bit to
+    /// return, it removes that bit from itself.
     #[inline(always)]
     pub fn pop_some_lsb(&mut self) -> Option<SQ> {
         if self.is_empty() {
@@ -182,6 +190,13 @@ impl BitBoard {
 
     /// Returns the index (as a square) and bit of the least significant bit and removes
     /// that bit from the `BitBoard`.
+    ///
+    /// # Safety
+    ///
+    /// Panics if the `BitBoard` is empty. See [`BitBoard::pop_some_lsb_and_bit`] for a
+    /// non-panicking version of the method.
+    ///
+    /// [`BitBoard::pop_some_lsb_and_bit`]: struct.BitBoard.html#method.pop_some_lsb_and_bit
     #[inline(always)]
     pub fn pop_lsb_and_bit(&mut self) -> (SQ, BitBoard) {
         let sq: SQ = self.bit_scan_forward();
@@ -189,6 +204,9 @@ impl BitBoard {
         (sq, sq.to_bb())
     }
 
+    /// Returns the index (as a square) and bit of the least significant bit and removes
+    /// that bit from the `BitBoard`. If there are no bits left (the board is empty), returns
+    /// `None`.
     #[inline(always)]
     pub fn pop_some_lsb_and_bit(&mut self) ->  Option<(SQ, BitBoard)> {
         if self.is_empty() {
@@ -202,7 +220,7 @@ impl BitBoard {
     ///
     /// # Safety
     ///
-    /// panics if the `BitBoard` is empty.
+    /// Panics if the `BitBoard` is empty.
     #[inline]
     pub fn frontmost_sq(self, player: Player) -> SQ {
         match player {

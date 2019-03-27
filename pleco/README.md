@@ -35,7 +35,7 @@ Use
 -------
 
 To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io](https://crates.io/crates/pleco). 
-`nightly` rust is required to use. 
+Pleco runs on all three distributions (`nightly`, `beta`, `stable`) of rust.
 
 ### Basic Usage
 
@@ -95,6 +95,17 @@ board.undo_move();
 assert_eq!(board.moves_played(),0);
 ```
 
+#### Features
+
+If on nightly rust, the feature `"nightly"` is available. This enables some nightly
+optimizations and speed improvements.
+
+Usage is as easy as updating your `cargo.toml` to include:
+
+```
+[dependencies]
+pleco = {version = "*", features = ["nightly"]}
+```
   
 Contributing
 -------

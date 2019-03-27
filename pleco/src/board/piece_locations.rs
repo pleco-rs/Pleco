@@ -46,7 +46,7 @@ impl PieceLocations {
     ///
     /// # Panics
     ///
-    /// Panics if Square is of index higher than 63.
+    /// Panics if Square is of index higher than 63 or the piece is `PieceType::{None || All}`
     #[inline]
     pub fn place(&mut self, square: SQ, player: Player, piece: PieceType) {
         debug_assert!(square.is_okay());

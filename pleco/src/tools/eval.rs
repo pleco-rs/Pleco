@@ -43,7 +43,18 @@ fn flatten(arr: [[i32; FILE_CNT]; RANK_CNT]) -> [i32; SQ_CNT] {
     new_arr
 }
 
-pub struct Eval {}
+/// A simple evaluation structure. This is included as an example, and shouldn't
+/// neccessarily be used inside serious chess engines.
+///
+/// ```
+/// use pleco::tools::eval::Eval;
+/// use pleco::Board;
+///
+/// let board = Board::start_pos();
+/// let score = Eval::eval_low(&board);
+/// println!("Score: {}", score);
+/// ```
+pub struct Eval;
 
 trait EvalRuns {
     fn eval_castling<PlayerTrait>(&self) -> i32;

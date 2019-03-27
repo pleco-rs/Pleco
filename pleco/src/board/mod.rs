@@ -756,11 +756,10 @@ impl Board {
         }
         self.state = next_arc_state.shareable();
 
-        if cfg!(debug_assertions) {
-            self.is_okay().unwrap();
-        } else {
-            assert!(self.is_ok_quick());
-        }
+        #[cfg(debug_assertions)]
+        self.is_okay().unwrap();
+        #[cfg(not(debug_assertions))]
+        assert!(self.is_ok_quick());
     }
 
     /// Applies a UCI move to the board. If the move is a valid string representing a UCI move, then
@@ -855,11 +854,10 @@ impl Board {
         self.half_moves -= 1;
         self.depth -= 1;
 
-        if cfg!(debug_assertions) {
-            self.is_okay().unwrap();
-        } else {
-            assert!(self.is_ok_quick());
-        }
+        #[cfg(debug_assertions)]
+        self.is_okay().unwrap();
+        #[cfg(not(debug_assertions))]
+        assert!(self.is_ok_quick());
     }
 
     /// Apply a "Null Move" to the board, essentially swapping the current turn of
@@ -920,11 +918,10 @@ impl Board {
         }
         self.state = next_arc_state.shareable();
 
-        if cfg!(debug_assertions) {
-            self.is_okay().unwrap();
-        } else {
-            assert!(self.is_ok_quick());
-        }
+        #[cfg(debug_assertions)]
+        self.is_okay().unwrap();
+        #[cfg(not(debug_assertions))]
+        assert!(self.is_ok_quick());
     }
 
     /// Undo a "Null Move" to the Board, returning to the previous state.
@@ -1980,6 +1977,12 @@ impl Board {
 
     /// `see_ge` stands for Static Exchange Evaluation, Greater or Equal. This teats if the
     /// Static Exchange Evaluation of a move is greater than or equal to a value.
+    ///
+    /// This is a recursive algorithm that works by checking the destination square of
+    /// the given move, and attempting to repeatedly capture that spot for both players.
+    ///
+    /// If the move is invalid for the current board, `false` will be returned regardless
+    /// of the threshold.
     pub fn see_ge(&self, mov: BitMove, threshold: i32) -> bool {
         if mov.move_type() != MoveType::Normal {
             return 0 >= threshold;

@@ -8,6 +8,7 @@ pub mod eval;
 pub mod tt;
 pub mod pleco_arc;
 
+
 use core::piece_move::BitMove;
 use board::Board;
 
@@ -22,6 +23,7 @@ pub trait Searcher {
             Self: Sized;
 }
 
+// https://doc.rust-lang.org/core/arch/x86_64/fn._mm_prefetch.html
 /// Allows an object to have it's entries pre-fetchable.
 pub trait PreFetchable {
     /// Pre-fetches a particular key. This means bringing it into the cache for faster access.
@@ -32,4 +34,98 @@ pub trait PreFetchable {
         self.prefetch(key);
         self.prefetch(key + 1);
     }
+}
+
+/// Prefetch's `ptr` to all levels of the cache.
+///
+/// For some platforms this may compile down to nothing, and be optimized away.
+/// To prevent compiling down into nothing, compilation must be done for a
+/// `x86` or `x86_64` platform with SSE instructions available. An easy way to
+/// do this is to add the environmental variable `RUSTFLAGS=-C target-cpu=native`.
+#[inline(always)]
+pub fn prefetch_write<T>(ptr: *const T) {
+    __prefetch_write::<T>(ptr);
+}
+
+
+#[cfg(feature = "nightly")]
+#[inline(always)]
+fn __prefetch_write<T>(ptr: *const T) {
+    use std::intrinsics::prefetch_write_data;
+    unsafe {
+        prefetch_write_data::<T>(ptr, 3);
+    }
+}
+
+#[cfg(
+    all(
+        not(feature = "nightly"),
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse"
+    )
+)]
+#[inline(always)]
+fn __prefetch_write<T>(ptr: *const T) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::_mm_prefetch;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::_mm_prefetch;
+    unsafe {
+        _mm_prefetch(ptr as *const i8, 3);
+    }
+}
+
+#[cfg(
+    all(
+        not(feature = "nightly"),
+        any(
+            all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                not(target_feature = "sse")
+            ),
+            not(any(target_arch = "x86", target_arch = "x86_64"))
+        )
+    )
+)]
+#[inline(always)]
+fn __prefetch_write<T>(ptr: *const T) {
+    // Do nothing
+}
+
+/// Hints to the compiler for optimizations.
+///
+/// These functions normally compile down to no-operations without the `nightly` flag.
+pub mod hint {
+    #[cfg(feature = "nightly")]
+    use std::intrinsics;
+
+    /// Hints to the compiler that branch condition is likely to be false.
+    /// Returns the value passed to it.
+    ///
+    /// Any use other than with `if` statements will probably not have an effect.
+    #[inline(always)]
+    pub fn unlikely(cond: bool) -> bool {
+        #[cfg(feature = "nightly")]
+        unsafe {
+            intrinsics::unlikely(cond)
+        }
+        #[cfg(not(feature = "nightly"))]
+        cond
+    }
+
+    /// Hints to the compiler that branch condition is likely to be true.
+    /// Returns the value passed to it.
+    ///
+    /// Any use other than with `if` statements will probably not have an effect.
+    #[inline(always)]
+    pub fn likely(cond: bool) -> bool {
+        #[cfg(feature = "nightly")]
+            unsafe {
+            intrinsics::likely(cond)
+        }
+        #[cfg(not(feature = "nightly"))]
+            cond
+    }
+
+
 }

@@ -20,7 +20,6 @@ use core::bitboard::BitBoard;
 use core::masks::*;
 use core::score::{Value,Score};
 
-//use std::sync::Arc;
 use tools::pleco_arc::Arc;
 use helper::prelude::*;
 
@@ -156,7 +155,7 @@ impl BoardState {
     ///
     /// Specifically, sets Blockers, Pinners, and Check Squares for each piece.
     ///
-    /// The `checkers_bb` must beset before this methof can be used.
+    /// The `checkers_bb` must beset before this method can be used.
     pub(crate) fn set_check_info(&mut self, board: &Board) {
         let mut white_pinners: BitBoard = BitBoard(0);
 

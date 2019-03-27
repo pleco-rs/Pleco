@@ -57,7 +57,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "0.4.4" }
+pleco = { path = "../pleco", version = "*", features =["nightly"]}
 chrono = "0.4.6"
 rand = "0.6.5"
 num_cpus = "1.8.0"

@@ -17,9 +17,13 @@
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
-use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
+use std::iter::{Iterator,IntoIterator,FusedIterator,ExactSizeIterator,FromIterator};
+#[cfg(feature = "nightly")]
+use std::iter::TrustedLen;
+
 use super::piece_move::{BitMove, ScoringMove};
 
+/// Trait to help generalize operations involving sctures containing a collection of `BitMove`s.
 pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
 
     /// Adds a `BitMove` to the end of the list.
@@ -33,7 +37,7 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     ///
     /// # Safety
     ///
-    /// Undefined behavior if pushing to the list when `MoveList::len() = 256`.
+    /// Undefined behavior if pushing to the list when `MoveList::len() = MAX_MOVES`.
     unsafe fn unchecked_push_mv(&mut self, mv: BitMove);
 
     /// Set the length of the list.
@@ -44,14 +48,14 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     unsafe fn unchecked_set_len(&mut self, len: usize);
 
 
-    /// Return a pointer to the first (0-th index) element in the list
+    /// Return a pointer to the first (0-th index) element in the list.
     ///
     /// # Safety
     ///
     /// Unsafe due to allow modification of elements possibly not inside the length.
     unsafe fn list_ptr(&mut self) -> *mut Self::Output;
 
-    /// Return a pointer to the element next to the last element in the list
+    /// Return a pointer to the element next to the last element in the list.
     ///
     /// # Safety
     ///
@@ -59,12 +63,26 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     unsafe fn over_bounds_ptr(&mut self) -> *mut Self::Output;
 }
 
-const MAX_MOVES: usize = 256;
+/// The maximum number of moves a `MoveList` or `ScoringMoveList` may contain.
+///
+/// This value differs based on the `target_pointer_width` to align lists of moves into
+/// values equally dividable by the cache size.
+#[cfg(target_pointer_width = "128")]
+pub const MAX_MOVES: usize = 248;
+#[cfg(target_pointer_width = "64")]
+pub const MAX_MOVES: usize = 252;
+#[cfg(target_pointer_width = "32")]
+pub const MAX_MOVES: usize = 254;
+#[cfg(any(
+    target_pointer_width = "16",
+    target_pointer_width = "8",
+))]
+pub const MAX_MOVES: usize = 255;
 
 /// This is the list of possible moves for a current position. Think of it alike a faster
 /// version of `Vec<BitMove>`, as all the data is stored in the Stack rather than the Heap.
 pub struct MoveList {
-    inner: [BitMove; 256],
+    inner: [BitMove; MAX_MOVES],
     len: usize,
 }
 
@@ -72,7 +90,7 @@ impl Default for MoveList {
     #[inline]
     fn default() -> Self {
         MoveList {
-            inner: [BitMove::null(); 256],
+            inner: [BitMove::null(); MAX_MOVES],
             len: 0,
         }
     }
@@ -307,6 +325,7 @@ impl<'a> ExactSizeIterator for MoveIter<'a> {}
 
 impl<'a> FusedIterator for MoveIter<'a> {}
 
+#[cfg(feature = "nightly")]
 unsafe impl<'a> TrustedLen for MoveIter<'a> {}
 
 // Iterator for the `MoveList`.
@@ -365,12 +384,13 @@ impl ExactSizeIterator for MoveIntoIter {}
 
 impl FusedIterator for MoveIntoIter {}
 
+#[cfg(feature = "nightly")]
 unsafe impl TrustedLen for MoveIntoIter {}
 
 
 /// This is similar to a `MoveList`, but also keeps the scores for each move as well.
 pub struct ScoringMoveList {
-    inner: [ScoringMove; 256],
+    inner: [ScoringMove; MAX_MOVES],
     len: usize,
 }
 
@@ -378,7 +398,7 @@ impl Default for ScoringMoveList {
     #[inline]
     fn default() -> Self {
         ScoringMoveList {
-            inner: [ScoringMove::default(); 256],
+            inner: [ScoringMove::default(); MAX_MOVES],
             len: 0,
         }
     }
@@ -588,6 +608,7 @@ impl<'a> ExactSizeIterator for ScoreMoveIter<'a> {}
 
 impl<'a> FusedIterator for ScoreMoveIter<'a> {}
 
+#[cfg(feature = "nightly")]
 unsafe impl<'a> TrustedLen for ScoreMoveIter<'a> {}
 
 // Iterator for the `ScoringMoveList`.
@@ -646,4 +667,5 @@ impl ExactSizeIterator for ScoreMoveIntoIter {}
 
 impl FusedIterator for ScoreMoveIntoIter {}
 
+#[cfg(feature = "nightly")]
 unsafe impl TrustedLen for ScoreMoveIntoIter {}
