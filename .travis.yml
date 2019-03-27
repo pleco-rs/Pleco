@@ -16,7 +16,7 @@ sudo: required
 env:
   global:
     - RUST_BACKTRACE=FULL
-    - RUSTFLAGS="-Ctarget-cpu=native -Zmutable-noalias"
+    - RUSTFLAGS="-Ctarget-cpu=native"
     - RUST_MIN_STACK=8000000
 #    - RUST_TEST_THREADS=1
 
@@ -46,7 +46,7 @@ script:
   - cargo +stable bench --package pleco
   - echo " ------ TESTING NIGHTLY BRANCH ------- "
   - cargo test --verbose
-  - cargo bench
+  - cargo bench -- -Zmutable-noalias
 #  - cd pleco/ && cargo bench
 #  - cd ../pleco_engine/ && cargo bench --bench eval_benches
 
