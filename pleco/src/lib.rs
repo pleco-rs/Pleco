@@ -67,9 +67,9 @@
 //#![feature(const_fn)]
 //#![feature(stdsimd)]
 
-// Need these for nightly
-#![feature(const_slice_len)] // General Usage
-#![feature(trusted_len)]     // used in MoveList
+#![cfg_attr(feature = "nightly", feature(core_intrinsics))]
+#![cfg_attr(feature = "nightly", feature(const_slice_len))]
+#![cfg_attr(feature = "nightly", feature(trusted_len))]
 
 #![allow(dead_code)]
 
@@ -80,8 +80,6 @@ extern crate lazy_static;
 extern crate num_cpus;
 extern crate rand;
 extern crate rayon;
-// This requires nightly, probably should find a better way to prefetch.
-extern crate prefetch;
 extern crate mucow;
 
 pub mod core;

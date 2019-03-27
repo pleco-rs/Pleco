@@ -8,6 +8,7 @@ pub mod eval;
 pub mod tt;
 pub mod pleco_arc;
 
+
 use core::piece_move::BitMove;
 use board::Board;
 
@@ -33,4 +34,51 @@ pub trait PreFetchable {
         self.prefetch(key);
         self.prefetch(key + 1);
     }
+}
+
+/// Prefetch's `ptr` to all levels of the cache.
+pub fn prefetch_write<T>(ptr: *const T) {
+    __prefetch_write::<T>(ptr);
+}
+
+
+#[cfg(feature = "nightly")]
+fn __prefetch_write<T>(ptr: *const T) {
+    use std::intrinsics::prefetch_write_data;
+    unsafe {
+        prefetch_write_data::<T>(ptr, 3);
+    }
+}
+
+#[cfg(
+    all(
+        not(feature = "nightly"),
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse"
+    )
+)]
+fn __prefetch_write<T>(ptr: *const T) {
+    #[cfg(target_arch = "x86")]
+    use std::arch::x86::_mm_prefetch;
+    #[cfg(target_arch = "x86_64")]
+    use std::arch::x86_64::_mm_prefetch;
+    unsafe {
+        _mm_prefetch(ptr as *const i8, 3);
+    }
+}
+
+#[cfg(
+    all(
+        not(feature = "nightly"),
+        any(
+            all(
+                any(target_arch = "x86", target_arch = "x86_64"),
+                not(target_feature = "sse")
+            ),
+            not(any(target_arch = "x86", target_arch = "x86_64"))
+        )
+    )
+)]
+fn __prefetch_write<T>(ptr: *const T) {
+    // Do nothing
 }

@@ -17,7 +17,10 @@
 
 use std::slice;
 use std::ops::{Deref,DerefMut,Index,IndexMut};
-use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator,FromIterator};
+use std::iter::{Iterator,IntoIterator,FusedIterator,ExactSizeIterator,FromIterator};
+#[cfg(feature = "nightly")]
+use std::iter::TrustedLen;
+
 use super::piece_move::{BitMove, ScoringMove};
 
 pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
@@ -307,6 +310,7 @@ impl<'a> ExactSizeIterator for MoveIter<'a> {}
 
 impl<'a> FusedIterator for MoveIter<'a> {}
 
+#[cfg(feature = "nightly")]
 unsafe impl<'a> TrustedLen for MoveIter<'a> {}
 
 // Iterator for the `MoveList`.
@@ -365,6 +369,7 @@ impl ExactSizeIterator for MoveIntoIter {}
 
 impl FusedIterator for MoveIntoIter {}
 
+#[cfg(feature = "nightly")]
 unsafe impl TrustedLen for MoveIntoIter {}
 
 
@@ -588,6 +593,7 @@ impl<'a> ExactSizeIterator for ScoreMoveIter<'a> {}
 
 impl<'a> FusedIterator for ScoreMoveIter<'a> {}
 
+#[cfg(feature = "nightly")]
 unsafe impl<'a> TrustedLen for ScoreMoveIter<'a> {}
 
 // Iterator for the `ScoringMoveList`.
@@ -646,4 +652,5 @@ impl ExactSizeIterator for ScoreMoveIntoIter {}
 
 impl FusedIterator for ScoreMoveIntoIter {}
 
+#[cfg(feature = "nightly")]
 unsafe impl TrustedLen for ScoreMoveIntoIter {}

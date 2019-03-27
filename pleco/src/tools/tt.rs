@@ -39,10 +39,9 @@ use std::alloc::{Layout, handle_alloc_error, self};
 use std::cmp::min;
 use std::cell::UnsafeCell;
 
-use prefetch::prefetch::*;
-
 use super::PreFetchable;
 use core::piece_move::BitMove;
+use super::prefetch_write;
 
 // TODO: investigate potention for SIMD in key lookup
 // Currently, there is now way to do this right now in rust without it being extensive.
@@ -462,7 +461,7 @@ impl PreFetchable for TranspositionTable {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
         unsafe {
             let ptr = (*self.clusters.get()).as_ptr().offset(index as isize);
-            prefetch::<Write, High, Data, Cluster>(ptr);
+            prefetch_write(ptr);
         };
     }
 }
