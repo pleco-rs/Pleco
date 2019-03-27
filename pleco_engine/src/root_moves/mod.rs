@@ -8,7 +8,8 @@ use std::cmp::Ordering as CmpOrder;
 use pleco::core::score::*;
 use pleco::BitMove;
 
-const MAX_MOVES: usize = 256;
+// 250 as this fits into 64 byte cache lines easily.
+const MAX_MOVES: usize = 250;
 
 /// Keeps track of information of a move for the position to be searched.
 #[derive(Copy, Clone,Eq)]

@@ -243,6 +243,17 @@ pub static SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
     8,  9,  10, 11, 12, 13, 14, 15,
     0,  1,   2,  3,  4,  5,  6,  7];
 
+/// Array mapping a square index to a string representation.
+///
+/// # Examples
+///
+/// ```
+/// use pleco::core::masks::SQ_DISPLAY;
+///
+/// assert_eq!(SQ_DISPLAY[0], "a1");
+/// assert_eq!(SQ_DISPLAY[1], "b1");
+/// assert_eq!(SQ_DISPLAY[8], "a2");
+/// ```
 pub static SQ_DISPLAY: [&str; SQ_CNT] = [
     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
     "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
@@ -254,13 +265,34 @@ pub static SQ_DISPLAY: [&str; SQ_CNT] = [
     "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"];
 
 /// Characters for each combination of player and piece.
+///
+/// White pieces are displayed as Uppercase letters, while black pieces are lowercase.
 pub static PIECE_DISPLAYS: [[char; PIECE_TYPE_CNT]; PLAYER_CNT] = [
     ['_', 'P', 'N', 'B', 'R', 'Q', 'K', '*'],
     ['_', 'p', 'n', 'b', 'r', 'q', 'k', '*'],
 ];
 
 /// Characters for each file, index from file A to file H.
+/// # Examples
+///
+/// ```
+/// use pleco::core::masks::FILE_DISPLAYS;
+///
+/// assert_eq!(FILE_DISPLAYS[0], "a");
+/// assert_eq!(FILE_DISPLAYS[1], "b");
+/// assert_eq!(FILE_DISPLAYS[7], "h");
+/// ```
 pub static FILE_DISPLAYS: [char; FILE_CNT] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 /// Characters for each rank, index from rank 1 to rank 8.
+///
+/// # Examples
+///
+/// ```
+/// use pleco::core::masks::RANK_DISPLAYS;
+///
+/// assert_eq!(RANK_DISPLAYS[0], "1");
+/// assert_eq!(RANK_DISPLAYS[1], "2");
+/// assert_eq!(RANK_DISPLAYS[7], "8");
+/// ```
 pub static RANK_DISPLAYS: [char; FILE_CNT] = ['1', '2', '3', '4', '5', '6', '7', '8'];

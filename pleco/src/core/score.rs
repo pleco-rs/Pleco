@@ -1,12 +1,14 @@
 //! Primitives for determining the value / score of a specific location.
 //!
-//! A `Value` stores a single `i16` to represent a score. `Score` stores two `i16`s inside of it,
+//! A `Value` stores a single `i32` to represent a score. `Score` stores two `i32`s inside of it,
 //! the first to determine the mid-game score, and the second to determine the end-game score.
 
 use std::ops::*;
 use std::fmt;
 
-/// Type for `i16` to determine the `Value` of an evaluation.
+// TODO: Why is Value an i32 now? Need some notes on why that changed.
+
+/// Type for `i32` to determine the `Value` of an evaluation.
 pub type Value = i32;
 
 

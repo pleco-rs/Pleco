@@ -466,7 +466,9 @@ impl BitMove {
     }
 }
 
-/// A move that stores a score as well
+/// Structure containing both a score (represented as a i16) and a `BitMove`.
+///
+/// This is useful for tracking a list of moves alongside each of their scores.
 #[derive(Eq, Copy, Clone, Debug)]
 #[repr(C)]
 pub struct ScoringMove {
@@ -485,6 +487,7 @@ impl Default for ScoringMove {
 }
 
 impl ScoringMove {
+    /// Creates a new `ScoringMove` with a default score of 0.
     #[inline(always)]
     pub fn new(m: BitMove) -> Self {
         ScoringMove {
@@ -493,6 +496,7 @@ impl ScoringMove {
         }
     }
 
+    /// Creates a new `ScoringMove`.
     #[inline(always)]
     pub fn new_score(m: BitMove, score: i16) -> Self {
         ScoringMove {
@@ -501,6 +505,7 @@ impl ScoringMove {
         }
     }
 
+    /// Returns a `ScoringMove` containing a `BitMove::null()` and a user-defined score.
     #[inline(always)]
     pub fn blank(score: i16) -> Self {
         ScoringMove {
@@ -509,28 +514,33 @@ impl ScoringMove {
         }
     }
 
+    /// Returns the move.
     #[inline(always)]
     pub fn bitmove(&self) -> BitMove {
         self.bit_move
     }
 
+    /// Returns the score.
     #[inline(always)]
     pub fn score(&self) -> i16 {
         self.score
     }
 
+    /// Negates the current score.
     #[inline(always)]
     pub fn negate(mut self) -> Self {
         self.score = self.score.wrapping_neg();
         self
     }
 
+    /// Swaps the current move with another move.
     #[inline(always)]
     pub fn swap_move(mut self, mov: BitMove) -> Self {
         self.bit_move = mov;
         self
     }
 
+    /// Returns a `ScoringMove` containing a `BitMove::null()` and a score of zero.
     #[inline(always)]
     pub const fn null() -> Self {
         ScoringMove {

@@ -37,12 +37,19 @@ pub trait PreFetchable {
 }
 
 /// Prefetch's `ptr` to all levels of the cache.
+///
+/// For some platforms this may compile down to nothing, and be optimized away.
+/// To prevent compiling down into nothing, compilation must be done for a
+/// `x86` or `x86_64` platform with SSE instructions available. An easy way to
+/// do this is to add the environmental variable `RUSTFLAGS=-C target-cpu=native`.
+#[inline(always)]
 pub fn prefetch_write<T>(ptr: *const T) {
     __prefetch_write::<T>(ptr);
 }
 
 
 #[cfg(feature = "nightly")]
+#[inline(always)]
 fn __prefetch_write<T>(ptr: *const T) {
     use std::intrinsics::prefetch_write_data;
     unsafe {
@@ -57,6 +64,7 @@ fn __prefetch_write<T>(ptr: *const T) {
         target_feature = "sse"
     )
 )]
+#[inline(always)]
 fn __prefetch_write<T>(ptr: *const T) {
     #[cfg(target_arch = "x86")]
     use std::arch::x86::_mm_prefetch;
@@ -79,6 +87,45 @@ fn __prefetch_write<T>(ptr: *const T) {
         )
     )
 )]
+#[inline(always)]
 fn __prefetch_write<T>(ptr: *const T) {
     // Do nothing
+}
+
+/// Hints to the compiler for optimizations.
+///
+/// These functions normally compile down to no-operations without the `nightly` flag.
+pub mod hint {
+    #[cfg(feature = "nightly")]
+    use std::intrinsics;
+
+    /// Hints to the compiler that branch condition is likely to be false.
+    /// Returns the value passed to it.
+    ///
+    /// Any use other than with `if` statements will probably not have an effect.
+    #[inline(always)]
+    pub fn unlikely(cond: bool) -> bool {
+        #[cfg(feature = "nightly")]
+        unsafe {
+            intrinsics::unlikely(cond)
+        }
+        #[cfg(not(feature = "nightly"))]
+        cond
+    }
+
+    /// Hints to the compiler that branch condition is likely to be true.
+    /// Returns the value passed to it.
+    ///
+    /// Any use other than with `if` statements will probably not have an effect.
+    #[inline(always)]
+    pub fn likely(cond: bool) -> bool {
+        #[cfg(feature = "nightly")]
+            unsafe {
+            intrinsics::likely(cond)
+        }
+        #[cfg(not(feature = "nightly"))]
+            cond
+    }
+
+
 }

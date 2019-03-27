@@ -1980,6 +1980,12 @@ impl Board {
 
     /// `see_ge` stands for Static Exchange Evaluation, Greater or Equal. This teats if the
     /// Static Exchange Evaluation of a move is greater than or equal to a value.
+    ///
+    /// This is a recursive algorithm that works by checking the destination square of
+    /// the given move, and attempting to repeatedly capture that spot for both players.
+    ///
+    /// If the move is invalid for the current board, `false` will be returned regardless
+    /// of the threshold.
     pub fn see_ge(&self, mov: BitMove, threshold: i32) -> bool {
         if mov.move_type() != MoveType::Normal {
             return 0 >= threshold;

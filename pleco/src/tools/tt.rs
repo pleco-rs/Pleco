@@ -472,7 +472,7 @@ impl Drop for TranspositionTable {
     }
 }
 
-/// Returns the first entry of a cluster
+/// Returns the first entry of a cluster.
 #[inline]
 unsafe fn cluster_first_entry(cluster: *mut Cluster) -> *mut Entry {
     (*cluster).entry.get_unchecked_mut(0) as *mut Entry

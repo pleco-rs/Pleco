@@ -60,7 +60,6 @@ bitflags = "1.0.4"
 rand = "0.6.5"
 rayon = "1.0.3"
 num_cpus = "1.10.0"
-#prefetch = "0.2.0"
 mucow = "0.1.0"
 lazy_static = "1.3.0"
 
@@ -70,9 +69,6 @@ nightly = []
 
 [dev-dependencies]
 criterion = { version = '0.2.10', default-features = false}
-
-#[build-dependencies]
-#itertools = {version = "0.8"}
 
 [[bench]]
 name = "bench_main"

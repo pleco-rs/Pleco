@@ -1,22 +1,33 @@
-//! A Rust re-write of the basic building blocks of the [Stockfish](https://stockfishchess.org/)
-//! chess engine.
+//! A blazingly fast chess library.
 //!
 //! This package is separated into two parts. Firstly, the board representation & associated functions
 //! (the current crate, `pleco`), and secondly, the AI implementations using these chess foundations,
 //! [pleco_engine](https://crates.io/crates/pleco_engine).
 //!
-//! This crate requires *nightly* Rust to use.
+//! The general formatting and structure of the library take heavy influence from the basic building
+//! blocks of the [Stockfish](https://stockfishchess.org/) chess engine.
 //!
 //! # Usage
 //!
 //! This crate is [on crates.io](https://crates.io/crates/pleco) and can be
 //! used by adding `pleco` to the dependencies in your project's `Cargo.toml`.
 //!
+//! # Platforms
+//!
+//! `pleco` is currently tested and created for use with the `x86_64` instruction set in mind.
+//! Currently, there are no guarantees of correct behavior if compiled for a different
+//! instruction set.
+//!
+//! # Nightly Features
+//!
+//! If on nightly rust, the feature `nightly` is available. This enables some nightly
+//! optimizations and speed improvements.
+//!
 //! # Safety
 //!
-//! While generally a safe library, pleco was built with a focus of speed in mind. Usage of methods must be followed
-//! carefully, as there are many possible ways to `panic` unexpectedly. Methods with the ability to panic will be
-//! documented as such.
+//! While generally a safe library, pleco was built with a focus of speed in mind. Usage of methods
+//! must be followed carefully, as there are many possible ways to `panic` unexpectedly. Methods
+//! with the ability to panic will be documented as such.
 //!
 //! # Examples
 //!
@@ -60,12 +71,6 @@
 #![cfg_attr(test, allow(dead_code))]
 
 //#![crate_type = "rlib"]
-
-// Unneeded I think
-//#![feature(test)]
-//#![feature(integer_atomics)]
-//#![feature(const_fn)]
-//#![feature(stdsimd)]
 
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![cfg_attr(feature = "nightly", feature(const_slice_len))]
