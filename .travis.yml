@@ -33,6 +33,9 @@ env:
 #      - kalakris-cmake
 
 
+before_script:
+  - rustup install stable-x86_64-unknown-linux-gnu
+
 os:
   - linux
 
