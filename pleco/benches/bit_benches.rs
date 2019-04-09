@@ -18,7 +18,7 @@ fn popcount_old_8(b: &mut Bencher, data: &Vec<BitBoard>) {
     b.iter(|| {
         black_box({
             for bits in data.iter() {
-                black_box({popcount_old(black_box((*bits).0));})
+                black_box({ popcount_table(black_box((*bits).0));})
             }
         })
     });

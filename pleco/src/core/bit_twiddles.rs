@@ -53,7 +53,7 @@ const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 /// ```
 #[inline(always)]
 pub fn popcount64(x: u64) -> u8 {
-    x.count_ones() as u8
+    popcount_rust(x)
 }
 
 /// Returns index of the Least Significant Bit
@@ -69,7 +69,9 @@ pub fn popcount64(x: u64) -> u8 {
 #[inline(always)]
 pub fn bit_scan_forward(bits: u64) -> u8 {
     assert_ne!(bits, 0);
-    DEBRUIJ_T[(((bits ^ bits.wrapping_sub(1)).wrapping_mul(DEBRUIJ_M)).wrapping_shr(58)) as usize]
+    unsafe {
+        *DEBRUIJ_T.get_unchecked((((bits ^ bits.wrapping_sub(1)).wrapping_mul(DEBRUIJ_M)).wrapping_shr(58)) as usize)
+    }
 }
 
 /// Returns index of the Least Significant Bit
@@ -79,7 +81,7 @@ pub fn bit_scan_forward(bits: u64) -> u8 {
 /// ```
 /// use pleco::core::bit_twiddles::*;
 ///
-/// assert_eq!(bit_scan_forward(0b100),2);
+/// assert_eq!(bit_scan_forward_rust_trailing(0b100),2);
 /// ```
 ///
 #[inline(always)]
@@ -107,7 +109,6 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 8;
     bb |= bb >> 16;
     bb |= bb >> 32;
-//    DEBRUIJ_T[(bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize]
     unsafe {
         *DEBRUIJ_T.get_unchecked((bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize)
     }
@@ -147,7 +148,7 @@ pub fn lsb(bits: u64) -> u64 {
 
 /// Counts the number of bits in a u64.
 #[inline]
-pub fn popcount_old(x: u64) -> u8 {
+pub fn popcount_table(x: u64) -> u8 {
     let x = x as usize;
     if x == 0 {
         return 0;
@@ -159,6 +160,12 @@ pub fn popcount_old(x: u64) -> u8 {
     POPCNT8[x >> 56] + POPCNT8[(x >> 48) & 0xFF] + POPCNT8[(x >> 40) & 0xFF] +
         POPCNT8[(x >> 32) & 0xFF] + POPCNT8[(x >> 24) & 0xFF] + POPCNT8[(x >> 16) & 0xFF] +
         POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]
+}
+
+/// Counts the number of bits in a u64.
+#[inline(always)]
+pub fn popcount_rust(x: u64) -> u8 {
+    x.count_ones() as u8
 }
 
 /// Returns the positive difference between two unsigned u8s.
