@@ -7,21 +7,17 @@ pub fn minimax(board: &mut Board, depth: u16) -> ScoringMove {
         return eval_board(board);
     }
 
-    let moves = board.generate_scoring_moves();
-    if moves.is_empty() {
-        if board.in_check() {
-            return ScoringMove::blank(-MATE_V);
-        } else {
-            return ScoringMove::blank(DRAW_V);
-        }
-    }
-
-    moves.into_iter()
+    board.generate_scoring_moves()
+        .into_iter()
         .map(|mut m: ScoringMove| {
             board.apply_move(m.bit_move);
             m.score = -minimax(board, depth - 1).score;
             board.undo_move();
             m
-        }).max()
-        .unwrap()
+        })
+        .max()
+        .unwrap_or_else(|| match board.in_check() {
+            true => ScoringMove::blank(-MATE_V),
+            false => ScoringMove::blank(DRAW_V)
+        })
 }
