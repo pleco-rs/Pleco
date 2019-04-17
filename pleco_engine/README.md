@@ -42,7 +42,12 @@ The compiled program will appear in `./target/release/`.
 
 Pleco can now be run with a `./Pleco` on Linux or a `./Pleco.exe` on Windows.
 
-  
+Rust Toolchain Version 
+-------
+
+Currently, `pleco_engine` requires **nightly** rust to use. 
+
+
 Contributing
 -------
 

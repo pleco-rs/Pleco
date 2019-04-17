@@ -75,21 +75,21 @@ impl Player {
     /// assert_eq!(b.other_player(), Player::White);
     /// ```
     #[inline(always)]
-    pub fn other_player(&self) -> Player {
-        !(*self)
+    pub fn other_player(self) -> Player {
+        !(self)
     }
 
     /// Returns the relative square from a given square.
     #[inline(always)]
-    pub fn relative_square(&self, sq: SQ) -> SQ {
+    pub fn relative_square(self, sq: SQ) -> SQ {
         assert!(sq.is_okay());
-        sq ^ SQ((*self) as u8 * 56)
+        sq ^ SQ((self) as u8 * 56)
     }
 
     /// Gets the direction of a pawn push for a given player.
     #[inline(always)]
-    pub fn pawn_push(&self) -> i8 {
-        match *self {
+    pub fn pawn_push(self) -> i8 {
+        match self {
             Player::White => NORTH,
             Player::Black => SOUTH,
         }
@@ -111,7 +111,7 @@ impl Player {
     /// assert_eq!(b.relative_rank_of_sq(SQ::A1), Rank::R8);
     /// ```
     #[inline(always)]
-    pub fn relative_rank_of_sq(&self, sq: SQ) -> Rank {
+    pub fn relative_rank_of_sq(self, sq: SQ) -> Rank {
         self.relative_rank(sq.rank())
     }
 
@@ -131,8 +131,8 @@ impl Player {
     /// assert_eq!(b.relative_rank(Rank::R1), Rank::R8);
     /// ```
     #[inline]
-    pub fn relative_rank(&self, rank: Rank) -> Rank {
-        let r = (rank as u8) ^ (*self as u8 * 7);
+    pub fn relative_rank(self, rank: Rank) -> Rank {
+        let r = (rank as u8) ^ (self as u8 * 7);
         debug_assert!(r < 8);
 //        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
         unsafe {
@@ -219,8 +219,8 @@ impl PieceType {
     ///
     /// Used for sorting moves.
     #[inline]
-    pub fn value(&self) -> i8 {
-        match *self {
+    pub fn value(self) -> i8 {
+        match self {
             PieceType::P => 1,
             PieceType::N | PieceType::B => 3,
             PieceType::R => 5,
@@ -250,8 +250,8 @@ impl PieceType {
 
     /// Return the lowercase character of a `Piece`.
     #[inline]
-    pub fn char_lower(&self) -> char {
-        match *self {
+    pub fn char_lower(self) -> char {
+        match self {
             PieceType::P => 'p',
             PieceType::N => 'n',
             PieceType::B => 'b',
@@ -264,8 +264,8 @@ impl PieceType {
 
     /// Return the uppercase character of a `Piece`.
     #[inline]
-    pub fn char_upper(&self) -> char {
-        match *self {
+    pub fn char_upper(self) -> char {
+        match self {
             PieceType::P => 'P',
             PieceType::N => 'N',
             PieceType::B => 'B',
