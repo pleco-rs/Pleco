@@ -2,7 +2,7 @@ language: rust
 
 rust:
   - nightly
-
+  - stable
 
 cache:
   - cargo
@@ -32,23 +32,30 @@ env:
 #    sources:
 #      - kalakris-cmake
 
-
-before_script:
-  - rustup install stable-x86_64-unknown-linux-gnu
-
 os:
   - linux
 
 script:
-  - cargo build --verbose
-  - echo " ------ TESTING STABLE BRANCH ------- "
-  - cargo +stable test --package pleco
-  - cargo +stable bench --package pleco
-  - echo " ------ TESTING NIGHTLY BRANCH ------- "
-  - cargo test --verbose
-  - cargo bench
-#  - cd pleco/ && cargo bench
-#  - cd ../pleco_engine/ && cargo bench --bench eval_benches
+  - if [ "$TRAVIS_RUST_VERSION" == "stable" ];
+    then
+      cargo build --verbose --package pleco;
+      cargo test --package pleco;
+      cargo build --package pleco;
+    else
+      cargo build --verbose;
+      cargo test;
+      cargo bench --package pleco --all-features;
+      cargo bench --package pleco_engine --all-features;
+    fi
+
+#  - cargo build --verbose
+#  - echo " ------ TESTING STABLE BRANCH ------- "
+#  - cargo +stable test --package pleco
+#  - cargo +stable bench --package pleco
+#  - echo " ------ TESTING NIGHTLY BRANCH ------- "
+#  - cargo test --verbose
+#  - cargo bench --package pleco --all-features
+#  - cargo bench --package pleco_engine --all-features
 
 #after_success:
 #  - |
