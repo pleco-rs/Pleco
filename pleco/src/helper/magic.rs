@@ -238,7 +238,7 @@ unsafe fn gen_magic_board(table_size: usize, deltas: &[i8; 4], static_magics: *m
 
         // points to the static entry
         let staticptr: *mut SMagic = static_magics.offset(i as isize);
-        let mut table_i: SMagic = SMagic {
+        let table_i: SMagic = SMagic {
             ptr: mem::transmute::<*const u64, usize>(beginptr),
             mask: pre_sq_table[i].mask,
             magic: pre_sq_table[i].magic,

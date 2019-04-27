@@ -26,7 +26,7 @@ impl RootMove {
     #[inline]
     pub fn new(bit_move: BitMove) -> Self {
         RootMove {
-            bit_move: bit_move,
+            bit_move,
             score: NEG_INFINITE as i32,
             prev_score: NEG_INFINITE as i32,
             depth_reached: 0,

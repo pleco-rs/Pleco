@@ -76,7 +76,7 @@ impl OptionsMap {
         };
         Box::new(UCIButton {
             option_name: "Clear Hash",
-            mutator: mutator
+            mutator
         })
     }
 

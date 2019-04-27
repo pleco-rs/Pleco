@@ -234,7 +234,7 @@ impl BoardState {
     /// If there was no previous state, returns `None`.
     #[inline]
     pub fn get_prev(&self) -> Option<Arc<BoardState>> {
-        (&self).prev.as_ref().cloned()
+        self.prev.as_ref().cloned()
     }
 
     /// Iterates through all previous `BoardStates` and prints debug information for each.

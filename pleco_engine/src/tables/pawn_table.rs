@@ -192,7 +192,7 @@ impl PreFetchable for PawnTable {
         unsafe {
             let ptr = self.table.get_ptr(key);
             prefetch_write(ptr);
-            let ptr_2 = (ptr as *mut u8).offset(64) as *mut PawnEntry;
+            let ptr_2 = (ptr as *mut u8).offset(64) as *const PawnEntry;
             prefetch_write(ptr_2);
         }
     }

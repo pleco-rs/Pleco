@@ -2519,9 +2519,7 @@ impl RandBoard {
             moves[self.random() % moves.len()]
         } else if self.random() % 5 == 0 {
             AlphaBetaSearcher::best_move(board.shallow_clone(),2)
-        } else if self.random() % 3 == 0 {
-            AlphaBetaSearcher::best_move(board.shallow_clone(),3)
-        } else if !favorable && self.random() % 5 < 4 {
+        } else if  self.random() % 3 == 0 || !favorable && self.random() % 5 < 4 {
             AlphaBetaSearcher::best_move(board.shallow_clone(),3)
         } else {
             AlphaBetaSearcher::best_move(board.shallow_clone(),4)

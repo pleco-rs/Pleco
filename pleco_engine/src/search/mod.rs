@@ -441,7 +441,7 @@ impl Searcher {
             // Main thread only from here on!
 
             // check for time
-            if let Some(_) = self.limit.use_time_management() {
+            if self.limit.use_time_management().is_some() {
                 if !self.stop() {
                     let score_diff: i32 = best_value - self.previous_score;
 
@@ -687,7 +687,7 @@ impl Searcher {
                                                       &self.capture_history,
                                                       &cont_hists as *const _,
                                                       tt_move,
-                                                      &ss.killers,
+                                                      ss.killers,
                                                       counter);
 
         singular_extension_node = !at_root

@@ -10,6 +10,11 @@
 #![cfg_attr(test, allow(dead_code))]
 
 #![allow(dead_code)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::cast_ptr_alignment)]
+#![allow(clippy::mut_from_ref)]
+#![allow(clippy::cognitive_complexity)]
 
 #![feature(ptr_internals)]
 #![feature(integer_atomics)]

@@ -43,7 +43,7 @@ pub trait StatBoard<T, IDX>: Sized + IndexMut<IDX, Output=T>
         let num: usize = mem::size_of::<Self>() / mem::size_of::<T>();
 
         unsafe {
-            let ptr: *mut T = mem::transmute(self as *mut Self);
+            let ptr: *mut T = self as *mut Self as *mut T;
             for i in 0..num {
                 ptr::write(ptr.add(i), val);
             }

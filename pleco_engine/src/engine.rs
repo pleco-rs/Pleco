@@ -50,7 +50,7 @@ impl PlecoSearcher {
     pub fn uci(&mut self) {
         self.uci_startup();
         let mut full_command = String::new();
-        'main: loop {
+        loop {
             full_command.clear();
             io::stdin().read_line(&mut full_command).ok().unwrap();
             let args: Vec<&str> = full_command.split_whitespace().collect();
@@ -183,18 +183,16 @@ impl PlecoSearcher {
             threadpool().wait_for_finish();
             threadpool().best_move()
         } else {
-            return BitMove::null();
+            BitMove::null()
         }
     }
 
     pub fn await_move(&mut self) -> BitMove {
         if self.is_searching() {
-            return {
-                threadpool().wait_for_finish();
-                threadpool().best_move()
-            }
+            threadpool().wait_for_finish();
+            threadpool().best_move()
         } else {
-            return BitMove::null();
+            BitMove::null()
         }
     }
 
