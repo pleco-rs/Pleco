@@ -7,11 +7,8 @@ rust:
 cache:
   - cargo
   - apt
-#  cache:
-#    directories:
-#      - $HOME/.cache/pip
 
-sudo: required
+sudo: false
 
 env:
   global:
