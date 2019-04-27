@@ -20,18 +20,6 @@ env:
     - RUST_MIN_STACK=8000000
 #    - RUST_TEST_THREADS=1
 
-
-#addons:
-#  apt:
-#    packages:
-#      - libcurl4-openssl-dev
-#      - libelf-dev
-#      - libdw-dev
-#      - binutils-dev
-#      - cmake
-#    sources:
-#      - kalakris-cmake
-
 os:
   - linux
 
@@ -40,7 +28,7 @@ script:
     then
       cargo build --verbose --package pleco;
       cargo test --package pleco;
-      cargo build --package pleco;
+      cargo bench --package pleco;
     else
       cargo build --verbose;
       cargo test;
@@ -56,13 +44,3 @@ script:
 #  - cargo test --verbose
 #  - cargo bench --package pleco --all-features
 #  - cargo bench --package pleco_engine --all-features
-
-#after_success:
-#  - |
-#    if [[ "$TRAVIS_BRANCH" = "master" ]] AND [ "$TRAVIS_PULL_REQUEST" = "false" ]
-#    then
-#      cargo install cargo-travis || echo "cargo-travis has been already installed"
-#      export PATH=$HOME/.cargo/bin:$PATH
-#      cargo coveralls
-#    fi
-#
