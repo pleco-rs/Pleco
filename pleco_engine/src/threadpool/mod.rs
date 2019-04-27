@@ -263,7 +263,7 @@ impl ThreadPool {
 
     /// Waits for all non-main threads to finish.
     pub fn wait_for_non_main(&self) {
-        self.await_search_cond(ThreadSelection::NonMain, true);
+        self.await_search_cond(ThreadSelection::NonMain, false);
     }
 
     /// Waits for all the non-main threads to start running
