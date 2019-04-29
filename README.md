@@ -41,6 +41,8 @@ And add the following to a `main.rs` or `lib.rs`:
 extern crate pleco;
 ```
 
+As of version `0.5.0`, the pleco library is available on all three Rust channels (stable, beta, nightly).
+
 ### Basic Usage
 Setting up a board position is extremely simple.
 ```rust

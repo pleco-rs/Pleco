@@ -63,6 +63,24 @@ pub fn threadpool() -> &'static mut ThreadPool {
     }
 }
 
+#[derive(Copy, Clone)]
+enum ThreadSelection {
+    Main,
+    NonMain,
+    All
+}
+
+impl ThreadSelection {
+    #[inline(always)]
+    pub fn is_selection(self, id: usize) -> bool {
+        match self {
+            ThreadSelection::Main => id == 0,
+            ThreadSelection::NonMain => id != 0,
+            ThreadSelection::All => true
+        }
+    }
+}
+
 // Dummy struct to allow us to pass a pointer into a spawned thread.
 struct SearcherPtr {
     ptr: UnsafeCell<*mut Searcher>
@@ -163,7 +181,7 @@ impl ThreadPool {
     fn main(&mut self) -> &mut Searcher {
         unsafe {
             let main_thread: *mut Searcher = *self.threads.get_unchecked(0).get();
-            return &mut *main_thread;
+            &mut *main_thread
         }
     }
 
@@ -199,17 +217,12 @@ impl ThreadPool {
             // tell each thread to drop
             self.threads.iter()
                 .map(|s| &**s.get())
-                .for_each(|s: &Searcher| {
-                    s.kill.store(true, Ordering::SeqCst)
-                });
+                .for_each(|s: &Searcher| { s.kill.store(true, Ordering::SeqCst) });
 
             // If awaiting a signal, wake up each thread so each can drop
             self.threads.iter()
                 .map(|s| &**s.get())
-                .for_each(|s: &Searcher| {
-                    s.cond.set();
-                });
-
+                .for_each(|s: &Searcher| { s.cond.set(); });
 
             // Start connecting each join handle. We don't unwrap here, as if one of the
             // threads fail, the other threads remain un-joined.
@@ -240,53 +253,35 @@ impl ThreadPool {
 
     /// Waits for all the threads to finish
     pub fn wait_for_finish(&self) {
-        unsafe {
-            self.threads.iter()
-                .map(|t| &**t.get())
-                .for_each(|t| t.searching.await(false));
-        }
+        self.await_search_cond(ThreadSelection::All, false);
     }
 
     /// Waits for all the threads to start.
     pub fn wait_for_start(&self) {
-        unsafe {
-            self.threads.iter()
-                .map(|t| &**t.get())
-                .for_each(|t| t.searching.await(true));
-        }
+        self.await_search_cond(ThreadSelection::All, true);
     }
 
     /// Waits for all non-main threads to finish.
     pub fn wait_for_non_main(&self) {
-        unsafe {
-            self.threads.iter()
-                .map(|s| &**s.get())
-                .for_each(|t: &Searcher|{
-                    if t.id != 0 {
-                        t.searching.await(false);
-                    }
-            });
-        }
+        self.await_search_cond(ThreadSelection::NonMain, false);
     }
 
     /// Waits for all the non-main threads to start running
     pub fn wait_for_main_start(&self) {
-        unsafe {
-            self.threads.iter()
-                .map(|s| &**s.get())
-                .for_each(|t: &Searcher|{
-                    if t.id == 0 {
-                        t.searching.await(true);
-                    }
-                });
-        }
+        self.await_search_cond(ThreadSelection::Main, true);
+    }
+
+    fn await_search_cond(&self, thread_sel: ThreadSelection, await_search: bool) {
+        self.threads.iter()
+            .map(|s| unsafe {&**s.get()})
+            .filter(|t| thread_sel.is_selection(t.id))
+            .for_each(|t: &Searcher|{ t.searching.await(await_search); });
     }
 
     pub fn clear_all(&mut self) {
-        for thread_ptr in self.threads.iter_mut() {
-            let mut thread: &mut Searcher = unsafe { &mut **(*thread_ptr).get() };
-            thread.clear();
-        }
+        self.threads.iter_mut()
+            .map(|thread_ptr| unsafe { &mut **(*thread_ptr).get() })
+            .for_each(|t| t.clear());
     }
 
     /// Starts a UCI search. The result will be printed to stdout if the stdout setting
@@ -307,7 +302,7 @@ impl ThreadPool {
         self.stop.store(false, Ordering::Relaxed);
 
         for thread_ptr in self.threads.iter_mut() {
-            let mut thread: &mut Searcher = unsafe {&mut **(*thread_ptr).get()};
+            let thread: &mut Searcher = unsafe {&mut **(*thread_ptr).get()};
             thread.nodes.store(0, Ordering::Relaxed);
             thread.depth_completed = 0;
             thread.board = board.shallow_clone();

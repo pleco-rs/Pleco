@@ -56,7 +56,7 @@ pub fn init_globals() {
 #[cold]
 fn init_tt() {
     unsafe {
-        let tt: *mut TranspositionTable = mem::transmute(&mut TT_TABLE);
+        let tt = &mut TT_TABLE as *mut DummyTranspositionTable as *mut TranspositionTable;
         ptr::write(tt, TranspositionTable::new(DEFAULT_TT_SIZE));
     }
 }
@@ -65,7 +65,7 @@ fn init_tt() {
 #[cold]
 fn init_timer() {
     unsafe {
-        let timer: *mut TimeManager = mem::transmute(&mut TIMER);
+        let timer: *mut TimeManager = &mut TIMER as *mut DummyTimeManager as *mut TimeManager;
         ptr::write(timer, TimeManager::uninitialized());
     }
 }
@@ -73,7 +73,7 @@ fn init_timer() {
 // Returns access to the global timer
 pub fn timer() -> &'static TimeManager {
     unsafe {
-        mem::transmute(&TIMER)
+        &*(&TIMER as *const DummyTimeManager as *const TimeManager)
     }
 }
 
@@ -81,7 +81,7 @@ pub fn timer() -> &'static TimeManager {
 #[inline(always)]
 pub fn tt() -> &'static TranspositionTable {
     unsafe {
-        mem::transmute(&TT_TABLE)
+        &*(&TT_TABLE as *const DummyTranspositionTable as *const TranspositionTable)
     }
 }
 

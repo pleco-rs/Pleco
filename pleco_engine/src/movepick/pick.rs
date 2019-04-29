@@ -37,8 +37,8 @@ impl Pick {
         unsafe {*self = mem::transmute(*self as u8 + 1); }
     }
 
-    pub fn to_string(&self) -> &'static str {
-        match *self {
+    pub fn to_string(self) -> &'static str {
+        match self {
             Pick::MainSearch => "MainSearch",
             Pick::CapturesInit => "CapturesInit",
             Pick::GoodCaptures => "GoodCaptures",
@@ -66,7 +66,7 @@ impl Pick {
 
 impl fmt::Display for Pick {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.pad(self.to_string())
+        f.pad(&self.to_string())
     }
 }
 

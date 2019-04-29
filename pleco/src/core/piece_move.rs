@@ -267,79 +267,79 @@ impl BitMove {
     ///
     /// See `BitMove::null()` for more information on Null moves.
     #[inline]
-    pub const fn is_null(&self) -> bool {
+    pub const fn is_null(self) -> bool {
         self.data == 0
     }
 
     /// Returns if a `BitMove` captures an opponent's piece.
     #[inline(always)]
-    pub const fn is_capture(&self) -> bool {
+    pub const fn is_capture(self) -> bool {
         ((self.data & CP_MASK) >> 14) == 1
     }
 
     /// Returns if a `BitMove` is a Quiet Move, meaning it is not any of the following: a capture, promotion, castle, or double pawn push.
     #[inline(always)]
-    pub const fn is_quiet_move(&self) -> bool {
+    pub const fn is_quiet_move(self) -> bool {
         self.flag() == 0
     }
 
     /// Returns if a `BitMove` is a promotion.
     #[inline(always)]
-    pub const fn is_promo(&self) -> bool {
+    pub const fn is_promo(self) -> bool {
         (self.data & PR_MASK) != 0
     }
 
     /// Returns the destination of a `BitMove`.
     #[inline(always)]
-    pub const fn get_dest(&self) -> SQ {
+    pub const fn get_dest(self) -> SQ {
         SQ(self.get_dest_u8())
     }
 
     /// Returns the destination of a `BitMove`.
     #[inline(always)]
-    pub const fn get_dest_u8(&self) -> u8 {
+    pub const fn get_dest_u8(self) -> u8 {
         ((self.data & DST_MASK) >> 6) as u8
     }
 
     /// Returns the source square of a `BitMove`.
     #[inline(always)]
-    pub const fn get_src(&self) -> SQ {
+    pub const fn get_src(self) -> SQ {
         SQ(self.get_src_u8())
     }
 
     /// Returns the source square of a `BitMove`.
     #[inline(always)]
-    pub const fn get_src_u8(&self) -> u8 {
+    pub const fn get_src_u8(self) -> u8 {
         (self.data & SRC_MASK) as u8
     }
 
     /// Returns if a `BitMove` is a castle.
     #[inline(always)]
-    pub const fn is_castle(&self) -> bool {
+    pub const fn is_castle(self) -> bool {
         (self.data  >> 13) == 1
     }
 
     /// Returns if a `BitMove` is a Castle && it is a KingSide Castle.
     #[inline(always)]
-    pub const fn is_king_castle(&self) -> bool {
+    pub const fn is_king_castle(self) -> bool {
         self.flag() == BitMove::FLAG_KING_CASTLE
     }
 
     /// Returns if a `BitMove` is a Castle && it is a QueenSide Castle.
     #[inline(always)]
-    pub const fn is_queen_castle(&self) -> bool {
+    pub const fn is_queen_castle(self) -> bool {
         self.flag() == BitMove::FLAG_QUEEN_CASTLE
     }
 
     /// Returns if a `BitMove` is an enpassant capture.
     #[inline(always)]
-    pub const fn is_en_passant(&self) -> bool {
+    pub const fn is_en_passant(self) -> bool {
         self.flag() == BitMove::FLAG_EP
     }
 
     /// Returns if a `BitMove` is a double push, and if so returns the Destination square as well.
     #[inline(always)]
-    pub fn is_double_push(&self) -> (bool, u8) {
+    pub fn is_double_push(self) -> (bool, u8) {
         let is_double_push: u8 = self.flag() as u8;
         match is_double_push {
             1 => (true, self.get_dest().0 as u8),
@@ -350,7 +350,7 @@ impl BitMove {
     /// Returns the `Rank` (otherwise known as row) that the destination square  of a `BitMove`
     /// lies on.
     #[inline(always)]
-    pub fn dest_row(&self) -> Rank {
+    pub fn dest_row(self) -> Rank {
 //        ALL_RANKS[(((self.data & DST_MASK) >> 6) as u8 / 8) as usize]
         self.get_dest().rank()
     }
@@ -358,19 +358,19 @@ impl BitMove {
     /// Returns the `File` (otherwise known as column) that the destination square of a `BitMove`
     /// lies on.
     #[inline(always)]
-    pub fn dest_col(&self) -> File {
+    pub fn dest_col(self) -> File {
         self.get_dest().file()
     }
 
     /// Returns the `Rank` (otherwise known as row) that the from-square of a `BitMove` lies on.
     #[inline(always)]
-    pub fn src_row(&self) -> Rank {
+    pub fn src_row(self) -> Rank {
         self.get_src().rank()
     }
 
     /// Returns the `File` (otherwise known as column) that the from-square of a `BitMove` lies on.
     #[inline(always)]
-    pub fn src_col(&self) -> File {
+    pub fn src_col(self) -> File {
         self.get_src().file()
     }
 
@@ -380,7 +380,7 @@ impl BitMove {
     ///
     /// Method should only be used if the [BitMove] is a promotion. Otherwise, Undefined Behavior may result.
     #[inline(always)]
-    pub fn promo_piece(&self) -> PieceType {
+    pub fn promo_piece(self) -> PieceType {
         match (self.flag()) & 0b0011 {
             0 => PieceType::N,
             1 => PieceType::B,
@@ -393,7 +393,7 @@ impl BitMove {
     // TODO: Simply with (m >> 4) & 3
     /// Returns the `MoveType` of a `BitMove`.
     #[inline(always)]
-    pub fn move_type(&self) -> MoveType {
+    pub fn move_type(self) -> MoveType {
         if self.is_castle() {
             return MoveType::Castle;
         }
@@ -411,7 +411,7 @@ impl BitMove {
     /// Format goes "Source Square, Destination Square, (Promo Piece)". Moving a Queen from A1 to B8
     /// will stringify to "a1b8". If there is a pawn promotion involved, the piece promoted to will be
     /// appended to the end of the string, alike "a7a8q" in the case of a queen promotion.
-    pub fn stringify(&self) -> String {
+    pub fn stringify(self) -> String {
         let src = self.get_src().to_string();
         let dst_sq = self.get_dest();
 
@@ -436,32 +436,32 @@ impl BitMove {
 
     /// Returns the raw number representation of the move.
     #[inline(always)]
-    pub const fn get_raw(&self) -> u16 {
+    pub const fn get_raw(self) -> u16 {
         self.data
     }
 
     /// Returns if the move has an incorrect flag inside, and therefore is invalid.
     #[inline(always)]
-    pub fn incorrect_flag(&self) -> bool {
+    pub fn incorrect_flag(self) -> bool {
         ((self.flag()) & 0b1110) == 0b0110
     }
 
     /// Returns the 4 bit flag of the `BitMove`.
     #[inline(always)]
-    pub const fn flag(&self) -> u16 {
+    pub const fn flag(self) -> u16 {
         self.data >> 12
     }
 
     /// Returns if the move is within bounds, ala the to and from squares
     /// are not equal.
     #[inline(always)]
-    pub const fn is_okay(&self) -> bool {
+    pub const fn is_okay(self) -> bool {
         self.get_dest_u8() != self.get_src_u8()
     }
 
     /// Returns only from "from" and "to" squares of the move.
     #[inline(always)]
-    pub const fn from_to(&self) -> u16 {
+    pub const fn from_to(self) -> u16 {
         self.data & FROM_TO_MASK
     }
 }
@@ -516,13 +516,13 @@ impl ScoringMove {
 
     /// Returns the move.
     #[inline(always)]
-    pub fn bitmove(&self) -> BitMove {
+    pub fn bitmove(self) -> BitMove {
         self.bit_move
     }
 
     /// Returns the score.
     #[inline(always)]
-    pub fn score(&self) -> i16 {
+    pub fn score(self) -> i16 {
         self.score
     }
 

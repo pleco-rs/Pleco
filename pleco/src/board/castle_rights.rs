@@ -84,7 +84,7 @@ impl Castling {
 
     /// Returns if a player can castle for a given side
     #[inline]
-    pub fn castle_rights(&self, player: Player, side: CastleType) -> bool {
+    pub fn castle_rights(self, player: Player, side: CastleType) -> bool {
         match player {
             Player::White => {
                 match side {
@@ -102,7 +102,7 @@ impl Castling {
     }
 
     #[inline]
-    pub fn player_can_castle(&self, player: Player) -> Castling {
+    pub fn player_can_castle(self, player: Player) -> Castling {
         Castling {
             bits: self.bits & (Castling::WHITE_ALL.bits >> (2 * player as u16))
         }
@@ -110,7 +110,7 @@ impl Castling {
 
     /// Returns if both players have lost their ability to castle
     #[inline]
-    pub fn no_castling(&self) -> bool {
+    pub fn no_castling(self) -> bool {
         !self.contains(Castling::WHITE_K) &&
             !self.contains(Castling::WHITE_Q) &&
             !self.contains(Castling::BLACK_K) &&
@@ -155,7 +155,7 @@ impl Castling {
     /// Used for FEN Strings, with (`K` | `Q`) representing white castling abilities,
     /// and (`k` | `q`) representing black castling abilities. If there are no bits set,
     /// returns a String containing "-".
-    pub fn pretty_string(&self) -> String {
+    pub fn pretty_string(self) -> String {
         if self.no_castling() {
             "-".to_owned()
         } else {

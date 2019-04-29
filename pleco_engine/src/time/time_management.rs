@@ -83,7 +83,7 @@ impl TimeManager {
         // We calculate optimum time usage for different hypothetical "moves to go"-values
         // and choose the minimum of calculated search time values. Usually the greatest
         // hypMTG gives the minimum values.
-        for hyp_mtg in 1..(max_mtg + 1) {
+        for hyp_mtg in 1..=max_mtg {
             let mut hyp_my_time: i64 = my_time
                                 + my_inc * (hyp_mtg - 1)
                                 - MOVE_OVERHEAD * (2 + hyp_mtg.min(40));
@@ -108,8 +108,7 @@ impl TimeManager {
 
     pub fn start(&self) -> Instant {
         unsafe {
-            let start = &*self.start.get();
-            start.clone()
+            *self.start.get()
         }
     }
 

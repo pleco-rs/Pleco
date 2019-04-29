@@ -4,8 +4,6 @@ use std::ops::{Deref,DerefMut,Index,IndexMut};
 use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
 use std::ptr;
 use std::mem;
-
-use std::mem::transmute;
 use std::sync::atomic::{Ordering,AtomicUsize};
 
 use pleco::{MoveList, BitMove};
@@ -51,8 +49,8 @@ impl RootMoveList {
     pub fn clone_from_other(&mut self, other: &RootMoveList) {
         self.len.store(other.len(), Ordering::SeqCst);
         unsafe {
-            let self_moves: *mut [RootMove; MAX_MOVES] = transmute::<*mut RootMove, *mut [RootMove; MAX_MOVES]>(self.moves.as_mut_ptr());
-            let other_moves: *const [RootMove; MAX_MOVES] =  transmute::<*const RootMove, *const [RootMove; MAX_MOVES]>(other.moves.as_ptr());
+            let self_moves: *mut [RootMove; MAX_MOVES] = self.moves.as_mut_ptr() as *mut [RootMove; MAX_MOVES];
+            let other_moves: *const [RootMove; MAX_MOVES] = other.moves.as_ptr() as *const [RootMove; MAX_MOVES];
             ptr::copy_nonoverlapping(other_moves, self_moves, 1);
         }
     }
@@ -117,12 +115,8 @@ impl RootMoveList {
     }
 
     pub fn find(&mut self, mov: BitMove) -> Option<&mut RootMove> {
-        for m in self.iter_mut() {
-            if m.bit_move == mov {
-                return Some(m);
-            }
-        }
-        None
+        self.iter_mut()
+            .find(|m| m.bit_move == mov)
     }
 }
 

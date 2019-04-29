@@ -40,7 +40,7 @@ impl MovePicker {
                        cap_hist: &CapturePieceToHistory,
                        cont_hist: *const [*const PieceToHistory; 4],
                        mut ttm: BitMove,
-                       killers: &[BitMove; 2], counter_move: BitMove) -> Self {
+                       killers: [BitMove; 2], counter_move: BitMove) -> Self {
         assert!(depth > 0);
         let mut pick = if board.in_check() {Pick::EvasionSearch} else {Pick::MainSearch};
 
@@ -58,13 +58,13 @@ impl MovePicker {
             moves,
             depth,
             ttm,
-            killers: (*killers).clone(),
+            killers,
             cm: counter_move,
             recapture_sq: unsafe {mem::uninitialized()},
             threshold: unsafe {mem::uninitialized()},
-            main_hist: main_hist,
+            main_hist,
             capture_hist: cap_hist,
-            cont_hist: cont_hist,
+            cont_hist,
             cur_ptr: first,
             end_ptr: first,
             end_bad_captures: first,
@@ -91,7 +91,7 @@ impl MovePicker {
             cm: unsafe { mem::uninitialized() },
             recapture_sq: unsafe { mem::uninitialized() },
             threshold: unsafe {mem::uninitialized()},
-            main_hist: main_hist,
+            main_hist,
             capture_hist: cap_hist,
             cont_hist: unsafe {mem::uninitialized()},
             cur_ptr: first,
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn movepick_rand_mainsearch() {
         for _x in 0..15 {
-            let mut b = Board::random().one();
+            let b = Board::random().one();
             movepick_rand_one(b);
             println!("pass movepick rand! {} ",_x);
         }
@@ -724,7 +724,7 @@ mod tests {
                 &cont_hist3 as *const _, &cont_hist4 as *const _];
             let mut mp = MovePicker::main_search(&b, depth, &main_hist, &cap_hist,
                                                  &cont_hist as *const _,
-                                                 ttm, &killers, cm);
+                                                 ttm, *killers, cm);
 
             let mut mp_next = mp.next_mov( false);
             while mp_next != BitMove::null() {

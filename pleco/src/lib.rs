@@ -70,11 +70,15 @@
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
 
+
 //#![crate_type = "rlib"]
 
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![cfg_attr(feature = "nightly", feature(const_slice_len))]
 #![cfg_attr(feature = "nightly", feature(trusted_len))]
+
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::unreadable_literal)]
 
 #![allow(dead_code)]
 

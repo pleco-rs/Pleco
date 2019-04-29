@@ -985,7 +985,7 @@ impl <'a, 'b, T: Tracing> EvaluationInner<'a, 'b, T>  {
             trace.add_one(EvalPasses::Initiative, Score(0, v));
         }
 
-        return Score(0, v);
+        Score(0, v)
     }
 
     fn scale_factor(&self, eg: i32) -> u8 {

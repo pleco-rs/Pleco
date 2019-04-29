@@ -34,7 +34,8 @@ Some of the features `pleco` implements:
 Use
 -------
 
-To use Pleco inside your own Rust projects, [Pleco.rs is available as a library on crates.io](https://crates.io/crates/pleco). 
+To use Pleco inside your own Rust projects, 
+[Pleco.rs is available as a library on crates.io](https://crates.io/crates/pleco). 
 Pleco runs on all three distributions (`nightly`, `beta`, `stable`) of rust.
 
 ### Basic Usage

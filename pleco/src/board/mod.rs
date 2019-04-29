@@ -238,8 +238,8 @@ impl Board {
     pub fn shallow_clone(&self) -> Board {
         Board {
             turn: self.turn,
-            bbs: self.bbs.clone(),
-            bbs_player:  self.bbs_player.clone(),
+            bbs: self.bbs,
+            bbs_player:  self.bbs_player,
             half_moves: self.half_moves,
             depth: 0,
             piece_counts: self.piece_counts,
@@ -279,8 +279,8 @@ impl Board {
     pub fn parallel_clone(&self) -> Board {
         Board {
             turn: self.turn,
-            bbs: self.bbs.clone(),
-            bbs_player: self.bbs_player.clone(),
+            bbs: self.bbs,
+            bbs_player: self.bbs_player,
             half_moves: self.half_moves,
             depth: self.depth,
             piece_counts: self.piece_counts,
@@ -2519,9 +2519,7 @@ impl RandBoard {
             moves[self.random() % moves.len()]
         } else if self.random() % 5 == 0 {
             AlphaBetaSearcher::best_move(board.shallow_clone(),2)
-        } else if self.random() % 3 == 0 {
-            AlphaBetaSearcher::best_move(board.shallow_clone(),3)
-        } else if !favorable && self.random() % 5 < 4 {
+        } else if  self.random() % 3 == 0 || !favorable && self.random() % 5 < 4 {
             AlphaBetaSearcher::best_move(board.shallow_clone(),3)
         } else {
             AlphaBetaSearcher::best_move(board.shallow_clone(),4)

@@ -1,6 +1,6 @@
 [package]
 name = "pleco_engine"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["Stephen Fleischman <stephenf@cs.washington.edu>"]
 description = "A blazingly-fast Chess AI."
 homepage = "https://github.com/sfleischman105/Pleco"
@@ -57,10 +57,10 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies]
-pleco = { path = "../pleco", version = "*", features =["nightly"]}
+pleco = { path = "../pleco", version = "0.5.0", features =["nightly"]}
 chrono = "0.4.6"
 rand = "0.6.5"
-num_cpus = "1.8.0"
+num_cpus = "1.10.0"
 prefetch = "0.2.0"
 
 [features]
