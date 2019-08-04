@@ -84,7 +84,7 @@ impl BitBoard {
     pub const DARK_SQUARES: BitBoard = BitBoard(DARK_SQUARES);
     /// BitBoard of all light squares.
     pub const LIGHT_SQUARES: BitBoard = BitBoard(LIGHT_SQUARES);
-    /// BitBoard of all light squares.
+    /// BitBoard of all squares.
     pub const ALL: BitBoard = BitBoard(!0);
 
     /// Converts a `BitBoard` to a square.
