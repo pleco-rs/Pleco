@@ -298,7 +298,7 @@ impl Searcher {
 
     // The per thread searching function
     fn search_root(&mut self) {
-        // Early return. This shouldn't notmally happen.
+        // Early return. This shouldn't normally happen.
         if self.stop() {
             return;
         }
