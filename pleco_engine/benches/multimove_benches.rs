@@ -62,7 +62,8 @@ fn bench_engine_evaluations(c: &mut Criterion) {
 criterion_group!(name = search_multimove;
      config = Criterion::default()
         .sample_size(35)
-        .warm_up_time(Duration::from_millis(150));
+        .warm_up_time(Duration::from_millis(150))
+        .measurement_time(Duration::from_secs(45));
     targets = bench_engine_evaluations
 );
 

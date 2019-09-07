@@ -39,7 +39,8 @@ fn perft_all(c: &mut Criterion) {
 criterion_group!(name = perft_benches;
      config = Criterion::default()
         .sample_size(12)
-        .warm_up_time(Duration::from_millis(20));
+        .warm_up_time(Duration::from_millis(20))
+        .measurement_time(Duration::from_secs(10));
     targets = perft_all
 );
 
