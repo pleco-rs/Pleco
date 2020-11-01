@@ -74,7 +74,7 @@
 //#![crate_type = "rlib"]
 
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
-#![cfg_attr(feature = "nightly", feature(const_slice_len))]
+#![cfg_attr(feature = "nightly", feature(const_slice_ptr_len))]
 #![cfg_attr(feature = "nightly", feature(trusted_len))]
 
 #![allow(clippy::cast_lossless)]

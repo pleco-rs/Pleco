@@ -22,7 +22,6 @@
 #![feature(allocator_api)]
 #![feature(trusted_len)]
 #![feature(const_fn)]
-#![feature(box_into_raw_non_null)]
 #![feature(alloc_layout_extra)]
 #![feature(thread_spawn_unchecked)]
 

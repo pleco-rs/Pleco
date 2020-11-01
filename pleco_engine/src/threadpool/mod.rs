@@ -1,6 +1,6 @@
 //! Contains the ThreadPool and the individual Threads.
 
-use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
+use std::alloc::{Layout, Global, handle_alloc_error, dealloc, alloc_zeroed};
 use std::sync::atomic::{AtomicBool,Ordering};
 use std::thread::{JoinHandle,self};
 use std::sync::{Once, ONCE_INIT};
@@ -160,11 +160,8 @@ impl ThreadPool {
         let layout = Layout::new::<Searcher>();
         let cond = if len == 0 {self.main_cond.clone()} else {self.thread_cond.clone()};
         unsafe {
-            let result = Global.alloc_zeroed(layout);
-            let new_ptr: *mut Searcher = match result {
-                Ok(ptr) => ptr.cast().as_ptr() as *mut Searcher,
-                Err(_err) => handle_alloc_error(layout),
-            };
+            let result = alloc_zeroed(layout);
+            let new_ptr: *mut Searcher = result.cast() as *mut Searcher;
             ptr::write(new_ptr, Searcher::new(len, cond));
             self.threads.push(UnsafeCell::new(new_ptr));
             SearcherPtr {ptr: UnsafeCell::new(new_ptr)}
@@ -235,7 +232,7 @@ impl ThreadPool {
                 let th: *mut Searcher = *unc.get();
                 let ptr: NonNull<u8> = mem::transmute(NonNull::new_unchecked(th));
                 let layout = Layout::new::<Searcher>();
-                Global.dealloc(ptr, layout);
+                dealloc(ptr.as_ptr(), layout);
             }
         }
 
