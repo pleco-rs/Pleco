@@ -7,7 +7,7 @@ pub mod capture_piece_history;
 pub mod butterfly;
 
 use std::ptr::NonNull;
-use std::alloc::{Alloc, Layout, Global, handle_alloc_error};
+use std::alloc::{Layout, Global, handle_alloc_error, dealloc, alloc_zeroed};
 use std::mem;
 use std::ptr;
 use std::ops::*;
@@ -139,18 +139,15 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
     // allocates space.
     unsafe fn alloc() -> NonNull<T> {
         let layout = Layout::array::<T>(T::ENTRY_COUNT).unwrap();
-        let ptr = Global.alloc_zeroed(layout);
-        let new_ptr = match ptr {
-            Ok(ptr) => ptr.cast().as_ptr(),
-            Err(_err) => handle_alloc_error(layout),
-        };
+        let ptr = alloc_zeroed(layout);
+        let new_ptr = ptr.cast();
         NonNull::new(new_ptr as *mut T).unwrap()
     }
 
     /// de-allocates the current table.
     unsafe fn de_alloc(&mut self) {
         let ptr: NonNull<u8> = mem::transmute(self.table);
-        Global.dealloc(ptr,Layout::array::<T>(T::ENTRY_COUNT).unwrap());
+        dealloc(ptr.as_ptr(),Layout::array::<T>(T::ENTRY_COUNT).unwrap());
     }
 }
 
