@@ -569,7 +569,7 @@ impl <'a, 'b, T: Tracing> EvaluationInner<'a, 'b, T>  {
                     }
                 }
             } else if piece == PieceType::Q {
-                let mut pinners: BitBoard = unsafe {mem::uninitialized()};
+                let mut pinners: BitBoard = unsafe {mem::MaybeUninit::uninit().assume_init()};
                 let pieces = self.board.piece_two_bb(PieceType::B, PieceType::R, them);
                 self.board.slider_blockers(pieces, s, &mut pinners);
                 if pinners.is_not_empty() {

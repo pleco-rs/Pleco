@@ -34,7 +34,7 @@ impl RootMoveList {
         unsafe {
             RootMoveList {
                 len: AtomicUsize::new(0),
-                moves: [mem::uninitialized(); MAX_MOVES],
+                moves: [mem::MaybeUninit::uninit().assume_init(); MAX_MOVES],
             }
         }
     }
