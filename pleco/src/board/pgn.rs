@@ -2,9 +2,9 @@
 
 //use super::Board;
 use core::sq::SQ;
-use core::{PieceType, File, Rank};
+use core::{File, PieceType, Rank};
 use std::fmt;
-
+use std::fmt::{Display, Formatter};
 
 //[Event "F/S Return Match"]
 //[Site "Belgrade, Serbia JUG"]
@@ -28,14 +28,14 @@ pub enum GameResult {
     WhiteWins,
     BlackWins,
     Draw,
-    Other
+    Other,
 }
 
 pub enum ChessDate {
     Unknown,
     Year(u16),
-    YearMonth(u16,u8),
-    Full(u16,u8,u8)
+    YearMonth(u16, u8),
+    Full(u16, u8, u8),
 }
 
 impl ChessDate {
@@ -52,7 +52,6 @@ impl ChessDate {
             return ChessDate::Unknown;
         }
         let year = y_err.unwrap();
-
 
         let m = args.next().map(|m: &str| m.parse::<u8>());
 
@@ -76,51 +75,32 @@ impl ChessDate {
             return ChessDate::YearMonth(year, month);
         }
         let day = d_err.unwrap();
-        ChessDate::Full(year,month,day)
+        ChessDate::Full(year, month, day)
     }
+}
 
-    pub fn to_string(&self) -> String {
-        match *self {
-            ChessDate::Unknown => {("\"??\"").to_owned()},
+impl Display for ChessDate {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"")?;
+        match self {
+            ChessDate::Unknown => write!(f, "??"),
             ChessDate::Year(y) => {
-                let mut s = ("\"").to_owned();
-                s.push_str(y.to_string().as_ref());
-                s.push_str(".??.??\"");
-                s
-            },
-            ChessDate::YearMonth(y,m) => {
-                let mut s = ("\"").to_owned();
-                s.push_str(y.to_string().as_ref());
-                s.push('.');
-                s.push_str(m.to_string().as_ref());
-                s.push_str(".??\"");
-                s
-            },
-            ChessDate::Full(y,m,d) => {
-                let mut s = ("\"").to_owned();
-                s.push_str(y.to_string().as_ref());
-                s.push('.');
-                s.push_str(m.to_string().as_ref());
-                s.push('.');
-                s.push_str(d.to_string().as_ref());
-                s.push('"');
-                s
-            },
-        }
+                write!(f, "{}.??.??", y)
+            }
+            ChessDate::YearMonth(y, m) => {
+                write!(f, "{}.{}.??", y, m)
+            }
+            ChessDate::Full(y, m, d) => {
+                write!(f, "{}.{}.{}", y, m, d)
+            }
+        }?;
+        write!(f, "\"")
     }
 }
 
+#[derive(Default)]
 pub struct ChessRound {
-    rounds: Vec<u32>
-}
-
-
-impl Default for ChessRound {
-    fn default() -> ChessRound {
-        ChessRound {
-            rounds: Vec::new()
-        }
-    }
+    rounds: Vec<u32>,
 }
 
 impl ChessRound {
@@ -128,24 +108,25 @@ impl ChessRound {
         let mut cr = ChessRound::default();
         let args = round[1..(round.len() - 1)].split('.');
         args.for_each(|r: &str| {
-//            r.parse().map(|m: u32| cr.rounds.push(m));
+            //            r.parse().map(|m: u32| cr.rounds.push(m));
             if let Ok(m) = r.parse() {
                 cr.rounds.push(m)
             }
         });
         cr
     }
+}
 
-    pub fn to_string(&self) -> String {
-        let mut s = "\"".to_string();
+impl Display for ChessRound {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"")?;
         for (i, x) in self.rounds.iter().enumerate() {
-            s.push_str(x.to_string().as_ref());
+            write!(f, "{}", x)?;
             if i != self.rounds.len() - 1 {
-                s.push('.');
+                write!(f, ".")?;
             }
         }
-        s.push('"');
-        s
+        write!(f, "\"")
     }
 }
 
@@ -161,44 +142,28 @@ pub struct PGNTags {
 
 impl fmt::Display for PGNTags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = self.to_string();
-        f.pad(&s)
+        writeln!(f, "[Event{}]", self.event)?;
+        writeln!(f, "[Site{}]", self.site)?;
+        writeln!(f, "[Date{}]", self.date)?;
+        writeln!(f, "[Round{}]", self.round)?;
+        writeln!(f, "[White{}]", self.white)?;
+        writeln!(f, "[Black{}]", self.black)?;
+        writeln!(f, "[Result{}]", self.result)
     }
 }
 
 impl PGNTags {
-    pub fn to_string(&self) -> String {
-        let mut s: String = "[Event ".to_owned();
-        s.push_str(self.event.as_ref());
-        s.push_str("]\n[Site ");
-        s.push_str(self.site.as_ref());
-        s.push_str("]\n[Date ");
-        s.push_str(self.date.to_string().as_ref());
-        s.push_str("]\n[Round ");
-        s.push_str(self.round.to_string().as_ref());
-        s.push_str("]\n[White ");
-        s.push_str(self.white.as_ref());
-        s.push_str("]\n[Black ");
-        s.push_str(self.black.as_ref());
-        s.push_str("]\n[Result ");
-        s.push_str(self.result.as_ref());
-        s.push_str("]\n");
-        s
-    }
-
-    pub fn add(mut self, input: &str) -> Result<PGNTags,PGNError> {
+    pub fn add(mut self, input: &str) -> Result<PGNTags, PGNError> {
         let first_char = input.chars().nth(0).ok_or(PGNError::TagParse)?;
         let last_char = input.chars().last().ok_or(PGNError::TagParse)?;
         if input.len() < 3 || first_char != '[' || last_char != ']' {
             return Err(PGNError::TagParse);
         }
         let r = &input[1..(input.len() - 1)];
-        let quote_first = r.find('"')
-            .ok_or(PGNError::TagParse)?;
-        let quote_second = r.rfind('"')
-            .ok_or(PGNError::TagParse)?;
+        let quote_first = r.find('"').ok_or(PGNError::TagParse)?;
+        let quote_second = r.rfind('"').ok_or(PGNError::TagParse)?;
         if quote_first >= quote_second - 2 {
-            return Err(PGNError::TagParse)
+            return Err(PGNError::TagParse);
         }
         let in_quote = r[(quote_first)..(quote_second + 1)].to_owned();
         let no_quote = r[..(quote_first - 1)]
@@ -210,16 +175,16 @@ impl PGNTags {
         Ok(self)
     }
 
-    pub fn parse_tag(mut self, tag: &str, data: String) -> Result<PGNTags,PGNError> {
+    pub fn parse_tag(mut self, tag: &str, data: String) -> Result<PGNTags, PGNError> {
         match tag {
-            "Event" => {self.event = data},
-            "Site" => {self.site = data},
-            "Date" => {self.date = ChessDate::parse_chess_date(data.as_ref())},
-            "Round" => {self.round = ChessRound::parse_chess_round(data.as_ref())},
-            "White" => {self.white = data},
-            "Black" => {self.black = data},
-            "Result" => {self.result = data},
-            _ => {return Err(PGNError::TagParse)}
+            "Event" => self.event = data,
+            "Site" => self.site = data,
+            "Date" => self.date = ChessDate::parse_chess_date(data.as_ref()),
+            "Round" => self.round = ChessRound::parse_chess_round(data.as_ref()),
+            "White" => self.white = data,
+            "Black" => self.black = data,
+            "Result" => self.result = data,
+            _ => return Err(PGNError::TagParse),
         }
         Ok(self)
     }
@@ -239,31 +204,29 @@ impl Default for PGNTags {
     }
 }
 
-
 pub enum PGNMoveTag {
-    None, // ''
-    Good, // '!'
-    Excellent, // '!!'
-    Bad, // '?'
-    Blunder, // '??'
+    None,        // ''
+    Good,        // '!'
+    Excellent,   // '!!'
+    Bad,         // '?'
+    Blunder,     // '??'
     Interesting, // '!?'
-    Doubtful // '?!'
+    Doubtful,    // '?!'
 }
 
 // Check = +
 // Checkmate = #
 pub enum CheckType {
     Check,
-    CheckMate
+    CheckMate,
 }
 
 // (File) OR (Rank) OR (Square)
 pub struct PGNMoveSpecifier {
     rank: Option<Rank>,
     file: Option<File>,
-    square: Option<SQ>
+    square: Option<SQ>,
 }
-
 
 // [Piece](specifier)("capture")["dest"]("Promo")
 // [Piece] => K, Q, R, B, N, '' if pawn
@@ -280,21 +243,20 @@ pub struct PGNRegMove {
 
 //
 pub enum PGNMoveType {
-    KingSideCastle, // O-O
+    KingSideCastle,  // O-O
     QueenSideCastle, // O-O-O
-    Reg(PGNRegMove)
+    Reg(PGNRegMove),
 }
 
 // (move)(check ?)(tag)
 pub struct PGNMove {
     move_type: PGNMoveType,
     check: Option<CheckType>,
-    tag: PGNMoveTag
+    tag: PGNMoveTag,
 }
 
 impl PGNMove {
     pub fn parse(_input: &str) -> Result<PGNMove, PGNError> {
-
         unimplemented!()
     }
 }
@@ -311,10 +273,9 @@ pub enum PGNError {
     Length,
 }
 
-
 pub struct PGN {
     tags: PGNTags,
-    moves: Vec<PGNRound>
+    moves: Vec<PGNRound>,
 }
 
 // [Event "F/S Return Match"]
@@ -333,11 +294,10 @@ impl PGN {
         }
         Ok(PGN {
             tags,
-            moves: Vec::new()
+            moves: Vec::new(),
         })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -354,9 +314,13 @@ mod tests {
     #[test]
     fn tags_test() {
         PGNTags::default()
-            .add(TEST_WHITE).unwrap()
-            .add(TEST_BLACK).unwrap()
-            .add(TEST_DATE).unwrap()
-            .add(TEST_ROUND).unwrap();
+            .add(TEST_WHITE)
+            .unwrap()
+            .add(TEST_BLACK)
+            .unwrap()
+            .add(TEST_DATE)
+            .unwrap()
+            .add(TEST_ROUND)
+            .unwrap();
     }
 }
