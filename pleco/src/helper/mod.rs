@@ -1,6 +1,6 @@
 //! Statically initialized lookup tables.
 //!
-//! Whenever a `Board` is created, these are also created as well. Calling `Hepler::new()` will
+//! Whenever a `Board` is created, these are also created as well. Calling `Helper::new()` will
 //! initialize the tables the first time it's called, and successive calls won't waste time
 //! initializing the table.
 //!
