@@ -21,7 +21,7 @@
 #![feature(test)]
 #![feature(allocator_api)]
 #![feature(trusted_len)]
-#![feature(const_fn)]
+#![feature(const_mut_refs)]
 #![feature(alloc_layout_extra)]
 #![feature(thread_spawn_unchecked)]
 
