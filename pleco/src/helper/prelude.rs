@@ -21,11 +21,11 @@ use {BitBoard, File, Piece, PieceType, Player, Rank, SQ};
 
 use std::mem;
 use std::sync::atomic::{compiler_fence, fence, AtomicBool, Ordering};
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
-static INIT: Once = ONCE_INIT;
+static INIT: Once = Once::new();
 
 /// Initializes the static structures. Guarantees to only allow being called once.
 #[cold]

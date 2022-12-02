@@ -90,8 +90,10 @@ impl MovePicker {
         assert!(depth <= 0);
         let mut moves = ScoringMoveList::default();
         let first: *mut ScoringMove = moves.as_mut_ptr();
+        let p = mem::MaybeUninit::uninit();
+
         let mut mp_qs = MovePicker {
-            pick: unsafe { mem::MaybeUninit::uninit().assume_init() },
+            pick: unsafe { p.assume_init() },
             board: &*board,
             moves,
             depth,

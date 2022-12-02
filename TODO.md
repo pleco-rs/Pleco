@@ -1,5 +1,6 @@
 Remake all old changes
 Address all existing PRs and Issues
+Publish new version of crates
 Raise PR for other protocols to use pleco again
 
 Create tooling for comparing engines (to find out which other projects are good, and to run in pipeline)
@@ -31,3 +32,5 @@ Update Chess engine competitive list
 Setup Lichess playable bot
 
 ================================================
+
+Fix nightly warnings

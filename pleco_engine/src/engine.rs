@@ -14,8 +14,6 @@ use uci::parse;
 
 use search::eval::Evaluation;
 
-use num_cpus;
-
 // --------- STATIC VARIABLES
 
 pub static ID_NAME: &str = "Pleco";

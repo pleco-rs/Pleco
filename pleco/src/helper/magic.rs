@@ -106,7 +106,7 @@ impl PreSMagic {
 
     // creates an array of PreSMagic
     pub unsafe fn init64() -> [PreSMagic; 64] {
-        let arr: [PreSMagic; 64] = mem::uninitialized();
+        let arr: [PreSMagic; 64] = mem::MaybeUninit::uninit().assume_init();
         arr
     }
 

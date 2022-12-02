@@ -5,7 +5,7 @@ pub mod counter_move;
 pub mod material;
 pub mod pawn_table;
 
-use std::alloc::{alloc_zeroed, dealloc, handle_alloc_error, Global, Layout};
+use std::alloc::{alloc_zeroed, dealloc, Layout};
 use std::mem;
 use std::ops::*;
 use std::ptr;

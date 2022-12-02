@@ -4,7 +4,7 @@ use std::ptr;
 use std::sync::atomic::compiler_fence;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 
 use pleco::helper::prelude;
 use pleco::tools::tt::TranspositionTable;
@@ -31,7 +31,7 @@ type DummyTimeManager = [u8; TIMER_ALLOC_SIZE];
 
 pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
 
-static INITALIZED: Once = ONCE_INIT;
+static INITALIZED: Once = Once::new();
 
 /// Global Transposition Table
 static mut TT_TABLE: DummyTranspositionTable = [0; TT_ALLOC_SIZE];

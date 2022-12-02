@@ -221,7 +221,7 @@ pub fn psq(piece: Piece, sq: SQ) -> Score {
 /// it'll return the midgame value.
 #[inline(always)]
 pub fn piece_value(piece: Piece, eg: bool) -> Value {
-    unsafe { (*(PIECE_VALUE.get_unchecked(piece as usize)).get_unchecked(eg as usize)) }
+    unsafe { *(PIECE_VALUE.get_unchecked(piece as usize)).get_unchecked(eg as usize) }
 }
 
 #[cfg(test)]

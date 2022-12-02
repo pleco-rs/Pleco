@@ -1,10 +1,10 @@
 //! Contains the ThreadPool and the individual Threads.
 
-use std::alloc::{alloc_zeroed, dealloc, handle_alloc_error, Global, Layout};
+use std::alloc::{alloc_zeroed, dealloc, Layout};
 use std::cell::UnsafeCell;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Once, ONCE_INIT};
+use std::sync::Once;
 use std::thread::{self, JoinHandle};
 use std::{mem, ptr};
 
@@ -32,7 +32,7 @@ type DummyThreadPool = [u8; POOL_SIZE];
 pub static mut THREADPOOL: DummyThreadPool = [0; POOL_SIZE];
 
 // ONCE for the Threadpool
-static THREADPOOL_INIT: Once = ONCE_INIT;
+static THREADPOOL_INIT: Once = Once::new();
 
 // Initializes the threadpool, called once on startup.
 #[cold]
