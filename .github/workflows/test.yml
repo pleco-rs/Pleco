@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-stable:
+    name: Test stable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: cargo +stable build --verbose
+      - name: Run tests
+        run: cargo +stable test --verbose
+  test-nightly:
+    name: Test nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: rustup install nightly
+      - name: Build
+        run: cargo +nightly build --verbose
+      - name: Run tests
+        run: cargo +nightly test --verbose
+  test-beta:
+    name: Test beta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: rustup install beta
+      - name: Build
+        run: cargo +beta build --verbose
+      - name: Run tests
+        run: cargo +beta test --verbose
