@@ -1,10 +1,17 @@
-# Pleco
+<div align="center">
+
+[![Pleco][pleco-badge]][pleco-link]
+[![Pleco][pleco-engine-badge]][pleco-engine-link]
+
+[![Build][build-badge]][build-link]
+[![License][license-badge]][license-link]
+[![Commits][commits-badge]][commits-link]
+
+</div>
+
+# Overview
 
 Pleco is a chess Engine & Library derived from Stockfish, written entirely in Rust.
-
-[![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
-[![Pleco crate](https://img.shields.io/crates/v/pleco_engine.svg)](https://crates.io/crates/pleco_engine)
-[![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=master)](https://travis-ci.org/sfleischman105/Pleco)
 
 This project is split into two crates, `pleco`, which contains the library functionality, and `pleco_engine`, which contains the
 UCI (Universal Chess Interface) compatible engine.
@@ -109,3 +116,14 @@ Any and all contributions are welcome! Open up a PR to contribute some improveme
 ## License
 
 Pleco is distributed under the terms of the MIT license. See LICENSE-MIT for details. Opening a pull requests is assumed to signal agreement with these licensing terms.
+
+[build-link]: https://github.com/pleco-rs/Pleco/blob/main/.github/workflows/test.yml
+[build-badge]: https://img.shields.io/github/workflow/status/pleco-rs/Pleco/Test?style=for-the-badge&label=tanton&logo=github
+[license-badge]: https://img.shields.io/github/license/pleco-rs/Pleco?style=for-the-badge&label=license&color=success
+[license-link]: https://github.com/pleco-rs/Pleco/blob/main/LICENSE
+[commits-badge]: https://img.shields.io/github/commit-activity/m/pleco-rs/Pleco?style=for-the-badge
+[commits-link]: https://github.com/pleco-rs/Pleco/commits/main
+[pleco-badge]: https://img.shields.io/crates/v/pleco.svg?style=for-the-badge
+[pleco-link]: https://crates.io/crates/pleco
+[pleco-engine-badge]: https://img.shields.io/crates/v/pleco_engine.svg?style=for-the-badge
+[pleco-engine-link]: https://crates.io/crates/pleco_engine
