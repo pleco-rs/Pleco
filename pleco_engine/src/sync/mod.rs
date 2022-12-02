@@ -87,7 +87,7 @@ impl GuardedBool {
 
     /// Awaits a value.
     #[inline]
-    pub fn await(&self, value: bool) {
+    pub fn wait(&self, value: bool) {
         self.a.await_value(value);
     }
 }

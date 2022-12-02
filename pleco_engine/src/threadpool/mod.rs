@@ -281,7 +281,7 @@ impl ThreadPool {
             .map(|s| unsafe { &**s.get() })
             .filter(|t| thread_sel.is_selection(t.id))
             .for_each(|t: &Searcher| {
-                t.searching.await(await_search);
+                t.searching.wait(await_search);
             });
     }
 
