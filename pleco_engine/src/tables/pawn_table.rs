@@ -1,7 +1,7 @@
 //! A Table to store information concerning the structure of pawns. Used to evaluate
 //! both the structure of the pawns, as well as king safety values.
 //!
-//! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not garunteed to be
+//! An entry is retrieved from the `pawn_key` field of a `Board`. A key is not guaranteed to be
 //! unique to a pawn structure, but it's very likely that there will be no collisions.
 
 use std::mem::transmute;
