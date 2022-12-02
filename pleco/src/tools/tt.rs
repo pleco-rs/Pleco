@@ -33,15 +33,15 @@
 //! [`TranspositionTable`]: ../../tools/tt/struct.TranspositionTable.html
 //! [`Entry`]: ../../tools/tt/struct.Entry.html
 
-use std::ptr::NonNull;
-use std::mem;
-use std::alloc::{Layout, handle_alloc_error, self};
-use std::cmp::min;
+use std::alloc::{self, handle_alloc_error, Layout};
 use std::cell::UnsafeCell;
+use std::cmp::min;
+use std::mem;
+use std::ptr::NonNull;
 
+use super::prefetch_write;
 use super::PreFetchable;
 use core::piece_move::BitMove;
-use super::prefetch_write;
 
 // TODO: investigate potention for SIMD in key lookup
 // Currently, there is now way to do this right now in rust without it being extensive.
@@ -76,7 +76,7 @@ pub enum NodeBound {
 /// Abstraction for combining the 'time' a node was found alongside the `NodeType`.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct NodeTypeTimeBound {
-    data: u8
+    data: u8,
 }
 
 impl NodeTypeTimeBound {
@@ -87,7 +87,7 @@ impl NodeTypeTimeBound {
     /// time_bound must be divisible by 8 or else Undefined behavior will follow.
     pub fn create(node_type: NodeBound, time_bound: u8) -> Self {
         NodeTypeTimeBound {
-            data: time_bound + (node_type as u8)
+            data: time_bound + (node_type as u8),
         }
     }
 
@@ -102,32 +102,38 @@ impl NodeTypeTimeBound {
     }
 }
 
-
-
 // 2 bytes + 2 bytes + 2 Byte + 2 byte + 1 + 1 = 10 Bytes
 
 /// Structure defining a singular Entry in a table, containing the `BestMove` found,
 /// the score of that node, the type of Node, depth found, as well as a key uniquely defining
 /// the node.
-#[derive(Clone,PartialEq)]
+#[derive(Clone, PartialEq)]
 #[repr(C)]
 pub struct Entry {
     pub partial_key: u16,
     pub best_move: BitMove, // What was the best move found here?
-    pub score: i16, // What was the Score of this node?
-    pub eval: i16, // What is the evaluation of this node
-    pub depth: i8, // How deep was this Score Found?
+    pub score: i16,         // What was the Score of this node?
+    pub eval: i16,          // What is the evaluation of this node
+    pub depth: i8,          // How deep was this Score Found?
     pub time_node_bound: NodeTypeTimeBound,
 }
 
 impl Entry {
-
     pub fn is_empty(&self) -> bool {
         self.node_type() == NodeBound::NoBound || self.partial_key == 0
     }
 
     /// Rewrites over an Entry.
-    pub fn place(&mut self, key: Key, best_move: BitMove, score: i16, eval: i16, depth: i16, node_type: NodeBound, gen: u8) {
+    pub fn place(
+        &mut self,
+        key: Key,
+        best_move: BitMove,
+        score: i16,
+        eval: i16,
+        depth: i16,
+        node_type: NodeBound,
+        gen: u8,
+    ) {
         let partial_key = key.wrapping_shr(48) as u16;
 
         if partial_key != self.partial_key {
@@ -135,7 +141,9 @@ impl Entry {
         }
 
         if partial_key != self.partial_key
-            || node_type == NodeBound::Exact || depth > self.depth as i16 - 4 {
+            || node_type == NodeBound::Exact
+            || depth > self.depth as i16 - 4
+        {
             self.partial_key = partial_key;
             self.score = score;
             self.eval = eval;
@@ -161,11 +169,12 @@ impl Entry {
 
     /// Returns the value of the node in respect to the depth searched && when it was placed into the TranspositionTable.
     pub fn time_value(&self, curr_time: u8) -> i16 {
-        let inner: i16 = ((259i16).wrapping_add(curr_time as i16)).wrapping_sub(self.time_node_bound.data as i16) & 0b1111_1100;
+        let inner: i16 = ((259i16).wrapping_add(curr_time as i16))
+            .wrapping_sub(self.time_node_bound.data as i16)
+            & 0b1111_1100;
         (self.depth as i16).wrapping_sub(inner).wrapping_mul(2)
     }
 }
-
 
 // 30 bytes + 2 = 32 Bytes
 /// Structure containing multiple Entries all mapped to by the same zobrist key.
@@ -255,15 +264,12 @@ impl TranspositionTable {
     #[inline(always)]
     pub fn size_gigabytes(&self) -> usize {
         (mem::size_of::<Cluster>() * self.num_clusters()) / BYTES_PER_GB
-
     }
 
     /// Returns the number of clusters the Transposition Table holds.
     #[inline(always)]
     pub fn num_clusters(&self) -> usize {
-        unsafe {
-            *self.cap.get()
-        }
+        unsafe { *self.cap.get() }
     }
 
     /// Returns the number of Entries the Transposition Table holds.
@@ -340,18 +346,14 @@ impl TranspositionTable {
     /// Returns the current time age of a TT.
     #[inline]
     pub fn time_age(&self) -> u8 {
-        unsafe {
-            *self.time_age.get()
-        }
+        unsafe { *self.time_age.get() }
     }
 
     /// Returns the current number of cycles a TT has gone through. Cycles is simply the
     /// number of times refresh has been called.
     #[inline]
     pub fn time_age_cylces(&self) -> u8 {
-        unsafe {
-            (*self.time_age.get()).wrapping_shr(2)
-        }
+        unsafe { (*self.time_age.get()).wrapping_shr(2) }
     }
 
     /// Probes the Transposition Table for a specified Key. Returns (true, entry) if either (1) an
@@ -377,7 +379,6 @@ impl TranspositionTable {
 
                 // found a spot
                 if entry.partial_key == 0 || entry.partial_key == partial_key {
-
                     // if age is incorrect, make it correct
                     if entry.time() != self.time_age() && entry.partial_key != 0 {
                         entry.time_node_bound.update_time(self.time_age());
@@ -409,9 +410,7 @@ impl TranspositionTable {
     #[inline]
     fn cluster(&self, key: Key) -> *mut Cluster {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
-        unsafe {
-            (*self.clusters.get()).as_ptr().offset(index as isize)
-        }
+        unsafe { (*self.clusters.get()).as_ptr().offset(index as isize) }
     }
 
     // Re-Allocates the current TT to a specified size.
@@ -424,7 +423,7 @@ impl TranspositionTable {
     unsafe fn de_alloc(&self) {
         let layout = Layout::from_size_align(*self.cap.get(), 2).unwrap();
         let ptr: *mut u8 = mem::transmute(*self.clusters.get());
-//        alloc::dealloc(ptr, Layout::array::<Cluster>(*self.cap.get()).unwrap());
+        //        alloc::dealloc(ptr, Layout::array::<Cluster>(*self.cap.get()).unwrap());
         alloc::dealloc(ptr, layout);
     }
 
@@ -440,7 +439,7 @@ impl TranspositionTable {
                 for e in 0..CLUSTER_SIZE {
                     // get a pointer to the specified entry
                     let entry_ptr: *mut Entry = init_entry.offset(e as isize);
-                    let entry: &Entry = & (*entry_ptr);
+                    let entry: &Entry = &(*entry_ptr);
                     if entry.time() == self.time_age() {
                         hits += 1.0;
                     }
@@ -468,7 +467,9 @@ impl PreFetchable for TranspositionTable {
 
 impl Drop for TranspositionTable {
     fn drop(&mut self) {
-        unsafe {self.de_alloc();}
+        unsafe {
+            self.de_alloc();
+        }
     }
 }
 
@@ -492,9 +493,7 @@ fn alloc_room(size: usize) -> NonNull<Cluster> {
         };
         new_ptr
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -505,23 +504,23 @@ mod tests {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use std::sync::atomic::Ordering;
     use std::sync::atomic::compiler_fence;
+    use std::sync::atomic::Ordering;
 
     // around 0.5 GB
     const HALF_GIG: usize = 2 << 24;
     // around 30 MB
     const THIRTY_MB: usize = 2 << 20;
 
-//    #[test]
-//    fn cluster_alloc_size_align() {
-//        for i in 0..10 {
-//            let size = 1 << i;
-//            let layout = Layout::array::<Cluster>(1 << i).unwrap();
-//            assert_eq!(layout.align(), 2);
-//            assert_eq!(layout.size(),  mem::size_of::<Cluster>() * size);
-//        }
-//    }
+    //    #[test]
+    //    fn cluster_alloc_size_align() {
+    //        for i in 0..10 {
+    //            let size = 1 << i;
+    //            let layout = Layout::array::<Cluster>(1 << i).unwrap();
+    //            assert_eq!(layout.align(), 2);
+    //            assert_eq!(layout.size(),  mem::size_of::<Cluster>() * size);
+    //        }
+    //    }
 
     #[test]
     fn tt_alloc_realloc() {
@@ -530,7 +529,7 @@ mod tests {
         assert_eq!(tt.num_clusters(), size);
 
         let key = create_key(32, 44);
-        let (_found,_entry) = tt.probe(key);
+        let (_found, _entry) = tt.probe(key);
 
         sleep(Duration::from_millis(1));
     }
@@ -539,7 +538,10 @@ mod tests {
     fn tt_test_sizes() {
         let tt = TranspositionTable::new_num_clusters(100);
         assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
-        assert_eq!(tt.num_entries(), (100 as usize).next_power_of_two() * CLUSTER_SIZE);
+        assert_eq!(
+            tt.num_entries(),
+            (100 as usize).next_power_of_two() * CLUSTER_SIZE
+        );
         compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
     }
@@ -549,7 +551,7 @@ mod tests {
         let size: usize = 2 << 20;
         let tt = TranspositionTable::new_num_clusters(size);
 
-        for x  in 0..1_000_000 as u64 {
+        for x in 0..1_000_000 as u64 {
             let key: u64 = rand::random::<u64>();
             {
                 let (_found, entry) = tt.probe(key);
@@ -577,8 +579,8 @@ mod tests {
         let (found, entry) = tt.probe(key_1);
         assert!(found);
         assert!(entry.is_empty());
-        assert_eq!(entry.partial_key,partial_key_1);
-        assert_eq!(entry.depth,2);
+        assert_eq!(entry.partial_key, partial_key_1);
+        assert_eq!(entry.depth, 2);
 
         let partial_key_2: u16 = 8091;
         let partial_key_3: u16 = 12;
@@ -617,4 +619,3 @@ mod tests {
         (partial_key as u64).wrapping_shl(48) | (full_key & 0x0000_FFFF_FFFF_FFFF)
     }
 }
-

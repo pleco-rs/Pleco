@@ -1,18 +1,18 @@
 //! Constant values and static structures.
 use std::mem;
 use std::ptr;
+use std::sync::atomic::compiler_fence;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
-use std::sync::{ONCE_INIT,Once};
-use std::sync::atomic::compiler_fence;
+use std::sync::{Once, ONCE_INIT};
 
-use pleco::tools::tt::TranspositionTable;
 use pleco::helper::prelude;
+use pleco::tools::tt::TranspositionTable;
 
-use time::time_management::TimeManager;
-use threadpool;
 use search;
 use tables::pawn_table;
+use threadpool;
+use time::time_management::TimeManager;
 
 pub const MAX_PLY: u16 = 126;
 pub const THREAD_STACK_SIZE: usize = MAX_PLY as usize + 7;
@@ -42,12 +42,12 @@ static mut TIMER: DummyTimeManager = [0; TIMER_ALLOC_SIZE];
 #[cold]
 pub fn init_globals() {
     INITALIZED.call_once(|| {
-        prelude::init_statics();   // Initialize static tables
+        prelude::init_statics(); // Initialize static tables
         compiler_fence(Ordering::SeqCst);
-        init_tt();                 // Transposition Table
-        init_timer();              // Global timer manager
+        init_tt(); // Transposition Table
+        init_timer(); // Global timer manager
         pawn_table::init();
-        threadpool::init_threadpool();  // Make Threadpool
+        threadpool::init_threadpool(); // Make Threadpool
         search::init();
     });
 }
@@ -72,19 +72,14 @@ fn init_timer() {
 
 // Returns access to the global timer
 pub fn timer() -> &'static TimeManager {
-    unsafe {
-        &*(&TIMER as *const DummyTimeManager as *const TimeManager)
-    }
+    unsafe { &*(&TIMER as *const DummyTimeManager as *const TimeManager) }
 }
 
 /// Returns access to the global transposition table
 #[inline(always)]
 pub fn tt() -> &'static TranspositionTable {
-    unsafe {
-        &*(&TT_TABLE as *const DummyTranspositionTable as *const TranspositionTable)
-    }
+    unsafe { &*(&TT_TABLE as *const DummyTranspositionTable as *const TranspositionTable) }
 }
-
 
 pub trait PVNode {
     fn is_pv() -> bool;
@@ -104,7 +99,6 @@ impl PVNode for NonPV {
         false
     }
 }
-
 
 #[cfg(test)]
 mod tests {

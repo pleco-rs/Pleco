@@ -23,16 +23,15 @@ os:
 script:
   - if [ "$TRAVIS_RUST_VERSION" == "stable" ];
     then
-      cargo build --verbose --package pleco;
-      cargo test --package pleco;
-      cargo bench --package pleco;
+    cargo build --verbose --package pleco;
+    cargo test --package pleco;
+    cargo bench --package pleco;
     else
-      cargo build --verbose;
-      cargo test;
-      cargo bench --package pleco --all-features;
-      cargo bench --package pleco_engine --all-features;
+    cargo build --verbose;
+    cargo test;
+    cargo bench --package pleco --all-features;
+    cargo bench --package pleco_engine --all-features;
     fi
-
 #  - cargo build --verbose
 #  - echo " ------ TESTING STABLE BRANCH ------- "
 #  - cargo +stable test --package pleco

@@ -12,15 +12,14 @@
 //!
 //! [`helper::prelude`]: prelude/index.html
 
-mod magic;
 mod boards;
-mod zobrist;
-mod psqt;
+mod magic;
 pub mod prelude;
+mod psqt;
+mod zobrist;
 
-
-use {SQ,BitBoard,Player,File,Rank,Piece};
-use core::score::{Score,Value};
+use core::score::{Score, Value};
+use {BitBoard, File, Piece, Player, Rank, SQ};
 
 /// Helper structure for accessing statically-initialized tables and other constants.
 ///
@@ -55,7 +54,7 @@ impl Helper {
     /// AND'd with the inverse of the intending moving player's pieces.
     #[inline(always)]
     pub fn bishop_moves(self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        prelude::bishop_moves(occupied,sq)
+        prelude::bishop_moves(occupied, sq)
     }
 
     /// Generate Rook Moves `BitBoard` from a bishop square and all occupied squares on the board.
@@ -63,7 +62,7 @@ impl Helper {
     /// AND'd with the inverse of the intending moving player's pieces.
     #[inline(always)]
     pub fn rook_moves(self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        prelude::rook_moves(occupied,sq)
+        prelude::rook_moves(occupied, sq)
     }
 
     /// Generate Queen Moves `BitBoard` from a bishop square and all occupied squares on the board.
@@ -71,7 +70,7 @@ impl Helper {
     /// AND'd with the inverse of the intending moving player's pieces.
     #[inline(always)]
     pub fn queen_moves(self, occupied: BitBoard, sq: SQ) -> BitBoard {
-        prelude::queen_moves(occupied,sq)
+        prelude::queen_moves(occupied, sq)
     }
 
     /// Generate Knight Moves `BitBoard` from a source square.
@@ -120,13 +119,13 @@ impl Helper {
     /// Basically, given square x, returns the BitBoard of squares a pawn on x attacks.
     #[inline(always)]
     pub fn pawn_attacks_from(self, sq: SQ, player: Player) -> BitBoard {
-        prelude::pawn_attacks_from(sq,player)
+        prelude::pawn_attacks_from(sq, player)
     }
 
     /// Returns if three Squares are in the same diagonal, file, or rank.
     #[inline(always)]
     pub fn aligned(self, s1: SQ, s2: SQ, s3: SQ) -> bool {
-        prelude::aligned(s1,s2,s3)
+        prelude::aligned(s1, s2, s3)
     }
 
     /// Returns the ring of bits surrounding the square sq at a specified distance.
@@ -136,13 +135,13 @@ impl Helper {
     /// distance must be less than 8, or else a panic will occur.
     #[inline(always)]
     pub fn ring_distance(self, sq: SQ, distance: u8) -> BitBoard {
-        prelude::ring_distance(sq,distance)
+        prelude::ring_distance(sq, distance)
     }
 
     /// Returns the BitBoard of all squares in the rank in front of the given one.
     #[inline(always)]
     pub fn forward_rank_bb(self, player: Player, rank: Rank) -> BitBoard {
-        prelude::forward_rank_bb(player,rank)
+        prelude::forward_rank_bb(player, rank)
     }
 
     /// Returns the `BitBoard` of all squares that can be attacked by a pawn
@@ -156,7 +155,7 @@ impl Helper {
     /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
     #[inline(always)]
     pub fn pawn_attacks_span(self, player: Player, sq: SQ) -> BitBoard {
-        prelude::pawn_attacks_span(player,sq)
+        prelude::pawn_attacks_span(player, sq)
     }
 
     /// Returns the BitBoard of all squares in the file in front of the given one.
@@ -166,7 +165,7 @@ impl Helper {
     /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
     #[inline(always)]
     pub fn forward_file_bb(self, player: Player, sq: SQ) -> BitBoard {
-        prelude::forward_file_bb(player,sq)
+        prelude::forward_file_bb(player, sq)
     }
 
     /// Returns a `BitBoard` allowing for testing of the a pawn being a
@@ -206,7 +205,7 @@ impl Helper {
 
     /// Returns the score for a player's piece being at a particular square.
     #[inline(always)]
-    pub fn psq(self, piece: Piece,  sq: SQ) -> Score {
+    pub fn psq(self, piece: Piece, sq: SQ) -> Score {
         prelude::psq(piece, sq)
     }
 
@@ -217,8 +216,6 @@ impl Helper {
         prelude::piece_value(piece, eg)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

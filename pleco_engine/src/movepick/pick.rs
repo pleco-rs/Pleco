@@ -1,5 +1,5 @@
-use std::mem;
 use std::fmt;
+use std::mem;
 
 #[repr(u8)]
 #[derive(Copy, Clone)]
@@ -34,7 +34,9 @@ pub enum Pick {
 
 impl Pick {
     pub fn incr(&mut self) {
-        unsafe {*self = mem::transmute(*self as u8 + 1); }
+        unsafe {
+            *self = mem::transmute(*self as u8 + 1);
+        }
     }
 
     pub fn to_string(self) -> &'static str {
@@ -70,7 +72,6 @@ impl fmt::Display for Pick {
     }
 }
 
-
 // types
 
 // Root
@@ -78,7 +79,6 @@ impl fmt::Display for Pick {
 // Evasions
 // ProbCut
 // Qsearch
-
 
 // Strategy
 

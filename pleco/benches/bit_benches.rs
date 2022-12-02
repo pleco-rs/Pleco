@@ -1,14 +1,16 @@
 use std::time::Duration;
 
-use criterion::{Criterion,black_box,Bencher,Fun};
-use pleco::core::bitboard::{BitBoard,RandBitBoard};
+use criterion::{black_box, Bencher, Criterion, Fun};
 use pleco::core::bit_twiddles::*;
+use pleco::core::bitboard::{BitBoard, RandBitBoard};
 
 fn popcount_rust(b: &mut Bencher, data: &Vec<BitBoard>) {
     b.iter(|| {
         black_box({
             for bits in data.iter() {
-                black_box({black_box(black_box((*bits).0)).count_ones();})
+                black_box({
+                    black_box(black_box((*bits).0)).count_ones();
+                })
             }
         })
     });
@@ -18,7 +20,9 @@ fn popcount_old_8(b: &mut Bencher, data: &Vec<BitBoard>) {
     b.iter(|| {
         black_box({
             for bits in data.iter() {
-                black_box({ popcount_table(black_box((*bits).0));})
+                black_box({
+                    popcount_table(black_box((*bits).0));
+                })
             }
         })
     });
@@ -31,8 +35,8 @@ fn popcount(c: &mut Criterion) {
         .max(11)
         .many(1000);
 
-    let popcnt_rust = Fun::new("Popcount Rust",popcount_rust);
-    let popcnt_old = Fun::new("Popcount Old",popcount_old_8);
+    let popcnt_rust = Fun::new("Popcount Rust", popcount_rust);
+    let popcnt_old = Fun::new("Popcount Old", popcount_old_8);
     let funs = vec![popcnt_rust, popcnt_old];
 
     c.bench_functions("PopCount", funs, bit_set_dense_100);

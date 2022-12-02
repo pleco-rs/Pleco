@@ -5,8 +5,6 @@ extern crate lazy_static;
 
 extern crate pleco;
 
-
-
 mod bit_benches;
 mod board_benches;
 mod bot_benches;
@@ -15,8 +13,7 @@ mod lookup_benches;
 mod move_gen_benches;
 mod perft_benches;
 
-
-criterion_main!{
+criterion_main! {
     move_gen_benches::movegen_benches,
     bit_benches::bit_benches,
     board_benches::board_benches,

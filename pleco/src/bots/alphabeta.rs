@@ -1,9 +1,8 @@
 //! The alpha-beta algorithm.
-use board::*;
 use super::*;
+use board::*;
 
-use super::{ScoringMove, eval_board};
-
+use super::{eval_board, ScoringMove};
 
 const MAX_PLY: u16 = 5;
 

@@ -12,14 +12,13 @@ use pleco::BitMove;
 const MAX_MOVES: usize = 250;
 
 /// Keeps track of information of a move for the position to be searched.
-#[derive(Copy, Clone,Eq)]
+#[derive(Copy, Clone, Eq)]
 pub struct RootMove {
     pub score: i32,
     pub prev_score: i32,
     pub bit_move: BitMove,
     pub depth_reached: i16,
 }
-
 
 impl RootMove {
     /// Creates a new `RootMove`.
@@ -80,7 +79,6 @@ impl PartialOrd for RootMove {
         Some(self.cmp(other))
     }
 }
-
 
 impl PartialEq for RootMove {
     fn eq(&self, other: &RootMove) -> bool {

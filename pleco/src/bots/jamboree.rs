@@ -1,15 +1,20 @@
 //! The jamboree algorithm.
-use board::*;
-use super::*;
-use super::{ScoringMove};
 use super::alphabeta::alpha_beta_search;
+use super::ScoringMove;
+use super::*;
+use board::*;
 use rayon;
 
 const DIVIDE_CUTOFF: usize = 5;
 const DIVISOR_SEQ: usize = 4;
 
-pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
-                depth: u16, plys_seq: u16) -> ScoringMove {
+pub fn jamboree(
+    board: &mut Board,
+    mut alpha: i16,
+    beta: i16,
+    depth: u16,
+    plys_seq: u16,
+) -> ScoringMove {
     assert!(alpha <= beta);
     if depth <= 2 {
         return alpha_beta_search(board, alpha, beta, depth);
@@ -32,7 +37,7 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
 
     for mov in seq {
         board.apply_move(mov.bit_move);
-        mov.score  = -jamboree(board, -beta, -alpha, depth - 1, plys_seq).score;
+        mov.score = -jamboree(board, -beta, -alpha, depth - 1, plys_seq).score;
         board.undo_move();
 
         if mov.score > alpha {
@@ -47,10 +52,14 @@ pub fn jamboree(board: &mut Board, mut alpha: i16, beta: i16,
     parallel_task(non_seq, board, alpha, beta, depth, plys_seq).max(best_move)
 }
 
-
-fn parallel_task(slice: &mut [ScoringMove], board: &mut Board, mut alpha: i16,
-                 beta: i16, depth: u16, plys_seq: u16, ) -> ScoringMove {
-
+fn parallel_task(
+    slice: &mut [ScoringMove],
+    board: &mut Board,
+    mut alpha: i16,
+    beta: i16,
+    depth: u16,
+    plys_seq: u16,
+) -> ScoringMove {
     if slice.len() <= DIVIDE_CUTOFF {
         let mut best_move: ScoringMove = ScoringMove::blank(alpha);
         for mov in slice {
@@ -71,9 +80,10 @@ fn parallel_task(slice: &mut [ScoringMove], board: &mut Board, mut alpha: i16,
         let (left, right) = slice.split_at_mut(mid_point);
         let mut left_clone = board.parallel_clone();
 
-        let (left_move, right_move): (ScoringMove, ScoringMove) = rayon::join (
+        let (left_move, right_move): (ScoringMove, ScoringMove) = rayon::join(
             || parallel_task(left, &mut left_clone, alpha, beta, depth, plys_seq),
-            || parallel_task(right, board, alpha, beta, depth, plys_seq));
+            || parallel_task(right, board, alpha, beta, depth, plys_seq),
+        );
 
         left_move.max(right_move)
     }

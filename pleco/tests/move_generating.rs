@@ -1,14 +1,13 @@
 extern crate pleco;
 
-use pleco::SQ;
-use pleco::core::*;
+use pleco::board::{Board, RandBoard};
 use pleco::core::piece_move::*;
-use pleco::board::{Board,RandBoard};
-
+use pleco::core::*;
+use pleco::SQ;
 
 #[test]
 fn test_movegen_captures() {
-    let vec =  RandBoard::default().no_check().many(9);
+    let vec = RandBoard::default().no_check().many(9);
 
     vec.iter().for_each(|b| {
         let moves = b.generate_moves_of_type(GenTypes::Captures);
@@ -23,7 +22,7 @@ fn test_movegen_captures() {
 
 #[test]
 fn test_movegen_quiets() {
-    let vec =  RandBoard::default().no_check().many(6);
+    let vec = RandBoard::default().no_check().many(6);
 
     vec.iter().for_each(|b| {
         let moves = b.generate_moves_of_type(GenTypes::Quiets);
@@ -38,7 +37,7 @@ fn test_movegen_quiets() {
 
 #[test]
 fn test_movegen_quiet_checks() {
-    let vec =  RandBoard::default().no_check().many(5);
+    let vec = RandBoard::default().no_check().many(5);
 
     vec.iter().for_each(|b| {
         b.generate_moves_of_type(GenTypes::QuietChecks);
@@ -81,8 +80,8 @@ fn test_move_permutations() {
         let move_info = BitMove::init(pre_move_info);
         assert_eq!(move_flag == MoveFlag::QuietMove, move_info.is_quiet_move());
         assert_eq!(
-            move_flag == MoveFlag::Castle { king_side: true } ||
-                move_flag == MoveFlag::Castle { king_side: false },
+            move_flag == MoveFlag::Castle { king_side: true }
+                || move_flag == MoveFlag::Castle { king_side: false },
             move_info.is_castle()
         );
         assert_eq!(

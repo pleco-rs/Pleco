@@ -6,9 +6,9 @@
 //!
 //! We are awaiting the stabilization of `const fn` and constant generics to remove these traits.
 
-use super::{Player, PieceType, GenTypes};
-use super::sq::SQ;
 use super::bitboard::BitBoard;
+use super::sq::SQ;
+use super::{GenTypes, PieceType, Player};
 
 /// Defines a Player Trait, allowing for specific functions in relation
 /// to a certain player.
@@ -97,55 +97,89 @@ impl PlayerTrait for WhiteType {
     }
 
     #[inline(always)]
-    fn player_idx() -> usize {Player::White as usize}
+    fn player_idx() -> usize {
+        Player::White as usize
+    }
 
     #[inline(always)]
-    fn down(sq: SQ) -> SQ { sq - SQ(8) }
+    fn down(sq: SQ) -> SQ {
+        sq - SQ(8)
+    }
 
     #[inline(always)]
-    fn up(sq: SQ) -> SQ { sq + SQ(8) }
+    fn up(sq: SQ) -> SQ {
+        sq + SQ(8)
+    }
 
     #[inline(always)]
-    fn left(sq: SQ) -> SQ { sq - SQ(1) }
+    fn left(sq: SQ) -> SQ {
+        sq - SQ(1)
+    }
 
     #[inline(always)]
-    fn right(sq: SQ) -> SQ { sq + SQ(1) }
+    fn right(sq: SQ) -> SQ {
+        sq + SQ(1)
+    }
 
     #[inline(always)]
-    fn down_left(sq: SQ) -> SQ { sq - SQ(9) }
+    fn down_left(sq: SQ) -> SQ {
+        sq - SQ(9)
+    }
 
     #[inline(always)]
-    fn down_right(sq: SQ) -> SQ { sq - SQ(7) }
+    fn down_right(sq: SQ) -> SQ {
+        sq - SQ(7)
+    }
 
     #[inline(always)]
-    fn up_left(sq: SQ) -> SQ { sq + SQ(7) }
+    fn up_left(sq: SQ) -> SQ {
+        sq + SQ(7)
+    }
 
     #[inline(always)]
-    fn up_right(sq: SQ) -> SQ { sq + SQ(9) }
+    fn up_right(sq: SQ) -> SQ {
+        sq + SQ(9)
+    }
 
     #[inline(always)]
-    fn shift_down(bb: BitBoard) -> BitBoard { bb >> 8 }
+    fn shift_down(bb: BitBoard) -> BitBoard {
+        bb >> 8
+    }
 
     #[inline(always)]
-    fn shift_up(bb: BitBoard) -> BitBoard { bb << 8 }
+    fn shift_up(bb: BitBoard) -> BitBoard {
+        bb << 8
+    }
 
     #[inline(always)]
-    fn shift_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) >> 1 }
+    fn shift_left(bb: BitBoard) -> BitBoard {
+        (bb & !BitBoard::FILE_A) >> 1
+    }
 
     #[inline(always)]
-    fn shift_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) << 1 }
+    fn shift_right(bb: BitBoard) -> BitBoard {
+        (bb & !BitBoard::FILE_H) << 1
+    }
 
     #[inline(always)]
-    fn shift_down_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) >> 9 }
+    fn shift_down_left(bb: BitBoard) -> BitBoard {
+        (bb & !BitBoard::FILE_A) >> 9
+    }
 
     #[inline(always)]
-    fn shift_down_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) >> 7 }
+    fn shift_down_right(bb: BitBoard) -> BitBoard {
+        (bb & !BitBoard::FILE_H) >> 7
+    }
 
     #[inline(always)]
-    fn shift_up_left(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_A) << 7 }
+    fn shift_up_left(bb: BitBoard) -> BitBoard {
+        (bb & !BitBoard::FILE_A) << 7
+    }
 
     #[inline(always)]
-    fn shift_up_right(bb: BitBoard) -> BitBoard { (bb & !BitBoard::FILE_H) << 9 }
+    fn shift_up_right(bb: BitBoard) -> BitBoard {
+        (bb & !BitBoard::FILE_H) << 9
+    }
 }
 
 impl PlayerTrait for BlackType {
@@ -160,37 +194,59 @@ impl PlayerTrait for BlackType {
     }
 
     #[inline(always)]
-    fn player_idx() -> usize {Player::Black as usize}
+    fn player_idx() -> usize {
+        Player::Black as usize
+    }
 
     #[inline(always)]
-    fn down(sq: SQ) -> SQ { sq + SQ(8) }
+    fn down(sq: SQ) -> SQ {
+        sq + SQ(8)
+    }
 
     #[inline(always)]
-    fn up(sq: SQ) -> SQ { sq - SQ(8) }
+    fn up(sq: SQ) -> SQ {
+        sq - SQ(8)
+    }
 
     #[inline(always)]
-    fn left(sq: SQ) -> SQ { sq + SQ(1) }
+    fn left(sq: SQ) -> SQ {
+        sq + SQ(1)
+    }
 
     #[inline(always)]
-    fn right(sq: SQ) -> SQ { sq - SQ(1) }
+    fn right(sq: SQ) -> SQ {
+        sq - SQ(1)
+    }
 
     #[inline(always)]
-    fn down_left(sq: SQ) -> SQ { sq + SQ(9) }
+    fn down_left(sq: SQ) -> SQ {
+        sq + SQ(9)
+    }
 
     #[inline(always)]
-    fn down_right(sq: SQ) -> SQ { sq + SQ(7) }
+    fn down_right(sq: SQ) -> SQ {
+        sq + SQ(7)
+    }
 
     #[inline(always)]
-    fn up_left(sq: SQ) -> SQ { sq - SQ(7) }
+    fn up_left(sq: SQ) -> SQ {
+        sq - SQ(7)
+    }
 
     #[inline(always)]
-    fn up_right(sq: SQ) -> SQ { sq - SQ(9) }
+    fn up_right(sq: SQ) -> SQ {
+        sq - SQ(9)
+    }
 
     #[inline(always)]
-    fn shift_down(bb: BitBoard) -> BitBoard { bb << (8) }
+    fn shift_down(bb: BitBoard) -> BitBoard {
+        bb << (8)
+    }
 
     #[inline(always)]
-    fn shift_up(bb: BitBoard) -> BitBoard { bb >> (8) }
+    fn shift_up(bb: BitBoard) -> BitBoard {
+        bb >> (8)
+    }
 
     #[inline(always)]
     fn shift_left(bb: BitBoard) -> BitBoard {
@@ -342,7 +398,7 @@ impl PieceTrait for PawnType {
 impl PawnType {
     #[inline(always)]
     fn incr() -> impl PieceTrait {
-        KnightType{}
+        KnightType {}
     }
 }
 
@@ -356,7 +412,7 @@ impl PieceTrait for KnightType {
 impl KnightType {
     #[inline(always)]
     fn incr() -> impl PieceTrait {
-        BishopType{}
+        BishopType {}
     }
 }
 
@@ -370,7 +426,7 @@ impl PieceTrait for BishopType {
 impl BishopType {
     #[inline(always)]
     fn incr() -> impl PieceTrait {
-        RookType{}
+        RookType {}
     }
 }
 
@@ -384,7 +440,7 @@ impl PieceTrait for RookType {
 impl RookType {
     #[inline(always)]
     fn incr() -> impl PieceTrait {
-        QueenType{}
+        QueenType {}
     }
 }
 
@@ -398,7 +454,7 @@ impl PieceTrait for QueenType {
 impl QueenType {
     #[inline(always)]
     fn incr() -> impl PieceTrait {
-        KingType{}
+        KingType {}
     }
 }
 
@@ -412,6 +468,6 @@ impl PieceTrait for KingType {
 impl KingType {
     #[inline(always)]
     fn incr() -> impl PieceTrait {
-        KingType{}
+        KingType {}
     }
 }

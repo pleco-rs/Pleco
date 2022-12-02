@@ -57,8 +57,8 @@ use super::masks::*;
 use super::*;
 
 use std::fmt;
-use std::ops::*;
 use std::mem::transmute;
+use std::ops::*;
 
 // TODO: Investigate possibility of using an Enum instead
 
@@ -124,7 +124,7 @@ impl SQ {
         let x = diff(self.rank_idx_of_sq(), sq_other.rank_idx_of_sq());
         let y = diff(self.file_idx_of_sq(), sq_other.file_idx_of_sq());
         if x > y {
-           x
+            x
         } else {
             y
         }
@@ -151,10 +151,8 @@ impl SQ {
     /// ```
     #[inline(always)]
     pub fn rank(self) -> Rank {
-//        ALL_RANKS[(self.0 >> 3) as usize]
-        unsafe {
-            transmute::<u8,Rank>((self.0 >> 3) & 0b0000_0111)
-        }
+        //        ALL_RANKS[(self.0 >> 3) as usize]
+        unsafe { transmute::<u8, Rank>((self.0 >> 3) & 0b0000_0111) }
     }
 
     /// Returns the `BitBoard` representation of a `Rank` that a `SQ` lies on.
@@ -181,9 +179,7 @@ impl SQ {
     /// ```
     #[inline(always)]
     pub fn file(self) -> File {
-        unsafe {
-            transmute::<u8,File>(self.0 & 0b0000_0111)
-        }
+        unsafe { transmute::<u8, File>(self.0 & 0b0000_0111) }
     }
 
     /// Returns the `BitBoard` representation of a `File` that a `SQ` lies on.
@@ -209,7 +205,7 @@ impl SQ {
             ROOK_BLACK_QSIDE_START => C_BLACK_Q_MASK,
             WHITE_KING_START => C_WHITE_K_MASK | C_WHITE_Q_MASK,
             BLACK_KING_START => C_BLACK_K_MASK | C_BLACK_Q_MASK,
-            _ => 0
+            _ => 0,
         }
     }
 
@@ -403,4 +399,3 @@ impl fmt::Display for SQ {
         write!(f, "{}", SQ_DISPLAY[self.0 as usize])
     }
 }
-

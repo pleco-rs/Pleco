@@ -3,33 +3,20 @@
 //! involving the manipulation of bits.
 
 static POPCNT8: &'static [u8] = &[
-    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
-    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
-    4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
+    0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
+    3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
 ];
 
 static DEBRUIJ_T: &'static [u8] = &[
-    0, 47,  1, 56, 48, 27,  2, 60,
-    57, 49, 41, 37, 28, 16,  3, 61,
-    54, 58, 35, 52, 50, 42, 21, 44,
-    38, 32, 29, 23, 17, 11,  4, 62,
-    46, 55, 26, 59, 40, 36, 15, 53,
-    34, 51, 20, 43, 31, 22, 10, 45,
-    25, 39, 14, 33, 19, 30,  9, 24,
-    13, 18,  8, 12,  7,  6,  5, 63
+    0, 47, 1, 56, 48, 27, 2, 60, 57, 49, 41, 37, 28, 16, 3, 61, 54, 58, 35, 52, 50, 42, 21, 44, 38,
+    32, 29, 23, 17, 11, 4, 62, 46, 55, 26, 59, 40, 36, 15, 53, 34, 51, 20, 43, 31, 22, 10, 45, 25,
+    39, 14, 33, 19, 30, 9, 24, 13, 18, 8, 12, 7, 6, 5, 63,
 ];
 
 const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
@@ -40,7 +27,6 @@ const DEBRUIJ_M: u64 = 0x03f7_9d71_b4cb_0a89;
 
 // PopCount: Rust:  22 s
 // PopCount: Old :  37 s
-
 
 /// Counts the number of bits
 ///
@@ -70,7 +56,9 @@ pub fn popcount64(x: u64) -> u8 {
 pub fn bit_scan_forward(bits: u64) -> u8 {
     assert_ne!(bits, 0);
     unsafe {
-        *DEBRUIJ_T.get_unchecked((((bits ^ bits.wrapping_sub(1)).wrapping_mul(DEBRUIJ_M)).wrapping_shr(58)) as usize)
+        *DEBRUIJ_T.get_unchecked(
+            (((bits ^ bits.wrapping_sub(1)).wrapping_mul(DEBRUIJ_M)).wrapping_shr(58)) as usize,
+        )
     }
 }
 
@@ -109,9 +97,7 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
     bb |= bb >> 8;
     bb |= bb >> 16;
     bb |= bb >> 32;
-    unsafe {
-        *DEBRUIJ_T.get_unchecked((bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize)
-    }
+    unsafe { *DEBRUIJ_T.get_unchecked((bb.wrapping_mul(DEBRUIJ_M)).wrapping_shr(58) as usize) }
 }
 
 /// Returns if there are more than one bits in a u64.
@@ -130,7 +116,6 @@ pub fn bit_scan_reverse(mut bb: u64) -> u8 {
 pub fn more_than_one(x: u64) -> bool {
     (x & (x.wrapping_sub(1))) != 0
 }
-
 
 /// Returns the least significant bit
 ///
@@ -157,9 +142,14 @@ pub fn popcount_table(x: u64) -> u8 {
         return 1;
     }
 
-    POPCNT8[x >> 56] + POPCNT8[(x >> 48) & 0xFF] + POPCNT8[(x >> 40) & 0xFF] +
-        POPCNT8[(x >> 32) & 0xFF] + POPCNT8[(x >> 24) & 0xFF] + POPCNT8[(x >> 16) & 0xFF] +
-        POPCNT8[(x >> 8) & 0xFF] + POPCNT8[x & 0xFF]
+    POPCNT8[x >> 56]
+        + POPCNT8[(x >> 48) & 0xFF]
+        + POPCNT8[(x >> 40) & 0xFF]
+        + POPCNT8[(x >> 32) & 0xFF]
+        + POPCNT8[(x >> 24) & 0xFF]
+        + POPCNT8[(x >> 16) & 0xFF]
+        + POPCNT8[(x >> 8) & 0xFF]
+        + POPCNT8[x & 0xFF]
 }
 
 /// Counts the number of bits in a u64.
@@ -182,7 +172,6 @@ pub fn diff(x: u8, y: u8) -> u8 {
 pub fn msb(x: u64) -> u64 {
     (1 as u64).wrapping_shl(63 - x.leading_zeros())
 }
-
 
 /// Reverses all the bytes in a u64.
 ///
@@ -221,10 +210,14 @@ pub fn reverse_bytes(b: u64) -> u64 {
 /// ```
 #[inline]
 pub fn reverse_byte(b: u8) -> u8 {
-    let m: u8 = ((0b0000_0001 & b) << 7) | ((0b0000_0010 & b) << 5) | ((0b0000_0100 & b) << 3) |
-        ((0b0000_1000 & b) << 1) |
-        ((0b0001_0000 & b) >> 1) | ((0b0010_0000 & b) >> 3) |
-        ((0b0100_0000 & b) >> 5) | ((0b1000_0000 & b) >> 7);
+    let m: u8 = ((0b0000_0001 & b) << 7)
+        | ((0b0000_0010 & b) << 5)
+        | ((0b0000_0100 & b) << 3)
+        | ((0b0000_1000 & b) << 1)
+        | ((0b0001_0000 & b) >> 1)
+        | ((0b0010_0000 & b) >> 3)
+        | ((0b0100_0000 & b) >> 5)
+        | ((0b1000_0000 & b) >> 7);
     m
 }
 
@@ -267,7 +260,7 @@ mod tests {
 
     #[test]
     fn msb_t() {
-        assert_eq!(msb(0b0011),0b0010);
+        assert_eq!(msb(0b0011), 0b0010);
     }
 
     #[test]
@@ -287,5 +280,4 @@ mod tests {
         assert_eq!(lsb(0b100001000000), 0b1000000);
         assert_eq!(lsb(0b1), 0b1);
     }
-
 }

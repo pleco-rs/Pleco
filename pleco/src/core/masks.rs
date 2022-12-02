@@ -77,27 +77,13 @@ pub const LIGHT_SQUARES: u64 = !DARK_SQUARES;
 /// Array of all files and their corresponding bits, indexed from
 /// file A to file H.
 pub static FILE_BB: [u64; FILE_CNT] = [
-    FILE_A,
-    FILE_B,
-    FILE_C,
-    FILE_D,
-    FILE_E,
-    FILE_F,
-    FILE_G,
-    FILE_H,
+    FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H,
 ];
 
 /// Array of all ranks and their corresponding bits, indexed from
 /// rank 1 to rank 8.
 pub static RANK_BB: [u64; RANK_CNT] = [
-    RANK_1,
-    RANK_2,
-    RANK_3,
-    RANK_4,
-    RANK_5,
-    RANK_6,
-    RANK_7,
-    RANK_8,
+    RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8,
 ];
 
 /// Direction of going north on a chessboard.
@@ -192,27 +178,24 @@ pub const C_BLACK_K_MASK: u8 = 0b0000_0010;
 pub const C_BLACK_Q_MASK: u8 = 0b0000_0001;
 
 /// Array containing all the starting rook positions for each side, for each player.
-pub static CASTLING_ROOK_START: [[u8; CASTLING_SIDES]; PLAYER_CNT] =
-    [
-        [ROOK_WHITE_KSIDE_START, ROOK_WHITE_QSIDE_START],
-        [ROOK_BLACK_KSIDE_START, ROOK_BLACK_QSIDE_START],
-    ];
+pub static CASTLING_ROOK_START: [[u8; CASTLING_SIDES]; PLAYER_CNT] = [
+    [ROOK_WHITE_KSIDE_START, ROOK_WHITE_QSIDE_START],
+    [ROOK_BLACK_KSIDE_START, ROOK_BLACK_QSIDE_START],
+];
 
 /// Bits representing the castling path for a white king-side castle.
-pub const CASTLING_PATH_WHITE_K_SIDE: u64 = (1 as u64) << SQ::F1.0 as u32 |
-    (1 as u64) << SQ::G1.0 as u32;
+pub const CASTLING_PATH_WHITE_K_SIDE: u64 =
+    (1 as u64) << SQ::F1.0 as u32 | (1 as u64) << SQ::G1.0 as u32;
 /// Bits representing the castling path for a white queen-side castle.
-pub const CASTLING_PATH_WHITE_Q_SIDE: u64 = (1 as u64) << SQ::B1.0 as u32 |
-    (1 as u64) << SQ::C1.0 as u32 |
-    (1 as u64) << SQ::D1.0 as u32;
+pub const CASTLING_PATH_WHITE_Q_SIDE: u64 =
+    (1 as u64) << SQ::B1.0 as u32 | (1 as u64) << SQ::C1.0 as u32 | (1 as u64) << SQ::D1.0 as u32;
 
 /// Bits representing the castling path for a black king-side castle.
-pub const CASTLING_PATH_BLACK_K_SIDE: u64 = (1 as u64) << SQ::F8.0 as u32 |
-    (1 as u64) << SQ::G8.0 as u32;
+pub const CASTLING_PATH_BLACK_K_SIDE: u64 =
+    (1 as u64) << SQ::F8.0 as u32 | (1 as u64) << SQ::G8.0 as u32;
 /// Bits representing the castling path for a black queen-side castle.
-pub const CASTLING_PATH_BLACK_Q_SIDE: u64 = (1 as u64) << SQ::B8.0 as u32 |
-    (1 as u64) << SQ::C8.0 as u32 |
-    (1 as u64) << SQ::D8.0 as u32;
+pub const CASTLING_PATH_BLACK_Q_SIDE: u64 =
+    (1 as u64) << SQ::B8.0 as u32 | (1 as u64) << SQ::C8.0 as u32 | (1 as u64) << SQ::D8.0 as u32;
 
 /// Array for the bits representing the castling path for a white castle, indexed
 /// per the side available (king-side, queen-side).
@@ -226,22 +209,18 @@ pub static CASTLING_PATH_BLACK: [u64; CASTLING_SIDES] =
 
 /// Array for the bits representing the castling path for castle, indexed
 /// per the side available (king-side, queen-side), as well as indexed per player.
-pub static CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] =
-    [
-        [CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE],
-        [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE],
-    ];
+pub static CASTLING_PATH: [[u64; CASTLING_SIDES]; PLAYER_CNT] = [
+    [CASTLING_PATH_WHITE_K_SIDE, CASTLING_PATH_WHITE_Q_SIDE],
+    [CASTLING_PATH_BLACK_K_SIDE, CASTLING_PATH_BLACK_Q_SIDE],
+];
 
 /// Display order for a squares. Used for printing, and for answering the question
 /// of which square to print first.
-pub static SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
-    48, 49, 50, 51, 52, 53, 54, 55,
-    40, 41, 42, 43, 44, 45, 46, 47,
-    32, 33, 34, 35, 36, 37, 38, 39,
-    24, 25, 26, 27, 28, 29, 30, 31,
-    16, 17, 18, 19, 20, 21, 22, 23,
-    8,  9,  10, 11, 12, 13, 14, 15,
-    0,  1,   2,  3,  4,  5,  6,  7];
+pub static SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [
+    56, 57, 58, 59, 60, 61, 62, 63, 48, 49, 50, 51, 52, 53, 54, 55, 40, 41, 42, 43, 44, 45, 46, 47,
+    32, 33, 34, 35, 36, 37, 38, 39, 24, 25, 26, 27, 28, 29, 30, 31, 16, 17, 18, 19, 20, 21, 22, 23,
+    8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7,
+];
 
 /// Array mapping a square index to a string representation.
 ///
@@ -255,14 +234,11 @@ pub static SQ_DISPLAY_ORDER: [u8; SQ_CNT] = [56, 57, 58, 59, 60, 61, 62, 63,
 /// assert_eq!(SQ_DISPLAY[8], "a2");
 /// ```
 pub static SQ_DISPLAY: [&str; SQ_CNT] = [
-    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
-    "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
-    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
-    "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
-    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
-    "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
-    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
-    "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8"];
+    "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1", "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+    "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3", "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+    "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5", "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+    "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7", "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+];
 
 /// Characters for each combination of player and piece.
 ///

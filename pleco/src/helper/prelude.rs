@@ -11,17 +11,17 @@
 //!
 //! [`Helper`]: ../struct.Helper.html
 
+use super::boards;
+use super::magic;
 use super::psqt;
 use super::zobrist;
-use super::magic;
-use super::boards;
 
-use {SQ,BitBoard,Player,PieceType,File,Rank,Piece};
-use core::score::{Score,Value};
+use core::score::{Score, Value};
+use {BitBoard, File, Piece, PieceType, Player, Rank, SQ};
 
-use std::sync::atomic::{AtomicBool,Ordering,fence,compiler_fence};
-use std::sync::{Once, ONCE_INIT};
 use std::mem;
+use std::sync::atomic::{compiler_fence, fence, AtomicBool, Ordering};
+use std::sync::{Once, ONCE_INIT};
 
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -69,8 +69,7 @@ pub fn rook_moves(occupied: BitBoard, sq: SQ) -> BitBoard {
 #[inline(always)]
 pub fn queen_moves(occupied: BitBoard, sq: SQ) -> BitBoard {
     debug_assert!(sq.is_okay());
-    BitBoard(magic::rook_attacks(occupied.0, sq.0)
-           | magic::bishop_attacks(occupied.0, sq.0))
+    BitBoard(magic::rook_attacks(occupied.0, sq.0) | magic::bishop_attacks(occupied.0, sq.0))
 }
 
 // BOARD FUNCTIONS
@@ -121,13 +120,13 @@ pub fn adjacent_file(f: File) -> BitBoard {
 /// Basically, given square x, returns the BitBoard of squares a pawn on x attacks.
 #[inline(always)]
 pub fn pawn_attacks_from(sq: SQ, player: Player) -> BitBoard {
-    BitBoard(boards::pawn_attacks_from(sq,player))
+    BitBoard(boards::pawn_attacks_from(sq, player))
 }
 
 /// Returns if three Squares are in the same diagonal, file, or rank.
 #[inline(always)]
 pub fn aligned(s1: SQ, s2: SQ, s3: SQ) -> bool {
-    boards::aligned(s1,s2,s3)
+    boards::aligned(s1, s2, s3)
 }
 
 /// Returns the ring of bits surrounding the square sq at a specified distance.
@@ -137,13 +136,13 @@ pub fn aligned(s1: SQ, s2: SQ, s3: SQ) -> bool {
 /// distance must be less than 8, or else a panic will occur.
 #[inline(always)]
 pub fn ring_distance(sq: SQ, distance: u8) -> BitBoard {
-    BitBoard(boards::ring_distance(sq,distance))
+    BitBoard(boards::ring_distance(sq, distance))
 }
 
 /// Returns the BitBoard of all squares in the rank in front of the given one.
 #[inline(always)]
 pub fn forward_rank_bb(player: Player, rank: Rank) -> BitBoard {
-    BitBoard(boards::forward_rank_bb(player,rank))
+    BitBoard(boards::forward_rank_bb(player, rank))
 }
 
 /// Returns the `BitBoard` of all squares that can be attacked by a pawn
@@ -157,7 +156,7 @@ pub fn forward_rank_bb(player: Player, rank: Rank) -> BitBoard {
 /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
 #[inline(always)]
 pub fn pawn_attacks_span(player: Player, sq: SQ) -> BitBoard {
-    BitBoard(boards::pawn_attacks_span(player,sq))
+    BitBoard(boards::pawn_attacks_span(player, sq))
 }
 
 /// Returns the BitBoard of all squares in the file in front of the given one.
@@ -167,9 +166,8 @@ pub fn pawn_attacks_span(player: Player, sq: SQ) -> BitBoard {
 /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
 #[inline(always)]
 pub fn forward_file_bb(player: Player, sq: SQ) -> BitBoard {
-    BitBoard(boards::forward_file_bb(player,sq))
+    BitBoard(boards::forward_file_bb(player, sq))
 }
-
 
 /// Returns a `BitBoard` allowing for testing of the a pawn being a
 /// "passed pawn".
@@ -215,8 +213,6 @@ pub fn z_no_pawns() -> u64 {
     zobrist::z_no_pawns()
 }
 
-
-
 // PSQT FUNCTIONS
 
 /// Returns the score for a player's piece being at a particular square.
@@ -236,6 +232,6 @@ pub fn piece_value(piece: Piece, eg: bool) -> Value {
 /// it'll return the midgame value.
 #[inline(always)]
 pub fn piecetype_value(piece_type: PieceType, eg: bool) -> Value {
-    let piece: Piece = unsafe {mem::transmute(piece_type)};
+    let piece: Piece = unsafe { mem::transmute(piece_type) };
     psqt::piece_value(piece, eg)
 }

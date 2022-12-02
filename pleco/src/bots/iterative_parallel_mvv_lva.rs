@@ -1,10 +1,9 @@
 //! The iterative jamboree algorithm.
-use board::*;
-use core::*;
-use core::piece_move::BitMove;
 use super::*;
+use board::*;
+use core::piece_move::BitMove;
+use core::*;
 use rayon;
-
 
 const MAX_PLY: u16 = 5;
 
@@ -56,8 +55,6 @@ pub fn iterative_deepening(board: &mut Board, max_depth: u16) -> BitMove {
     best_move.bit_move
 }
 
-
-
 fn jamboree(
     board: &mut Board,
     mut alpha: i16,
@@ -87,7 +84,6 @@ fn jamboree(
 
     let (seq, non_seq) = moves.split_at_mut(amount_seq);
 
-
     let mut best_move: BitMove = BitMove::null();
     let mut best_value: i16 = NEG_INF_V;
     for mov in seq {
@@ -95,9 +91,8 @@ fn jamboree(
         let return_move = jamboree(board, -beta, -alpha, max_depth, plys_seq).negate();
         board.undo_move();
 
-
         if return_move.score > best_value {
-                best_move = *mov;
+            best_move = *mov;
             best_value = return_move.score;
 
             if return_move.score > alpha {
@@ -153,15 +148,15 @@ fn parallel_task(
                 };
             }
         }
-
     } else {
         let mid_point = slice.len() / 2;
         let (left, right) = slice.split_at(mid_point);
         let mut left_clone = board.parallel_clone();
 
-        let (left_move, right_move) = rayon::join (
+        let (left_move, right_move) = rayon::join(
             || parallel_task(left, &mut left_clone, alpha, beta, max_depth, plys_seq),
-            || parallel_task(right, board, alpha, beta, max_depth, plys_seq));
+            || parallel_task(right, board, alpha, beta, max_depth, plys_seq),
+        );
 
         if left_move.score > alpha {
             alpha = left_move.score;
@@ -176,11 +171,9 @@ fn parallel_task(
         bit_move: best_move,
         score: alpha,
     }
-
 }
 
 fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u16) -> ScoringMove {
-
     if board.depth() >= max_depth {
         if board.in_check() || board.piece_last_captured().is_some() {
             return quiescence_search(board, alpha, beta, max_depth + 2);
@@ -189,8 +182,10 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
     }
 
     // Futility Pruning
-    if max_depth > 2 && board.depth() == max_depth - 1 &&
-        board.piece_last_captured().is_none() && !board.in_check()
+    if max_depth > 2
+        && board.depth() == max_depth - 1
+        && board.piece_last_captured().is_none()
+        && !board.in_check()
     {
         let eval = eval_board(board);
         if eval.score + 100 < alpha {
@@ -200,7 +195,6 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
 
     let moves = board.generate_moves();
 
-
     if moves.is_empty() {
         if board.in_check() {
             return ScoringMove::blank(MATE_V + (board.depth() as i16));
@@ -208,8 +202,6 @@ fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, max_depth: u1
             return ScoringMove::blank(DRAW_V);
         }
     }
-
-
 
     let mut best_move: BitMove = BitMove::null();
 

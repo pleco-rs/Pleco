@@ -69,51 +69,45 @@
 
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
-
-
 //#![crate_type = "rlib"]
-
 #![cfg_attr(feature = "nightly", feature(core_intrinsics))]
 #![cfg_attr(feature = "nightly", feature(const_slice_ptr_len))]
 #![cfg_attr(feature = "nightly", feature(trusted_len))]
-
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::unreadable_literal)]
-
 #![allow(dead_code)]
 
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
 extern crate lazy_static;
+extern crate mucow;
 extern crate num_cpus;
 extern crate rand;
 extern crate rayon;
-extern crate mucow;
 
-pub mod core;
 pub mod board;
 pub mod bots;
+pub mod core;
 pub mod helper;
 pub mod tools;
 
 pub use board::Board;
-pub use core::piece_move::{BitMove,ScoringMove};
-pub use core::move_list::{MoveList,ScoringMoveList};
-pub use core::sq::SQ;
 pub use core::bitboard::BitBoard;
+pub use core::move_list::{MoveList, ScoringMoveList};
+pub use core::piece_move::{BitMove, ScoringMove};
+pub use core::sq::SQ;
+pub use core::{File, Piece, PieceType, Player, Rank};
 pub use helper::Helper;
-pub use core::{Player, Piece, PieceType, Rank, File};
-
 
 pub mod bot_prelude {
     //! Easy importing of all available bots.
-    pub use bots::RandomBot;
+    pub use bots::AlphaBetaSearcher;
+    pub use bots::IterativeSearcher;
+    pub use bots::JamboreeSearcher;
     pub use bots::MiniMaxSearcher;
     pub use bots::ParallelMiniMaxSearcher;
-    pub use bots::AlphaBetaSearcher;
-    pub use bots::JamboreeSearcher;
-    pub use bots::IterativeSearcher;
+    pub use bots::RandomBot;
 
     pub use tools::Searcher;
 }

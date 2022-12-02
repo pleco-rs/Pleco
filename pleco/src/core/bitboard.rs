@@ -25,16 +25,16 @@
 
 extern crate rand;
 
-use super::sq::SQ;
 use super::bit_twiddles::*;
 use super::masks::*;
-use tools::prng::PRNG;
+use super::sq::SQ;
 use super::Player;
+use tools::prng::PRNG;
 
-use std::mem;
-use std::ops::*;
 use std::fmt;
 use std::hint::unreachable_unchecked;
+use std::mem;
+use std::ops::*;
 
 /// A `BitBoard` is simply a 64 bit long integer where each
 /// bit maps to a specific square. Used for mapping occupancy, where '1' represents
@@ -46,7 +46,6 @@ pub struct BitBoard(pub u64);
 impl_bit_ops!(BitBoard, u64);
 
 impl BitBoard {
-
     /// BitBoard of File A.
     pub const FILE_A: BitBoard = BitBoard(FILE_A);
     /// BitBoard of File B.
@@ -208,7 +207,7 @@ impl BitBoard {
     /// that bit from the `BitBoard`. If there are no bits left (the board is empty), returns
     /// `None`.
     #[inline(always)]
-    pub fn pop_some_lsb_and_bit(&mut self) ->  Option<(SQ, BitBoard)> {
+    pub fn pop_some_lsb_and_bit(&mut self) -> Option<(SQ, BitBoard)> {
         if self.is_empty() {
             None
         } else {
@@ -245,7 +244,9 @@ impl BitBoard {
     /// Returns a clone of a `[[BitBoard; 6]; 2]`. Used to duplicate occupancy `BitBoard`s of each
     /// piece for each player.
     #[inline(always)]
-    pub fn clone_all_occ(bbs: &[[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT], ) -> [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] {
+    pub fn clone_all_occ(
+        bbs: &[[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT],
+    ) -> [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] {
         let new_bbs: [[BitBoard; PIECE_TYPE_CNT]; PLAYER_CNT] = unsafe { mem::transmute_copy(bbs) };
         new_bbs
     }
@@ -290,13 +291,13 @@ impl fmt::Display for BitBoard {
 /// Sets the Number of random bits on a randomly-generated `BitBoard`.
 #[derive(Eq, PartialEq)]
 enum RandAmount {
-    VeryDense, // Average 48 bits
-    Dense,    // Average 32 bits
-    Standard,  // Average 16 bits
-    Sparse,   // Average 8 bits
-    VerySparse, // Average 6 bits
+    VeryDense,       // Average 48 bits
+    Dense,           // Average 32 bits
+    Standard,        // Average 16 bits
+    Sparse,          // Average 8 bits
+    VerySparse,      // Average 6 bits
     ExtremelySparse, // Average 4 bits
-    Singular // One and only one bit set.
+    Singular,        // One and only one bit set.
 }
 
 /// BitBoard generating structure.
@@ -305,7 +306,7 @@ pub struct RandBitBoard {
     seed: u64,
     rand: RandAmount,
     max: u16,
-    min: u16
+    min: u16,
 }
 
 impl Default for RandBitBoard {
@@ -315,7 +316,7 @@ impl Default for RandBitBoard {
             seed: 0,
             rand: RandAmount::Standard,
             max: 64,
-            min: 1
+            min: 1,
         }
     }
 }
@@ -326,7 +327,7 @@ impl RandBitBoard {
         let mut boards: Vec<BitBoard> = Vec::with_capacity(amount);
         for _x in 0..amount {
             boards.push(self.go());
-        };
+        }
         boards
     }
 
@@ -375,7 +376,7 @@ impl RandBitBoard {
     /// numbers. The seed is a random number for the random numbers to be generated
     /// off of.
     pub fn pseudo_random(mut self, seed: u64) -> Self {
-        self.seed = if seed == 0 {1} else {seed};
+        self.seed = if seed == 0 { 1 } else { seed };
         self.prng = PRNG::init(seed);
         self
     }
@@ -388,12 +389,14 @@ impl RandBitBoard {
         loop {
             let num = match self.rand {
                 RandAmount::VeryDense => self.prng.rand() | self.prng.rand(), // Average 48 bits
-                RandAmount::Dense => self.prng.rand(),    // Average 32 bits
+                RandAmount::Dense => self.prng.rand(),                        // Average 32 bits
                 RandAmount::Standard => self.prng.rand() & self.prng.rand(),  // Average 16 bits
-                RandAmount::Sparse => self.prng.sparse_rand(),   // Average 8 bits
-                RandAmount::VerySparse => self.prng.sparse_rand() & (self.prng.rand() | self.prng.rand()), // Average 6 bits
-                RandAmount::ExtremelySparse => self.prng.sparse_rand() & self.prng.rand(),   // Average 4 bits
-                RandAmount::Singular => unsafe {unreachable_unchecked()}
+                RandAmount::Sparse => self.prng.sparse_rand(),                // Average 8 bits
+                RandAmount::VerySparse => {
+                    self.prng.sparse_rand() & (self.prng.rand() | self.prng.rand())
+                } // Average 6 bits
+                RandAmount::ExtremelySparse => self.prng.sparse_rand() & self.prng.rand(), // Average 4 bits
+                RandAmount::Singular => unsafe { unreachable_unchecked() },
             };
             let count = popcount64(num) as u16;
             if count >= self.min && count <= self.max {
@@ -409,7 +412,6 @@ impl RandBitBoard {
         self.prng.rand() as usize
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -449,7 +451,7 @@ mod tests {
             .avg(16)
             .many(1000);
 
-        assert_eq!(bbs_1.len(),bbs_2.len());
+        assert_eq!(bbs_1.len(), bbs_2.len());
         while !bbs_1.is_empty() {
             assert_eq!(bbs_1.pop(), bbs_2.pop());
         }

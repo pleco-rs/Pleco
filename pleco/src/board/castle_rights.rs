@@ -8,14 +8,13 @@
 //!
 //! [`Castling`]: struct.Castling.html
 
+use core::masks::*;
 use core::*;
 use std::fmt;
-use core::masks::*;
 
 use core::sq::SQ;
 
 const ALL_CASTLING: u8 = 0b0000_1111;
-
 
 bitflags! {
     /// Structure to help with recognizing the various possibilities of castling.
@@ -55,13 +54,13 @@ impl Castling {
     #[doc(hidden)]
     #[inline]
     pub const fn all_castling() -> Self {
-        Castling {bits: ALL_CASTLING}
+        Castling { bits: ALL_CASTLING }
     }
 
     #[doc(hidden)]
     #[inline]
     pub const fn empty_set() -> Self {
-        Castling {bits: 0}
+        Castling { bits: 0 }
     }
 
     /// Removes King-Side castling possibility for a single player
@@ -86,37 +85,32 @@ impl Castling {
     #[inline]
     pub fn castle_rights(self, player: Player, side: CastleType) -> bool {
         match player {
-            Player::White => {
-                match side {
-                    CastleType::KingSide => self.contains(Self::WHITE_K),
-                    CastleType::QueenSide => self.contains(Self::WHITE_Q),
-                }
-            }
-            Player::Black => {
-                match side {
-                    CastleType::KingSide => self.contains(Self::BLACK_K),
-                    CastleType::QueenSide => self.contains(Self::BLACK_Q),
-                }
-            }
+            Player::White => match side {
+                CastleType::KingSide => self.contains(Self::WHITE_K),
+                CastleType::QueenSide => self.contains(Self::WHITE_Q),
+            },
+            Player::Black => match side {
+                CastleType::KingSide => self.contains(Self::BLACK_K),
+                CastleType::QueenSide => self.contains(Self::BLACK_Q),
+            },
         }
     }
 
     #[inline]
     pub fn player_can_castle(self, player: Player) -> Castling {
         Castling {
-            bits: self.bits & (Castling::WHITE_ALL.bits >> (2 * player as u16))
+            bits: self.bits & (Castling::WHITE_ALL.bits >> (2 * player as u16)),
         }
     }
 
     /// Returns if both players have lost their ability to castle
     #[inline]
     pub fn no_castling(self) -> bool {
-        !self.contains(Castling::WHITE_K) &&
-            !self.contains(Castling::WHITE_Q) &&
-            !self.contains(Castling::BLACK_K) &&
-            !self.contains(Castling::BLACK_Q)
+        !self.contains(Castling::WHITE_K)
+            && !self.contains(Castling::WHITE_Q)
+            && !self.contains(Castling::BLACK_K)
+            && !self.contains(Castling::BLACK_Q)
     }
-
 
     #[inline]
     pub fn update_castling(&mut self, to: SQ, from: SQ) -> u8 {
@@ -145,7 +139,7 @@ impl Castling {
             'Q' => Castling::WHITE_Q.bits,
             'k' => Castling::BLACK_K.bits,
             'q' => Castling::BLACK_Q.bits,
-            '-' => {0}
+            '-' => 0,
             _ => panic!(),
         };
     }
@@ -180,13 +174,11 @@ impl Castling {
     }
 }
 
-
 impl fmt::Display for Castling {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.pretty_string())
     }
 }
-
 
 #[cfg(test)]
 mod tests {

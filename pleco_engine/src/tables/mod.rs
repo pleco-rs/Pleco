@@ -1,38 +1,36 @@
-
-pub mod pawn_table;
-pub mod material;
-pub mod counter_move;
-pub mod continuation;
-pub mod capture_piece_history;
 pub mod butterfly;
+pub mod capture_piece_history;
+pub mod continuation;
+pub mod counter_move;
+pub mod material;
+pub mod pawn_table;
 
-use std::ptr::NonNull;
-use std::alloc::{Layout, Global, handle_alloc_error, dealloc, alloc_zeroed};
+use std::alloc::{alloc_zeroed, dealloc, handle_alloc_error, Global, Layout};
 use std::mem;
-use std::ptr;
 use std::ops::*;
+use std::ptr;
+use std::ptr::NonNull;
 
 pub mod prelude {
     // easier exporting :)
-    pub use super::counter_move::CounterMoveHistory;
-    pub use super::continuation::{ContinuationHistory,PieceToHistory};
     pub use super::butterfly::ButterflyHistory;
     pub use super::capture_piece_history::CapturePieceToHistory;
-    pub use super::{StatBoard,NumStatBoard,NumStatCube};
+    pub use super::continuation::{ContinuationHistory, PieceToHistory};
+    pub use super::counter_move::CounterMoveHistory;
+    pub use super::{NumStatBoard, NumStatCube, StatBoard};
 }
-
 
 // TODO: Create StatBoards using const generics: https://github.com/rust-lang/rust/issues/44580
 // TODO: Create 3DBoard using const generics: https://github.com/rust-lang/rust/issues/44580
 
-
-pub trait StatBoard<T, IDX>: Sized + IndexMut<IDX, Output=T>
-    where T: Copy + Clone + Sized, {
-
+pub trait StatBoard<T, IDX>: Sized + IndexMut<IDX, Output = T>
+where
+    T: Copy + Clone + Sized,
+{
     const FILL: T;
 
     fn new() -> Self {
-        unsafe {mem::zeroed()}
+        unsafe { mem::zeroed() }
     }
 
     fn clear(&mut self) {
@@ -51,8 +49,7 @@ pub trait StatBoard<T, IDX>: Sized + IndexMut<IDX, Output=T>
     }
 }
 
-pub trait NumStatBoard<IDX>: StatBoard<i16,IDX>
-{
+pub trait NumStatBoard<IDX>: StatBoard<i16, IDX> {
     const D: i16;
     fn update(&mut self, idx: IDX, bonus: i16) {
         assert!(bonus.abs() <= Self::D); // Ensure range is [-32 * D, 32 * D]
@@ -61,8 +58,7 @@ pub trait NumStatBoard<IDX>: StatBoard<i16,IDX>
     }
 }
 
-
-pub trait NumStatCube<IDX>: StatBoard<i16,IDX> {
+pub trait NumStatCube<IDX>: StatBoard<i16, IDX> {
     const D: i32;
     const W: i32;
 
@@ -100,7 +96,7 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
         if T::ENTRY_COUNT.count_ones() != 1 {
             None
         } else {
-            unsafe  {
+            unsafe {
                 let table = TableBase {
                     table: TableBase::alloc(),
                 };
@@ -112,9 +108,7 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
     /// Gets a mutable reference to an entry with a certain key.
     #[inline(always)]
     pub fn get_mut(&mut self, key: u64) -> &mut T {
-        unsafe {
-            &mut *self.get_ptr(key)
-        }
+        unsafe { &mut *self.get_ptr(key) }
     }
 
     /// Gets a mutable pointer to an entry with a certain key.
@@ -147,7 +141,7 @@ impl<T: Sized + TableBaseConst> TableBase<T> {
     /// de-allocates the current table.
     unsafe fn de_alloc(&mut self) {
         let ptr: NonNull<u8> = mem::transmute(self.table);
-        dealloc(ptr.as_ptr(),Layout::array::<T>(T::ENTRY_COUNT).unwrap());
+        dealloc(ptr.as_ptr(), Layout::array::<T>(T::ENTRY_COUNT).unwrap());
     }
 }
 

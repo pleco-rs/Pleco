@@ -8,10 +8,9 @@
 //! See [this Wikipedia article](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
 //! for more information.
 
-
-use super::{Board,FenBuildError};
-use {BitBoard, PieceType, Player, Rank, SQ};
 use super::super::core::sq::NO_SQ;
+use super::{Board, FenBuildError};
+use {BitBoard, PieceType, Player, Rank, SQ};
 
 /// The fen string for the start position.
 pub const OPENING_POS_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -47,21 +46,21 @@ pub static STANDARD_FENS_MIDDLE_POS: [&'static str; 27] = [
     "6k1/6p1/P6p/r1N5/5p2/7P/1b3PP1/4R1K1 w - - 0 1",
     "1r3k2/4q3/2Pp3b/3Bp3/2Q2p2/1p1P2P1/1P2KP2/3N4 w - - 0 1",
     "6k1/4pp1p/3p2p1/P1pPb3/R7/1r2P1PP/3B1P2/6K1 w - - 0 1",
-    "8/3p3B/5p2/5P2/p7/PP5b/k7/6K1 w - - 0 1"
+    "8/3p3B/5p2/5P2/p7/PP5b/k7/6K1 w - - 0 1",
 ];
 
 #[doc(hidden)]
 pub static STANDARD_FENS_5_PIECE_POS: [&'static str; 3] = [
-    "8/8/8/8/5kp1/P7/8/1K1N4 w - - 0 1",     // Kc2 - mate
-    "8/8/8/5N2/8/p7/8/2NK3k w - - 0 1",      // Na2 - mate
-    "8/3k4/8/8/8/4B3/4KB2/2B5 w - - 0 1",    // draw
+    "8/8/8/8/5kp1/P7/8/1K1N4 w - - 0 1",  // Kc2 - mate
+    "8/8/8/5N2/8/p7/8/2NK3k w - - 0 1",   // Na2 - mate
+    "8/3k4/8/8/8/4B3/4KB2/2B5 w - - 0 1", // draw
 ];
 
 #[doc(hidden)]
 pub static STANDARD_FENS_6_PIECE_POS: [&'static str; 3] = [
-    "8/8/1P6/5pr1/8/4R3/7k/2K5 w - - 0 1",   // Re5 - mate
-    "8/2p4P/8/kr6/6R1/8/8/1K6 w - - 0 1",    // Ka2 - mate
-    "8/8/3P3k/8/1p6/8/1P6/1K3n2 b - - 0 1",  // Nd2 - draw
+    "8/8/1P6/5pr1/8/4R3/7k/2K5 w - - 0 1",  // Re5 - mate
+    "8/2p4P/8/kr6/6R1/8/8/1K6 w - - 0 1",   // Ka2 - mate
+    "8/8/3P3k/8/1p6/8/1P6/1K3n2 b - - 0 1", // Nd2 - draw
 ];
 
 #[doc(hidden)]
@@ -76,7 +75,6 @@ pub static STANDARD_FEN_MATE_STALEMATE: [&'static str; 4] = [
     "8/8/8/8/8/6k1/6p1/6K1 w - - 0 1",
     "7k/7P/6K1/8/3B4/8/8/8 b - - 0 1",
 ];
-
 
 lazy_static! {
     #[doc(hidden)]
@@ -102,11 +100,13 @@ lazy_static! {
 ///
 /// [`Board`]: ../struct.Board.html
 /// [`Board::new_from_fen`]: ../struct.Board.html#method.new_from_fen
-pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
+pub fn is_valid_fen(board: Board) -> Result<Board, FenBuildError> {
     let checks = board.checkers();
     let num_checks = checks.count_bits();
     // Cant be more than 2 checking pieces at a time
-    if num_checks > 2 { return Err(FenBuildError::IllegalNumCheckingPieces {num: num_checks}) }
+    if num_checks > 2 {
+        return Err(FenBuildError::IllegalNumCheckingPieces { num: num_checks });
+    }
     if num_checks == 2 {
         let sq_1bb = checks.lsb();
         let sq_2 = (checks & !sq_1bb).to_sq();
@@ -120,12 +120,14 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
                 return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
             }
         } else if piece_1 == PieceType::B && (piece_2 == PieceType::P || piece_2 == PieceType::B)
-            || piece_1 == PieceType::N && (piece_2 == PieceType::P || piece_2 == PieceType::N) {
+            || piece_1 == PieceType::N && (piece_2 == PieceType::P || piece_2 == PieceType::N)
+        {
             return Err(FenBuildError::IllegalCheckState { piece_1, piece_2 });
         }
     }
 
-    let all_pawns: BitBoard = board.piece_bb_both_players(PieceType::P) & (BitBoard::RANK_1 | BitBoard::RANK_8 );
+    let all_pawns: BitBoard =
+        board.piece_bb_both_players(PieceType::P) & (BitBoard::RANK_1 | BitBoard::RANK_8);
 
     // No pawns on Rank 1 or 8
     if all_pawns.is_not_empty() {
@@ -136,11 +138,17 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
     let white_pawns = board.count_piece(Player::White, PieceType::P);
     let black_pawns = board.count_piece(Player::Black, PieceType::P);
     if white_pawns > 8 {
-        return Err(FenBuildError::TooManyPawns { player: Player::White, num: white_pawns });
+        return Err(FenBuildError::TooManyPawns {
+            player: Player::White,
+            num: white_pawns,
+        });
     }
 
     if black_pawns > 8 {
-        return Err(FenBuildError::TooManyPawns { player: Player::Black, num: black_pawns });
+        return Err(FenBuildError::TooManyPawns {
+            player: Player::Black,
+            num: black_pawns,
+        });
     }
 
     // check for correct en-passant square rank
@@ -148,8 +156,10 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
     if ep_sq != NO_SQ {
         match board.turn() {
             Player::White => {
-                if ep_sq.rank() != Rank::R6  {
-                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                if ep_sq.rank() != Rank::R6 {
+                    return Err(FenBuildError::EPSquareInvalid {
+                        ep: ep_sq.to_string(),
+                    });
                 }
 
                 let ep_p_sq = ep_sq - SQ(8);
@@ -157,17 +167,22 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
                 let (ep_player, ep_piece) = board.piece_at_sq(ep_p_sq).player_piece_lossy();
 
                 if ep_piece == PieceType::None {
-                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                    return Err(FenBuildError::EPSquareInvalid {
+                        ep: ep_sq.to_string(),
+                    });
                 }
 
-
-                if ep_player != Player::Black ||  ep_piece != PieceType::P {
-                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                if ep_player != Player::Black || ep_piece != PieceType::P {
+                    return Err(FenBuildError::EPSquareInvalid {
+                        ep: ep_sq.to_string(),
+                    });
                 }
-            },
+            }
             Player::Black => {
-                if ep_sq.rank() != Rank::R3  {
-                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                if ep_sq.rank() != Rank::R3 {
+                    return Err(FenBuildError::EPSquareInvalid {
+                        ep: ep_sq.to_string(),
+                    });
                 }
 
                 let ep_p_sq = ep_sq + SQ(8);
@@ -175,13 +190,17 @@ pub fn is_valid_fen(board: Board) -> Result<Board,FenBuildError> {
                 let (ep_player, ep_piece) = board.piece_at_sq(ep_p_sq).player_piece_lossy();
 
                 if ep_piece == PieceType::None {
-                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                    return Err(FenBuildError::EPSquareInvalid {
+                        ep: ep_sq.to_string(),
+                    });
                 }
 
-                if ep_player != Player::White ||  ep_piece != PieceType::P {
-                    return Err(FenBuildError::EPSquareInvalid {ep: ep_sq.to_string()});
+                if ep_player != Player::White || ep_piece != PieceType::P {
+                    return Err(FenBuildError::EPSquareInvalid {
+                        ep: ep_sq.to_string(),
+                    });
                 }
-            },
+            }
         }
     }
 
@@ -195,7 +214,7 @@ mod tests {
     const EXTRA_PAWNS: &str = "rnbqkbnr/pppppppp/8/8/8/7P/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     #[test]
-    fn fen_extra_pawns(){
+    fn fen_extra_pawns() {
         assert!(Board::from_fen(EXTRA_PAWNS).is_err());
     }
 }

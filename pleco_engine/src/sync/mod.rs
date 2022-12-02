@@ -1,6 +1,6 @@
 //! Useful synchronization primitives.
 
-use std::sync::{Mutex,Condvar};
+use std::sync::{Condvar, Mutex};
 
 /// A `LockLatch` starts as false and eventually becomes true. You can block
 /// until it becomes true.
@@ -68,14 +68,14 @@ impl LockLatch {
 
 /// A `GuardedBool` allows for waiting on a specific bool value.
 pub struct GuardedBool {
-    a: LockLatch
+    a: LockLatch,
 }
 
 impl GuardedBool {
     #[inline]
     pub fn new(value: bool) -> GuardedBool {
         GuardedBool {
-            a: LockLatch::new_value(value)
+            a: LockLatch::new_value(value),
         }
     }
 

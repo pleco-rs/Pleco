@@ -4,18 +4,17 @@
 
 extern crate rand;
 
+pub mod alphabeta;
+pub mod iterative_parallel_mvv_lva;
+pub mod jamboree;
 pub mod minimax;
 pub mod parallel_minimax;
-pub mod alphabeta;
-pub mod jamboree;
-pub mod iterative_parallel_mvv_lva;
 
-use core::piece_move::*;
-use tools::Searcher;
 use board::Board;
-use tools::eval::*;
+use core::piece_move::*;
 use core::score::*;
-
+use tools::eval::*;
+use tools::Searcher;
 
 const MAX_PLY: u16 = 4;
 const MATE_V: i16 = MATE as i16;
@@ -23,9 +22,8 @@ const DRAW_V: i16 = DRAW as i16;
 const NEG_INF_V: i16 = NEG_INFINITE as i16;
 const INF_V: i16 = INFINITE as i16;
 
-
 struct BoardWrapper<'a> {
-    b: &'a mut Board
+    b: &'a mut Board,
 }
 
 /// Searcher that randomly chooses a move. The fastest, yet dumbest, searcher we have to offer.
@@ -48,7 +46,6 @@ pub struct JamboreeSearcher {}
 /// adding iterative deepening with an aspiration window, MVV-LVA move ordering, as well as a qscience search.
 pub struct IterativeSearcher {}
 
-
 impl Searcher for RandomBot {
     fn name() -> &'static str {
         "Random Searcher"
@@ -68,8 +65,7 @@ impl Searcher for AlphaBetaSearcher {
     fn best_move(board: Board, depth: u16) -> BitMove {
         let alpha = NEG_INF_V;
         let beta = INF_V;
-        alphabeta::alpha_beta_search(&mut board.shallow_clone(), alpha, beta, depth)
-            .bit_move
+        alphabeta::alpha_beta_search(&mut board.shallow_clone(), alpha, beta, depth).bit_move
     }
 }
 
@@ -91,8 +87,7 @@ impl Searcher for JamboreeSearcher {
     fn best_move(board: Board, depth: u16) -> BitMove {
         let alpha = NEG_INF_V;
         let beta = INF_V;
-        jamboree::jamboree(&mut board.shallow_clone(), alpha, beta, depth, 2)
-            .bit_move
+        jamboree::jamboree(&mut board.shallow_clone(), alpha, beta, depth, 2).bit_move
     }
 }
 
@@ -102,10 +97,9 @@ impl Searcher for MiniMaxSearcher {
     }
 
     fn best_move(board: Board, depth: u16) -> BitMove {
-        minimax::minimax( &mut board.shallow_clone(),  depth).bit_move
+        minimax::minimax(&mut board.shallow_clone(), depth).bit_move
     }
 }
-
 
 impl Searcher for ParallelMiniMaxSearcher {
     fn name() -> &'static str {
@@ -113,8 +107,7 @@ impl Searcher for ParallelMiniMaxSearcher {
     }
 
     fn best_move(board: Board, depth: u16) -> BitMove {
-        parallel_minimax::parallel_minimax(&mut board.shallow_clone(),  depth)
-            .bit_move
+        parallel_minimax::parallel_minimax(&mut board.shallow_clone(), depth).bit_move
     }
 }
 
@@ -122,7 +115,6 @@ impl Searcher for ParallelMiniMaxSearcher {
 pub fn eval_board(board: &Board) -> ScoringMove {
     ScoringMove::blank(Eval::eval_low(board) as i16)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -135,13 +127,19 @@ mod tests {
     fn minimax_equality() {
         let b = Board::start_pos();
         let b2 = b.shallow_clone();
-        assert_eq!(MiniMaxSearcher::best_move(b, 5), ParallelMiniMaxSearcher::best_move(b2, 5));
+        assert_eq!(
+            MiniMaxSearcher::best_move(b, 5),
+            ParallelMiniMaxSearcher::best_move(b2, 5)
+        );
     }
 
     #[test]
     fn alpha_equality() {
         let b = Board::start_pos();
         let b2 = b.shallow_clone();
-        assert_eq!(AlphaBetaSearcher::best_move(b, 5), JamboreeSearcher::best_move(b2, 5));
+        assert_eq!(
+            AlphaBetaSearcher::best_move(b, 5),
+            JamboreeSearcher::best_move(b2, 5)
+        );
     }
 }

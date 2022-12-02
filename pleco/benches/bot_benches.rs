@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use criterion::{Criterion,black_box,Bencher,Fun};
+use criterion::{black_box, Bencher, Criterion, Fun};
 
 use lazy_static;
-use pleco::Board;
 use pleco::bot_prelude::*;
 use pleco::tools::Searcher;
+use pleco::Board;
 
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
@@ -14,7 +14,6 @@ lazy_static! {
         vec
     };
 }
-
 
 fn bench_searcher<S: Searcher>(b: &mut Bencher, data: &(&Vec<Board>, u16)) {
     b.iter(|| {
@@ -26,10 +25,10 @@ fn bench_searcher<S: Searcher>(b: &mut Bencher, data: &(&Vec<Board>, u16)) {
 
 fn bench_all_searchers_4_ply(c: &mut Criterion) {
     lazy_static::initialize(&RAND_BOARDS);
-    let minimax = Fun::new("MiniMax",bench_searcher::<MiniMaxSearcher>);
-    let parallel_minimax = Fun::new("ParallelMiniMax",bench_searcher::<ParallelMiniMaxSearcher>);
-    let alpha_beta = Fun::new("AlphaBeta",bench_searcher::<AlphaBetaSearcher>);
-    let jamboree = Fun::new("Jamboree",bench_searcher::<JamboreeSearcher>);
+    let minimax = Fun::new("MiniMax", bench_searcher::<MiniMaxSearcher>);
+    let parallel_minimax = Fun::new("ParallelMiniMax", bench_searcher::<ParallelMiniMaxSearcher>);
+    let alpha_beta = Fun::new("AlphaBeta", bench_searcher::<AlphaBetaSearcher>);
+    let jamboree = Fun::new("Jamboree", bench_searcher::<JamboreeSearcher>);
 
     let funs = vec![minimax, parallel_minimax, alpha_beta, jamboree];
 

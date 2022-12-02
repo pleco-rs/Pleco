@@ -3,16 +3,16 @@
 //! This is mostly copied from [servo_arc](https://doc.servo.org/servo_arc/index.html), so see
 //! that documentation for more information.
 
+use std::ops::{Deref, DerefMut};
+use std::ptr::NonNull;
 #[allow(unused_imports)]
 use std::sync::atomic;
-use std::ops::{Deref, DerefMut};
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
-use std::ptr::NonNull;
 
 /// The Inner structure of an `Arc`.
 pub struct ArcInner<T: ?Sized> {
     count: atomic::AtomicUsize,
-    data: T
+    data: T,
 }
 
 /// An `Arc` that ensures a single reference to it. Allows for modification to the
@@ -52,14 +52,13 @@ impl<T> DerefMut for UniqueArc<T> {
 
 /// Reference counting pointer, sharable between threads.
 pub struct Arc<T: ?Sized> {
-    p: NonNull<ArcInner<T>>
+    p: NonNull<ArcInner<T>>,
 }
 
 unsafe impl<T: ?Sized + Sync + Send> Send for Arc<T> {}
 unsafe impl<T: ?Sized + Sync + Send> Sync for Arc<T> {}
 
 impl<T> Arc<T> {
-
     /// Creates a new `Arc`.
     #[inline]
     pub fn new(data: T) -> Self {
@@ -68,12 +67,12 @@ impl<T> Arc<T> {
             data,
         });
         unsafe {
-            Arc { p: NonNull::new_unchecked(Box::into_raw(x)) }
+            Arc {
+                p: NonNull::new_unchecked(Box::into_raw(x)),
+            }
         }
     }
 }
-
-
 
 impl<T: ?Sized> Arc<T> {
     /// Returns a pointer to the inner Arc.
@@ -140,7 +139,9 @@ impl<T: ?Sized> Clone for Arc<T> {
     fn clone(&self) -> Self {
         self.inner().count.fetch_add(1, Relaxed);
         unsafe {
-            Arc { p: NonNull::new_unchecked(self.ptr()) }
+            Arc {
+                p: NonNull::new_unchecked(self.ptr()),
+            }
         }
     }
 }

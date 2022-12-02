@@ -8,14 +8,12 @@
 //!
 #![cfg_attr(feature = "dev", allow(unstable_features))]
 #![cfg_attr(test, allow(dead_code))]
-
 #![allow(dead_code)]
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::cast_ptr_alignment)]
 #![allow(clippy::mut_from_ref)]
 #![allow(clippy::cognitive_complexity)]
-
 #![feature(ptr_internals)]
 #![feature(integer_atomics)]
 #![feature(test)]
@@ -27,21 +25,21 @@
 
 //#![crate_type = "staticlib"]
 
-extern crate num_cpus;
-extern crate rand;
-extern crate pleco;
 extern crate chrono;
+extern crate num_cpus;
+extern crate pleco;
 extern crate prefetch;
+extern crate rand;
 
-pub mod threadpool;
-pub mod sync;
-pub mod time;
 pub mod consts;
-pub mod uci;
-pub mod root_moves;
-pub mod movepick;
-pub mod tables;
 pub mod engine;
+pub mod movepick;
+pub mod root_moves;
 pub mod search;
+pub mod sync;
+pub mod tables;
+pub mod threadpool;
+pub mod time;
+pub mod uci;
 
 pub use consts::*;

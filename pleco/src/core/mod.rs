@@ -5,27 +5,32 @@
 mod macros;
 
 pub mod bit_twiddles;
-pub mod piece_move;
+pub mod bitboard;
 pub mod masks;
 pub mod mono_traits;
-pub mod sq;
-pub mod bitboard;
 pub mod move_list;
+pub mod piece_move;
 pub mod score;
+pub mod sq;
 
 use self::bit_twiddles::*;
+use self::bitboard::BitBoard;
 use self::masks::*;
 use self::sq::SQ;
-use self::bitboard::BitBoard;
 
 use std::fmt;
 use std::mem;
 use std::ops::Not;
 
 /// Array of all possible pieces, indexed by their enum value.
-pub const ALL_PIECE_TYPES: [PieceType; PIECE_TYPE_CNT - 2] =
-    [PieceType::P, PieceType::N, PieceType::B, PieceType::R, PieceType::Q, PieceType::K];
-
+pub const ALL_PIECE_TYPES: [PieceType; PIECE_TYPE_CNT - 2] = [
+    PieceType::P,
+    PieceType::N,
+    PieceType::B,
+    PieceType::R,
+    PieceType::Q,
+    PieceType::K,
+];
 
 /// Array of both players, indexed by their enum value.
 pub const ALL_PLAYERS: [Player; 2] = [Player::White, Player::Black];
@@ -53,7 +58,6 @@ pub static ALL_RANKS: [Rank; RANK_CNT] = [
     Rank::R7,
     Rank::R8,
 ];
-
 
 /// Enum to represent the Players White & Black.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -134,10 +138,8 @@ impl Player {
     pub fn relative_rank(self, rank: Rank) -> Rank {
         let r = (rank as u8) ^ (self as u8 * 7);
         debug_assert!(r < 8);
-//        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
-        unsafe {
-            mem::transmute::<u8,Rank>(r)
-        }
+        //        ALL_RANKS[((rank as u8) ^ (*self as u8 * 7)) as usize]
+        unsafe { mem::transmute::<u8, Rank>(r) }
     }
 }
 
@@ -146,12 +148,9 @@ impl Not for Player {
 
     fn not(self) -> Self::Output {
         let other: u8 = (self as u8) ^ 0b0000_0001;
-        unsafe {
-            mem::transmute(other)
-        }
+        unsafe { mem::transmute(other) }
     }
 }
-
 
 impl fmt::Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -193,7 +192,7 @@ pub enum GenTypes {
     Quiets,
     QuietChecks,
     Evasions,
-    NonEvasions
+    NonEvasions,
 }
 
 /// All possible Types of Pieces on a chessboard.
@@ -211,7 +210,7 @@ pub enum PieceType {
     R = 4,
     Q = 5,
     K = 6,
-    All = 7
+    All = 7,
 }
 
 impl PieceType {
@@ -226,7 +225,6 @@ impl PieceType {
             PieceType::R => 5,
             PieceType::Q => 8,
             _ => 0,
-
         }
     }
 
@@ -303,19 +301,19 @@ impl fmt::Display for PieceType {
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq)]
 pub enum Piece {
-    None        = 0b0000,
-    WhitePawn   = 0b0001,
+    None = 0b0000,
+    WhitePawn = 0b0001,
     WhiteKnight = 0b0010,
     WhiteBishop = 0b0011,
-    WhiteRook   = 0b0100,
-    WhiteQueen  = 0b0101,
-    WhiteKing   = 0b0110,
-    BlackPawn   = 0b1001,
+    WhiteRook = 0b0100,
+    WhiteQueen = 0b0101,
+    WhiteKing = 0b0110,
+    BlackPawn = 0b1001,
     BlackKnight = 0b1010,
     BlackBishop = 0b1011,
-    BlackRook   = 0b1100,
-    BlackQueen  = 0b1101,
-    BlackKing   = 0b1110
+    BlackRook = 0b1100,
+    BlackQueen = 0b1101,
+    BlackKing = 0b1110,
 }
 
 impl Piece {
@@ -385,14 +383,12 @@ impl Piece {
     /// [`Piece::player`]: ./enum.Piece.html#method.player
     #[inline(always)]
     pub fn player_lossy(self) -> Player {
-        unsafe {
-            mem::transmute((self as u8 >> 3) & 0b1)
-        }
+        unsafe { mem::transmute((self as u8 >> 3) & 0b1) }
     }
 
     /// Returns the `PieceType`.
     ///
-   /// # Examples
+    /// # Examples
     ///
     /// ```
     /// use pleco::{Piece,PieceType};
@@ -408,9 +404,7 @@ impl Piece {
     /// ```
     #[inline(always)]
     pub fn type_of(self) -> PieceType {
-        unsafe {
-            mem::transmute(self as u8 & 0b111)
-        }
+        unsafe { mem::transmute(self as u8 & 0b111) }
     }
 
     /// Returns the `Player` and `PieceType` of this piece, if any. If the discriminant is
@@ -504,7 +498,7 @@ impl Piece {
         match piece_type {
             PieceType::None => Some(Piece::None),
             PieceType::All => None,
-            _ => Some(Piece::make_lossy(player, piece_type))
+            _ => Some(Piece::make_lossy(player, piece_type)),
         }
     }
 
@@ -559,19 +553,19 @@ impl Piece {
     /// If the Piece is `Piece::None`, a panic will occur.
     pub fn character_lossy(self) -> char {
         match self {
-            Piece::None        => panic!(),
-            Piece::WhitePawn   => 'P',
+            Piece::None => panic!(),
+            Piece::WhitePawn => 'P',
             Piece::WhiteKnight => 'N',
             Piece::WhiteBishop => 'B',
-            Piece::WhiteRook   => 'R',
-            Piece::WhiteQueen  => 'Q',
-            Piece::WhiteKing   => 'K',
-            Piece::BlackPawn   => 'p',
+            Piece::WhiteRook => 'R',
+            Piece::WhiteQueen => 'Q',
+            Piece::WhiteKing => 'K',
+            Piece::BlackPawn => 'p',
             Piece::BlackKnight => 'n',
             Piece::BlackBishop => 'b',
-            Piece::BlackRook   => 'r',
-            Piece::BlackQueen  => 'q',
-            Piece::BlackKing   => 'k'
+            Piece::BlackRook => 'r',
+            Piece::BlackQueen => 'q',
+            Piece::BlackKing => 'k',
         }
     }
 }
@@ -589,19 +583,19 @@ impl fmt::Display for Piece {
 impl fmt::Debug for Piece {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match *self {
-             Piece::None        => "None",
-             Piece::WhitePawn   => "WhitePawn",
-             Piece::WhiteKnight => "WhiteKnight",
-             Piece::WhiteBishop => "WhiteBishop",
-             Piece::WhiteRook   => "WhiteRook",
-             Piece::WhiteQueen  => "WhiteQueen",
-             Piece::WhiteKing   => "WhiteKing",
-             Piece::BlackPawn   => "BlackPawn",
-             Piece::BlackKnight => "BlackKnight",
-             Piece::BlackBishop => "BlackBishop",
-             Piece::BlackRook   => "BlackRook",
-             Piece::BlackQueen  => "BlackQueen",
-             Piece::BlackKing   => "BlackKing",
+            Piece::None => "None",
+            Piece::WhitePawn => "WhitePawn",
+            Piece::WhiteKnight => "WhiteKnight",
+            Piece::WhiteBishop => "WhiteBishop",
+            Piece::WhiteRook => "WhiteRook",
+            Piece::WhiteQueen => "WhiteQueen",
+            Piece::WhiteKing => "WhiteKing",
+            Piece::BlackPawn => "BlackPawn",
+            Piece::BlackKnight => "BlackKnight",
+            Piece::BlackBishop => "BlackBishop",
+            Piece::BlackRook => "BlackRook",
+            Piece::BlackQueen => "BlackQueen",
+            Piece::BlackKing => "BlackKing",
         };
         write!(f, "{}", s)
     }
@@ -696,7 +690,7 @@ impl Not for File {
     fn not(self) -> File {
         unsafe {
             let f = self as u8 ^ File::H as u8;
-            mem::transmute::<u8,File>(0b111 & f)
+            mem::transmute::<u8, File>(0b111 & f)
         }
     }
 }
@@ -704,7 +698,8 @@ impl Not for File {
 /// Enum for the Ranks of a Chessboard.
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug, Eq, Ord, PartialOrd)]
-pub enum Rank { // eg a specific row
+pub enum Rank {
+    // eg a specific row
     R1 = 0,
     R2 = 1,
     R3 = 2,
@@ -744,7 +739,7 @@ pub enum CastleType {
 #[repr(u8)]
 pub enum Phase {
     MG = 0,
-    EG = 1
+    EG = 1,
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the
@@ -758,10 +753,8 @@ pub fn rank_bb(s: u8) -> u64 {
 /// corresponding `Rank`.
 #[inline(always)]
 pub fn rank_of_sq(s: u8) -> Rank {
-    unsafe {
-        mem::transmute::<u8,Rank>((s >> 3) & 0b0000_0111)
-    }
-//    ALL_RANKS[(s >> 3) as usize]
+    unsafe { mem::transmute::<u8, Rank>((s >> 3) & 0b0000_0111) }
+    //    ALL_RANKS[(s >> 3) as usize]
 }
 
 /// For whatever rank the bit (inner value of a `SQ`) is, returns the
@@ -782,9 +775,7 @@ pub fn file_bb(s: u8) -> u64 {
 /// corresponding `File`.
 #[inline(always)]
 pub fn file_of_sq(s: u8) -> File {
-    unsafe {
-        mem::transmute::<u8,File>(s & 0b0000_0111)
-    }
+    unsafe { mem::transmute::<u8, File>(s & 0b0000_0111) }
 }
 
 /// For whatever file the bit (inner value of a `SQ`) is, returns the

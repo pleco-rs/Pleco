@@ -1,9 +1,9 @@
 //! Houses any UCI compatible options, as well as the framework for parsing and applying them.
 
-use consts::{MAX_THREADS,DEFAULT_TT_SIZE};
+use consts::{DEFAULT_TT_SIZE, MAX_THREADS};
 
-use std::option::Option;
 use std::collections::VecDeque;
+use std::option::Option;
 
 use num_cpus;
 
@@ -11,15 +11,15 @@ use num_cpus;
 pub enum OptionWork {
     ClearTT,
     ResizeTT(usize),
-    Threads(usize)
+    Threads(usize),
 }
 
 impl OptionWork {
-    pub fn usable_while_searching(&self) -> bool{
+    pub fn usable_while_searching(&self) -> bool {
         match *self {
             OptionWork::ClearTT => false,
             OptionWork::ResizeTT(_) => false,
-            OptionWork::Threads(_) => false
+            OptionWork::Threads(_) => false,
         }
     }
 }
@@ -27,7 +27,7 @@ impl OptionWork {
 /// A sorted map of options available
 pub struct OptionsMap {
     pub map: Vec<Box<UCIOption>>,
-    pub work: VecDeque<OptionWork>
+    pub work: VecDeque<OptionWork>,
 }
 
 impl OptionsMap {
@@ -38,10 +38,9 @@ impl OptionsMap {
         map.push(OptionsMap::clear_hash());
         map.push(OptionsMap::resize_hash());
         map.push(OptionsMap::threads());
-        map.sort_by(|a, b|
-            a.option_name().cmp(b.option_name()));
+        map.sort_by(|a, b| a.option_name().cmp(b.option_name()));
 
-        OptionsMap {map, work}
+        OptionsMap { map, work }
     }
 
     /// Applies an option and returns its success.
@@ -61,7 +60,7 @@ impl OptionsMap {
     /// Displays all available options in alphabetical order
     pub fn display_all(&self) {
         for op in self.map.iter() {
-            println!("{}",op.display());
+            println!("{}", op.display());
         }
     }
 
@@ -71,42 +70,36 @@ impl OptionsMap {
     }
 
     fn clear_hash() -> Box<UCIOption> {
-        let mutator: fn() -> Option<OptionWork> = || {
-            Some(OptionWork::ClearTT)
-        };
+        let mutator: fn() -> Option<OptionWork> = || Some(OptionWork::ClearTT);
         Box::new(UCIButton {
             option_name: "Clear Hash",
-            mutator
+            mutator,
         })
     }
 
     fn resize_hash() -> Box<UCIOption> {
-        let mutator: fn(i32) -> Option<OptionWork> = |x: i32| {
-            Some(OptionWork::ResizeTT(x as usize))
-        };
+        let mutator: fn(i32) -> Option<OptionWork> =
+            |x: i32| Some(OptionWork::ResizeTT(x as usize));
         Box::new(UCISpin {
             option_name: "Hash",
             default: DEFAULT_TT_SIZE as i32,
             min: 1,
             max: 8000,
-            mutator
+            mutator,
         })
     }
 
     fn threads() -> Box<UCIOption> {
-        let mutator: fn(i32) -> Option<OptionWork> = |x: i32| {
-            Some(OptionWork::Threads(x as usize))
-        };
+        let mutator: fn(i32) -> Option<OptionWork> = |x: i32| Some(OptionWork::Threads(x as usize));
         Box::new(UCISpin {
             option_name: "Threads",
             default: num_cpus::get() as i32,
             min: 1,
             max: MAX_THREADS as i32,
-            mutator
+            mutator,
         })
     }
 }
-
 
 // "option name Nullmove type check default true\n"
 // "option name Style type combo default Normal var Solid var Normal var Risky\n"
@@ -114,7 +107,6 @@ impl OptionsMap {
 
 /// UCI complient options for a searcher.
 pub trait UCIOption {
-
     // Returns the type of option. This can be one of the following: button, check, spin, text, or combo.
     fn option_type(&self) -> &'static str;
 
@@ -126,10 +118,8 @@ pub trait UCIOption {
 
     /// Displays the options
     fn display(&self) -> String {
-        let mut display = String::from("option name ")
-            + self.option_name()
-            + " type "
-            + self.option_type();
+        let mut display =
+            String::from("option name ") + self.option_name() + " type " + self.option_type();
 
         if let Some(part_dis) = self.partial_display() {
             display += " ";
@@ -145,13 +135,13 @@ pub trait UCIOption {
 
 pub struct UCIButton {
     option_name: &'static str,
-    mutator: fn() -> Option<OptionWork>
+    mutator: fn() -> Option<OptionWork>,
 }
 
 pub struct UCICheck {
     option_name: &'static str,
     default: bool,
-    mutator: fn(bool) -> Option<OptionWork>
+    mutator: fn(bool) -> Option<OptionWork>,
 }
 
 pub struct UCISpin {
@@ -159,24 +149,23 @@ pub struct UCISpin {
     default: i32,
     max: i32,
     min: i32,
-    mutator: fn(i32) -> Option<OptionWork>
+    mutator: fn(i32) -> Option<OptionWork>,
 }
 
 pub struct UCICombo {
     option_name: &'static str,
     default: &'static str,
-    values: &'static[&'static str],
-    mutator: fn(&str) -> Option<OptionWork>
+    values: &'static [&'static str],
+    mutator: fn(&str) -> Option<OptionWork>,
 }
 
 pub struct UCIText {
     option_name: &'static str,
     default: &'static str,
-    mutator: fn(&str) -> Option<OptionWork>
+    mutator: fn(&str) -> Option<OptionWork>,
 }
 
 impl UCIOption for UCIButton {
-
     fn option_type(&self) -> &'static str {
         "button"
     }
@@ -218,7 +207,6 @@ impl UCIOption for UCICheck {
 }
 
 impl UCIOption for UCISpin {
-
     fn option_type(&self) -> &'static str {
         "spin"
     }
@@ -228,9 +216,14 @@ impl UCIOption for UCISpin {
     }
 
     fn partial_display(&self) -> Option<String> {
-        Some(String::from("default ") + &self.default.to_string()
-            + " min " + &self.min.to_string()
-            + " max " + &self.max.to_string())
+        Some(
+            String::from("default ")
+                + &self.default.to_string()
+                + " min "
+                + &self.min.to_string()
+                + " max "
+                + &self.max.to_string(),
+        )
     }
 
     fn mutate(&self, val: &str) -> Option<OptionWork> {

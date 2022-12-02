@@ -3,14 +3,13 @@
 //! A `Value` stores a single `i32` to represent a score. `Score` stores two `i32`s inside of it,
 //! the first to determine the mid-game score, and the second to determine the end-game score.
 
-use std::ops::*;
 use std::fmt;
+use std::ops::*;
 
 // TODO: Why is Value an i32 now? Need some notes on why that changed.
 
 /// Type for `i32` to determine the `Value` of an evaluation.
 pub type Value = i32;
-
 
 pub const ZERO: Value = 0;
 pub const DRAW: Value = 0;
@@ -45,12 +44,12 @@ pub const MATE_IN_MAX_PLY: Value = MATE - 2 * 128;
 pub const MATED_IN_MAX_PLY: Value = -MATE + 2 * 128;
 
 /// Struct to define the value of a mid-game / end-game evaluation.
-#[derive(Copy, Clone,PartialEq,Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Score(pub Value, pub Value);
 
 impl Score {
     /// The Score of zero
-    pub const ZERO: Score = Score(0,0);
+    pub const ZERO: Score = Score(0, 0);
 
     /// Creates a new `Score`.
     pub fn make(mg: Value, eg: Value) -> Self {
@@ -83,7 +82,7 @@ impl Score {
 impl fmt::Display for Score {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let (mg, eg) = self.centipawns();
-        write!(f, "{:5.2} {:5.2}",mg, eg)
+        write!(f, "{:5.2} {:5.2}", mg, eg)
     }
 }
 
@@ -94,7 +93,6 @@ impl Add for Score {
         Score(self.0 + other.0, self.1 + other.1)
     }
 }
-
 
 impl AddAssign for Score {
     fn add_assign(&mut self, other: Score) {
@@ -139,7 +137,6 @@ impl Mul<u16> for Score {
         Score(self.0 * rhs as i32, self.1 * rhs as i32)
     }
 }
-
 
 impl Mul<i16> for Score {
     type Output = Score;

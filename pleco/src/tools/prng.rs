@@ -35,7 +35,7 @@ impl PRNG {
 
     /// Returns a u64 with exactly one bit set in a random location.
     pub fn singular_bit(&mut self) -> u64 {
-        let arr: [u8; 8] = unsafe {transmute(self.rand() ^ self.rand())};
+        let arr: [u8; 8] = unsafe { transmute(self.rand() ^ self.rand()) };
         let byte: u8 = arr.iter().fold(0, |acc, &x| acc ^ x);
         (1u64).wrapping_shl(((byte) >> 2) as u32)
     }
@@ -59,7 +59,7 @@ mod test {
     #[test]
     fn check_bit_displacement() {
         let mut seeder = PRNG::init(10300014);
-        let mut acc =  [0u32; 64];
+        let mut acc = [0u32; 64];
         for _ in 0..ROUNDS {
             let mut prng = PRNG::init(seeder.rand());
             for _ in 0..MUTS {
@@ -75,7 +75,7 @@ mod test {
         }
 
         let _sum: u32 = acc.iter().sum();
-//        println!("avg: {}", _sum / 64);
+        //        println!("avg: {}", _sum / 64);
     }
 
     fn add_to_bit_counts(mut num: u64, acc: &mut [u32; 64]) {

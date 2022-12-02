@@ -7,10 +7,10 @@
 
 use std::mem;
 
-use core::*;
+use super::FenBuildError;
 use core::masks::*;
 use core::sq::SQ;
-use super::FenBuildError;
+use core::*;
 
 /// Struct to allow fast lookups for any square. Given a square, allows for determining if there
 /// is a piece currently there, and if so, allows for determining it's color and type of piece.
@@ -34,12 +34,12 @@ pub struct PieceLocations {
     data: [Piece; SQ_CNT],
 }
 
-
-
 impl PieceLocations {
     /// Constructs a new `PieceLocations` with a default of no pieces on the board.
     pub const fn blank() -> PieceLocations {
-        PieceLocations { data: [Piece::None; 64] }
+        PieceLocations {
+            data: [Piece::None; 64],
+        }
     }
 
     /// Places a given piece for a given player at a certain square.
@@ -81,7 +81,6 @@ impl PieceLocations {
     pub fn at_square(&self, square: SQ) -> bool {
         assert!(square.is_okay());
         self.data[square.0 as usize] != Piece::None
-
     }
 
     /// Returns the first square (if any) that a piece / player is at.
@@ -99,12 +98,14 @@ impl PieceLocations {
     /// Returns if the Board contains a particular piece / player.
     #[inline]
     pub fn contains(&self, piece: PieceType, player: Player) -> bool {
-        self.first_square(piece,player).is_some()
+        self.first_square(piece, player).is_some()
     }
 
     /// Generates a `PieceLocations` from a partial fen. A partial fen is defined as the first part of a
     /// fen, where the piece positions are available.
-    pub(crate) fn from_partial_fen(ranks: &[&str]) -> Result<Vec<(SQ,Player,PieceType)>, FenBuildError> {
+    pub(crate) fn from_partial_fen(
+        ranks: &[&str],
+    ) -> Result<Vec<(SQ, Player, PieceType)>, FenBuildError> {
         let mut loc = Vec::with_capacity(64);
         for (i, rank) in ranks.iter().enumerate() {
             let min_sq = (7 - i) * 8;
@@ -112,9 +113,15 @@ impl PieceLocations {
             let mut idx = min_sq;
             for ch in rank.chars() {
                 if idx < min_sq {
-                    return Err(FenBuildError::SquareSmallerRank{rank: i, square: SQ(idx as u8).to_string()})
+                    return Err(FenBuildError::SquareSmallerRank {
+                        rank: i,
+                        square: SQ(idx as u8).to_string(),
+                    });
                 } else if idx > max_sq {
-                    return Err(FenBuildError::SquareLargerRank{rank: i, square: SQ(idx as u8).to_string()})
+                    return Err(FenBuildError::SquareLargerRank {
+                        rank: i,
+                        square: SQ(idx as u8).to_string(),
+                    });
                 }
 
                 let dig = ch.to_digit(10);
@@ -129,7 +136,7 @@ impl PieceLocations {
                         'r' | 'R' => PieceType::R,
                         'q' | 'Q' => PieceType::Q,
                         'k' | 'K' => PieceType::K,
-                        _ => {return Err(FenBuildError::UnrecognizedPiece{piece: ch})},
+                        _ => return Err(FenBuildError::UnrecognizedPiece { piece: ch }),
                     };
                     let player = if ch.is_lowercase() {
                         Player::Black
@@ -163,14 +170,13 @@ impl PartialEq for PieceLocations {
     }
 }
 
-
 pub struct PieceLocationsIter {
     locations: PieceLocations,
-    sq: SQ
+    sq: SQ,
 }
 
 impl Iterator for PieceLocationsIter {
-    type Item = (SQ,Piece);
+    type Item = (SQ, Piece);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -188,7 +194,7 @@ impl Iterator for PieceLocationsIter {
 }
 
 impl IntoIterator for PieceLocations {
-    type Item = (SQ,Piece);
+    type Item = (SQ, Piece);
     type IntoIter = PieceLocationsIter;
 
     #[inline(always)]

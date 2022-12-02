@@ -2,16 +2,17 @@
 //!
 //! This is a VERY basic evaluation, and while decent, it certainly isn't anything exceptional.
 
-use Board;
-use std::i32;
-use core::*;
-use core::masks::*;
 use core::bitboard::BitBoard;
+use core::masks::*;
 use core::mono_traits::*;
 use core::score::Value;
+use core::*;
+use std::i32;
+use Board;
 
 lazy_static! {
-    pub static ref PAWN_POS: [[i32; SQ_CNT]; PLAYER_CNT] = [   flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)   ];
+    pub static ref PAWN_POS: [[i32; SQ_CNT]; PLAYER_CNT] =
+        [flatten(flip(PAWN_POS_ARRAY)), flatten(PAWN_POS_ARRAY)];
 }
 
 const PAWN_POS_ARRAY: [[i32; FILE_CNT]; RANK_CNT] = [
@@ -61,9 +62,8 @@ trait EvalRuns {
     fn eval_king_pos<PlayerTrait>(&self) -> i32;
     fn eval_bishop_pos<PlayerTrait>(&self) -> i32;
     fn eval_threats<PlayerTrait>(&self) -> i32;
-    fn eval_piece_counts<PlayerTrait,PieceTrait>(&self) -> i32;
+    fn eval_piece_counts<PlayerTrait, PieceTrait>(&self) -> i32;
 }
-
 
 const INFINITY: i32 = 30_001;
 const NEG_INFINITY: i32 = -30_001;
@@ -92,34 +92,35 @@ pub const PIECE_VALS: [i32; PIECE_TYPE_CNT] = [
     0,
 ];
 
-
-
 impl Eval {
     /// Evaluates the score of a `Board` for the current side to move.
     pub fn eval_low(board: &Board) -> Value {
         match board.turn() {
-            Player::White => eval_all::<WhiteType>(board) - eval_all::<BlackType>(board) + board.non_pawn_material(Player::White) - board.non_pawn_material(Player::Black),
-            Player::Black => eval_all::<BlackType>(board) - eval_all::<WhiteType>(board) + board.non_pawn_material(Player::Black) - board.non_pawn_material(Player::White)
+            Player::White => {
+                eval_all::<WhiteType>(board) - eval_all::<BlackType>(board)
+                    + board.non_pawn_material(Player::White)
+                    - board.non_pawn_material(Player::Black)
+            }
+            Player::Black => {
+                eval_all::<BlackType>(board) - eval_all::<WhiteType>(board)
+                    + board.non_pawn_material(Player::Black)
+                    - board.non_pawn_material(Player::White)
+            }
         }
     }
 }
-
-
-
 
 fn eval_all<P: PlayerTrait>(board: &Board) -> Value {
     if board.rule_50() >= 50 {
         return MATE;
     }
-    eval_piece_counts::<P>(board) +
-    eval_castling::<P>(board) +
-    eval_king_pos::<P>(board) +
-    eval_bishop_pos::<P>(board) +
-    eval_king_blockers_pinners::<P>(board) +
-    eval_pawns::<P>(board)
-
+    eval_piece_counts::<P>(board)
+        + eval_castling::<P>(board)
+        + eval_king_pos::<P>(board)
+        + eval_bishop_pos::<P>(board)
+        + eval_king_blockers_pinners::<P>(board)
+        + eval_pawns::<P>(board)
 }
-
 
 fn eval_piece_counts<P: PlayerTrait>(board: &Board) -> i32 {
     board.count_piece(P::player(), PieceType::P) as i32 * PAWN_VALUE
@@ -145,7 +146,8 @@ fn eval_king_pos<P: PlayerTrait>(board: &Board) -> i32 {
         score -= CHECK
     }
 
-    let bb_around_us: BitBoard = board.magic_helper.king_moves(us_ksq) & board.get_occupied_player(P::player());
+    let bb_around_us: BitBoard =
+        board.magic_helper.king_moves(us_ksq) & board.get_occupied_player(P::player());
     score += bb_around_us.count_bits() as i32 * 9;
 
     score
@@ -223,6 +225,4 @@ fn eval_pawns<P: PlayerTrait>(board: &Board) -> i32 {
     }
 
     score
-
 }
-

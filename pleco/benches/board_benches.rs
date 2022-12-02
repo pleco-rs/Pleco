@@ -1,18 +1,17 @@
-
-use std::time::Duration;
-use criterion::{Criterion,black_box};
+use criterion::{black_box, Criterion};
 use lazy_static;
+use std::time::Duration;
 
-use pleco::{Player,Board,BitMove,MoveList};
 use pleco::tools::prng::PRNG;
+use pleco::{BitMove, Board, MoveList, Player};
 
 pub const SEED: u64 = 5363310003543;
-
 
 lazy_static! {
     pub static ref RAND_BOARDS: Vec<Board> = {
         let mut prng = PRNG::init(SEED);
-        let mut boards = RAND_BOARD_FENS.iter()
+        let mut boards = RAND_BOARD_FENS
+            .iter()
             .map(|b| Board::from_fen(b).unwrap())
             .collect::<Vec<Board>>();
 
@@ -26,15 +25,14 @@ lazy_static! {
 
 fn bench_board_100_clone(c: &mut Criterion) {
     lazy_static::initialize(&RAND_BOARDS);
-    c.bench_function("Board Clone 100", |b|
-    b.iter(|| {
-        for board in RAND_BOARDS.iter() {
-            black_box(board.shallow_clone());
-        }
-    })
-    );
+    c.bench_function("Board Clone 100", |b| {
+        b.iter(|| {
+            for board in RAND_BOARDS.iter() {
+                black_box(board.shallow_clone());
+            }
+        })
+    });
 }
-
 
 fn bench_find(c: &mut Criterion) {
     lazy_static::initialize(&RAND_BOARDS);
@@ -51,14 +49,14 @@ fn bench_find(c: &mut Criterion) {
 
 fn bench_apply_100_move(c: &mut Criterion) {
     lazy_static::initialize(&RAND_BOARDS);
-    c.bench_function("Board Apply 100 Move",  |b| {
+    c.bench_function("Board Apply 100 Move", |b| {
         let mut prng = PRNG::init(SEED);
         let mut board_move: Vec<(Board, BitMove)> = Vec::with_capacity(100);
 
         for board in RAND_BOARDS.iter() {
             let moves: Vec<BitMove> = MoveList::into(board.generate_moves());
             let bit_move = *moves.get(prng.rand() as usize % moves.len()).unwrap();
-            board_move.push((board.parallel_clone(),bit_move));
+            board_move.push((board.parallel_clone(), bit_move));
         }
 
         b.iter(|| {
@@ -100,7 +98,6 @@ criterion_group!(name = board_benches;
         bench_apply_100_move,
         bench_undo_100_move
 );
-
 
 static RAND_BOARD_FENS: [&str; 100] = [
     "r3kb1r/3qpppp/p1Qp4/1p6/3Pp3/7P/PP1PP2P/R1B1KB1R w KQkq - 2 13",
@@ -202,4 +199,5 @@ static RAND_BOARD_FENS: [&str; 100] = [
     "2r2k2/p2Qnp1p/8/1P2r3/P7/1P3B2/3R1PPP/1N3RK b - - 2 35",
     "8/5p2/2p3k1/7p/2BP4/P1P1N2P/1P1K4/ b - - 2 35",
     "3r1rn1/p2pk1p1/4p2p/4R2P/1bp3P1/5N2/1B1PB3/4KR b - - 1 33",
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" ];
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+];

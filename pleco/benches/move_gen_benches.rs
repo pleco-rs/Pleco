@@ -1,63 +1,98 @@
 use std::time::Duration;
 
-use criterion::{Criterion,black_box,Bencher,Fun};
+use criterion::{black_box, Bencher, Criterion, Fun};
 
+use pleco::board::movegen::{Legal, Legality, MoveGen, PseudoLegal};
 use pleco::core::mono_traits::*;
 use pleco::Board;
-use pleco::board::movegen::{MoveGen,Legality,PseudoLegal,Legal};
-
 
 fn movegen_ty<L: Legality, G: GenTypeTrait>(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter(|| {
         for board in boards.iter() {
-            black_box(MoveGen::generate::<L,G>(board));
+            black_box(MoveGen::generate::<L, G>(board));
         }
     })
 }
 
-
 fn all_movegen(c: &mut Criterion) {
-    let boards_any: Vec<Board> = RAND_BOARD_ANY_GEN.iter()
+    let boards_any: Vec<Board> = RAND_BOARD_ANY_GEN
+        .iter()
         .map(|b| Board::from_fen(b).unwrap())
         .collect();
 
-    let boards_no_check: Vec<Board> = RAND_BOARD_NON_CHECKS_GEN.iter()
+    let boards_no_check: Vec<Board> = RAND_BOARD_NON_CHECKS_GEN
+        .iter()
         .map(|b| Board::from_fen(b).unwrap())
         .collect();
 
-    let boards_in_check: Vec<Board> = RAND_BOARD_IN_CHECKS_GEN.iter()
+    let boards_in_check: Vec<Board> = RAND_BOARD_IN_CHECKS_GEN
+        .iter()
         .map(|b| Board::from_fen(b).unwrap())
         .collect();
-
 
     let all_legal = Fun::new("MoveGen All Legal", movegen_ty::<Legal, AllGenType>);
-    let all_pslegal = Fun::new("MoveGen All PseudoLegal", movegen_ty::<PseudoLegal, AllGenType>);
+    let all_pslegal = Fun::new(
+        "MoveGen All PseudoLegal",
+        movegen_ty::<PseudoLegal, AllGenType>,
+    );
 
-    let nochk_legal = Fun::new("MoveGen NonEvasions - Legal", movegen_ty::<Legal, NonEvasionsGenType>);
-    let nochk_pslegal = Fun::new("MoveGen NonEvasions - PseudoLegal", movegen_ty::<PseudoLegal, NonEvasionsGenType>);
+    let nochk_legal = Fun::new(
+        "MoveGen NonEvasions - Legal",
+        movegen_ty::<Legal, NonEvasionsGenType>,
+    );
+    let nochk_pslegal = Fun::new(
+        "MoveGen NonEvasions - PseudoLegal",
+        movegen_ty::<PseudoLegal, NonEvasionsGenType>,
+    );
 
-    let nochk_captures_legal = Fun::new("MoveGen Captures - Legal", movegen_ty::<Legal, CapturesGenType>);
-    let nochk_captures_pslegal = Fun::new("MoveGen Captures - PseudoLegal", movegen_ty::<PseudoLegal, CapturesGenType>);
+    let nochk_captures_legal = Fun::new(
+        "MoveGen Captures - Legal",
+        movegen_ty::<Legal, CapturesGenType>,
+    );
+    let nochk_captures_pslegal = Fun::new(
+        "MoveGen Captures - PseudoLegal",
+        movegen_ty::<PseudoLegal, CapturesGenType>,
+    );
 
     let nochk_quiets_legal = Fun::new("MoveGen Quiets - Legal", movegen_ty::<Legal, QuietsGenType>);
-    let nochk_quiets_pslegal = Fun::new("MoveGen Quiets - PseudoLegal", movegen_ty::<PseudoLegal, QuietsGenType>);
+    let nochk_quiets_pslegal = Fun::new(
+        "MoveGen Quiets - PseudoLegal",
+        movegen_ty::<PseudoLegal, QuietsGenType>,
+    );
 
-    let nochk_quietchecks_legal = Fun::new("MoveGen QuietChecks - Legal", movegen_ty::<Legal, QuietChecksGenType>);
-    let nochk_quietchecks_pslegal = Fun::new("MoveGen QuietChecks - PseudoLegal", movegen_ty::<PseudoLegal, QuietChecksGenType>);
+    let nochk_quietchecks_legal = Fun::new(
+        "MoveGen QuietChecks - Legal",
+        movegen_ty::<Legal, QuietChecksGenType>,
+    );
+    let nochk_quietchecks_pslegal = Fun::new(
+        "MoveGen QuietChecks - PseudoLegal",
+        movegen_ty::<PseudoLegal, QuietChecksGenType>,
+    );
 
-//    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, AllGenType>);
-//    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, AllGenType>);
+    //    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, AllGenType>);
+    //    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, AllGenType>);
 
-    let chk_legal = Fun::new("MoveGen Evasions - Legal", movegen_ty::<Legal, EvasionsGenType>);
-    let chk_pslegal = Fun::new("MoveGen Evasions - PseudoLegal", movegen_ty::<PseudoLegal, EvasionsGenType>);
+    let chk_legal = Fun::new(
+        "MoveGen Evasions - Legal",
+        movegen_ty::<Legal, EvasionsGenType>,
+    );
+    let chk_pslegal = Fun::new(
+        "MoveGen Evasions - PseudoLegal",
+        movegen_ty::<PseudoLegal, EvasionsGenType>,
+    );
 
     let all_funcs = vec![all_legal, all_pslegal];
 
     let nochk_funcs = vec![
-                            nochk_legal,              nochk_pslegal,
-                            nochk_captures_legal,     nochk_captures_pslegal,
-                            nochk_quiets_legal,       nochk_quiets_pslegal,
-                            nochk_quietchecks_legal,  nochk_quietchecks_pslegal];
+        nochk_legal,
+        nochk_pslegal,
+        nochk_captures_legal,
+        nochk_captures_pslegal,
+        nochk_quiets_legal,
+        nochk_quiets_pslegal,
+        nochk_quietchecks_legal,
+        nochk_quietchecks_pslegal,
+    ];
 
     let chk_funcs = vec![chk_legal, chk_pslegal];
 
@@ -72,8 +107,6 @@ criterion_group!(name = movegen_benches;
         .warm_up_time(Duration::from_millis(10));
     targets = all_movegen
 );
-
-
 
 const RAND_BOARD_ANY_GEN: [&str; 30] = [
     "3qkb1r/ppp2ppp/4bn2/8/4P3/1PNB1K1P/P1PP1PP1/R6R b k - 0 13",
@@ -105,8 +138,8 @@ const RAND_BOARD_ANY_GEN: [&str; 30] = [
     "3k4/6b1/1p5p/4p3/5rP1/6K1/8/ w - - 0 40",
     "8/1bpk1r1p/1p4R1/2n2q2/3p4/PrP1R3/4P3/5BK b - - 0 38",
     "1k6/1p1n4/p6p/4P3/2P5/1R6/5K1P/4R b - - 2 33",
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
-
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+];
 
 const RAND_BOARD_NON_CHECKS_GEN: [&str; 30] = [
     "3qkb1r/ppp2ppp/4bn2/8/4P3/1PNB1K1P/P1PP1PP1/R6R b k - 0 13",
@@ -138,7 +171,8 @@ const RAND_BOARD_NON_CHECKS_GEN: [&str; 30] = [
     "3k4/6b1/1p5p/4p3/5rP1/6K1/8/ w - - 0 40",
     "8/1bpk1r1p/1p4R1/2n2q2/3p4/PrP1R3/4P3/5BK b - - 0 38",
     "1k6/1p1n4/p6p/4P3/2P5/1R6/5K1P/4R b - - 2 33",
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+];
 
 const RAND_BOARD_IN_CHECKS_GEN: [&str; 30] = [
     "3r4/2pk2p1/p1n1p3/8/P1PP2q1/4b3/3K4/ w - - 0 38",
@@ -172,4 +206,3 @@ const RAND_BOARD_IN_CHECKS_GEN: [&str; 30] = [
     "8/8/2P2R2/8/p3P3/P1Q5/1Pk5/7K b - - 2 40",
     "6rk/3R3p/6p1/5p2/1P3P1P/2KB2P1/6b1/q w - - 4 39",
 ];
-

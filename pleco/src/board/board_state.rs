@@ -13,15 +13,15 @@
 use super::castle_rights::Castling;
 use super::Board;
 
-use core::*;
-use core::piece_move::BitMove;
-use core::sq::{SQ,NO_SQ};
 use core::bitboard::BitBoard;
 use core::masks::*;
-use core::score::{Value,Score};
+use core::piece_move::BitMove;
+use core::score::{Score, Value};
+use core::sq::{NO_SQ, SQ};
+use core::*;
 
-use tools::pleco_arc::Arc;
 use helper::prelude::*;
+use tools::pleco_arc::Arc;
 
 /// Holds useful information concerning the current state of the [`Board`].
 ///
@@ -52,7 +52,6 @@ pub struct BoardState {
     pub psq: Score,
 
     // These fields MUST be Recomputed after a move
-
     /// The Zobrist key of the board.
     pub zobrist: u64,
     /// The Hash key of the current pawn configuration.
@@ -142,8 +141,8 @@ impl BoardState {
         let them = !us;
         let ksq = board.king_sq(us);
 
-        self.checkers_bb = board.attackers_to(ksq, board.occupied())
-            & board.bbs_player[them as usize];
+        self.checkers_bb =
+            board.attackers_to(ksq, board.occupied()) & board.bbs_player[them as usize];
 
         self.set_check_info(board);
         self.set_zob_hash(board);
@@ -162,7 +161,8 @@ impl BoardState {
         self.blockers_king[Player::White as usize] = board.slider_blockers(
             board.occupied_black(),
             board.king_sq(Player::White),
-            &mut white_pinners);
+            &mut white_pinners,
+        );
 
         self.pinners_king[Player::White as usize] = white_pinners;
 
@@ -171,7 +171,8 @@ impl BoardState {
         self.blockers_king[Player::Black as usize] = board.slider_blockers(
             board.occupied_white(),
             board.king_sq(Player::Black),
-            &mut black_pinners);
+            &mut black_pinners,
+        );
 
         self.pinners_king[Player::Black as usize] = black_pinners;
 
@@ -182,8 +183,8 @@ impl BoardState {
         self.check_sqs[PieceType::N as usize] = knight_moves(ksq);
         self.check_sqs[PieceType::B as usize] = bishop_moves(occupied, ksq);
         self.check_sqs[PieceType::R as usize] = rook_moves(occupied, ksq);
-        self.check_sqs[PieceType::Q as usize] = self.check_sqs[PieceType::B as usize]
-            | self.check_sqs[PieceType::R as usize];
+        self.check_sqs[PieceType::Q as usize] =
+            self.check_sqs[PieceType::B as usize] | self.check_sqs[PieceType::R as usize];
         self.check_sqs[PieceType::K as usize] = BitBoard(0);
     }
 
@@ -191,8 +192,8 @@ impl BoardState {
     fn set_zob_hash(&mut self, board: &Board) {
         let mut b: BitBoard = board.occupied();
         while let Some(sq) = b.pop_some_lsb() {
-            let piece =  board.piece_locations.piece_at(sq);
-            self.psq += psq(piece,sq);
+            let piece = board.piece_locations.piece_at(sq);
+            self.psq += psq(piece, sq);
             let key = z_square(sq, piece);
             self.zobrist ^= key;
             if piece.type_of() == PieceType::P {
@@ -249,7 +250,7 @@ impl BoardState {
 
     /// Prints information about the current `BoardState`.
     pub fn print_info(&self) {
-        print!("ply: {}, move played: {} ",self.ply, self.prev_move);
+        print!("ply: {}, move played: {} ", self.ply, self.prev_move);
         if !self.checkers_bb.is_empty() {
             print!("in check {}", self.checkers_bb.to_sq());
         }
@@ -259,14 +260,14 @@ impl BoardState {
 
 impl PartialEq for BoardState {
     fn eq(&self, other: &BoardState) -> bool {
-        self.castling == other.castling &&
-            self.rule_50 == other.rule_50 &&
-            self.ep_square == other.ep_square &&
-            self.zobrist == other.zobrist &&
-            self.captured_piece == other.captured_piece &&
-            self.checkers_bb == other.checkers_bb &&
-            self.blockers_king == other.blockers_king &&
-            self.pinners_king == other.pinners_king &&
-            self.check_sqs == other.check_sqs
+        self.castling == other.castling
+            && self.rule_50 == other.rule_50
+            && self.ep_square == other.ep_square
+            && self.zobrist == other.zobrist
+            && self.captured_piece == other.captured_piece
+            && self.checkers_bb == other.checkers_bb
+            && self.blockers_king == other.blockers_king
+            && self.pinners_king == other.pinners_king
+            && self.check_sqs == other.check_sqs
     }
 }

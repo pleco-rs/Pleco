@@ -15,17 +15,16 @@
 //! [`MoveList`]: struct.MoveList.html
 //! [`ScoreMoveList`]: struct.MoveList.html
 
-use std::slice;
-use std::ops::{Deref,DerefMut,Index,IndexMut};
-use std::iter::{Iterator,IntoIterator,FusedIterator,ExactSizeIterator,FromIterator};
 #[cfg(feature = "nightly")]
 use std::iter::TrustedLen;
+use std::iter::{ExactSizeIterator, FromIterator, FusedIterator, IntoIterator, Iterator};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::slice;
 
 use super::piece_move::{BitMove, ScoringMove};
 
 /// Trait to help generalize operations involving sctures containing a collection of `BitMove`s.
 pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
-
     /// Adds a `BitMove` to the end of the list.
     ///
     /// # Safety
@@ -46,7 +45,6 @@ pub trait MVPushable: Sized + IndexMut<usize> + Index<usize> + DerefMut {
     ///
     /// Unsafe due to overwriting the length of the list
     unsafe fn unchecked_set_len(&mut self, len: usize);
-
 
     /// Return a pointer to the first (0-th index) element in the list.
     ///
@@ -73,10 +71,7 @@ pub const MAX_MOVES: usize = 248;
 pub const MAX_MOVES: usize = 252;
 #[cfg(target_pointer_width = "32")]
 pub const MAX_MOVES: usize = 254;
-#[cfg(any(
-    target_pointer_width = "16",
-    target_pointer_width = "8",
-))]
+#[cfg(any(target_pointer_width = "16", target_pointer_width = "8",))]
 pub const MAX_MOVES: usize = 255;
 
 /// This is the list of possible moves for a current position. Think of it alike a faster
@@ -103,7 +98,6 @@ impl From<Vec<BitMove>> for MoveList {
         list
     }
 }
-
 
 impl From<ScoringMoveList> for MoveList {
     fn from(sc_list: ScoringMoveList) -> Self {
@@ -163,7 +157,7 @@ impl MoveList {
         for mov in self.iter() {
             vec.push(*mov);
         }
-        assert_eq!(vec.len(),self.len);
+        assert_eq!(vec.len(), self.len);
         vec
     }
 
@@ -209,7 +203,6 @@ impl MoveList {
     }
 }
 
-
 impl Deref for MoveList {
     type Target = [BitMove];
 
@@ -248,12 +241,11 @@ impl IndexMut<usize> for MoveList {
     }
 }
 
-
 impl MVPushable for MoveList {
     #[inline(always)]
     fn push_mv(&mut self, mv: BitMove) {
         if self.len() < MAX_MOVES {
-            unsafe{ self.unchecked_push_mv(mv) }
+            unsafe { self.unchecked_push_mv(mv) }
         }
     }
 
@@ -282,7 +274,7 @@ impl MVPushable for MoveList {
 
 pub struct MoveIter<'a> {
     movelist: &'a MoveList,
-    idx: usize
+    idx: usize,
 }
 
 impl<'a> Iterator for MoveIter<'a> {
@@ -298,13 +290,15 @@ impl<'a> Iterator for MoveIter<'a> {
                 self.idx += 1;
                 Some(m)
             }
-
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.movelist.len - self.idx, Some(self.movelist.len - self.idx))
+        (
+            self.movelist.len - self.idx,
+            Some(self.movelist.len - self.idx),
+        )
     }
 }
 
@@ -331,7 +325,7 @@ unsafe impl<'a> TrustedLen for MoveIter<'a> {}
 // Iterator for the `MoveList`.
 pub struct MoveIntoIter {
     movelist: MoveList,
-    idx: usize
+    idx: usize,
 }
 
 impl Iterator for MoveIntoIter {
@@ -347,13 +341,15 @@ impl Iterator for MoveIntoIter {
                 self.idx += 1;
                 Some(m)
             }
-
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.movelist.len - self.idx, Some(self.movelist.len - self.idx))
+        (
+            self.movelist.len - self.idx,
+            Some(self.movelist.len - self.idx),
+        )
     }
 }
 
@@ -371,7 +367,7 @@ impl IntoIterator for MoveList {
 }
 
 impl FromIterator<BitMove> for MoveList {
-    fn from_iter<T: IntoIterator<Item=BitMove>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = BitMove>>(iter: T) -> Self {
         let mut list = MoveList::default();
         for i in iter {
             list.push(i);
@@ -386,7 +382,6 @@ impl FusedIterator for MoveIntoIter {}
 
 #[cfg(feature = "nightly")]
 unsafe impl TrustedLen for MoveIntoIter {}
-
 
 /// This is similar to a `MoveList`, but also keeps the scores for each move as well.
 pub struct ScoringMoveList {
@@ -450,7 +445,7 @@ impl ScoringMoveList {
         for pair in self.iter() {
             vec.push(*pair);
         }
-        assert_eq!(vec.len(),self.len);
+        assert_eq!(vec.len(), self.len);
         vec
     }
 
@@ -491,7 +486,6 @@ impl ScoringMoveList {
         self
     }
 }
-
 
 impl Deref for ScoringMoveList {
     type Target = [ScoringMove];
@@ -535,7 +529,7 @@ impl MVPushable for ScoringMoveList {
     #[inline(always)]
     fn push_mv(&mut self, mv: BitMove) {
         if self.len() < MAX_MOVES {
-            unsafe{ self.unchecked_push_mv(mv) }
+            unsafe { self.unchecked_push_mv(mv) }
         }
     }
 
@@ -545,7 +539,6 @@ impl MVPushable for ScoringMoveList {
         *end = ScoringMove::new(mv);
         self.len += 1;
     }
-
 
     #[inline(always)]
     unsafe fn unchecked_set_len(&mut self, len: usize) {
@@ -565,7 +558,7 @@ impl MVPushable for ScoringMoveList {
 
 pub struct ScoreMoveIter<'a> {
     movelist: &'a ScoringMoveList,
-    idx: usize
+    idx: usize,
 }
 
 impl<'a> Iterator for ScoreMoveIter<'a> {
@@ -581,13 +574,15 @@ impl<'a> Iterator for ScoreMoveIter<'a> {
                 self.idx += 1;
                 Some(m)
             }
-
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.movelist.len - self.idx, Some(self.movelist.len - self.idx))
+        (
+            self.movelist.len - self.idx,
+            Some(self.movelist.len - self.idx),
+        )
     }
 }
 
@@ -614,7 +609,7 @@ unsafe impl<'a> TrustedLen for ScoreMoveIter<'a> {}
 // Iterator for the `ScoringMoveList`.
 pub struct ScoreMoveIntoIter {
     movelist: ScoringMoveList,
-    idx: usize
+    idx: usize,
 }
 
 impl Iterator for ScoreMoveIntoIter {
@@ -630,13 +625,15 @@ impl Iterator for ScoreMoveIntoIter {
                 self.idx += 1;
                 Some(m)
             }
-
         }
     }
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.movelist.len - self.idx, Some(self.movelist.len - self.idx))
+        (
+            self.movelist.len - self.idx,
+            Some(self.movelist.len - self.idx),
+        )
     }
 }
 
@@ -654,7 +651,7 @@ impl IntoIterator for ScoringMoveList {
 }
 
 impl FromIterator<BitMove> for ScoringMoveList {
-    fn from_iter<T: IntoIterator<Item=BitMove>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = BitMove>>(iter: T) -> Self {
         let mut list = ScoringMoveList::default();
         for i in iter {
             list.push(i);

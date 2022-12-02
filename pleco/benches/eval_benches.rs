@@ -1,16 +1,14 @@
-
-
 use std::time::Duration;
 
-use criterion::{Criterion,black_box};
+use criterion::{black_box, Criterion};
 
 use pleco::tools::eval::Eval;
-use pleco::{Board};
-
+use pleco::Board;
 
 fn bench_100_evaluations(c: &mut Criterion) {
     c.bench_function("bench_100_evaluations", |b| {
-        let rand_boards: Vec<Board> = RAND_BOARD_NON_CHECKS_100.iter()
+        let rand_boards: Vec<Board> = RAND_BOARD_NON_CHECKS_100
+            .iter()
             .map(|b| Board::from_fen(b).unwrap())
             .collect();
 
@@ -28,7 +26,6 @@ criterion_group!(name = eval_benches;
     config = Criterion::default().sample_size(20).warm_up_time(Duration::from_millis(5));
     targets = bench_100_evaluations
 );
-
 
 static RAND_BOARD_NON_CHECKS_100: [&str; 100] = [
     "3qkb1r/3ppp2/3r1np1/2Q4p/5P2/1P3B2/P1P1PP1P/R2NK2R b k - 0 22",
@@ -130,4 +127,5 @@ static RAND_BOARD_NON_CHECKS_100: [&str; 100] = [
     "r3r3/2Q2pp1/p6k/3p4/2p1pP1P/4P1P1/2RKB3/1q w - - 0 41",
     "r6k/pp5p/6p1/2p2b2/2n5/8/7P/K w - - 0 39",
     "5r2/1b1rkp2/3pp3/2p3R1/p3P3/5PP1/q3BKP1/4Q1N b - - 1 38",
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"];
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+];

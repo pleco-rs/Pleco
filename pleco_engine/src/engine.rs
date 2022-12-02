@@ -3,14 +3,14 @@
 use std::io;
 use std::sync::atomic::Ordering;
 
-use pleco::Board;
 use pleco::BitMove;
+use pleco::Board;
 
-use time::uci_timer::{PreLimits};
-use uci::options::{OptionsMap,OptionWork};
-use uci::parse;
 use consts::*;
 use threadpool::threadpool;
+use time::uci_timer::PreLimits;
+use uci::options::{OptionWork, OptionsMap};
+use uci::parse;
 
 use search::eval::Evaluation;
 
@@ -32,18 +32,18 @@ enum SearchType {
 pub struct PlecoSearcher {
     options: OptionsMap,
     search_mode: SearchType,
-    board: Board
+    board: Board,
 }
 
 impl PlecoSearcher {
     pub fn init(use_stdout: bool) -> Self {
         init_globals();
-        USE_STDOUT.store(use_stdout,Ordering::Relaxed);
+        USE_STDOUT.store(use_stdout, Ordering::Relaxed);
         threadpool().set_thread_count(num_cpus::get().min(MAX_THREADS).max(1));
         PlecoSearcher {
             options: OptionsMap::new(),
             search_mode: SearchType::None,
-            board: Board::start_pos()
+            board: Board::start_pos(),
         }
     }
 
@@ -68,22 +68,22 @@ impl PlecoSearcher {
                     } else {
                         println!("unable to parse board");
                     }
-                },
+                }
                 "setboard" => {
                     if let Some(b) = parse::setboard_parse_board(&args[1..]) {
                         self.board = b;
                     } else {
                         println!("unable to parse board");
                     }
-                },
+                }
                 "go" => self.uci_go(&args[1..]),
                 "quit" => {
                     self.halt();
                     break;
-                },
+                }
                 "stop" => self.halt(),
                 "eval" => Evaluation::trace(&self.board),
-                _ => print!("Unknown Command: {}",full_command)
+                _ => print!("Unknown Command: {}", full_command),
             }
             self.apply_all_options();
         }
@@ -100,8 +100,8 @@ impl PlecoSearcher {
     }
 
     fn apply_option(&mut self, full_command: &str) {
-        let mut args  = full_command.split_whitespace();
-        args.next().unwrap();  // setoption
+        let mut args = full_command.split_whitespace();
+        args.next().unwrap(); // setoption
         if let Some(non_name) = args.next() {
             if non_name != "name" {
                 println!("setoption [name]");
@@ -114,19 +114,21 @@ impl PlecoSearcher {
         let mut name = String::new();
         let mut value = String::new();
 
-        if let Some(third_arg) = args.next() { //[should be name of the option]
+        if let Some(third_arg) = args.next() {
+            //[should be name of the option]
             name += third_arg;
         } else {
             println!("setoption name [name]");
             return;
         }
 
-        'nv: while let Some(ref partial_name) = args.next(){
+        'nv: while let Some(ref partial_name) = args.next() {
             if *partial_name == "value" {
-                value = args.map(|s| s.to_string() + " ")
-                            .collect::<String>()
-                            .trim()
-                            .to_string();
+                value = args
+                    .map(|s| s.to_string() + " ")
+                    .collect::<String>()
+                    .trim()
+                    .to_string();
                 if &value == "" {
                     println!("forgot a value!");
                     return;
@@ -151,16 +153,16 @@ impl PlecoSearcher {
                 println!("unable to apply work");
             } else {
                 match work {
-                    OptionWork::ClearTT => {self.clear_tt()},
-                    OptionWork::ResizeTT(mb) => {self.resize_tt(mb)},
-                    OptionWork::Threads(num) => {threadpool().set_thread_count(num)}
+                    OptionWork::ClearTT => self.clear_tt(),
+                    OptionWork::ResizeTT(mb) => self.resize_tt(mb),
+                    OptionWork::Threads(num) => threadpool().set_thread_count(num),
                 }
             }
         }
     }
 
     fn uci_startup(&self) {
-        println!("id name {}",ID_NAME);
+        println!("id name {}", ID_NAME);
         println!("id authors {}", ID_AUTHORS);
         self.options.display_all();
         println!("uciok");
@@ -208,26 +210,21 @@ impl PlecoSearcher {
     }
 
     pub fn clear_tt(&mut self) {
-        unsafe {tt().clear() };
+        unsafe { tt().clear() };
     }
 
     pub fn resize_tt(&mut self, mb: usize) {
-        unsafe {tt().resize_to_megabytes(mb)};
+        unsafe { tt().resize_to_megabytes(mb) };
     }
 
     pub fn use_stdout(&mut self, stdout: bool) {
         threadpool().stdout(stdout);
     }
-
-
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     fn ply_3() {
         let mut limit = PreLimits::blank();
@@ -237,6 +234,4 @@ mod tests {
         s.search(&board, &limit);
         s.await_move();
     }
-
-
 }

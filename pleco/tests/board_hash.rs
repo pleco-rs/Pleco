@@ -1,9 +1,8 @@
 extern crate pleco;
 extern crate rand;
 
-use pleco::{Board,BitMove};
-use pleco::board::{RandBoard};
-
+use pleco::board::RandBoard;
+use pleco::{BitMove, Board};
 
 trait HashCorrect {
     fn get_hash(board: &Board) -> u64;
@@ -19,7 +18,6 @@ trait HashCorrect {
                 Self::print_hash(board, &fen);
             }
         }
-
     }
 
     fn print_hash(board: &Board, fen: &str) {
@@ -27,7 +25,8 @@ trait HashCorrect {
         let mut prev_board: Board = board.parallel_clone();
         prev_board.undo_move();
         let prev_fen = prev_board.fen();
-        panic!("\nBoard did not have correct zobrist before and after! ply: {} \n\
+        panic!(
+            "\nBoard did not have correct zobrist before and after! ply: {} \n\
                 current fen: {}\n\
                 last move played: {}, flags: {:b} \n\
                 previous fen: {}\n\
@@ -35,8 +34,14 @@ trait HashCorrect {
                 {} \n
                 previous pretty: \n\
                 {} \n",
-               board.depth(), fen, last_move_played, last_move_played.get_raw() >> 12,
-               prev_fen, board.pretty_string(), prev_board.pretty_string());
+            board.depth(),
+            fen,
+            last_move_played,
+            last_move_played.get_raw() >> 12,
+            prev_fen,
+            board.pretty_string(),
+            prev_board.pretty_string()
+        );
     }
 }
 
@@ -88,8 +93,7 @@ fn material_key_correctness() {
 
 fn randomize<H: HashCorrect>(board: &mut Board) {
     let list = board.generate_moves();
-    let num_iterations = ((rand::random::<usize>() % 6) + 3)
-        .min(list.len());
+    let num_iterations = ((rand::random::<usize>() % 6) + 3).min(list.len());
 
     let mut moves = Vec::with_capacity(num_iterations);
     for _x in 0..num_iterations {
@@ -104,7 +108,6 @@ fn randomize<H: HashCorrect>(board: &mut Board) {
     }
 }
 
-
 fn randomize_inner<H: HashCorrect>(board: &mut Board, depth: usize) {
     H::check_hash(&board);
     if depth != 0 {
@@ -114,12 +117,12 @@ fn randomize_inner<H: HashCorrect>(board: &mut Board, depth: usize) {
         }
 
         let rn = rand::random::<usize>() % moves.len();
-        board.apply_move( moves[rn % moves.len()]);
+        board.apply_move(moves[rn % moves.len()]);
         randomize_inner::<H>(board, depth - 1);
         board.undo_move();
 
         if rn > 3 && rn % 4 == 0 && depth > 4 {
-            board.apply_move( moves[rn - 1]);
+            board.apply_move(moves[rn - 1]);
             randomize_inner::<H>(board, depth - 2);
             board.undo_move();
         }

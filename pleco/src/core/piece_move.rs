@@ -61,25 +61,25 @@
 //! on a `Board` that didn't directly create them, unless it is otherwise known that move
 //! correlates to that specific board position.
 
+use std::cmp::{Ord, Ordering, PartialEq, PartialOrd};
 use std::fmt;
-use std::cmp::{Ordering,PartialEq,PartialOrd,Ord};
 
-use super::*;
 use super::sq::SQ;
+use super::*;
 
 // Castles have the src as the king bit and the dst as the rook
-const SRC_MASK: u16     = 0b0000_000000_111111;
-const DST_MASK: u16     = 0b0000_111111_000000;
+const SRC_MASK: u16 = 0b0000_000000_111111;
+const DST_MASK: u16 = 0b0000_111111_000000;
 const FROM_TO_MASK: u16 = 0b0000_111111_111111;
-const PR_MASK: u16      = 0b1000_000000_000000;
-const CP_MASK: u16      = 0b0100_000000_000000;
-const FLAG_MASK: u16    = 0b1111_000000_000000;
-const SP_MASK: u16      = 0b0011_000000_000000;
+const PR_MASK: u16 = 0b1000_000000_000000;
+const CP_MASK: u16 = 0b0100_000000_000000;
+const FLAG_MASK: u16 = 0b1111_000000_000000;
+const SP_MASK: u16 = 0b0011_000000_000000;
 
-/// Represents a singular move. 
+/// Represents a singular move.
 ///
 /// A `BitMove` consists of 16 bits, all of which to include a source square, destination square,
-/// and special move-flags to differentiate types of moves. 
+/// and special move-flags to differentiate types of moves.
 ///
 /// A `BitMove` should never be created directly, but rather instigated with a `PreMoveInfo`. This is because
 /// the bits are in a special order, and manually creating moves risks creating an invalid move.
@@ -97,19 +97,19 @@ pub enum MoveFlag {
         /// Marks the move as a capturing promotion.
         capture: bool,
         /// The piece that the move promotes to.
-        prom: PieceType
+        prom: PieceType,
     },
     /// The move is a castle.
     Castle {
         /// Determines if the castle is a castle on the king side.
-        king_side: bool
+        king_side: bool,
     },
     /// The move is a double pawn push.
     DoublePawnPush,
     /// The move is a capturing move.
     Capture {
         /// Marks this move as an en-passant capture.
-        ep_capture: bool
+        ep_capture: bool,
     },
     /// The move is a quiet move. This means its not a capture, promotion, castle, or double-pawn push.
     QuietMove,
@@ -120,13 +120,13 @@ pub enum MoveFlag {
 #[repr(u8)]
 pub enum MoveType {
     /// The move is "Normal", So its not a castle, promotion, or en-passant.
-    Normal = 0,    //0b000x
+    Normal = 0, //0b000x
     /// The move is castling move.
-    Castle = 1,    //0b001x
+    Castle = 1, //0b001x
     /// The move is an en-passant capture.
     EnPassant = 5, // 0b0101
     /// The move is a promotion.
-    Promotion = 8,      //0b1xxx
+    Promotion = 8, //0b1xxx
 }
 
 /// Useful pre-encoding of a move's information before it is compressed into a `BitMove` struct.
@@ -146,25 +146,24 @@ impl fmt::Display for BitMove {
     }
 }
 
-
 // https://chessprogramming.wikispaces.com/Encoding+Moves
 impl BitMove {
-    pub const FLAG_QUIET: u16 =         0b0000;
-    pub const FLAG_DOUBLE_PAWN: u16 =   0b0001;
-    pub const FLAG_KING_CASTLE: u16 =   0b0010;
-    pub const FLAG_QUEEN_CASTLE: u16 =  0b0011;
-    pub const FLAG_CAPTURE: u16 =       0b0100;
-    pub const FLAG_EP: u16 =            0b0101;
-    pub const ILLEGAL_FLAG_1: u16 =     0b0110;
-    pub const ILLEGAL_FLAG_2: u16 =     0b0111;
-    pub const FLAG_PROMO_N: u16 =       0b1000;
-    pub const FLAG_PROMO_B: u16 =       0b1001;
-    pub const FLAG_PROMO_R: u16 =       0b1010;
-    pub const FLAG_PROMO_Q: u16 =       0b1011;
-    pub const FLAG_PROMO_CAP_N: u16 =   0b1100;
-    pub const FLAG_PROMO_CAP_B: u16 =   0b1101;
-    pub const FLAG_PROMO_CAP_R: u16 =   0b1110;
-    pub const FLAG_PROMO_CAP_Q: u16 =   0b1111;
+    pub const FLAG_QUIET: u16 = 0b0000;
+    pub const FLAG_DOUBLE_PAWN: u16 = 0b0001;
+    pub const FLAG_KING_CASTLE: u16 = 0b0010;
+    pub const FLAG_QUEEN_CASTLE: u16 = 0b0011;
+    pub const FLAG_CAPTURE: u16 = 0b0100;
+    pub const FLAG_EP: u16 = 0b0101;
+    pub const ILLEGAL_FLAG_1: u16 = 0b0110;
+    pub const ILLEGAL_FLAG_2: u16 = 0b0111;
+    pub const FLAG_PROMO_N: u16 = 0b1000;
+    pub const FLAG_PROMO_B: u16 = 0b1001;
+    pub const FLAG_PROMO_R: u16 = 0b1010;
+    pub const FLAG_PROMO_Q: u16 = 0b1011;
+    pub const FLAG_PROMO_CAP_N: u16 = 0b1100;
+    pub const FLAG_PROMO_CAP_B: u16 = 0b1101;
+    pub const FLAG_PROMO_CAP_R: u16 = 0b1110;
+    pub const FLAG_PROMO_CAP_Q: u16 = 0b1111;
 
     /// Creates a new BitMove from raw bits.
     ///
@@ -180,34 +179,35 @@ impl BitMove {
     /// Makes a quiet `BitMove` from a source and destination square.
     #[inline(always)]
     pub const fn make_quiet(src: SQ, dst: SQ) -> BitMove {
-        BitMove::make(BitMove::FLAG_QUIET,src,dst)
+        BitMove::make(BitMove::FLAG_QUIET, src, dst)
     }
 
     /// Makes a pawn-push `BitMove` from a source and destination square.
     #[inline(always)]
     pub const fn make_pawn_push(src: SQ, dst: SQ) -> BitMove {
-        BitMove::make(BitMove::FLAG_DOUBLE_PAWN,src,dst)
+        BitMove::make(BitMove::FLAG_DOUBLE_PAWN, src, dst)
     }
 
     /// Makes a non-enpassant capturing `BitMove` from a source and destination square.
     #[inline(always)]
     pub const fn make_capture(src: SQ, dst: SQ) -> BitMove {
-        BitMove::make(BitMove::FLAG_CAPTURE,src,dst)
+        BitMove::make(BitMove::FLAG_CAPTURE, src, dst)
     }
 
     /// Makes an enpassant `BitMove` from a source and destination square.
     #[inline(always)]
     pub const fn make_ep_capture(src: SQ, dst: SQ) -> BitMove {
-        BitMove::make(BitMove::FLAG_EP,src,dst)
+        BitMove::make(BitMove::FLAG_EP, src, dst)
     }
 
     /// Creates a `BitMove` from a source and destination square, as well as the current
     /// flag.
     #[inline(always)]
     pub const fn make(flag_bits: u16, src: SQ, dst: SQ) -> BitMove {
-        BitMove { data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6) }
+        BitMove {
+            data: (flag_bits << 12) | src.0 as u16 | ((dst.0 as u16) << 6),
+        }
     }
-
 
     /// Returns the promotion flag bits of a `PieceType`.
     #[inline(always)]
@@ -249,7 +249,9 @@ impl BitMove {
             MoveFlag::DoublePawnPush => 1,
             MoveFlag::QuietMove => 0,
         };
-        BitMove { data: (flag_bits << 12) | src | dst }
+        BitMove {
+            data: (flag_bits << 12) | src | dst,
+        }
     }
 
     /// Creates a Null Move.
@@ -316,7 +318,7 @@ impl BitMove {
     /// Returns if a `BitMove` is a castle.
     #[inline(always)]
     pub const fn is_castle(self) -> bool {
-        (self.data  >> 13) == 1
+        (self.data >> 13) == 1
     }
 
     /// Returns if a `BitMove` is a Castle && it is a KingSide Castle.
@@ -351,7 +353,7 @@ impl BitMove {
     /// lies on.
     #[inline(always)]
     pub fn dest_row(self) -> Rank {
-//        ALL_RANKS[(((self.data & DST_MASK) >> 6) as u8 / 8) as usize]
+        //        ALL_RANKS[(((self.data & DST_MASK) >> 6) as u8 / 8) as usize]
         self.get_dest().rank()
     }
 
@@ -389,7 +391,6 @@ impl BitMove {
         }
     }
 
-
     // TODO: Simply with (m >> 4) & 3
     /// Returns the `MoveType` of a `BitMove`.
     #[inline(always)]
@@ -421,7 +422,7 @@ impl BitMove {
                 SQ::A1 => String::from("c1"),
                 SQ::H8 => String::from("g8"),
                 SQ::H1 => String::from("g1"),
-                _ => dst_sq.to_string()
+                _ => dst_sq.to_string(),
             }
         } else {
             dst_sq.to_string()
@@ -473,7 +474,7 @@ impl BitMove {
 #[repr(C)]
 pub struct ScoringMove {
     pub bit_move: BitMove,
-    pub score: i16
+    pub score: i16,
 }
 
 impl Default for ScoringMove {
@@ -481,7 +482,7 @@ impl Default for ScoringMove {
     fn default() -> Self {
         ScoringMove {
             bit_move: BitMove::null(),
-            score: 0
+            score: 0,
         }
     }
 }
@@ -492,17 +493,14 @@ impl ScoringMove {
     pub fn new(m: BitMove) -> Self {
         ScoringMove {
             bit_move: m,
-            score: 0
+            score: 0,
         }
     }
 
     /// Creates a new `ScoringMove`.
     #[inline(always)]
     pub fn new_score(m: BitMove, score: i16) -> Self {
-        ScoringMove {
-            bit_move: m,
-            score,
-        }
+        ScoringMove { bit_move: m, score }
     }
 
     /// Returns a `ScoringMove` containing a `BitMove::null()` and a user-defined score.
@@ -545,10 +543,9 @@ impl ScoringMove {
     pub const fn null() -> Self {
         ScoringMove {
             bit_move: BitMove::null(),
-            score: 0
+            score: 0,
         }
     }
-
 }
 
 impl Ord for ScoringMove {
@@ -568,5 +565,3 @@ impl PartialEq for ScoringMove {
         self.score == other.score
     }
 }
-
-

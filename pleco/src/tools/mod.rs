@@ -3,24 +3,25 @@
 //! multiple threads. Other useful objects are the `UciLimit` enum and `Searcher` trait
 //! for building bots.
 
-pub mod prng;
 pub mod eval;
-pub mod tt;
 pub mod pleco_arc;
+pub mod prng;
+pub mod tt;
 
-
-use core::piece_move::BitMove;
 use board::Board;
+use core::piece_move::BitMove;
 
 /// Defines an object that can play chess.
 pub trait Searcher {
     /// Returns the name of the searcher.
-    fn name() -> &'static str where Self: Sized;
+    fn name() -> &'static str
+    where
+        Self: Sized;
 
     /// Returns the BestMove of a position from a search of depth.
     fn best_move(board: Board, depth: u16) -> BitMove
-        where
-            Self: Sized;
+    where
+        Self: Sized;
 }
 
 // https://doc.rust-lang.org/core/arch/x86_64/fn._mm_prefetch.html
@@ -47,7 +48,6 @@ pub fn prefetch_write<T>(ptr: *const T) {
     __prefetch_write::<T>(ptr);
 }
 
-
 #[cfg(feature = "nightly")]
 #[inline(always)]
 fn __prefetch_write<T>(ptr: *const T) {
@@ -57,13 +57,11 @@ fn __prefetch_write<T>(ptr: *const T) {
     }
 }
 
-#[cfg(
-    all(
-        not(feature = "nightly"),
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse"
-    )
-)]
+#[cfg(all(
+    not(feature = "nightly"),
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "sse"
+))]
 #[inline(always)]
 fn __prefetch_write<T>(ptr: *const T) {
     #[cfg(target_arch = "x86")]
@@ -75,18 +73,16 @@ fn __prefetch_write<T>(ptr: *const T) {
     }
 }
 
-#[cfg(
-    all(
-        not(feature = "nightly"),
-        any(
-            all(
-                any(target_arch = "x86", target_arch = "x86_64"),
-                not(target_feature = "sse")
-            ),
-            not(any(target_arch = "x86", target_arch = "x86_64"))
-        )
+#[cfg(all(
+    not(feature = "nightly"),
+    any(
+        all(
+            any(target_arch = "x86", target_arch = "x86_64"),
+            not(target_feature = "sse")
+        ),
+        not(any(target_arch = "x86", target_arch = "x86_64"))
     )
-)]
+))]
 #[inline(always)]
 fn __prefetch_write<T>(ptr: *const T) {
     // Do nothing
@@ -120,12 +116,10 @@ pub mod hint {
     #[inline(always)]
     pub fn likely(cond: bool) -> bool {
         #[cfg(feature = "nightly")]
-            unsafe {
+        unsafe {
             intrinsics::likely(cond)
         }
         #[cfg(not(feature = "nightly"))]
-            cond
+        cond
     }
-
-
 }

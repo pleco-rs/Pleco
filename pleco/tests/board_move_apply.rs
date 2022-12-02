@@ -5,7 +5,6 @@ use pleco::board::Board;
 use pleco::core::piece_move::BitMove;
 use std::*;
 
-
 #[test]
 fn random_moves() {
     let mut chess_board = Board::start_pos();
@@ -43,4 +42,3 @@ fn apply_null_moves() {
         trials += 1;
     }
 }
-

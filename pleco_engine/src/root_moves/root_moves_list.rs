@@ -1,14 +1,12 @@
-
-use std::slice;
-use std::ops::{Deref,DerefMut,Index,IndexMut};
-use std::iter::{Iterator,IntoIterator,FusedIterator,TrustedLen,ExactSizeIterator};
-use std::ptr;
+use std::iter::{ExactSizeIterator, FusedIterator, IntoIterator, Iterator, TrustedLen};
 use std::mem;
-use std::sync::atomic::{Ordering,AtomicUsize};
+use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::ptr;
+use std::slice;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use pleco::{MoveList, BitMove};
 use super::{RootMove, MAX_MOVES};
-
+use pleco::{BitMove, MoveList};
 
 pub struct RootMoveList {
     len: AtomicUsize,
@@ -19,7 +17,7 @@ impl Clone for RootMoveList {
     fn clone(&self) -> Self {
         RootMoveList {
             len: AtomicUsize::new(self.len.load(Ordering::SeqCst)),
-            moves: self.moves
+            moves: self.moves,
         }
     }
 }
@@ -49,8 +47,10 @@ impl RootMoveList {
     pub fn clone_from_other(&mut self, other: &RootMoveList) {
         self.len.store(other.len(), Ordering::SeqCst);
         unsafe {
-            let self_moves: *mut [RootMove; MAX_MOVES] = self.moves.as_mut_ptr() as *mut [RootMove; MAX_MOVES];
-            let other_moves: *const [RootMove; MAX_MOVES] = other.moves.as_ptr() as *const [RootMove; MAX_MOVES];
+            let self_moves: *mut [RootMove; MAX_MOVES] =
+                self.moves.as_mut_ptr() as *mut [RootMove; MAX_MOVES];
+            let other_moves: *const [RootMove; MAX_MOVES] =
+                other.moves.as_ptr() as *const [RootMove; MAX_MOVES];
             ptr::copy_nonoverlapping(other_moves, self_moves, 1);
         }
     }
@@ -66,8 +66,7 @@ impl RootMoveList {
     /// Applies `RootMove::rollback()` to each `RootMove` inside.
     #[inline]
     pub fn rollback(&mut self) {
-        self.iter_mut()
-            .for_each(|b| b.prev_score = b.score);
+        self.iter_mut().for_each(|b| b.prev_score = b.score);
     }
 
     /// Returns the first `RootMove` in the list.
@@ -77,23 +76,19 @@ impl RootMoveList {
     /// May return a nonsense `RootMove` if the list hasn't been initalized since the start.
     #[inline]
     pub fn first(&mut self) -> &mut RootMove {
-        unsafe {
-            self.get_unchecked_mut(0)
-        }
+        unsafe { self.get_unchecked_mut(0) }
     }
 
     /// Converts to a `MoveList`.
     pub fn to_list(&self) -> MoveList {
-        let vec =  self.iter().map(|m| m.bit_move).collect::<Vec<BitMove>>();
+        let vec = self.iter().map(|m| m.bit_move).collect::<Vec<BitMove>>();
         MoveList::from(vec)
     }
 
     /// Returns the previous best score.
     #[inline]
     pub fn prev_best_score(&self) -> i32 {
-        unsafe {
-            self.get_unchecked(0).prev_score
-        }
+        unsafe { self.get_unchecked(0).prev_score }
     }
 
     #[inline]
@@ -102,7 +97,6 @@ impl RootMoveList {
             let rm: &mut RootMove = self.get_unchecked_mut(index);
             rm.score = score;
             rm.depth_reached = depth;
-
         }
     }
 
@@ -115,8 +109,7 @@ impl RootMoveList {
     }
 
     pub fn find(&mut self, mov: BitMove) -> Option<&mut RootMove> {
-        self.iter_mut()
-            .find(|m| m.bit_move == mov)
+        self.iter_mut().find(|m| m.bit_move == mov)
     }
 }
 
@@ -161,7 +154,7 @@ impl IndexMut<usize> for RootMoveList {
 pub struct MoveIter<'a> {
     movelist: &'a RootMoveList,
     idx: usize,
-    len: usize
+    len: usize,
 }
 
 impl<'a> Iterator for MoveIter<'a> {
@@ -177,7 +170,6 @@ impl<'a> Iterator for MoveIter<'a> {
                 self.idx += 1;
                 Some(m)
             }
-
         }
     }
 
@@ -196,7 +188,7 @@ impl<'a> IntoIterator for &'a RootMoveList {
         MoveIter {
             movelist: &self,
             idx: 0,
-            len: self.len()
+            len: self.len(),
         }
     }
 }
