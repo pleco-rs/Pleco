@@ -1,10 +1,17 @@
-# Pleco
+<div align="center">
+
+[![Pleco][pleco-badge]][pleco-link]
+
+[![Build][build-badge]][build-link]
+[![License][license-badge]][license-link]
+[![Commits][commits-badge]][commits-link]
+
+</div>
+
+# Overview
 
 Pleco is a Chess Library, containing the building blocks of the chess engine [Stockfish](https://stockfishchess.org/),
 re-written entirely in Rust.
-
-[![Pleco crate](https://img.shields.io/crates/v/pleco.svg)](https://crates.io/crates/pleco)
-[![Build Status](https://api.travis-ci.org/sfleischman105/Pleco.svg?branch=Beta-Branch)](https://travis-ci.org/sfleischman105/Pleco)
 
 This project is split into two crates, `pleco` (the library you are currently in), which contains the library functionality,
 and `pleco_engine`, which contains the UCI (Universal Chess Interface) compatible Engine & AI.
