@@ -15,8 +15,8 @@
 //! [`MoveList`]: struct.MoveList.html
 //! [`ScoreMoveList`]: struct.MoveList.html
 
-#[cfg(feature = "nightly")]
-use std::iter::TrustedLen;
+// #[cfg(feature = "nightly")] meow
+// use std::iter::TrustedLen;
 use std::iter::{ExactSizeIterator, FromIterator, FusedIterator, IntoIterator, Iterator};
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::slice;
@@ -319,8 +319,8 @@ impl<'a> ExactSizeIterator for MoveIter<'a> {}
 
 impl<'a> FusedIterator for MoveIter<'a> {}
 
-#[cfg(feature = "nightly")]
-unsafe impl<'a> TrustedLen for MoveIter<'a> {}
+// #[cfg(feature = "nightly")] meow
+// unsafe impl<'a> TrustedLen for MoveIter<'a> {}
 
 // Iterator for the `MoveList`.
 pub struct MoveIntoIter {
@@ -380,8 +380,8 @@ impl ExactSizeIterator for MoveIntoIter {}
 
 impl FusedIterator for MoveIntoIter {}
 
-#[cfg(feature = "nightly")]
-unsafe impl TrustedLen for MoveIntoIter {}
+// #[cfg(feature = "nightly")] meow
+// unsafe impl TrustedLen for MoveIntoIter {}
 
 /// This is similar to a `MoveList`, but also keeps the scores for each move as well.
 pub struct ScoringMoveList {
@@ -603,8 +603,8 @@ impl<'a> ExactSizeIterator for ScoreMoveIter<'a> {}
 
 impl<'a> FusedIterator for ScoreMoveIter<'a> {}
 
-#[cfg(feature = "nightly")]
-unsafe impl<'a> TrustedLen for ScoreMoveIter<'a> {}
+// #[cfg(feature = "nightly")] meow
+// unsafe impl<'a> TrustedLen for ScoreMoveIter<'a> {}
 
 // Iterator for the `ScoringMoveList`.
 pub struct ScoreMoveIntoIter {
@@ -664,5 +664,5 @@ impl ExactSizeIterator for ScoreMoveIntoIter {}
 
 impl FusedIterator for ScoreMoveIntoIter {}
 
-#[cfg(feature = "nightly")]
-unsafe impl TrustedLen for ScoreMoveIntoIter {}
+// #[cfg(feature = "nightly")] meow
+// unsafe impl TrustedLen for ScoreMoveIntoIter {}

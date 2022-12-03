@@ -48,17 +48,17 @@ pub fn prefetch_write<T>(ptr: *const T) {
     __prefetch_write::<T>(ptr);
 }
 
-#[cfg(feature = "nightly")]
-#[inline(always)]
-fn __prefetch_write<T>(ptr: *const T) {
-    use std::intrinsics::prefetch_write_data;
-    unsafe {
-        prefetch_write_data::<T>(ptr, 3);
-    }
-}
+// #[cfg(feature = "nightly")] meow
+// #[inline(always)]
+// fn __prefetch_write<T>(ptr: *const T) {
+//     use std::intrinsics::prefetch_write_data;
+//     unsafe {
+//         prefetch_write_data::<T>(ptr, 3);
+//     }
+// }
 
 #[cfg(all(
-    not(feature = "nightly"),
+    // not(feature = "nightly"), meow
     any(target_arch = "x86", target_arch = "x86_64"),
     target_feature = "sse"
 ))]
@@ -74,7 +74,7 @@ fn __prefetch_write<T>(ptr: *const T) {
 }
 
 #[cfg(all(
-    not(feature = "nightly"),
+    // not(feature = "nightly"), meow
     any(
         all(
             any(target_arch = "x86", target_arch = "x86_64"),
@@ -92,8 +92,8 @@ fn __prefetch_write<T>(ptr: *const T) {
 ///
 /// These functions normally compile down to no-operations without the `nightly` flag.
 pub mod hint {
-    #[cfg(feature = "nightly")]
-    use std::intrinsics;
+    // #[cfg(feature = "nightly")] meow
+    // use std::intrinsics;
 
     /// Hints to the compiler that branch condition is likely to be false.
     /// Returns the value passed to it.
@@ -101,11 +101,12 @@ pub mod hint {
     /// Any use other than with `if` statements will probably not have an effect.
     #[inline(always)]
     pub fn unlikely(cond: bool) -> bool {
-        #[cfg(feature = "nightly")]
-        {
-            intrinsics::unlikely(cond)
-        }
-        #[cfg(not(feature = "nightly"))]
+        // meow
+        // #[cfg(feature = "nightly")]
+        // {
+        //     intrinsics::unlikely(cond)
+        // }
+        // #[cfg(not(feature = "nightly"))]
         cond
     }
 
@@ -115,11 +116,12 @@ pub mod hint {
     /// Any use other than with `if` statements will probably not have an effect.
     #[inline(always)]
     pub fn likely(cond: bool) -> bool {
-        #[cfg(feature = "nightly")]
-        {
-            intrinsics::likely(cond)
-        }
-        #[cfg(not(feature = "nightly"))]
+        // meow
+        // #[cfg(feature = "nightly")]
+        // {
+        //     intrinsics::likely(cond)
+        // }
+        // #[cfg(not(feature = "nightly"))]
         cond
     }
 }

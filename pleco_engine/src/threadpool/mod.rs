@@ -45,7 +45,7 @@ pub fn init_threadpool() {
                 .name("Starter".to_string())
                 .stack_size(THREAD_STACK_SIZE);
 
-            let handle = builder.spawn_unchecked(move || {
+            let handle = builder.spawn(|| {
                 let pool: *mut ThreadPool = mem::transmute(&mut THREADPOOL);
                 ptr::write(pool, ThreadPool::new());
             });
@@ -137,7 +137,7 @@ impl ThreadPool {
                 .stack_size(THREAD_STACK_SIZE);
 
             let handle = builder
-                .spawn_unchecked(move || {
+                .spawn(move || {
                     let thread = &mut **thread_ptr.ptr.get();
                     thread.cond.lock();
                     thread.idle_loop();

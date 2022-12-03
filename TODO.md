@@ -17,6 +17,7 @@ Review projects to get ideas for improvements
 - https://github.com/jordanbray/chess
 - https://github.com/Johnson-A/Crabby
 
+Create logo and branding
 Setup docs and move content to there
 Revise all readmes
 Create website

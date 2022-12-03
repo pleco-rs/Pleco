@@ -1,4 +1,5 @@
-use std::iter::{ExactSizeIterator, FusedIterator, IntoIterator, Iterator, TrustedLen};
+// use std::iter::{ExactSizeIterator, FusedIterator, IntoIterator, Iterator, TrustedLen}; meow
+use std::iter::{ExactSizeIterator, FusedIterator, IntoIterator, Iterator};
 use std::mem;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::ptr;
@@ -197,4 +198,4 @@ impl<'a> ExactSizeIterator for MoveIter<'a> {}
 
 impl<'a> FusedIterator for MoveIter<'a> {}
 
-unsafe impl<'a> TrustedLen for MoveIter<'a> {}
+// unsafe impl<'a> TrustedLen for MoveIter<'a> {} meow
