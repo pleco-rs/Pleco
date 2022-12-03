@@ -111,3 +111,14 @@ Any and all contributions are welcome! Open up a PR to contribute some improveme
 ## License
 
 Pleco is distributed under the terms of the MIT license. See LICENSE-MIT for details. Opening a pull requests is assumed to signal agreement with these licensing terms.
+
+[build-link]: https://github.com/pleco-rs/Pleco/blob/main/.github/workflows/test.yml
+[build-badge]: https://img.shields.io/github/workflow/status/pleco-rs/Pleco/Test?style=for-the-badge&label=tanton&logo=github
+[license-badge]: https://img.shields.io/github/license/pleco-rs/Pleco?style=for-the-badge&label=license&color=success
+[license-link]: https://github.com/pleco-rs/Pleco/blob/main/LICENSE
+[commits-badge]: https://img.shields.io/github/commit-activity/m/pleco-rs/Pleco?style=for-the-badge
+[commits-link]: https://github.com/pleco-rs/Pleco/commits/main
+[pleco-badge]: https://img.shields.io/crates/v/pleco.svg?style=for-the-badge
+[pleco-link]: https://crates.io/crates/pleco
+[pleco-engine-badge]: https://img.shields.io/crates/v/pleco_engine.svg?style=for-the-badge
+[pleco-engine-link]: https://crates.io/crates/pleco_engine

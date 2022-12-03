@@ -1,4 +1,3 @@
-Remake all old changes
 Address all existing PRs and Issues
 Publish new version of crates
 Raise PR for other protocols to use pleco again
