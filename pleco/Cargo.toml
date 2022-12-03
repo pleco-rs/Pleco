@@ -20,10 +20,6 @@ include = [
     "README.md",
 ]
 
-[badges]
-travis-ci = { repository = "sfleischman105/Pleco", branch = "master" }
-coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = "github" }
-
 [lib]
 name = "pleco"
 path = "src/lib.rs"

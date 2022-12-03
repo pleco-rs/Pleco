@@ -20,14 +20,6 @@ include = [
     "README.md"
 ]
 
-[badges]
-travis-ci = { repository = "sfleischman105/Pleco", branch = "master" }
-coveralls = { repository = "sfleischman105/Pleco", branch = "master", service = "github" }
-
-#[profile.dev]
-#opt-level = 3
-#debug = true
-
 [profile.release]
 opt-level = 3
 debug = false
