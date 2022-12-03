@@ -35,7 +35,7 @@ If you would rather build it yourself (for a specific architecture, or otherwise
 and navigate into the created folder with the following commands:
 
 ```
-$ git clone https://github.com/sfleischman105/Pleco --branch master
+$ git clone https://github.com/sfleischman105/Pleco --branch main
 $ cd Pleco/
 ```
 

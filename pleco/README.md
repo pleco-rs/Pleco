@@ -24,7 +24,7 @@ credit for the majority of the code go directly to the maintainers and authors o
 - [crates.io](https://crates.io/crates/pleco)
 
 For the chess engine implemented using this library provided by `pleco`,
-see [pleco_engine](https://github.com/sfleischman105/Pleco/tree/master/pleco_engine).
+see [pleco_engine](https://github.com/sfleischman105/Pleco/tree/main/pleco_engine).
 
 ## Features
 

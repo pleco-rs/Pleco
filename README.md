@@ -27,7 +27,7 @@ between the two languages, as well as for educational purposes.
 
 ## Standalone Installation and Use
 
-To use pleco as an executable, please [navigate to here](https://github.com/sfleischman105/Pleco/tree/master/pleco_engine) and read the `README.md`.
+To use pleco as an executable, please [navigate to here](https://github.com/sfleischman105/Pleco/tree/main/pleco_engine) and read the `README.md`.
 
 ## Using Pleco as a Library
 
@@ -107,7 +107,7 @@ board.undo_move();
 assert_eq!(board.moves_played(),0);
 ```
 
-For more informaton about `pleco` as a library, see the [pleco README.md](https://github.com/sfleischman105/Pleco/tree/master/pleco).
+For more informaton about `pleco` as a library, see the [pleco README.md](https://github.com/sfleischman105/Pleco/tree/main/pleco).
 
 ## Contributing
 
