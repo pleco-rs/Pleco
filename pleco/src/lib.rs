@@ -67,12 +67,7 @@
 //! [`MoveList`]: core/move_list/struct.MoveList.html
 //! [`Board`]: board/struct.Board.html
 
-// #![cfg_attr(feature = "dev", allow(unstable_features))] meow
 #![cfg_attr(test, allow(dead_code))]
-//#![crate_type = "rlib"]
-// #![cfg_attr(feature = "nightly", feature(core_intrinsics))] meow
-// #![cfg_attr(feature = "nightly", feature(const_slice_ptr_len))] meow
-// #![cfg_attr(feature = "nightly", feature(trusted_len))] meow
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::unreadable_literal)]
 #![allow(dead_code)]

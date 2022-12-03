@@ -6,7 +6,6 @@
 //! If you are interested in using the direct chess library functions (The Boards, move generation, etc), please
 //! checkout the core library, `pleco`, available on [on crates.io](https://crates.io/crates/pleco).
 //!
-// #![cfg_attr(feature = "dev", allow(unstable_features))] meow
 #![cfg_attr(test, allow(dead_code))]
 #![allow(dead_code)]
 #![allow(clippy::cast_lossless)]
@@ -14,14 +13,6 @@
 #![allow(clippy::cast_ptr_alignment)]
 #![allow(clippy::mut_from_ref)]
 #![allow(clippy::cognitive_complexity)]
-// #![feature(ptr_internals)] meow
-// #![feature(integer_atomics)]
-// #![feature(test)]
-// #![feature(allocator_api)]
-// #![feature(trusted_len)]
-// #![feature(const_mut_refs)]
-// #![feature(alloc_layout_extra)]
-// #![feature(thread_spawn_unchecked)]
 
 //#![crate_type = "staticlib"]
 
