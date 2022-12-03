@@ -3,7 +3,7 @@
 //! A [`BitBoard`] is a set of bits, where the index of each bit represents a square on the
 //! Board. We use this to mark whether or not something is residing at a certain square. For
 //! example, if we are using it to map the positions of the white pawns, and there exists a
-//! pawn at square B9, the bit at index 9 will be set to '1'. The lack of a piece is marked
+//! pawn at square B2, the bit at index 9 will be set to '1'. The lack of a piece is marked
 //! with a '0' instead.
 //!
 //! Each bit's index of a [`BitBoard`] maps to the following squares:
