@@ -10,3 +10,4 @@ pleco/Cargo.lock
 pleco_engine/Cargo.lock
 Cargo.lock
 notes.txt
+.DS_Store
