@@ -28,7 +28,6 @@
 extern crate chrono;
 extern crate num_cpus;
 extern crate pleco;
-extern crate prefetch;
 extern crate rand;
 
 pub mod consts;
