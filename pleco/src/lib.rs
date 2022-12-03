@@ -18,11 +18,6 @@
 //! Currently, there are no guarantees of correct behavior if compiled for a different
 //! instruction set.
 //!
-//! # Nightly Features
-//!
-//! If on nightly rust, the feature `nightly` is available. This enables some nightly
-//! optimizations and speed improvements.
-//!
 //! # Safety
 //!
 //! While generally a safe library, pleco was built with a focus of speed in mind. Usage of methods
