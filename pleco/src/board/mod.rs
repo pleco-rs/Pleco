@@ -206,6 +206,7 @@ pub struct Board {
     depth: u16,                                       // Current depth since last shallow_copy
     piece_counts: [[u8; PIECE_TYPE_CNT]; PLAYER_CNT], // Count of each Piece
     piece_locations: PieceLocations,                  // Mapping Squares to Pieces and Plauers
+    historic_piece_locations: Vec<PieceLocations>,    // Historic piece locations
 
     // State of the Board, Un modifiable.
     // Arc to allow easy and quick copying of boards without copying memory
@@ -304,6 +305,7 @@ impl Board {
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
             magic_helper: self.magic_helper,
+            historic_piece_locations: Vec::new(),
         }
     }
 
@@ -345,6 +347,7 @@ impl Board {
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
             magic_helper: self.magic_helper,
+            historic_piece_locations: self.historic_piece_locations.clone(),
         }
     }
 
@@ -435,6 +438,7 @@ impl Board {
             piece_locations: PieceLocations::blank(),
             state: Arc::new(BoardState::blank()),
             magic_helper: Helper::new(),
+            historic_piece_locations: Vec::new(),
         };
 
         for &(sq, plyr, piece) in piece_loc.iter() {
@@ -702,6 +706,8 @@ impl Board {
             // Increment these
             self.half_moves += 1;
             self.depth += 1;
+            self.historic_piece_locations
+                .push(self.piece_locations.clone());
             new_state.rule_50 += 1;
             new_state.ply += 1;
             new_state.prev_move = bit_move;
@@ -952,6 +958,7 @@ impl Board {
         self.state = self.state.get_prev().unwrap();
         self.half_moves -= 1;
         self.depth -= 1;
+        self.historic_piece_locations.pop();
 
         #[cfg(debug_assertions)]
         self.is_okay().unwrap();
@@ -1743,11 +1750,25 @@ impl Board {
         self.in_check() && self.generate_moves().is_empty()
     }
 
+    /// Return if the threefold repetition rule has been met.
+    pub fn threefold_repetition(&self) -> bool {
+        let mut count = 0;
+        for position in &self.historic_piece_locations {
+            if *position == self.piece_locations {
+                count += 1;
+            }
+        }
+        count >= 2
+    }
+
     /// Returns if the current side to move is in stalemate.
     ///
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
-        !self.in_check() && (self.state.rule_50 >= 50 || self.generate_moves().is_empty())
+        !self.in_check()
+            && (self.state.rule_50 >= 50
+                || self.generate_moves().is_empty()
+                || self.threefold_repetition())
     }
 
     /// Return the `BitBoard` of all checks on the current player's king. If the current side

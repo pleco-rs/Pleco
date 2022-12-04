@@ -30,6 +30,7 @@ Raise PR for other protocols to use pleco again
 
 ## Development
 
+Consider 3-fold repetition in engine
 Review and merge this PR: https://github.com/pleco-rs/Pleco/pull/134
 Test engine in Arena: https://github.com/pleco-rs/Pleco/issues/132
 Find some AI code review tool to find improvements
@@ -51,5 +52,8 @@ Setup Lichess playable bot
 
 Implement PGN Parser: https://github.com/pleco-rs/Pleco/issues/71
 Consider splitting up repos
+Look at all changes stockfish has made since Pleco was created, port over meaningful ones that will benefit Pleco
 
 ================================================
+
+Update more packages
