@@ -272,8 +272,8 @@ unsafe fn gen_king_moves() {
 
 #[cold]
 unsafe fn gen_distance_table() {
-    for i in 0..64 as u8 {
-        for j in 0..64 as u8 {
+    for i in 0..64_u8 {
+        for j in 0..64_u8 {
             DISTANCE_TABLE[i as usize][j as usize] = (SQ(i)).distance(SQ(j));
         }
     }
@@ -281,10 +281,10 @@ unsafe fn gen_distance_table() {
 
 #[cold]
 unsafe fn gen_between_and_line_bbs() {
-    for i in 0..64 as u8 {
-        for j in 0..64 as u8 {
-            let i_bb: u64 = (1 as u64) << i;
-            let j_bb: u64 = (1 as u64) << j;
+    for i in 0..64_u8 {
+        for j in 0..64_u8 {
+            let i_bb: u64 = 1_u64 << i;
+            let j_bb: u64 = 1_u64 << j;
             if rook_attacks(0, i) & j_bb != 0 {
                 LINE_BITBOARD[i as usize][j as usize] |=
                     (rook_attacks(0, j) & rook_attacks(0, i)) | i_bb | j_bb;
@@ -306,7 +306,7 @@ unsafe fn gen_between_and_line_bbs() {
 #[cold]
 unsafe fn gen_pawn_attacks() {
     // gen white pawn attacks
-    for i in 0..56 as u8 {
+    for i in 0..56_u8 {
         let mut bb: u64 = 0;
         if file_of_sq(i) != File::A {
             bb |= u8_to_u64(i + 7)
@@ -318,7 +318,7 @@ unsafe fn gen_pawn_attacks() {
     }
 
     // Black pawn attacks
-    for i in 8..64 as u8 {
+    for i in 8..64_u8 {
         let mut bb: u64 = 0;
         if file_of_sq(i) != File::A {
             bb |= u8_to_u64(i - 9)
@@ -336,7 +336,7 @@ unsafe fn gen_ring_distance_bb() {
         for j in 0..64 {
             if i != j {
                 let dist = DISTANCE_TABLE[i][j] as usize;
-                DISTANCE_RING_TABLE[dist - 1][i] |= (1 as u64) << (j as usize);
+                DISTANCE_RING_TABLE[dist - 1][i] |= 1_u64 << (j as usize);
             }
         }
     }

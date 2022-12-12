@@ -13,6 +13,7 @@
 #![allow(clippy::cast_ptr_alignment)]
 #![allow(clippy::mut_from_ref)]
 #![allow(clippy::cognitive_complexity)]
+#![allow(clippy::uninit_assumed_init)]
 
 //#![crate_type = "staticlib"]
 

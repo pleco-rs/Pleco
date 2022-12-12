@@ -78,13 +78,6 @@ impl SQ {
     /// `None`.
     pub const NONE: SQ = NO_SQ;
 
-    /// Returns the UCI String representation of a `SQ`.
-    #[inline(never)]
-    pub fn to_string(self) -> String {
-        assert!(self.is_okay());
-        String::from(SQ_DISPLAY[self.0 as usize])
-    }
-
     /// Returns if a `SQ` is within the legal bounds of a square,
     /// which is inclusively between 0 - 63.
     ///

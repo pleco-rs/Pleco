@@ -38,11 +38,12 @@ fn bench_find(c: &mut Criterion) {
     lazy_static::initialize(&RAND_BOARDS);
     c.bench_function("Board find King SQ", |b| {
         b.iter(|| {
-            black_box({
+            {
                 for board in RAND_BOARDS.iter() {
                     black_box(board.king_sq(Player::Black));
                 }
-            })
+            };
+            black_box(())
         })
     });
 }
@@ -60,12 +61,14 @@ fn bench_apply_100_move(c: &mut Criterion) {
         }
 
         b.iter(|| {
-            black_box({
+            {
                 for t in board_move.iter() {
                     let board: &Board = &(t.0);
-                    black_box(black_box(board.clone()).apply_move(t.1));
+                    black_box(board.clone()).apply_move(t.1);
+                    black_box(());
                 }
-            })
+            };
+            black_box(())
         })
     });
 }
@@ -79,11 +82,13 @@ fn bench_undo_100_move(c: &mut Criterion) {
         }
 
         b.iter(|| {
-            black_box({
+            {
                 for board in boards.iter_mut() {
-                    black_box(black_box(board.parallel_clone()).undo_move());
+                    black_box(board.parallel_clone()).undo_move();
+                    black_box(());
                 }
-            })
+            };
+            black_box(())
         })
     });
 }

@@ -6,25 +6,27 @@ use pleco::core::bitboard::{BitBoard, RandBitBoard};
 
 fn popcount_rust(b: &mut Bencher, data: &Vec<BitBoard>) {
     b.iter(|| {
-        black_box({
+        {
             for bits in data.iter() {
                 black_box({
-                    black_box(black_box((*bits).0)).count_ones();
+                    black_box(black_box(bits.0)).count_ones();
                 })
             }
-        })
+        };
+        black_box(())
     });
 }
 
 fn popcount_old_8(b: &mut Bencher, data: &Vec<BitBoard>) {
     b.iter(|| {
-        black_box({
+        {
             for bits in data.iter() {
                 black_box({
-                    popcount_table(black_box((*bits).0));
+                    popcount_table(black_box(bits.0));
                 })
             }
-        })
+        };
+        black_box(())
     });
 }
 

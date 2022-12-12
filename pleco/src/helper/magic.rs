@@ -154,7 +154,7 @@ unsafe fn gen_magic_board(
     pre_sq_table[0].start = 0;
 
     // Loop through each square! s is a SQ
-    for s in 0..64 as u8 {
+    for s in 0..64_u8 {
         // Magic number for later
         let mut magic: u64;
 
@@ -213,9 +213,9 @@ unsafe fn gen_magic_board(
                     // If we have visited with lower current, we replace it with this current number,
                     // as this current is higher and has gone through more passes
                     age[index] = current;
-                    *attacks.offset((pre_sq_table[s as usize].start + index) as isize) =
+                    *attacks.add(pre_sq_table[s as usize].start + index) =
                         reference[i];
-                } else if *attacks.offset((pre_sq_table[s as usize].start + index) as isize)
+                } else if *attacks.add(pre_sq_table[s as usize].start + index)
                     != reference[i]
                 {
                     // If a magic maps to the same index but different result, either magic is bad or we are done
@@ -238,12 +238,12 @@ unsafe fn gen_magic_board(
     let mut size = 0;
     for i in 0..64 {
         // begin ptr points to the beginning of the current slice in the vector
-        let beginptr = attacks.offset(size as isize);
+        let beginptr = attacks.add(size);
 
         // points to the static entry
-        let staticptr: *mut SMagic = static_magics.offset(i as isize);
+        let staticptr: *mut SMagic = static_magics.add(i);
         let table_i: SMagic = SMagic {
-            ptr: mem::transmute::<*const u64, usize>(beginptr),
+            ptr: beginptr as usize,
             mask: pre_sq_table[i].mask,
             magic: pre_sq_table[i].magic,
             shift: pre_sq_table[i].shift,
@@ -265,12 +265,12 @@ fn sliding_attack(deltas: &[i8; 4], sq: u8, occupied: u64) -> u64 {
     assert!(sq < 64);
     let mut attack: u64 = 0;
     let square: i16 = sq as i16;
-    for delta in deltas.iter().take(4 as usize) {
+    for delta in deltas.iter().take(4_usize) {
         let mut s: u8 = ((square as i16) + (*delta as i16)) as u8;
         'inner: while s < 64 && SQ(s as u8).distance(SQ(((s as i16) - (*delta as i16)) as u8)) == 1
         {
-            attack |= (1 as u64).wrapping_shl(s as u32);
-            if occupied & (1 as u64).wrapping_shl(s as u32) != 0 {
+            attack |= 1_u64.wrapping_shl(s as u32);
+            if occupied & 1_u64.wrapping_shl(s as u32) != 0 {
                 break 'inner;
             }
             s = ((s as i16) + (*delta as i16)) as u8;

@@ -39,7 +39,7 @@ impl<T> UniqueArc<T> {
 impl<T> Deref for UniqueArc<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        &*self.0
+        &self.0
     }
 }
 

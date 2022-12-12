@@ -44,7 +44,7 @@ pub const MATE_IN_MAX_PLY: Value = MATE - 2 * 128;
 pub const MATED_IN_MAX_PLY: Value = -MATE + 2 * 128;
 
 /// Struct to define the value of a mid-game / end-game evaluation.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Score(pub Value, pub Value);
 
 impl Score {
