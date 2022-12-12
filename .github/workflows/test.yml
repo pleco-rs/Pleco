@@ -6,6 +6,13 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Lint
+        run: cargo clippy
   test-stable:
     name: Test stable
     runs-on: ubuntu-latest
