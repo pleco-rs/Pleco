@@ -38,9 +38,11 @@ impl Pick {
             *self = mem::transmute(*self as u8 + 1);
         }
     }
+}
 
-    pub fn to_string(self) -> &'static str {
-        match self {
+impl fmt::Display for Pick {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(&match self {
             Pick::MainSearch => "MainSearch",
             Pick::CapturesInit => "CapturesInit",
             Pick::GoodCaptures => "GoodCaptures",
@@ -62,13 +64,7 @@ impl Pick {
             Pick::QChecks => "QChecks",
             Pick::QSearchRecaptures => "QSearchRecaptures",
             Pick::QRecaptures => "QRecaptures",
-        }
-    }
-}
-
-impl fmt::Display for Pick {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.pad(&self.to_string())
+        })
     }
 }
 
