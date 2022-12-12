@@ -14,6 +14,8 @@ Review projects to get ideas for improvements
 - https://github.com/jordanbray/chess
 - https://github.com/Johnson-A/Crabby
 
+Review ideas from here: https://nnethercote.github.io/perf-book/title-page.html
+
 ## Branding
 
 Create logo and branding
@@ -57,3 +59,4 @@ Look at all changes stockfish has made since Pleco was created, port over meanin
 ================================================
 
 Update more packages
+Use the Chess.dom analyser to see weaknesses
