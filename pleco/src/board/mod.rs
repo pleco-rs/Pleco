@@ -206,7 +206,8 @@ pub struct Board {
     depth: u16,                                       // Current depth since last shallow_copy
     piece_counts: [[u8; PIECE_TYPE_CNT]; PLAYER_CNT], // Count of each Piece
     piece_locations: PieceLocations,                  // Mapping Squares to Pieces and Plauers
-    historic_piece_locations: Vec<PieceLocations>,    // Historic piece locations
+    zobrist_history: Vec<u64>,                        // Historic Zobrist keys of the board
+    threefold_repetition: bool,                       // Whether the board has been repeated 3 times
 
     // State of the Board, Un modifiable.
     // Arc to allow easy and quick copying of boards without copying memory
@@ -305,7 +306,8 @@ impl Board {
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
             magic_helper: self.magic_helper,
-            historic_piece_locations: Vec::new(),
+            zobrist_history: self.zobrist_history.clone(),
+            threefold_repetition: self.threefold_repetition,
         }
     }
 
@@ -347,7 +349,8 @@ impl Board {
             piece_locations: self.piece_locations.clone(),
             state: Arc::clone(&self.state),
             magic_helper: self.magic_helper,
-            historic_piece_locations: self.historic_piece_locations.clone(),
+            zobrist_history: self.zobrist_history.clone(),
+            threefold_repetition: self.threefold_repetition,
         }
     }
 
@@ -438,7 +441,8 @@ impl Board {
             piece_locations: PieceLocations::blank(),
             state: Arc::new(BoardState::blank()),
             magic_helper: Helper::new(),
-            historic_piece_locations: Vec::new(),
+            zobrist_history: Vec::new(),
+            threefold_repetition: false,
         };
 
         for &(sq, plyr, piece) in piece_loc.iter() {
@@ -706,8 +710,7 @@ impl Board {
             // Increment these
             self.half_moves += 1;
             self.depth += 1;
-            self.historic_piece_locations
-                .push(self.piece_locations.clone());
+            self.zobrist_history.push(self.state.zobrist);
             new_state.rule_50 += 1;
             new_state.ply += 1;
             new_state.prev_move = bit_move;
@@ -853,6 +856,8 @@ impl Board {
                 BitBoard(0)
             };
 
+            self.threefold_repetition =
+                self.zobrist_history.iter().filter(|&x| x == &zob).count() >= 2;
             self.turn = them;
 
             // Set the checking information
@@ -958,7 +963,7 @@ impl Board {
         self.state = self.state.get_prev().unwrap();
         self.half_moves -= 1;
         self.depth -= 1;
-        self.historic_piece_locations.pop();
+        self.zobrist_history.pop();
 
         #[cfg(debug_assertions)]
         self.is_okay().unwrap();
@@ -1752,13 +1757,11 @@ impl Board {
 
     /// Return if the threefold repetition rule has been met.
     pub fn threefold_repetition(&self) -> bool {
-        let mut count = 0;
-        for position in &self.historic_piece_locations {
-            if *position == self.piece_locations {
-                count += 1;
-            }
-        }
-        count >= 2
+        self.threefold_repetition
+    }
+
+    pub fn fifty_move_rule(&self) -> bool {
+        self.state.rule_50 >= 50
     }
 
     /// Returns if the current side to move is in stalemate.
@@ -1766,7 +1769,7 @@ impl Board {
     /// This method can be computationally expensive, do not use outside of Engines.
     pub fn stalemate(&self) -> bool {
         !self.in_check()
-            && (self.state.rule_50 >= 50
+            && (self.fifty_move_rule()
                 || self.generate_moves().is_empty()
                 || self.threefold_repetition())
     }
