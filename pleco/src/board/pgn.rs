@@ -156,13 +156,6 @@ pub struct PGNTags {
 
 impl fmt::Display for PGNTags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = self.to_string();
-        f.pad(&s)
-    }
-}
-
-impl PGNTags {
-    pub fn to_string(&self) -> String {
         let mut s: String = "[Event ".to_owned();
         s.push_str(self.event.as_ref());
         s.push_str("]\n[Site ");
@@ -178,9 +171,11 @@ impl PGNTags {
         s.push_str("]\n[Result ");
         s.push_str(self.result.as_ref());
         s.push_str("]\n");
-        s
+        f.pad(&s)
     }
+}
 
+impl PGNTags {
     pub fn add(mut self, input: &str) -> Result<PGNTags, PGNError> {
         let first_char = input.chars().next().ok_or(PGNError::TagParse)?;
         let last_char = input.chars().last().ok_or(PGNError::TagParse)?;
