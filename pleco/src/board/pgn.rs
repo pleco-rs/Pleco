@@ -182,7 +182,7 @@ impl PGNTags {
     }
 
     pub fn add(mut self, input: &str) -> Result<PGNTags, PGNError> {
-        let first_char = input.chars().nth(0).ok_or(PGNError::TagParse)?;
+        let first_char = input.chars().next().ok_or(PGNError::TagParse)?;
         let last_char = input.chars().last().ok_or(PGNError::TagParse)?;
         if input.len() < 3 || first_char != '[' || last_char != ']' {
             return Err(PGNError::TagParse);
@@ -195,7 +195,6 @@ impl PGNTags {
         }
         let in_quote = r[(quote_first)..(quote_second + 1)].to_owned();
         let no_quote = r[..(quote_first - 1)]
-            .trim()
             .split_whitespace()
             .next()
             .ok_or(PGNError::TagParse)?;
@@ -314,7 +313,7 @@ impl PGN {
         let mut lines = input.lines();
         loop {
             let mut line = lines.next().ok_or(PGNError::Length)?;
-            if line == "" {
+            if line.is_empty() {
                 break;
             }
             line = line.trim();
@@ -330,11 +329,11 @@ impl PGN {
 #[cfg(test)]
 mod tests {
 
-    static TEST_WHITE: &'static str = "[White \"David Sr. Johnson\"]";
-    static TEST_BLACK: &'static str = "[Black \"Grace Foo Bar\"]";
-    static TEST_DATE: &'static str = "[Date \"2017.4.2\"]";
-    static TEST_ROUND: &'static str = "[Round \"0.0\"]";
-    static TEST_RESULT: &'static str = "[Round \"1-0\"]";
+    static TEST_WHITE: &str = "[White \"David Sr. Johnson\"]";
+    static TEST_BLACK: &str = "[Black \"Grace Foo Bar\"]";
+    static TEST_DATE: &str = "[Date \"2017.4.2\"]";
+    static TEST_ROUND: &str = "[Round \"0.0\"]";
+    static TEST_RESULT: &str = "[Round \"1-0\"]";
 
     extern crate rand;
     use super::*;

@@ -8,7 +8,7 @@ use pleco::{BitMove, Board};
 #[test]
 fn pseudolegal_all_fens() {
     for fen in ALL_FENS.iter() {
-        let board = Board::from_fen(*fen).unwrap();
+        let board = Board::from_fen(fen).unwrap();
         pseudolegal_correctness(&board);
     }
 }
@@ -46,17 +46,15 @@ fn pseudolegal_correctness(board: &Board) {
                     bit_move.get_raw()
                 );
             }
-        } else {
-            if pseudo_moves.contains(&bit_move) && board.legal_move(bit_move) {
-                panic!(
-                    "\nBoard::pseudolegal move returned false, when it should be true!\
-                    \n  fen: {}\
-                    \n  move: {} bits: {:b}\n",
-                    board.fen(),
-                    bit_move,
-                    bit_move.get_raw()
-                );
-            }
+        } else if pseudo_moves.contains(&bit_move) && board.legal_move(bit_move) {
+            panic!(
+                "\nBoard::pseudolegal move returned false, when it should be true!\
+                \n  fen: {}\
+                \n  move: {} bits: {:b}\n",
+                board.fen(),
+                bit_move,
+                bit_move.get_raw()
+            );
         }
     }
 }
@@ -64,7 +62,7 @@ fn pseudolegal_correctness(board: &Board) {
 #[test]
 fn legal_all_fens() {
     for fen in ALL_FENS.iter() {
-        let board = Board::from_fen(*fen).unwrap();
+        let board = Board::from_fen(fen).unwrap();
         legal_correctness(&board);
     }
 }

@@ -109,10 +109,10 @@ fn randomize<H: HashCorrect>(board: &mut Board) {
 }
 
 fn randomize_inner<H: HashCorrect>(board: &mut Board, depth: usize) {
-    H::check_hash(&board);
+    H::check_hash(board);
     if depth != 0 {
         let moves = board.generate_moves();
-        if moves.len() == 0 {
+        if moves.is_empty() {
             return;
         }
 
