@@ -1,21 +1,3 @@
-## Gathering tasks
-
-Create tooling for comparing engines (to find out which other projects are good, and to run in pipeline)
-Review projects to get ideas for improvements
-
-- https://github.com/MitchelPaulin/Walleye
-- https://github.com/mvanthoor/rustic
-- https://github.com/Recursing/sunfish_rs
-- https://github.com/vinc/littlewing
-- https://github.com/Heiaha/Weiawaga
-- https://github.com/mkyl/cicada
-- https://github.com/Tearth/Inanis
-- https://github.com/mhonert/velvet-chess
-- https://github.com/jordanbray/chess
-- https://github.com/Johnson-A/Crabby
-
-Review ideas from here: https://nnethercote.github.io/perf-book/title-page.html
-
 ## Branding
 
 Create logo and branding
@@ -32,12 +14,10 @@ Raise PR for other protocols to use pleco again
 
 ## Development
 
-Review and merge this PR: https://github.com/pleco-rs/Pleco/pull/134
 Test engine in Arena: https://github.com/pleco-rs/Pleco/issues/132
 Find some AI code review tool to find improvements
 AI PR reviews
 Add better output like this one does (https://github.com/MitchelPaulin/Walleye)
-Consider stalemate in engine (e.g. avoid threefold repetition if you're ahead)
 Port over Stockfish end of game table: https://github.com/pleco-rs/Pleco/issues/113
 Review unstable features and which ones we can add back: https://github.com/pleco-rs/Pleco/issues/77
 Do some code profiling to see where the bottlenecks are
@@ -60,3 +40,5 @@ Look at all changes stockfish has made since Pleco was created, port over meanin
 
 Update more packages
 Use the Chess.dom analyser to see weaknesses
+Consider moving the board ranking to the pleco_engine package
+Add cool runtime output

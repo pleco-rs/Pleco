@@ -4,6 +4,7 @@
 use core::sq::SQ;
 use core::{File, PieceType, Rank};
 use std::fmt;
+use std::fmt::{Display, Formatter};
 
 //[Event "F/S Return Match"]
 //[Site "Belgrade, Serbia JUG"]
@@ -76,34 +77,15 @@ impl ChessDate {
         let day = d_err.unwrap();
         ChessDate::Full(year, month, day)
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl Display for ChessDate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ChessDate::Unknown => ("\"??\"").to_owned(),
-            ChessDate::Year(y) => {
-                let mut s = ("\"").to_owned();
-                s.push_str(y.to_string().as_ref());
-                s.push_str(".??.??\"");
-                s
-            }
-            ChessDate::YearMonth(y, m) => {
-                let mut s = ("\"").to_owned();
-                s.push_str(y.to_string().as_ref());
-                s.push('.');
-                s.push_str(m.to_string().as_ref());
-                s.push_str(".??\"");
-                s
-            }
-            ChessDate::Full(y, m, d) => {
-                let mut s = ("\"").to_owned();
-                s.push_str(y.to_string().as_ref());
-                s.push('.');
-                s.push_str(m.to_string().as_ref());
-                s.push('.');
-                s.push_str(d.to_string().as_ref());
-                s.push('"');
-                s
-            }
+            ChessDate::Unknown => write!(f, "??"),
+            ChessDate::Year(y) => write!(f, "{}.??.??", y),
+            ChessDate::YearMonth(y, m) => write!(f, "{}.{}.??", y, m),
+            ChessDate::Full(y, m, d) => write!(f, "{}.{}.{}", y, m, d),
         }
     }
 }
@@ -130,17 +112,18 @@ impl ChessRound {
         });
         cr
     }
+}
 
-    pub fn to_string(&self) -> String {
-        let mut s = "\"".to_string();
+impl Display for ChessRound {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"")?;
         for (i, x) in self.rounds.iter().enumerate() {
-            s.push_str(x.to_string().as_ref());
+            write!(f, "{}", x)?;
             if i != self.rounds.len() - 1 {
-                s.push('.');
+                write!(f, ".")?;
             }
         }
-        s.push('"');
-        s
+        write!(f, "\"")
     }
 }
 
@@ -156,22 +139,13 @@ pub struct PGNTags {
 
 impl fmt::Display for PGNTags {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s: String = "[Event ".to_owned();
-        s.push_str(self.event.as_ref());
-        s.push_str("]\n[Site ");
-        s.push_str(self.site.as_ref());
-        s.push_str("]\n[Date ");
-        s.push_str(self.date.to_string().as_ref());
-        s.push_str("]\n[Round ");
-        s.push_str(self.round.to_string().as_ref());
-        s.push_str("]\n[White ");
-        s.push_str(self.white.as_ref());
-        s.push_str("]\n[Black ");
-        s.push_str(self.black.as_ref());
-        s.push_str("]\n[Result ");
-        s.push_str(self.result.as_ref());
-        s.push_str("]\n");
-        f.pad(&s)
+        writeln!(f, "[Event{}]", self.event)?;
+        writeln!(f, "[Site{}]", self.site)?;
+        writeln!(f, "[Date{}]", self.date)?;
+        writeln!(f, "[Round{}]", self.round)?;
+        writeln!(f, "[White{}]", self.white)?;
+        writeln!(f, "[Black{}]", self.black)?;
+        writeln!(f, "[Result{}]", self.result)
     }
 }
 
