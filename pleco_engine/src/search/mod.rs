@@ -485,6 +485,10 @@ impl Searcher {
         cut_node: bool,
         skip_early_pruning: bool,
     ) -> i32 {
+        if self.board.fifty_move_rule() || self.board.threefold_repetition() {
+            return DRAW as i32;
+        }
+
         if depth < 1 {
             return self.qsearch::<N>(alpha, beta, ss, 0);
         }
@@ -1064,6 +1068,10 @@ impl Searcher {
         ss: &mut Stack,
         rev_depth: i16,
     ) -> i32 {
+        if self.board.fifty_move_rule() || self.board.threefold_repetition() {
+            return DRAW as i32;
+        }
+
         let is_pv: bool = N::is_pv();
 
         assert!(alpha >= NEG_INFINITE);

@@ -494,7 +494,7 @@ impl<'a, 'b, T: Tracing> EvaluationInner<'a, 'b, T> {
         }
     }
 
-    fn value(&mut self) -> Value {
+    fn white_value(&mut self) -> Value {
         let mut score = self.pawn_entry.pawns_score(Player::White)
             - self.pawn_entry.pawns_score(Player::Black)
             + self.material_entry.score()
@@ -505,12 +505,7 @@ impl<'a, 'b, T: Tracing> EvaluationInner<'a, 'b, T> {
             if let Some(trace) = self.trace.trace() {
                 trace.used = false;
             }
-
-            if self.board.turn() == Player::White {
-                return v;
-            } else {
-                return -v;
-            }
+            return v;
         }
 
         self.initialize::<WhiteType>();
@@ -569,11 +564,14 @@ impl<'a, 'b, T: Tracing> EvaluationInner<'a, 'b, T> {
                 panic!();
             }
         }
+        v
+    }
 
+    fn value(&mut self) -> Value {
         if self.board.turn() == Player::White {
-            v
+            self.white_value()
         } else {
-            -v
+            -self.white_value()
         }
     }
 
