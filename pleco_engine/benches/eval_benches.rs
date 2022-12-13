@@ -10,7 +10,7 @@ use pleco_engine::search::eval::Evaluation;
 
 fn bench_100_pawn_evals(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter_batched(
-        || PawnTable::new(),
+        PawnTable::new,
         |mut t| {
             #[allow(unused_variables)]
             let mut score: i64 = 0;
@@ -26,7 +26,7 @@ fn bench_100_pawn_evals(b: &mut Bencher, boards: &Vec<Board>) {
 
 fn bench_100_pawn_king_evals(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter_batched(
-        || PawnTable::new(),
+        PawnTable::new,
         |mut t| {
             #[allow(unused_variables)]
             let mut score: i64 = 0;
@@ -35,7 +35,7 @@ fn bench_100_pawn_king_evals(b: &mut Bencher, boards: &Vec<Board>) {
                 score += black_box(entry.pawns_score(Player::White)).0 as i64;
                 score += black_box(entry.pawns_score(Player::Black)).0 as i64;
                 score +=
-                    black_box(entry.king_safety::<WhiteType>(&board, board.king_sq(Player::White)))
+                    black_box(entry.king_safety::<WhiteType>(board, board.king_sq(Player::White)))
                         .0 as i64;
             }
         },
@@ -45,7 +45,7 @@ fn bench_100_pawn_king_evals(b: &mut Bencher, boards: &Vec<Board>) {
 
 fn bench_100_material_eval(b: &mut Bencher, boards: &Vec<Board>) {
     b.iter_batched(
-        || Material::new(),
+        Material::new,
         |mut t| {
             #[allow(unused_variables)]
             let mut score: i64 = 0;
@@ -69,7 +69,7 @@ fn bench_100_eval(b: &mut Bencher, boards: &Vec<Board>) {
             #[allow(unused_variables)]
             let mut score: i64 = 0;
             for board in boards.iter() {
-                score += black_box(Evaluation::evaluate(&board, &mut tp, &mut tm)) as i64;
+                score += black_box(Evaluation::evaluate(board, &mut tp, &mut tm)) as i64;
             }
         },
         BatchSize::PerIteration,

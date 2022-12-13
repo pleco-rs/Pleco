@@ -2,7 +2,7 @@
 //! You will rarely need to interact with this module directly unless you need functions
 //! involving the manipulation of bits.
 
-static POPCNT8: &'static [u8] = &[
+static POPCNT8: &[u8] = &[
     0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
     1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6,
@@ -13,7 +13,7 @@ static POPCNT8: &'static [u8] = &[
     3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8,
 ];
 
-static DEBRUIJ_T: &'static [u8] = &[
+static DEBRUIJ_T: &[u8] = &[
     0, 47, 1, 56, 48, 27, 2, 60, 57, 49, 41, 37, 28, 16, 3, 61, 54, 58, 35, 52, 50, 42, 21, 44, 38,
     32, 29, 23, 17, 11, 4, 62, 46, 55, 26, 59, 40, 36, 15, 53, 34, 51, 20, 43, 31, 22, 10, 45, 25,
     39, 14, 33, 19, 30, 9, 24, 13, 18, 8, 12, 7, 6, 5, 63,
@@ -128,7 +128,7 @@ pub fn more_than_one(x: u64) -> bool {
 /// ```
 #[inline(always)]
 pub fn lsb(bits: u64) -> u64 {
-    (1 as u64).wrapping_shl(bits.trailing_zeros())
+    1_u64.wrapping_shl(bits.trailing_zeros())
 }
 
 /// Counts the number of bits in a u64.
@@ -170,7 +170,7 @@ pub fn diff(x: u8, y: u8) -> u8 {
 
 /// Gives the most significant bit of a `u64`.
 pub fn msb(x: u64) -> u64 {
-    (1 as u64).wrapping_shl(63 - x.leading_zeros())
+    1_u64.wrapping_shl(63 - x.leading_zeros())
 }
 
 /// Reverses all the bytes in a u64.

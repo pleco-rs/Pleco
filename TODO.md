@@ -14,6 +14,8 @@ Review projects to get ideas for improvements
 - https://github.com/jordanbray/chess
 - https://github.com/Johnson-A/Crabby
 
+Review ideas from here: https://nnethercote.github.io/perf-book/title-page.html
+
 ## Branding
 
 Create logo and branding
@@ -39,7 +41,7 @@ Consider stalemate in engine (e.g. avoid threefold repetition if you're ahead)
 Port over Stockfish end of game table: https://github.com/pleco-rs/Pleco/issues/113
 Review unstable features and which ones we can add back: https://github.com/pleco-rs/Pleco/issues/77
 Do some code profiling to see where the bottlenecks are
-Suggestions from here (Fix nightly warnings): https://github.com/sfleischman105/Pleco/issues/131
+Suggestions from here (Fix nightly warnings): https://github.com/sfleischman105/Pleco/issues/131 (then remove `uninit_assumed_init` and `missing_safety_doc`)
 
 ## Integrations
 
@@ -57,3 +59,4 @@ Look at all changes stockfish has made since Pleco was created, port over meanin
 ================================================
 
 Update more packages
+Use the Chess.dom analyser to see weaknesses

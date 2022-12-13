@@ -184,18 +184,16 @@ pub static CASTLING_ROOK_START: [[u8; CASTLING_SIDES]; PLAYER_CNT] = [
 ];
 
 /// Bits representing the castling path for a white king-side castle.
-pub const CASTLING_PATH_WHITE_K_SIDE: u64 =
-    (1 as u64) << SQ::F1.0 as u32 | (1 as u64) << SQ::G1.0 as u32;
+pub const CASTLING_PATH_WHITE_K_SIDE: u64 = 1_u64 << SQ::F1.0 as u32 | 1_u64 << SQ::G1.0 as u32;
 /// Bits representing the castling path for a white queen-side castle.
 pub const CASTLING_PATH_WHITE_Q_SIDE: u64 =
-    (1 as u64) << SQ::B1.0 as u32 | (1 as u64) << SQ::C1.0 as u32 | (1 as u64) << SQ::D1.0 as u32;
+    1_u64 << SQ::B1.0 as u32 | 1_u64 << SQ::C1.0 as u32 | 1_u64 << SQ::D1.0 as u32;
 
 /// Bits representing the castling path for a black king-side castle.
-pub const CASTLING_PATH_BLACK_K_SIDE: u64 =
-    (1 as u64) << SQ::F8.0 as u32 | (1 as u64) << SQ::G8.0 as u32;
+pub const CASTLING_PATH_BLACK_K_SIDE: u64 = 1_u64 << SQ::F8.0 as u32 | 1_u64 << SQ::G8.0 as u32;
 /// Bits representing the castling path for a black queen-side castle.
 pub const CASTLING_PATH_BLACK_Q_SIDE: u64 =
-    (1 as u64) << SQ::B8.0 as u32 | (1 as u64) << SQ::C8.0 as u32 | (1 as u64) << SQ::D8.0 as u32;
+    1_u64 << SQ::B8.0 as u32 | 1_u64 << SQ::C8.0 as u32 | 1_u64 << SQ::D8.0 as u32;
 
 /// Array for the bits representing the castling path for a white castle, indexed
 /// per the side available (king-side, queen-side).

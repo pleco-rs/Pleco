@@ -60,7 +60,7 @@ pub static ALL_RANKS: [Rank; RANK_CNT] = [
 ];
 
 /// Enum to represent the Players White & Black.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Player {
     White = 0,
@@ -185,7 +185,7 @@ impl fmt::Display for Player {
 /// `GenTypes::QuietChecks` and `GenTypes::NonEvasions` can only be used if the board
 /// if not in check, while `GenTypes::Evasions` can only be used if the the board is
 /// in check. The remaining `GenTypes` can be used legally whenever.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum GenTypes {
     All,
     Captures,
@@ -201,7 +201,7 @@ pub enum GenTypes {
 ///
 /// [`Piece`]: ./enum.Piece
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum PieceType {
     None = 0,
     P = 1,
@@ -299,7 +299,7 @@ impl fmt::Display for PieceType {
 ///
 /// [`Piece`]: ./enum.PieceType
 #[repr(u8)]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Piece {
     None = 0b0000,
     WhitePawn = 0b0001,
@@ -727,7 +727,7 @@ impl Rank {
 }
 
 /// Types of Castling available to a player.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum CastleType {
     KingSide = 0,
@@ -735,7 +735,7 @@ pub enum CastleType {
 }
 
 #[doc(hidden)]
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum Phase {
     MG = 0,
@@ -807,5 +807,5 @@ pub fn u64_to_u8(b: u64) -> u8 {
 #[inline]
 pub fn u8_to_u64(s: u8) -> u64 {
     debug_assert!(s < 64);
-    (1 as u64).wrapping_shl(s as u32)
+    1_u64.wrapping_shl(s as u32)
 }

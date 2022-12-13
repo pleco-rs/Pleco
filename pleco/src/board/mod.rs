@@ -702,7 +702,7 @@ impl Board {
         // Seperate Block to allow derefencing the BoardState
         // As there is garunteed only one owner of the Arc, this is allowed
         {
-            let new_state: &mut BoardState = &mut *next_arc_state;
+            let new_state: &mut BoardState = &mut next_arc_state;
 
             // Set the prev state
             new_state.prev = Some(Arc::clone(&self.state));
@@ -861,7 +861,7 @@ impl Board {
             self.turn = them;
 
             // Set the checking information
-            new_state.set_check_info(&self);
+            new_state.set_check_info(self);
         }
         self.state = next_arc_state.shareable();
 
@@ -1008,7 +1008,7 @@ impl Board {
         let mut next_arc_state = UniqueArc::new(self.state.partial_clone());
 
         {
-            let new_state: &mut BoardState = &mut *next_arc_state;
+            let new_state: &mut BoardState = &mut next_arc_state;
 
             new_state.prev_move = BitMove::null();
             new_state.rule_50 += 1;
@@ -1025,7 +1025,7 @@ impl Board {
             self.turn = self.turn.other_player();
 
             // Set the checking information
-            new_state.set_check_info(&self);
+            new_state.set_check_info(self);
         }
         self.state = next_arc_state.shareable();
 
@@ -1939,10 +1939,8 @@ impl Board {
             {
                 return false;
             }
-        } else {
-            if m.is_double_push().0 || (self.attacks_from(piece, from, us) & to_bb).is_empty() {
-                return false;
-            }
+        } else if m.is_double_push().0 || (self.attacks_from(piece, from, us) & to_bb).is_empty() {
+            return false;
         }
 
         if self.is_capture(m) ^ m.is_capture() {
@@ -2804,7 +2802,7 @@ mod tests {
     #[test]
     fn see_ge_all_fens() {
         for b in super::fen::ALL_FENS.iter() {
-            see_ge_all_fens_inner(&Board::from_fen(*b).unwrap());
+            see_ge_all_fens_inner(&Board::from_fen(b).unwrap());
         }
     }
 

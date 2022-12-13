@@ -13,11 +13,12 @@ fn bench_100_evaluations(c: &mut Criterion) {
             .collect();
 
         b.iter(|| {
-            black_box({
+            {
                 for board in rand_boards.iter() {
                     black_box(Eval::eval_low(board));
                 }
-            })
+            };
+            black_box(())
         })
     });
 }

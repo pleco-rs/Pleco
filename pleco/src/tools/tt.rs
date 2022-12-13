@@ -107,7 +107,7 @@ impl NodeTypeTimeBound {
 /// Structure defining a singular Entry in a table, containing the `BestMove` found,
 /// the score of that node, the type of Node, depth found, as well as a key uniquely defining
 /// the node.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 #[repr(C)]
 pub struct Entry {
     pub partial_key: u16,
@@ -373,7 +373,7 @@ impl TranspositionTable {
             // for each entry
             for i in 0..CLUSTER_SIZE {
                 // get a pointer to the specified entry
-                let entry_ptr: *mut Entry = init_entry.offset(i as isize);
+                let entry_ptr: *mut Entry = init_entry.add(i);
                 // convert to &mut
                 let entry: &mut Entry = &mut (*entry_ptr);
 
@@ -390,12 +390,12 @@ impl TranspositionTable {
             }
 
             let mut replacement: *mut Entry = init_entry;
-            let mut replacement_score: i16 = (&*replacement).time_value(self.time_age());
+            let mut replacement_score: i16 = (*replacement).time_value(self.time_age());
 
             // Table is full, find the best replacement based on depth and time placed there
             for i in 1..CLUSTER_SIZE {
-                let entry_ptr: *mut Entry = init_entry.offset(i as isize);
-                let entry_score: i16 = (&*entry_ptr).time_value(self.time_age());
+                let entry_ptr: *mut Entry = init_entry.add(i);
+                let entry_score: i16 = (*entry_ptr).time_value(self.time_age());
                 if entry_score < replacement_score {
                     replacement = entry_ptr;
                     replacement_score = entry_score;
@@ -410,7 +410,7 @@ impl TranspositionTable {
     #[inline]
     fn cluster(&self, key: Key) -> *mut Cluster {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
-        unsafe { (*self.clusters.get()).as_ptr().offset(index as isize) }
+        unsafe { (*self.clusters.get()).as_ptr().add(index) }
     }
 
     // Re-Allocates the current TT to a specified size.
@@ -438,7 +438,7 @@ impl TranspositionTable {
                 let init_entry: *mut Entry = cluster_first_entry(cluster);
                 for e in 0..CLUSTER_SIZE {
                     // get a pointer to the specified entry
-                    let entry_ptr: *mut Entry = init_entry.offset(e as isize);
+                    let entry_ptr: *mut Entry = init_entry.add(e);
                     let entry: &Entry = &(*entry_ptr);
                     if entry.time() == self.time_age() {
                         hits += 1.0;
@@ -459,7 +459,7 @@ impl PreFetchable for TranspositionTable {
     fn prefetch(&self, key: u64) {
         let index: usize = ((self.num_clusters() - 1) as u64 & key) as usize;
         unsafe {
-            let ptr = (*self.clusters.get()).as_ptr().offset(index as isize);
+            let ptr = (*self.clusters.get()).as_ptr().add(index);
             prefetch_write(ptr);
         };
     }
@@ -537,10 +537,10 @@ mod tests {
     #[test]
     fn tt_test_sizes() {
         let tt = TranspositionTable::new_num_clusters(100);
-        assert_eq!(tt.num_clusters(), (100 as usize).next_power_of_two());
+        assert_eq!(tt.num_clusters(), 100_usize.next_power_of_two());
         assert_eq!(
             tt.num_entries(),
-            (100 as usize).next_power_of_two() * CLUSTER_SIZE
+            100_usize.next_power_of_two() * CLUSTER_SIZE
         );
         compiler_fence(Ordering::Release);
         sleep(Duration::from_millis(1));
@@ -551,7 +551,7 @@ mod tests {
         let size: usize = 2 << 20;
         let tt = TranspositionTable::new_num_clusters(size);
 
-        for x in 0..1_000_000 as u64 {
+        for x in 0..1_000_000_u64 {
             let key: u64 = rand::random::<u64>();
             {
                 let (_found, entry) = tt.probe(key);

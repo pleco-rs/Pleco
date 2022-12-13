@@ -707,7 +707,7 @@ mod tests {
     fn movegen_list_sim_all() {
         let boards: Vec<Board> = ALL_FENS
             .iter()
-            .map(|f| Board::from_fen(*f).unwrap())
+            .map(|f| Board::from_fen(f).unwrap())
             .collect();
 
         boards.iter().for_each(|b| {

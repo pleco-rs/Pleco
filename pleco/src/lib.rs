@@ -65,6 +65,9 @@
 #![cfg_attr(test, allow(dead_code))]
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::unreadable_literal)]
+#![allow(clippy::unusual_byte_groupings)]
+#![allow(clippy::uninit_assumed_init)]
+#![allow(clippy::missing_safety_doc)]
 #![allow(dead_code)]
 
 #[macro_use]

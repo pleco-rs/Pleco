@@ -90,7 +90,7 @@ pub struct BitMove {
 }
 
 /// Selected Meta-Data to accompany each move.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum MoveFlag {
     /// The move is a promotion.
     Promotion {
@@ -116,7 +116,7 @@ pub enum MoveFlag {
 }
 
 /// A Subset of `MoveFlag`, used to determine the overall classification of a move.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum MoveType {
     /// The move is "Normal", So its not a castle, promotion, or en-passant.
