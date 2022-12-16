@@ -22,3 +22,10 @@ pub fn minimax(board: &mut Board, depth: u16) -> ScoringMove {
             false => ScoringMove::blank(DRAW_V),
         })
 }
+
+pub fn minimax_eval_bitmove(board: &mut Board, bm: BitMove, depth: u16) -> i16 {
+    board.apply_move(bm);
+    let out = -minimax(board, depth).score;
+    board.undo_move();
+    out
+}
