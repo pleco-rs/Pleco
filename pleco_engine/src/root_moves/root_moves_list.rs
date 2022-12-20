@@ -73,7 +73,7 @@ impl RootMoveList {
     ///
     /// # Safety
     ///
-    /// May return a nonsense `RootMove` if the list hasn't been initalized since the start.
+    /// May return a nonsense `RootMove` if the list hasn't been initialized since the start.
     #[inline]
     pub fn first(&mut self) -> &mut RootMove {
         unsafe { self.get_unchecked_mut(0) }

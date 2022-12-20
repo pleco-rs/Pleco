@@ -1,13 +1,13 @@
 //! Statically initialized lookup tables.
 //!
-//! Whenever a `Board` is created, these are also created as well. Calling `Hepler::new()` will
+//! Whenever a `Board` is created, these are also created as well. Calling `Helper::new()` will
 //! initialize the tables the first time it's called, and successive calls won't waste time
 //! initializing the table.
 //!
 //! It is highly recommended to go through a `Helper` to access these tables, as the access will
 //! guarantee that the tables are initialized in the first place.
 //!
-//! If you want the same functions, but can ensure the Tables are initalized, see [`helper::prelude`]
+//! If you want the same functions, but can ensure the Tables are initialized, see [`helper::prelude`]
 //! for those raw functions.
 //!
 //! [`helper::prelude`]: prelude/index.html
@@ -152,7 +152,7 @@ impl Helper {
     ///
     /// # Safety
     ///
-    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+    /// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
     #[inline(always)]
     pub fn pawn_attacks_span(self, player: Player, sq: SQ) -> BitBoard {
         prelude::pawn_attacks_span(player, sq)
@@ -162,7 +162,7 @@ impl Helper {
     ///
     /// # Safety
     ///
-    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+    /// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
     #[inline(always)]
     pub fn forward_file_bb(self, player: Player, sq: SQ) -> BitBoard {
         prelude::forward_file_bb(player, sq)
@@ -173,7 +173,7 @@ impl Helper {
     ///
     /// # Safety
     ///
-    /// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+    /// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
     #[inline(always)]
     pub fn passed_pawn_mask(self, player: Player, sq: SQ) -> BitBoard {
         prelude::passed_pawn_mask(player, sq)

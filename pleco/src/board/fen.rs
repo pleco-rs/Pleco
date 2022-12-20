@@ -103,7 +103,7 @@ lazy_static! {
 pub fn is_valid_fen(board: Board) -> Result<Board, FenBuildError> {
     let checks = board.checkers();
     let num_checks = checks.count_bits();
-    // Cant be more than 2 checking pieces at a time
+    // Can't be more than 2 checking pieces at a time
     if num_checks > 2 {
         return Err(FenBuildError::IllegalNumCheckingPieces { num: num_checks });
     }

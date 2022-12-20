@@ -153,7 +153,7 @@ pub fn forward_rank_bb(player: Player, rank: Rank) -> BitBoard {
 ///
 /// # Safety
 ///
-/// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+/// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
 #[inline(always)]
 pub fn pawn_attacks_span(player: Player, sq: SQ) -> BitBoard {
     BitBoard(boards::pawn_attacks_span(player, sq))
@@ -163,7 +163,7 @@ pub fn pawn_attacks_span(player: Player, sq: SQ) -> BitBoard {
 ///
 /// # Safety
 ///
-/// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+/// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
 #[inline(always)]
 pub fn forward_file_bb(player: Player, sq: SQ) -> BitBoard {
     BitBoard(boards::forward_file_bb(player, sq))
@@ -173,7 +173,7 @@ pub fn forward_file_bb(player: Player, sq: SQ) -> BitBoard {
 /// "passed pawn".
 /// # Safety
 ///
-/// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+/// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
 #[inline(always)]
 pub fn passed_pawn_mask(player: Player, sq: SQ) -> BitBoard {
     BitBoard(boards::passed_pawn_mask(player, sq))

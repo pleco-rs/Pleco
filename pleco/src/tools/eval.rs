@@ -45,7 +45,7 @@ fn flatten(arr: [[i32; FILE_CNT]; RANK_CNT]) -> [i32; SQ_CNT] {
 }
 
 /// A simple evaluation structure. This is included as an example, and shouldn't
-/// neccessarily be used inside serious chess engines.
+/// necessarily be used inside serious chess engines.
 ///
 /// ```
 /// use pleco::tools::eval::Eval;

@@ -28,7 +28,7 @@ type DummyThreadPool = [u8; POOL_SIZE];
 
 // The Global threadpool! Yes, this is *technically* an array the same
 // size as a ThreadPool object. This is a cheap hack to get a global value, as
-// Rust isn't particularily fond of mutable global statics.
+// Rust isn't particularly fond of mutable global statics.
 pub static mut THREADPOOL: DummyThreadPool = [0; POOL_SIZE];
 
 // ONCE for the Threadpool

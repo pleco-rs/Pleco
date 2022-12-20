@@ -142,7 +142,7 @@ pub fn forward_rank_bb(player: Player, rank: Rank) -> u64 {
 ///
 /// # Safety
 ///
-/// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+/// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
 #[inline(always)]
 pub fn pawn_attacks_span(player: Player, sq: SQ) -> u64 {
     debug_assert!(sq.is_okay());
@@ -157,7 +157,7 @@ pub fn pawn_attacks_span(player: Player, sq: SQ) -> u64 {
 ///
 /// # Safety
 ///
-/// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+/// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
 #[inline(always)]
 pub fn forward_file_bb(player: Player, sq: SQ) -> u64 {
     debug_assert!(sq.is_okay());
@@ -172,7 +172,7 @@ pub fn forward_file_bb(player: Player, sq: SQ) -> u64 {
 /// "passed pawn".
 /// # Safety
 ///
-/// The Square must be within normal bounds, or else a panic or undefined behvaior may occur.
+/// The Square must be within normal bounds, or else a panic or undefined behaviour may occur.
 #[inline(always)]
 pub fn passed_pawn_mask(player: Player, sq: SQ) -> u64 {
     debug_assert!(sq.is_okay());

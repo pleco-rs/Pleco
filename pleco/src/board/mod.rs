@@ -159,7 +159,7 @@ impl PreFetchable for PreFetchDummy {
 /// by both Engines and Players / Bots alike.
 ///
 /// Ideally, the Engine contains the original Representation of a board (owns the board), and utilizes
-/// `Board::shallow_clone()` to share this representaion with Players.
+/// `Board::shallow_clone()` to share this representation with Players.
 ///
 /// # Examples
 ///
@@ -406,7 +406,7 @@ impl Board {
     ///
     /// The FEN string must be valid, or else the method will return an Error.
     ///
-    /// There is a possibility of the FEN string representing an unvalid position, with no panics resulting.
+    /// There is a possibility of the FEN string representing an invalid position, with no panics resulting.
     /// The Constructed Board may have some Undefined Behavior as a result. It is up to the user to give a
     /// valid FEN string.
     pub fn from_fen(fen: &str) -> Result<Board, FenBuildError> {
@@ -532,7 +532,7 @@ impl Board {
         };
 
         // Total Moves Played
-        // Moves is defined as everytime White moves, so gotta translate to total moves
+        // Moves is defined as every time White moves, so gotta translate to total moves
         let mut total_moves = if det_split.len() >= 6 && det_split[5] != "-" {
             (det_split[5].parse::<u16>()? - 1) * 2
         } else {
@@ -576,7 +576,7 @@ impl Board {
     /// assert_eq!(board.fen(),"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     /// ```
     pub fn fen(&self) -> String {
-        // TODO: Doesnt display if rank 8 has zero pieces on it
+        // TODO: Doesn't display if rank 8 has zero pieces on it
         let mut s = String::default();
 
         for reverse_rnk in 0..8 {
@@ -699,7 +699,7 @@ impl Board {
         // New Arc for the board to have by making a partial clone of the current state
         let mut next_arc_state = UniqueArc::new(self.state.partial_clone());
 
-        // Seperate Block to allow derefencing the BoardState
+        // Separate Block to allow dereferencing the BoardState
         // As there is garunteed only one owner of the Arc, this is allowed
         {
             let new_state: &mut BoardState = &mut next_arc_state;
@@ -2001,7 +2001,7 @@ impl Board {
 
     /// Returns if a move is a capture.
     ///
-    /// This is similar to `BitMove::is_capture`, but instead comapres the move to the `Board`s
+    /// This is similar to `BitMove::is_capture`, but instead compares the move to the `Board`s
     /// data, rather than relying on the information encoded in the move.
     #[inline(always)]
     pub fn is_capture(&self, mov: BitMove) -> bool {
@@ -2012,7 +2012,7 @@ impl Board {
 
     /// Returns if a move is a capture.
     ///
-    /// This is similar to `BitMove::is_capture` & `BitMove::is_promo`, but instead comapres the
+    /// This is similar to `BitMove::is_capture` & `BitMove::is_promo`, but instead compares the
     /// move to the `Board`s data, rather than relying on the information encoded in the move.
     #[inline(always)]
     pub fn is_capture_or_promotion(&self, mov: BitMove) -> bool {
@@ -2381,7 +2381,7 @@ impl Board {
 
     /// Print the board alongside useful information.
     ///
-    /// Mostly for Debugging useage.
+    /// Mostly for Debugging usage.
     pub fn fancy_print(&self) {
         self.pretty_print();
         println!(

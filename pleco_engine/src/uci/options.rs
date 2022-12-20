@@ -105,7 +105,7 @@ impl OptionsMap {
 // "option name Style type combo default Normal var Solid var Normal var Risky\n"
 // "option name Clear Hash type button\n"
 
-/// UCI complient options for a searcher.
+/// UCI compliant options for a searcher.
 pub trait UCIOption {
     // Returns the type of option. This can be one of the following: button, check, spin, text, or combo.
     fn option_type(&self) -> &'static str;

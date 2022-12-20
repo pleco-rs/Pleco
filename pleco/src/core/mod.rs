@@ -605,7 +605,7 @@ impl fmt::Debug for Piece {
 #[repr(u8)]
 #[derive(Copy, Clone, PartialEq, Debug, Ord, PartialOrd, Eq)]
 pub enum File {
-    A = 0, // eg a specific coloumn
+    A = 0, // eg a specific column
     B = 1,
     C = 2,
     D = 3,
