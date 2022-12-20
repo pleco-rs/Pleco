@@ -74,7 +74,7 @@ impl_bit_ops!(SQ, u8);
 pub const NO_SQ: SQ = SQ(64);
 
 impl SQ {
-    /// A square that isn't on the board. Basically equivilant to `Option<SQ>` where the value is
+    /// A square that isn't on the board. Basically equivalent to `Option<SQ>` where the value is
     /// `None`.
     pub const NONE: SQ = NO_SQ;
 

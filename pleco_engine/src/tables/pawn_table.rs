@@ -89,7 +89,7 @@ const STORM_DANGER: [[[Value; RANK_CNT]; 4]; 4] = [
 
 pub static mut CONNECTED: [[[[Score; RANK_CNT]; 3]; 2]; 2] = [[[[Score(0, 0); RANK_CNT]; 3]; 2]; 2];
 
-/// Initalizes the CONNECTED table.
+/// Initializes the CONNECTED table.
 #[cold]
 pub fn init() {
     unsafe {
@@ -268,7 +268,7 @@ impl PawnEntry {
         self.weak_unopposed[player as usize]
     }
 
-    /// Assymetric score of a position.
+    /// Asymmetric score of a position.
     #[inline(always)]
     pub fn asymmetry(&self) -> i16 {
         self.asymmetry

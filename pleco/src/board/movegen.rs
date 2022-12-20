@@ -339,7 +339,7 @@ where
         // Possible king moves, Where the king cannot move into a slider / own pieces
         let k_moves: BitBoard = king_moves(ksq) & !slider_attacks & !self.us_occ;
 
-        // Seperate captures and non captures
+        // Separate captures and non captures
         let mut captures_bb: BitBoard = k_moves & self.them_occ;
         let mut non_captures_bb: BitBoard = k_moves & !self.them_occ;
         self.move_append_from_bb_flag::<L>(&mut captures_bb, ksq, BitMove::FLAG_CAPTURE);
@@ -449,7 +449,7 @@ where
 
         let mut empty_squares = BitBoard(0);
 
-        // seperate these two for promotion moves and non promotions
+        // separate these two for promotion moves and non promotions
         let pawns_rank_7: BitBoard = all_pawns & rank_7;
         let pawns_not_rank_7: BitBoard = all_pawns & !rank_7;
 

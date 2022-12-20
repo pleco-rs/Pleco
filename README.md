@@ -107,7 +107,7 @@ board.undo_move();
 assert_eq!(board.moves_played(),0);
 ```
 
-For more informaton about `pleco` as a library, see the [pleco README.md](https://github.com/sfleischman105/Pleco/tree/main/pleco).
+For more information about `pleco` as a library, see the [pleco README.md](https://github.com/sfleischman105/Pleco/tree/main/pleco).
 
 ## Contributing
 

@@ -359,7 +359,7 @@ impl TranspositionTable {
     /// Probes the Transposition Table for a specified Key. Returns (true, entry) if either (1) an
     /// Entry corresponding to the current key is found, or an Open Entry slot is found for the key.
     /// In the case of an open Entry, the entry can be tested for its contents by using `Entry::is_empty()`.
-    /// If no entry is found && there are no open entries, returns the entry that is is most irrelevent to
+    /// If no entry is found && there are no open entries, returns the entry that is is most irrelevant to
     /// the current search, e.g. has the shallowest depth or was found in a previous search.
     ///
     /// If 'true' is returned, the Entry is guaranteed to have the correct time.

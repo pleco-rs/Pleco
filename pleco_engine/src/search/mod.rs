@@ -120,7 +120,7 @@ impl ThreadStack {
         unsafe { mem::zeroed() }
     }
 
-    /// Get's a certain frame from the stack.
+    /// Gets a certain frame from the stack.
     ///
     /// Assumes the frame is within bounds, otherwise undefined behavior.
     pub fn get(&mut self, frame: usize) -> &mut Stack {
@@ -376,7 +376,7 @@ impl Searcher {
                     break 'aspiration_window;
                 }
 
-                // Order root moves by the score retreived post search.
+                // Order root moves by the score retrieved post search.
 
                 if self.use_stdout()
                     && self.main_thread()
@@ -972,7 +972,7 @@ impl Searcher {
                 }
             }
 
-            // If best_move wasnt found, add it to the list of quiets / captures that failed
+            // If best_move wasn't found, add it to the list of quiets / captures that failed
             if mov != best_move {
                 if capture_or_promotion && captures_count < 32 {
                     captures_searched[captures_count] = mov;
@@ -1218,7 +1218,7 @@ impl Searcher {
                 && best_value > MATED_IN_MAX_PLY
                 && !self.board.is_capture(mov);
 
-            // Don't search moves that lead to a negative static exhange
+            // Don't search moves that lead to a negative static exchange
             if (!in_check || evasion_prunable) && !self.board.see_ge(mov, 0) {
                 continue;
             }

@@ -31,7 +31,7 @@ type DummyTimeManager = [u8; TIMER_ALLOC_SIZE];
 
 pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
 
-static INITALIZED: Once = Once::new();
+static INITIALIZED: Once = Once::new();
 
 /// Global Transposition Table
 static mut TT_TABLE: DummyTranspositionTable = [0; TT_ALLOC_SIZE];
@@ -41,7 +41,7 @@ static mut TIMER: DummyTimeManager = [0; TIMER_ALLOC_SIZE];
 
 #[cold]
 pub fn init_globals() {
-    INITALIZED.call_once(|| {
+    INITIALIZED.call_once(|| {
         prelude::init_statics(); // Initialize static tables
         compiler_fence(Ordering::SeqCst);
         init_tt(); // Transposition Table
