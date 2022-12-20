@@ -50,7 +50,7 @@ impl<T> DerefMut for UniqueArc<T> {
     }
 }
 
-/// Reference counting pointer, sharable between threads.
+/// Reference counting pointer, shareable between threads.
 pub struct Arc<T: ?Sized> {
     p: NonNull<ArcInner<T>>,
 }

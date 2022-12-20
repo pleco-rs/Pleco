@@ -258,7 +258,7 @@ impl BitMove {
     ///
     /// # Safety
     ///
-    /// A Null move is never a valid move to play. Using a Null move should onl be used for search and
+    /// A Null move is never a valid move to play. Using a Null move should only be used for search and
     /// evaluation purposes.
     #[inline]
     pub const fn null() -> Self {

@@ -125,7 +125,7 @@ unsafe fn gen_magic_board(
     static_magics: *mut SMagic,
     attacks: *mut u64,
 ) {
-    // Creates PreSMagic to hold raw numbers. Technically jsut adds room to stack
+    // Creates PreSMagic to hold raw numbers. Technically just adds room to stack
     let mut pre_sq_table: [PreSMagic; 64] = PreSMagic::init64();
 
     // Initializes each PreSMagic
@@ -158,7 +158,7 @@ unsafe fn gen_magic_board(
         // Magic number for later
         let mut magic: u64;
 
-        // edges is the bitboard represenation of the edges s is not on.
+        // edges is the bitboard representation of the edges s is not on.
         // e.g. sq A1 is on FileA and Rank1, so edges = bitboard of FileH and Rank8
         // mask = occupancy mask of square s
         let edges: u64 = ((RANK_1 | RANK_8) & !rank_bb(s)) | ((FILE_A | FILE_H) & !file_bb(s));
