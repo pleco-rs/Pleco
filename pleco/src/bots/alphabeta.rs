@@ -37,3 +37,10 @@ pub fn alpha_beta_search(board: &mut Board, mut alpha: i16, beta: i16, depth: u1
 
     best_move
 }
+
+pub fn alpha_beta_eval_bitmove(board: &mut Board, bm: BitMove, alpha: i16, beta: i16, depth: u16) -> i16 {
+    board.apply_move(bm);
+    let out = -alpha_beta_search(board, alpha, beta, depth).score;
+    board.undo_move();
+    out
+}
