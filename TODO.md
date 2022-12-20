@@ -15,9 +15,6 @@ Raise PR for other protocols to use pleco again
 ## Development
 
 Test engine in Arena: https://github.com/pleco-rs/Pleco/issues/132
-Find some AI code review tool to find improvements
-AI PR reviews
-Add better output like this one does (https://github.com/MitchelPaulin/Walleye)
 Port over Stockfish end of game table: https://github.com/pleco-rs/Pleco/issues/113
 Review unstable features and which ones we can add back: https://github.com/pleco-rs/Pleco/issues/77
 Do some code profiling to see where the bottlenecks are
