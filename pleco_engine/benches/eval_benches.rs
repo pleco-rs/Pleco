@@ -34,9 +34,10 @@ fn bench_100_pawn_king_evals(b: &mut Bencher, boards: &Vec<Board>) {
                 let entry: &mut PawnEntry = black_box(t.probe(board));
                 score += black_box(entry.pawns_score(Player::White)).0 as i64;
                 score += black_box(entry.pawns_score(Player::Black)).0 as i64;
-                score +=
-                    black_box(entry.king_safety::<WhiteType>(board, board.king_sq(Player::White)))
-                        .0 as i64;
+                score += black_box(
+                    entry.king_safety::<WhiteType>(board, board.king_sq(Player::White)),
+                )
+                .0 as i64;
             }
         },
         BatchSize::PerIteration,
