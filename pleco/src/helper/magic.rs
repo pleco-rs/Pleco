@@ -213,11 +213,8 @@ unsafe fn gen_magic_board(
                     // If we have visited with lower current, we replace it with this current number,
                     // as this current is higher and has gone through more passes
                     age[index] = current;
-                    *attacks.add(pre_sq_table[s as usize].start + index) =
-                        reference[i];
-                } else if *attacks.add(pre_sq_table[s as usize].start + index)
-                    != reference[i]
-                {
+                    *attacks.add(pre_sq_table[s as usize].start + index) = reference[i];
+                } else if *attacks.add(pre_sq_table[s as usize].start + index) != reference[i] {
                     // If a magic maps to the same index but different result, either magic is bad or we are done
                     break;
                 }
