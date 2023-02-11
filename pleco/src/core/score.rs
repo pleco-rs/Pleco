@@ -73,7 +73,7 @@ impl Score {
 
     /// Gives the value of the score in centi-pawns
     pub fn centipawns(self) -> (f64, f64) {
-        let mg: f64 = self.mg() as f64 / PAWN_EG as f64;
+        let mg: f64 = self.mg() as f64 / PAWN_MG as f64;
         let eg: f64 = self.eg() as f64 / PAWN_EG as f64;
         (mg, eg)
     }
