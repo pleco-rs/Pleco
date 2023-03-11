@@ -59,7 +59,7 @@ Any and all contributions are welcome! Open up a PR to contribute some improveme
 
 ## License
 
-Pleco is distributed under the terms of the MIT license. See LICENSE-MIT for details. Opening a pull requests is assumed to signal agreement with these licensing terms.
+Pleco Engine is distributed under the GNU General Public License version 3 (or any later version at your option). See [LICENSE](LICENSE) for full details. Opening a pull requests is assumed to signal agreement with these licensing terms.
 
 [build-link]: https://github.com/pleco-rs/Pleco/blob/main/.github/workflows/test.yml
 [build-badge]: https://img.shields.io/github/actions/workflow/status/pleco-rs/Pleco/test.yml?branch=main&style=for-the-badge&label=tanton&logo=github
