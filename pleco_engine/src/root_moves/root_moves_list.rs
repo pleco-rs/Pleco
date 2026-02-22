@@ -93,31 +93,15 @@ impl RootMoveList {
 
     #[inline]
     pub fn insert_score_depth(&mut self, index: usize, score: i32, depth: i16) {
-        assert!(
-            index < self.len(),
-            "index out of bounds: the index is {} but the len is {}",
-            index,
-            self.len()
-        );
-        unsafe {
-            let rm: &mut RootMove = self.get_unchecked_mut(index);
-            rm.score = score;
-            rm.depth_reached = depth;
-        }
+        let rm: &mut RootMove = &mut self[index];
+        rm.score = score;
+        rm.depth_reached = depth;
     }
 
     #[inline]
     pub fn insert_score(&mut self, index: usize, score: i32) {
-        assert!(
-            index < self.len(),
-            "index out of bounds: the index is {} but the len is {}",
-            index,
-            self.len()
-        );
-        unsafe {
-            let rm: &mut RootMove = self.get_unchecked_mut(index);
-            rm.score = score;
-        }
+        let rm: &mut RootMove = &mut self[index];
+        rm.score = score;
     }
 
     pub fn find(&mut self, mov: BitMove) -> Option<&mut RootMove> {
@@ -208,3 +192,22 @@ impl<'a> IntoIterator for &'a RootMoveList {
 impl<'a> ExactSizeIterator for MoveIter<'a> {}
 
 impl<'a> FusedIterator for MoveIter<'a> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn insert_score_depth_out_of_bounds() {
+        let mut list = RootMoveList::new();
+        list.insert_score_depth(1000, 100, 10);
+    }
+
+    #[test]
+    #[should_panic]
+    fn insert_score_out_of_bounds() {
+        let mut list = RootMoveList::new();
+        list.insert_score(1000, 100);
+    }
+}
