@@ -430,6 +430,9 @@ pub struct SQFromStrError;
 
 impl fmt::Display for SQFromStrError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "invalid square string, expected format like 'a1' through 'h8'")
+        write!(
+            f,
+            "invalid square string, expected format like 'a1' through 'h8'"
+        )
     }
 }

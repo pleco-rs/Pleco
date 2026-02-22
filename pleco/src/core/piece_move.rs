@@ -211,7 +211,10 @@ pub struct BitMoveFromStrError;
 
 impl fmt::Display for BitMoveFromStrError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "invalid move string, expected format like 'e2e4' or 'a7a8q'")
+        write!(
+            f,
+            "invalid move string, expected format like 'e2e4' or 'a7a8q'"
+        )
     }
 }
 
