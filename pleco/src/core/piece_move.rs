@@ -63,6 +63,7 @@
 
 use std::cmp::{Ord, Ordering, PartialEq, PartialOrd};
 use std::fmt;
+use std::str::FromStr;
 
 use super::sq::SQ;
 use super::*;
@@ -143,6 +144,71 @@ pub struct PreMoveInfo {
 impl fmt::Display for BitMove {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.stringify())
+    }
+}
+
+impl FromStr for BitMove {
+    type Err = BitMoveFromStrError;
+
+    /// Parses a `BitMove` from a UCI move string (e.g., "e2e4", "a7a8q").
+    ///
+    /// The format is: source square, destination square, and an optional promotion piece
+    /// character ('n', 'b', 'r', 'q').
+    ///
+    /// Note: Without board context, only the source, destination, and promotion information
+    /// can be determined. Flags such as capture, en passant, castle, or double pawn push
+    /// cannot be inferred from the string alone.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::BitMove;
+    /// use std::str::FromStr;
+    ///
+    /// let mv = BitMove::from_str("e2e4").unwrap();
+    /// assert_eq!(mv.to_string(), "e2e4");
+    ///
+    /// let promo = BitMove::from_str("a7a8q").unwrap();
+    /// assert!(promo.is_promo());
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let len = s.len();
+        if len < 4 || len > 5 {
+            return Err(BitMoveFromStrError);
+        }
+        let src = s[0..2].parse::<SQ>().map_err(|_| BitMoveFromStrError)?;
+        let dst = s[2..4].parse::<SQ>().map_err(|_| BitMoveFromStrError)?;
+
+        if len == 5 {
+            let promo_char = s.as_bytes()[4];
+            let prom = match promo_char {
+                b'n' => PieceType::N,
+                b'b' => PieceType::B,
+                b'r' => PieceType::R,
+                b'q' => PieceType::Q,
+                _ => return Err(BitMoveFromStrError),
+            };
+            Ok(BitMove::init(PreMoveInfo {
+                src,
+                dst,
+                flags: MoveFlag::Promotion {
+                    capture: false,
+                    prom,
+                },
+            }))
+        } else {
+            Ok(BitMove::make(BitMove::FLAG_QUIET, src, dst))
+        }
+    }
+}
+
+/// Error type for parsing a `BitMove` from a string.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BitMoveFromStrError;
+
+impl fmt::Display for BitMoveFromStrError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "invalid move string, expected format like 'e2e4' or 'a7a8q'")
     }
 }
 
