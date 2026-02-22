@@ -790,8 +790,9 @@ impl Board {
                 // Only XOR out the EP hash if it was included in the zobrist
                 // (it was included only when an opponent pawn could capture en passant)
                 let ep_owner = !self.turn;
-                if (pawn_attacks_from(self.state.ep_square, ep_owner) & self.piece_bb(self.turn, PieceType::P))
-                    .is_not_empty()
+                if (pawn_attacks_from(self.state.ep_square, ep_owner)
+                    & self.piece_bb(self.turn, PieceType::P))
+                .is_not_empty()
                 {
                     zob ^= z_ep(self.state.ep_square);
                 }
@@ -1029,8 +1030,9 @@ impl Board {
             if self.state.ep_square != NO_SQ {
                 // Only XOR out the EP hash if it was included in the zobrist
                 let ep_owner = !self.turn;
-                if (pawn_attacks_from(self.state.ep_square, ep_owner) & self.piece_bb(self.turn, PieceType::P))
-                    .is_not_empty()
+                if (pawn_attacks_from(self.state.ep_square, ep_owner)
+                    & self.piece_bb(self.turn, PieceType::P))
+                .is_not_empty()
                 {
                     zob ^= z_ep(self.state.ep_square);
                 }
