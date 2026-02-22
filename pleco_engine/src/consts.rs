@@ -1,5 +1,4 @@
 //! Constant values and static structures.
-use std::mem;
 use std::mem::MaybeUninit;
 use std::ptr;
 use std::sync::atomic::compiler_fence;

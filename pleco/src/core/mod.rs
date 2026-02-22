@@ -522,7 +522,7 @@ impl Piece {
     ///
     /// The following code snippet will give undefined behavior:
     ///
-    /// ```
+    /// ```no_run
     /// use pleco::{Piece,PieceType,Player};
     ///
     /// let illegal_piece = Piece::make_lossy(Player::Black, PieceType::All);
