@@ -188,6 +188,7 @@ impl FromStr for BitMove {
                 b'q' => PieceType::Q,
                 _ => return Err(BitMoveFromStrError),
             };
+            // Capture status cannot be determined without board context
             Ok(BitMove::init(PreMoveInfo {
                 src,
                 dst,
@@ -197,6 +198,8 @@ impl FromStr for BitMove {
                 },
             }))
         } else {
+            // Without board context, flags like capture, en passant, castle,
+            // or double pawn push cannot be inferred from the string alone
             Ok(BitMove::make(BitMove::FLAG_QUIET, src, dst))
         }
     }
