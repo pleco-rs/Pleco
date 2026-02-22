@@ -93,6 +93,7 @@ impl RootMoveList {
 
     #[inline]
     pub fn insert_score_depth(&mut self, index: usize, score: i32, depth: i16) {
+        assert!(index < self.len(), "index out of bounds: the index is {} but the len is {}", index, self.len());
         unsafe {
             let rm: &mut RootMove = self.get_unchecked_mut(index);
             rm.score = score;
@@ -102,6 +103,7 @@ impl RootMoveList {
 
     #[inline]
     pub fn insert_score(&mut self, index: usize, score: i32) {
+        assert!(index < self.len(), "index out of bounds: the index is {} but the len is {}", index, self.len());
         unsafe {
             let rm: &mut RootMove = self.get_unchecked_mut(index);
             rm.score = score;
