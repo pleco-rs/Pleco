@@ -142,4 +142,11 @@ mod tests {
             JamboreeSearcher::best_move(b2, 5)
         );
     }
+
+    #[test]
+    fn iterative_searcher_depth_10() {
+        let b = Board::from_fen("1k6/R7/8/7B/7P/8/5Q2/B3K2R w K - 11 47").unwrap();
+        // Should not panic with depth >= PLYS_SEQ length
+        let _best = IterativeSearcher::best_move(b, 10);
+    }
 }
