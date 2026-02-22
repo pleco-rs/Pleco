@@ -97,9 +97,15 @@ pub struct Stack {
 
 impl Stack {
     /// Get the next ply at an offset.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the resulting pointer after applying `count`
+    /// remains within the bounds of the containing `ThreadStack` array.
     pub fn offset(&mut self, count: isize) -> &mut Stack {
         unsafe {
             let ptr: *mut Stack = self as *mut Stack;
+            debug_assert!((count.unsigned_abs()) < THREAD_STACK_SIZE);
             &mut *ptr.offset(count)
         }
     }
