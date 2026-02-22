@@ -120,7 +120,7 @@ pub fn eval_board(board: &Board) -> ScoringMove {
 mod tests {
     use super::*;
 
-    // We test these, as both algorithms should give the same result no matter if paralleized
+    // We test these, as both algorithms should give the same result no matter if parallelized
     // or not.
 
     #[test]

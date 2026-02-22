@@ -293,7 +293,7 @@ impl Searcher {
 
     // The per thread searching function
     fn search_root(&mut self) {
-        // Early return. This shouldn't notmally happen.
+        // Early return. This shouldn't normally happen.
         if self.stop() {
             return;
         }
@@ -948,7 +948,7 @@ impl Searcher {
                         rm.score = NEG_INFINITE;
                     }
                 }
-                // If we have a new best move at root, update the nmber of best_move changes.
+                // If we have a new best move at root, update the number of best_move changes.
                 if incr_bmc {
                     self.best_move_changes += 1.0;
                 }

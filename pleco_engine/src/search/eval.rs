@@ -266,7 +266,7 @@ const PAWNLESS_FLANK: Score = Score(20, 80);
 const THREAT_BY_SAFE_PAWN: Score = Score(192, 175);
 const THREAT_BY_RANK: Score = Score(16, 3);
 const HANGING: Score = Score(48, 27);
-const WEAK_UNOPOSSED_PAWN: Score = Score(5, 25);
+const WEAK_UNOPPOSED_PAWN: Score = Score(5, 25);
 const SLIDER_ON_QUEEN: Score = Score(42, 21);
 const THREAT_BY_PAWN_PUSH: Score = Score(38, 22);
 const THREAT_BY_ATTACK_ON_QUEEN: Score = Score(38, 22);
@@ -961,7 +961,7 @@ impl<'a, 'b, T: Tracing> EvaluationInner<'a, 'b, T> {
             .piece_two_bb(PieceType::R, PieceType::Q, us)
             .is_not_empty()
         {
-            score += WEAK_UNOPOSSED_PAWN * self.pawn_entry.weak_unopposed(them);
+            score += WEAK_UNOPPOSED_PAWN * self.pawn_entry.weak_unopposed(them);
         }
 
         // Find squares where our pawns can push on the next move
