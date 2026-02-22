@@ -3,6 +3,7 @@ extern crate rand;
 
 use pleco::board::Board;
 use pleco::core::piece_move::BitMove;
+use pleco::core::sq::SQ;
 use std::*;
 
 #[test]
@@ -41,4 +42,16 @@ fn apply_null_moves() {
         }
         trials += 1;
     }
+}
+
+#[test]
+fn double_pawn_push_sets_ep_square() {
+    let fen1 = "r1bqkbnr/pppppppp/2n5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2";
+    let mut board = Board::from_fen(fen1).unwrap();
+
+    let move_to_play = BitMove::make(BitMove::FLAG_DOUBLE_PAWN, SQ::D2, SQ::D4);
+    board.apply_move(move_to_play);
+
+    let expected_fen = "r1bqkbnr/pppppppp/2n5/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq d3 0 2";
+    assert_eq!(expected_fen, board.fen());
 }

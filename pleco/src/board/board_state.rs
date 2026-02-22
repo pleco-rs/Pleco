@@ -205,7 +205,16 @@ impl BoardState {
 
         let ep = self.ep_square;
         if ep != NO_SQ {
-            self.zobrist ^= z_ep(ep);
+            // Only include EP in zobrist hash if an opponent pawn can capture en passant
+            let ep_owner = match board.turn {
+                Player::White => Player::Black,
+                Player::Black => Player::White,
+            };
+            if (pawn_attacks_from(ep, ep_owner) & board.piece_bb(board.turn, PieceType::P))
+                .is_not_empty()
+            {
+                self.zobrist ^= z_ep(ep);
+            }
         }
 
         match board.turn {

@@ -787,7 +787,14 @@ impl Board {
             zob ^= z_square(to, piece) ^ z_square(from, piece);
 
             if self.state.ep_square != NO_SQ {
-                zob ^= z_ep(self.state.ep_square);
+                // Only XOR out the EP hash if it was included in the zobrist
+                // (it was included only when an opponent pawn could capture en passant)
+                let ep_owner = !self.turn;
+                if (pawn_attacks_from(self.state.ep_square, ep_owner) & self.piece_bb(self.turn, PieceType::P))
+                    .is_not_empty()
+                {
+                    zob ^= z_ep(self.state.ep_square);
+                }
                 new_state.ep_square = NO_SQ;
             }
 
@@ -810,11 +817,14 @@ impl Board {
                     // Double Push
                     let poss_ep: u8 = (to.0 as i8 - us.pawn_push()) as u8;
 
-                    // Set en-passant square if the moved pawn can be captured
+                    // Always set en-passant square after a double pawn push,
+                    // per the FEN standard
+                    new_state.ep_square = SQ(poss_ep);
+
+                    // Only include in zobrist hash if the moved pawn can be captured
                     if (pawn_attacks_from(SQ(poss_ep), us) & self.piece_bb(them, PieceType::P))
                         .is_not_empty()
                     {
-                        new_state.ep_square = SQ(poss_ep);
                         zob ^= z_ep(new_state.ep_square);
                     }
                 } else if bit_move.is_promo() {
@@ -1017,7 +1027,13 @@ impl Board {
             new_state.prev = Some(Arc::clone(&self.state));
 
             if self.state.ep_square != NO_SQ {
-                zob ^= z_ep(self.state.ep_square);
+                // Only XOR out the EP hash if it was included in the zobrist
+                let ep_owner = !self.turn;
+                if (pawn_attacks_from(self.state.ep_square, ep_owner) & self.piece_bb(self.turn, PieceType::P))
+                    .is_not_empty()
+                {
+                    zob ^= z_ep(self.state.ep_square);
+                }
                 new_state.ep_square = NO_SQ;
             }
 
