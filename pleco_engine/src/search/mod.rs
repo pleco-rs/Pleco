@@ -790,8 +790,8 @@ impl Searcher {
                     // Countermoves based pruning
                     unsafe {
                         if lmr_depth < 3
-                            && (*cont_hists[0])[(moved_piece, mov.get_dest())] < 0
-                            && (*cont_hists[1])[(moved_piece, mov.get_dest())] < 0
+                            && (&(*cont_hists[0]))[(moved_piece, mov.get_dest())] < 0
+                            && (&(*cont_hists[1]))[(moved_piece, mov.get_dest())] < 0
                         {
                             continue;
                         }
@@ -881,9 +881,9 @@ impl Searcher {
 
                     ss.stat_score = unsafe {
                         self.main_history[(!self.board.turn(), mov)] as i32
-                            + (*cont_hists[0])[(moved_piece, mov.get_dest())] as i32
-                            + (*cont_hists[1])[(moved_piece, mov.get_dest())] as i32
-                            + (*cont_hists[3])[(moved_piece, mov.get_dest())] as i32
+                            + (&(*cont_hists[0]))[(moved_piece, mov.get_dest())] as i32
+                            + (&(*cont_hists[1]))[(moved_piece, mov.get_dest())] as i32
+                            + (&(*cont_hists[3]))[(moved_piece, mov.get_dest())] as i32
                             - 4000
                     };
 
