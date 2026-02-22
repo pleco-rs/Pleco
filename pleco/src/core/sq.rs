@@ -59,6 +59,7 @@ use super::*;
 use std::fmt;
 use std::mem::transmute;
 use std::ops::*;
+use std::str::FromStr;
 
 // TODO: Investigate possibility of using an Enum instead
 
@@ -390,5 +391,48 @@ impl SQ {
 impl fmt::Display for SQ {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", SQ_DISPLAY[self.0 as usize])
+    }
+}
+
+impl FromStr for SQ {
+    type Err = SQFromStrError;
+
+    /// Parses a `SQ` from a string in algebraic notation (e.g., "a1", "h8").
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pleco::SQ;
+    /// use std::str::FromStr;
+    ///
+    /// let sq = SQ::from_str("e4").unwrap();
+    /// assert_eq!(sq, SQ::E4);
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes = s.as_bytes();
+        if bytes.len() != 2 {
+            return Err(SQFromStrError);
+        }
+        let file = bytes[0];
+        let rank = bytes[1];
+        if !(b'a'..=b'h').contains(&file) || !(b'1'..=b'8').contains(&rank) {
+            return Err(SQFromStrError);
+        }
+        let file_idx = file - b'a';
+        let rank_idx = rank - b'1';
+        Ok(SQ(rank_idx * 8 + file_idx))
+    }
+}
+
+/// Error type for parsing a `SQ` from a string.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SQFromStrError;
+
+impl fmt::Display for SQFromStrError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "invalid square string, expected format like 'a1' through 'h8'"
+        )
     }
 }

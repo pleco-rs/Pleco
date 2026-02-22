@@ -4,6 +4,7 @@ use pleco::board::{Board, RandBoard};
 use pleco::core::piece_move::*;
 use pleco::core::*;
 use pleco::SQ;
+use std::str::FromStr;
 
 #[test]
 fn test_movegen_captures() {
@@ -332,4 +333,75 @@ fn all_move_flags() -> Vec<MoveFlag> {
     move_flags.push(MoveFlag::DoublePawnPush);
     move_flags.push(MoveFlag::QuietMove);
     move_flags
+}
+
+#[test]
+fn sq_from_str() {
+    assert_eq!(SQ::from_str("a1").unwrap(), SQ::A1);
+    assert_eq!(SQ::from_str("h8").unwrap(), SQ::H8);
+    assert_eq!(SQ::from_str("e4").unwrap(), SQ::E4);
+    assert_eq!(SQ::from_str("d7").unwrap(), SQ::D7);
+    assert!(SQ::from_str("").is_err());
+    assert!(SQ::from_str("a").is_err());
+    assert!(SQ::from_str("a9").is_err());
+    assert!(SQ::from_str("i1").is_err());
+    assert!(SQ::from_str("a1b").is_err());
+}
+
+#[test]
+fn sq_from_str_roundtrip() {
+    for i in 0..64u8 {
+        let sq = SQ(i);
+        let s = sq.to_string();
+        let parsed = SQ::from_str(&s).unwrap();
+        assert_eq!(sq, parsed);
+    }
+}
+
+#[test]
+fn bitmove_from_str_quiet() {
+    let mv = BitMove::from_str("e2e4").unwrap();
+    assert_eq!(mv.get_src(), SQ::E2);
+    assert_eq!(mv.get_dest(), SQ::E4);
+    assert!(!mv.is_promo());
+    assert_eq!(mv.to_string(), "e2e4");
+}
+
+#[test]
+fn bitmove_from_str_promotion() {
+    let mv = BitMove::from_str("a7a8q").unwrap();
+    assert_eq!(mv.get_src(), SQ::A7);
+    assert_eq!(mv.get_dest(), SQ::A8);
+    assert!(mv.is_promo());
+    assert_eq!(mv.promo_piece(), PieceType::Q);
+
+    let mv = BitMove::from_str("b7b8n").unwrap();
+    assert!(mv.is_promo());
+    assert_eq!(mv.promo_piece(), PieceType::N);
+
+    let mv = BitMove::from_str("c7c8b").unwrap();
+    assert!(mv.is_promo());
+    assert_eq!(mv.promo_piece(), PieceType::B);
+
+    let mv = BitMove::from_str("d7d8r").unwrap();
+    assert!(mv.is_promo());
+    assert_eq!(mv.promo_piece(), PieceType::R);
+}
+
+#[test]
+fn bitmove_from_str_invalid() {
+    assert!(BitMove::from_str("").is_err());
+    assert!(BitMove::from_str("e2").is_err());
+    assert!(BitMove::from_str("e2e4e6").is_err());
+    assert!(BitMove::from_str("e2e9").is_err());
+    assert!(BitMove::from_str("e2e4x").is_err());
+}
+
+#[test]
+fn bitmove_from_str_roundtrip_quiet() {
+    let original = BitMove::make_quiet(SQ::E2, SQ::E4);
+    let s = original.to_string();
+    let parsed = BitMove::from_str(&s).unwrap();
+    assert_eq!(parsed.get_src(), original.get_src());
+    assert_eq!(parsed.get_dest(), original.get_dest());
 }
