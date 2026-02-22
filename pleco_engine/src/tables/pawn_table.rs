@@ -377,7 +377,7 @@ impl PawnEntry {
             {
                 0 // Blocked By King
             } else if rk_us == Rank::R1 {
-                1 // Unopossed
+                1 // Unopposed
             } else if rk_them as u8 == rk_us as u8 + 1 {
                 2 // Blocked by Pawn
             } else {

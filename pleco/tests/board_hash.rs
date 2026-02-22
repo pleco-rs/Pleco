@@ -66,7 +66,7 @@ impl HashCorrect for PawnHashCorrect {
     }
 }
 
-// Testing that applying / undoing a move leads to the same zobriust hash
+// Testing that applying / undoing a move leads to the same zobrist hash
 #[test]
 fn zobrist_correctness() {
     for _x in 0..15 {
