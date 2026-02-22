@@ -1,5 +1,6 @@
 //! Constant values and static structures.
 use std::mem;
+use std::mem::MaybeUninit;
 use std::ptr;
 use std::sync::atomic::compiler_fence;
 use std::sync::atomic::AtomicBool;
@@ -22,22 +23,15 @@ pub const DEFAULT_TT_SIZE: usize = 256;
 pub const PAWN_TABLE_SIZE: usize = 16384;
 pub const MATERIAL_TABLE_SIZE: usize = 8192;
 
-const TT_ALLOC_SIZE: usize = mem::size_of::<TranspositionTable>();
-const TIMER_ALLOC_SIZE: usize = mem::size_of::<TimeManager>();
-
-// A object that is the same size as a transposition table
-type DummyTranspositionTable = [u8; TT_ALLOC_SIZE];
-type DummyTimeManager = [u8; TIMER_ALLOC_SIZE];
-
 pub static USE_STDOUT: AtomicBool = AtomicBool::new(true);
 
 static INITIALIZED: Once = Once::new();
 
 /// Global Transposition Table
-static mut TT_TABLE: DummyTranspositionTable = [0; TT_ALLOC_SIZE];
+static mut TT_TABLE: MaybeUninit<TranspositionTable> = MaybeUninit::uninit();
 
 // Global Timer
-static mut TIMER: DummyTimeManager = [0; TIMER_ALLOC_SIZE];
+static mut TIMER: MaybeUninit<TimeManager> = MaybeUninit::uninit();
 
 #[cold]
 pub fn init_globals() {
@@ -56,8 +50,7 @@ pub fn init_globals() {
 #[cold]
 fn init_tt() {
     unsafe {
-        let tt = &mut TT_TABLE as *mut DummyTranspositionTable as *mut TranspositionTable;
-        ptr::write(tt, TranspositionTable::new(DEFAULT_TT_SIZE));
+        ptr::write(TT_TABLE.as_mut_ptr(), TranspositionTable::new(DEFAULT_TT_SIZE));
     }
 }
 
@@ -65,20 +58,19 @@ fn init_tt() {
 #[cold]
 fn init_timer() {
     unsafe {
-        let timer: *mut TimeManager = &mut TIMER as *mut DummyTimeManager as *mut TimeManager;
-        ptr::write(timer, TimeManager::uninitialized());
+        ptr::write(TIMER.as_mut_ptr(), TimeManager::uninitialized());
     }
 }
 
 // Returns access to the global timer
 pub fn timer() -> &'static TimeManager {
-    unsafe { &*(&TIMER as *const DummyTimeManager as *const TimeManager) }
+    unsafe { &*TIMER.as_ptr() }
 }
 
 /// Returns access to the global transposition table
 #[inline(always)]
 pub fn tt() -> &'static TranspositionTable {
-    unsafe { &*(&TT_TABLE as *const DummyTranspositionTable as *const TranspositionTable) }
+    unsafe { &*TT_TABLE.as_ptr() }
 }
 
 pub trait PVNode {
