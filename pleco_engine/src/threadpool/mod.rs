@@ -31,17 +31,15 @@ static THREADPOOL_INIT: Once = Once::new();
 // Initializes the threadpool, called once on startup.
 #[cold]
 pub fn init_threadpool() {
-    THREADPOOL_INIT.call_once(|| {
-        unsafe {
-            let builder = thread::Builder::new()
-                .name("Starter".to_string())
-                .stack_size(THREAD_STACK_SIZE);
+    THREADPOOL_INIT.call_once(|| unsafe {
+        let builder = thread::Builder::new()
+            .name("Starter".to_string())
+            .stack_size(THREAD_STACK_SIZE);
 
-            let handle = builder.spawn(|| {
-                ptr::write(THREADPOOL.as_mut_ptr(), ThreadPool::new());
-            });
-            handle.unwrap().join().unwrap();
-        }
+        let handle = builder.spawn(|| {
+            ptr::write(THREADPOOL.as_mut_ptr(), ThreadPool::new());
+        });
+        handle.unwrap().join().unwrap();
     });
 }
 

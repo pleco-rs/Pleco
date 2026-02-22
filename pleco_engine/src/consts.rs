@@ -49,7 +49,10 @@ pub fn init_globals() {
 #[cold]
 fn init_tt() {
     unsafe {
-        ptr::write(TT_TABLE.as_mut_ptr(), TranspositionTable::new(DEFAULT_TT_SIZE));
+        ptr::write(
+            TT_TABLE.as_mut_ptr(),
+            TranspositionTable::new(DEFAULT_TT_SIZE),
+        );
     }
 }
 
