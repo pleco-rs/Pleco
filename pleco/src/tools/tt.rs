@@ -43,7 +43,7 @@ use super::prefetch_write;
 use super::PreFetchable;
 use core::piece_move::BitMove;
 
-// TODO: investigate potention for SIMD in key lookup
+// TODO: investigate potential for SIMD in key lookup
 // Currently, there is now way to do this right now in rust without it being extensive.
 
 pub type Key = u64;
@@ -352,7 +352,7 @@ impl TranspositionTable {
     /// Returns the current number of cycles a TT has gone through. Cycles is simply the
     /// number of times refresh has been called.
     #[inline]
-    pub fn time_age_cylces(&self) -> u8 {
+    pub fn time_age_cycles(&self) -> u8 {
         unsafe { (*self.time_age.get()).wrapping_shr(2) }
     }
 
@@ -363,6 +363,7 @@ impl TranspositionTable {
     /// the current search, e.g. has the shallowest depth or was found in a previous search.
     ///
     /// If 'true' is returned, the Entry is guaranteed to have the correct time.
+    #[allow(clippy::mut_from_ref)]
     pub fn probe(&self, key: Key) -> (bool, &mut Entry) {
         let partial_key: u16 = (key).wrapping_shr(48) as u16;
 

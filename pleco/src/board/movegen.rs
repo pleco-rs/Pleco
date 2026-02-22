@@ -111,7 +111,7 @@ impl Legality for PseudoLegal {
     }
 }
 
-// Pieces to generate moves with inter-changably
+// Pieces to generate moves with interchangeably
 const STANDARD_PIECES: [PieceType; 4] = [PieceType::B, PieceType::N, PieceType::R, PieceType::Q];
 const DEFAULT_MOVES_LENGTH: usize = 32;
 

@@ -2,6 +2,7 @@
 
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 use std::cell::UnsafeCell;
+use std::mem::MaybeUninit;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Once;
@@ -21,15 +22,8 @@ use consts::*;
 
 const KILOBYTE: usize = 1000;
 const THREAD_STACK_SIZE: usize = 18000 * KILOBYTE;
-const POOL_SIZE: usize = mem::size_of::<ThreadPool>();
 
-// An object that is the same size as a thread pool.
-type DummyThreadPool = [u8; POOL_SIZE];
-
-// The Global threadpool! Yes, this is *technically* an array the same
-// size as a ThreadPool object. This is a cheap hack to get a global value, as
-// Rust isn't particularly fond of mutable global statics.
-pub static mut THREADPOOL: DummyThreadPool = [0; POOL_SIZE];
+pub static mut THREADPOOL: MaybeUninit<ThreadPool> = MaybeUninit::uninit();
 
 // ONCE for the Threadpool
 static THREADPOOL_INIT: Once = Once::new();
@@ -37,27 +31,22 @@ static THREADPOOL_INIT: Once = Once::new();
 // Initializes the threadpool, called once on startup.
 #[cold]
 pub fn init_threadpool() {
-    THREADPOOL_INIT.call_once(|| {
-        unsafe {
-            // We have a spawned thread create all structures, as a stack overflow can
-            // occur otherwise
-            let builder = thread::Builder::new()
-                .name("Starter".to_string())
-                .stack_size(THREAD_STACK_SIZE);
+    THREADPOOL_INIT.call_once(|| unsafe {
+        let builder = thread::Builder::new()
+            .name("Starter".to_string())
+            .stack_size(THREAD_STACK_SIZE);
 
-            let handle = builder.spawn(|| {
-                let pool: *mut ThreadPool = mem::transmute(&mut THREADPOOL);
-                ptr::write(pool, ThreadPool::new());
-            });
-            handle.unwrap().join().unwrap();
-        }
+        let handle = builder.spawn(|| {
+            ptr::write(THREADPOOL.as_mut_ptr(), ThreadPool::new());
+        });
+        handle.unwrap().join().unwrap();
     });
 }
 
 /// Returns access to the global thread pool.
 #[inline(always)]
 pub fn threadpool() -> &'static mut ThreadPool {
-    unsafe { mem::transmute::<&mut DummyThreadPool, &'static mut ThreadPool>(&mut THREADPOOL) }
+    unsafe { &mut *THREADPOOL.as_mut_ptr() }
 }
 
 #[derive(Copy, Clone)]

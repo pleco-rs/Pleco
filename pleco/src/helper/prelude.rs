@@ -193,7 +193,7 @@ pub fn z_ep(sq: SQ) -> u64 {
     zobrist::z_ep(sq)
 }
 
-/// Returns the Zobrish hash for a castling right.
+/// Returns the Zobrist hash for a castling right.
 ///
 /// Undefined behavior will occur if the bits are greater than 15.
 #[inline(always)]

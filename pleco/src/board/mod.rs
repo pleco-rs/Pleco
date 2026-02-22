@@ -205,7 +205,7 @@ pub struct Board {
     half_moves: u16,                                  // Total moves played
     depth: u16,                                       // Current depth since last shallow_copy
     piece_counts: [[u8; PIECE_TYPE_CNT]; PLAYER_CNT], // Count of each Piece
-    piece_locations: PieceLocations,                  // Mapping Squares to Pieces and Plauers
+    piece_locations: PieceLocations,                  // Mapping Squares to Pieces and Players
     zobrist_history: Vec<u64>,                        // Historic Zobrist keys of the board
     threefold_repetition: bool,                       // Whether the board has been repeated 3 times
 
@@ -700,7 +700,7 @@ impl Board {
         let mut next_arc_state = UniqueArc::new(self.state.partial_clone());
 
         // Separate Block to allow dereferencing the BoardState
-        // As there is garunteed only one owner of the Arc, this is allowed
+        // As there is guaranteed only one owner of the Arc, this is allowed
         {
             let new_state: &mut BoardState = &mut next_arc_state;
 
@@ -1258,7 +1258,7 @@ impl Board {
     fn apply_castling(
         &mut self,
         player: Player,
-        k_src: SQ,          // from, king startng spot
+        k_src: SQ,          // from, king starting spot
         to_r_orig: &mut SQ, // originally
         r_src: &mut SQ,
         r_dst: &mut SQ,

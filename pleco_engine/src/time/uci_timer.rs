@@ -25,7 +25,7 @@ impl LimitsType {
 #[derive(Clone)]
 pub struct UCITimer {
     pub time_msec: [i64; PLAYER_CNT], // time each player has remaining
-    pub inc_msec: [i64; PLAYER_CNT],  // increments for each palyer after each turn
+    pub inc_msec: [i64; PLAYER_CNT],  // increments for each player after each turn
     pub moves_to_go: u32,             // Moves to go until next time control sent
 }
 

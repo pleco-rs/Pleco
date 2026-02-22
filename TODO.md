@@ -14,6 +14,7 @@ Raise PR for other protocols to use pleco again
 
 ## Development
 
+Fix CI
 Test engine in Arena: https://github.com/pleco-rs/Pleco/issues/132
 Port over Stockfish end of game table: https://github.com/pleco-rs/Pleco/issues/113
 Review unstable features and which ones we can add back: https://github.com/pleco-rs/Pleco/issues/77
