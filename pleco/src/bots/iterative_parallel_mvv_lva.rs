@@ -35,7 +35,8 @@ pub fn iterative_deepening(board: &mut Board, max_depth: u16) -> BitMove {
         // clone the board
         let mut b = board.shallow_clone();
 
-        let returned_b_move = jamboree(&mut b, alpha, beta, i, PLYS_SEQ[i as usize]);
+        let plys_idx = std::cmp::min(i as usize, PLYS_SEQ.len() - 1);
+        let returned_b_move = jamboree(&mut b, alpha, beta, i, PLYS_SEQ[plys_idx]);
         if i >= 2 {
             if returned_b_move.score > beta {
                 beta = INF_V;
