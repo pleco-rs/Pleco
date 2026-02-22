@@ -363,6 +363,7 @@ impl TranspositionTable {
     /// the current search, e.g. has the shallowest depth or was found in a previous search.
     ///
     /// If 'true' is returned, the Entry is guaranteed to have the correct time.
+    #[allow(clippy::mut_from_ref)]
     pub fn probe(&self, key: Key) -> (bool, &mut Entry) {
         let partial_key: u16 = (key).wrapping_shr(48) as u16;
 
