@@ -975,6 +975,8 @@ impl Board {
         self.half_moves -= 1;
         self.depth -= 1;
         self.zobrist_history.pop();
+        let zob = self.state.zobrist;
+        self.threefold_repetition = self.zobrist_history.iter().filter(|&x| x == &zob).count() >= 2;
 
         #[cfg(debug_assertions)]
         self.is_okay().unwrap();
