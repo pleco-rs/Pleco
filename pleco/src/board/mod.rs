@@ -1779,7 +1779,7 @@ impl Board {
     }
 
     pub fn fifty_move_rule(&self) -> bool {
-        self.state.rule_50 >= 50
+        self.state.rule_50 >= 100
     }
 
     /// Returns if the current side to move is in stalemate.
